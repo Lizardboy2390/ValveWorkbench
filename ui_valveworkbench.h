@@ -103,17 +103,17 @@ public:
     QPushButton *pushButton_4;
     QHBoxLayout *horizontalLayout_25;
     QLabel *label_13;
-    QLineEdit *deviceName_2;
+    QLineEdit *deviceName;
     QHBoxLayout *horizontalLayout_26;
     QLabel *deviceTypeLabel_2;
-    QComboBox *deviceType_2;
+    QComboBox *deviceType;
     QHBoxLayout *horizontalLayout_27;
     QLabel *label_14;
-    QComboBox *testType_2;
+    QComboBox *testType;
     QSpacerItem *verticalSpacer_8;
     QHBoxLayout *horizontalLayout_28;
     QLabel *heaterLabel_2;
-    QLineEdit *heaterVoltage_2;
+    QLineEdit *heaterVoltage;
     QSpacerItem *horizontalSpacer_11;
     QHBoxLayout *horizontalLayout_29;
     QSpacerItem *horizontalSpacer_16;
@@ -121,46 +121,46 @@ public:
     QLabel *label_16;
     QLabel *label_17;
     QHBoxLayout *horizontalLayout_30;
-    QLabel *anodeLabel_2;
-    QLineEdit *anodeStart_2;
-    QLineEdit *anodeStop_2;
-    QLineEdit *anodeStep_2;
-    QHBoxLayout *gridGroup_2;
-    QLabel *gridLabel_2;
-    QLineEdit *gridStart_2;
-    QLineEdit *gridStop_2;
-    QLineEdit *gridStep_2;
+    QLabel *anodeLabel;
+    QLineEdit *anodeStart;
+    QLineEdit *anodeStop;
+    QLineEdit *anodeStep;
+    QHBoxLayout *gridGroup;
+    QLabel *gridLabel;
+    QLineEdit *gridStart;
+    QLineEdit *gridStop;
+    QLineEdit *gridStep;
     QHBoxLayout *screenGroup_2;
-    QLabel *screenLabel_2;
-    QLineEdit *screenStart_2;
-    QLineEdit *screenStop_2;
-    QLineEdit *screenStep_2;
+    QLabel *screenLabel;
+    QLineEdit *screenStart;
+    QLineEdit *screenStop;
+    QLineEdit *screenStep;
     QVBoxLayout *verticalLayout_7;
     QHBoxLayout *horizontalLayout_31;
     QLabel *label_18;
-    QLineEdit *iaMax_2;
+    QLineEdit *iaMax;
     QSpacerItem *horizontalSpacer_4;
     QHBoxLayout *horizontalLayout_32;
     QLabel *label_19;
-    QLineEdit *pMax_2;
+    QLineEdit *pMax;
     QSpacerItem *horizontalSpacer_5;
     QSpacerItem *verticalSpacer_9;
-    QHBoxLayout *heaterLayout_2;
-    QPushButton *heaterButton_2;
+    QHBoxLayout *heaterLayout;
+    QPushButton *heaterButton;
     QSpacerItem *horizontalSpacer_13;
     QHBoxLayout *horizontalLayout_33;
-    QLabel *heaterVLabel_2;
+    QLabel *heaterVLabel;
     QSpacerItem *horizontalSpacer_14;
-    QLCDNumber *heaterVlcd_2;
+    QLCDNumber *heaterVlcd;
     QHBoxLayout *horizontalLayout_34;
-    QLabel *heaterILabel_2;
+    QLabel *heaterILabel;
     QSpacerItem *horizontalSpacer_17;
-    QLCDNumber *heaterIlcd_2;
+    QLCDNumber *heaterIlcd;
     QSpacerItem *verticalSpacer_10;
     QHBoxLayout *horizontalLayout_35;
-    QPushButton *runButton_2;
+    QPushButton *runButton;
     QSpacerItem *horizontalSpacer_18;
-    QProgressBar *progressBar_2;
+    QProgressBar *progressBar;
     QSpacerItem *verticalSpacer_11;
     QSpacerItem *horizontalSpacer;
     QVBoxLayout *verticalLayout_2;
@@ -510,12 +510,12 @@ public:
 
         horizontalLayout_25->addWidget(label_13);
 
-        deviceName_2 = new QLineEdit(layoutWidget_2);
-        deviceName_2->setObjectName(QString::fromUtf8("deviceName_2"));
-        deviceName_2->setMinimumSize(QSize(160, 0));
-        deviceName_2->setMaximumSize(QSize(160, 16777215));
+        deviceName = new QLineEdit(layoutWidget_2);
+        deviceName->setObjectName(QString::fromUtf8("deviceName"));
+        deviceName->setMinimumSize(QSize(160, 0));
+        deviceName->setMaximumSize(QSize(160, 16777215));
 
-        horizontalLayout_25->addWidget(deviceName_2);
+        horizontalLayout_25->addWidget(deviceName);
 
 
         verticalLayout_6->addLayout(horizontalLayout_25);
@@ -533,14 +533,14 @@ public:
 
         horizontalLayout_26->addWidget(deviceTypeLabel_2);
 
-        deviceType_2 = new QComboBox(layoutWidget_2);
-        deviceType_2->setObjectName(QString::fromUtf8("deviceType_2"));
-        sizePolicy1.setHeightForWidth(deviceType_2->sizePolicy().hasHeightForWidth());
-        deviceType_2->setSizePolicy(sizePolicy1);
-        deviceType_2->setMinimumSize(QSize(160, 0));
-        deviceType_2->setMaximumSize(QSize(160, 16777215));
+        deviceType = new QComboBox(layoutWidget_2);
+        deviceType->setObjectName(QString::fromUtf8("deviceType"));
+        sizePolicy1.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
+        deviceType->setSizePolicy(sizePolicy1);
+        deviceType->setMinimumSize(QSize(160, 0));
+        deviceType->setMaximumSize(QSize(160, 16777215));
 
-        horizontalLayout_26->addWidget(deviceType_2);
+        horizontalLayout_26->addWidget(deviceType);
 
 
         verticalLayout_6->addLayout(horizontalLayout_26);
@@ -552,14 +552,14 @@ public:
 
         horizontalLayout_27->addWidget(label_14);
 
-        testType_2 = new QComboBox(layoutWidget_2);
-        testType_2->setObjectName(QString::fromUtf8("testType_2"));
-        sizePolicy1.setHeightForWidth(testType_2->sizePolicy().hasHeightForWidth());
-        testType_2->setSizePolicy(sizePolicy1);
-        testType_2->setMinimumSize(QSize(160, 0));
-        testType_2->setMaximumSize(QSize(160, 16777215));
+        testType = new QComboBox(layoutWidget_2);
+        testType->setObjectName(QString::fromUtf8("testType"));
+        sizePolicy1.setHeightForWidth(testType->sizePolicy().hasHeightForWidth());
+        testType->setSizePolicy(sizePolicy1);
+        testType->setMinimumSize(QSize(160, 0));
+        testType->setMaximumSize(QSize(160, 16777215));
 
-        horizontalLayout_27->addWidget(testType_2);
+        horizontalLayout_27->addWidget(testType);
 
 
         verticalLayout_6->addLayout(horizontalLayout_27);
@@ -578,14 +578,14 @@ public:
 
         horizontalLayout_28->addWidget(heaterLabel_2);
 
-        heaterVoltage_2 = new QLineEdit(layoutWidget_2);
-        heaterVoltage_2->setObjectName(QString::fromUtf8("heaterVoltage_2"));
-        sizePolicy1.setHeightForWidth(heaterVoltage_2->sizePolicy().hasHeightForWidth());
-        heaterVoltage_2->setSizePolicy(sizePolicy1);
-        heaterVoltage_2->setMinimumSize(QSize(50, 0));
-        heaterVoltage_2->setMaximumSize(QSize(50, 16777215));
+        heaterVoltage = new QLineEdit(layoutWidget_2);
+        heaterVoltage->setObjectName(QString::fromUtf8("heaterVoltage"));
+        sizePolicy1.setHeightForWidth(heaterVoltage->sizePolicy().hasHeightForWidth());
+        heaterVoltage->setSizePolicy(sizePolicy1);
+        heaterVoltage->setMinimumSize(QSize(50, 0));
+        heaterVoltage->setMaximumSize(QSize(50, 16777215));
 
-        horizontalLayout_28->addWidget(heaterVoltage_2);
+        horizontalLayout_28->addWidget(heaterVoltage);
 
         horizontalSpacer_11 = new QSpacerItem(112, 20, QSizePolicy::Fixed, QSizePolicy::Minimum);
 
@@ -638,121 +638,121 @@ public:
 
         horizontalLayout_30 = new QHBoxLayout();
         horizontalLayout_30->setObjectName(QString::fromUtf8("horizontalLayout_30"));
-        anodeLabel_2 = new QLabel(layoutWidget_2);
-        anodeLabel_2->setObjectName(QString::fromUtf8("anodeLabel_2"));
+        anodeLabel = new QLabel(layoutWidget_2);
+        anodeLabel->setObjectName(QString::fromUtf8("anodeLabel"));
         QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Preferred);
         sizePolicy5.setHorizontalStretch(100);
         sizePolicy5.setVerticalStretch(0);
-        sizePolicy5.setHeightForWidth(anodeLabel_2->sizePolicy().hasHeightForWidth());
-        anodeLabel_2->setSizePolicy(sizePolicy5);
-        anodeLabel_2->setMinimumSize(QSize(100, 0));
+        sizePolicy5.setHeightForWidth(anodeLabel->sizePolicy().hasHeightForWidth());
+        anodeLabel->setSizePolicy(sizePolicy5);
+        anodeLabel->setMinimumSize(QSize(100, 0));
 
-        horizontalLayout_30->addWidget(anodeLabel_2);
+        horizontalLayout_30->addWidget(anodeLabel);
 
-        anodeStart_2 = new QLineEdit(layoutWidget_2);
-        anodeStart_2->setObjectName(QString::fromUtf8("anodeStart_2"));
-        sizePolicy1.setHeightForWidth(anodeStart_2->sizePolicy().hasHeightForWidth());
-        anodeStart_2->setSizePolicy(sizePolicy1);
-        anodeStart_2->setMinimumSize(QSize(50, 0));
-        anodeStart_2->setMaximumSize(QSize(50, 16777215));
+        anodeStart = new QLineEdit(layoutWidget_2);
+        anodeStart->setObjectName(QString::fromUtf8("anodeStart"));
+        sizePolicy1.setHeightForWidth(anodeStart->sizePolicy().hasHeightForWidth());
+        anodeStart->setSizePolicy(sizePolicy1);
+        anodeStart->setMinimumSize(QSize(50, 0));
+        anodeStart->setMaximumSize(QSize(50, 16777215));
 
-        horizontalLayout_30->addWidget(anodeStart_2);
+        horizontalLayout_30->addWidget(anodeStart);
 
-        anodeStop_2 = new QLineEdit(layoutWidget_2);
-        anodeStop_2->setObjectName(QString::fromUtf8("anodeStop_2"));
-        sizePolicy1.setHeightForWidth(anodeStop_2->sizePolicy().hasHeightForWidth());
-        anodeStop_2->setSizePolicy(sizePolicy1);
-        anodeStop_2->setMaximumSize(QSize(50, 16777215));
+        anodeStop = new QLineEdit(layoutWidget_2);
+        anodeStop->setObjectName(QString::fromUtf8("anodeStop"));
+        sizePolicy1.setHeightForWidth(anodeStop->sizePolicy().hasHeightForWidth());
+        anodeStop->setSizePolicy(sizePolicy1);
+        anodeStop->setMaximumSize(QSize(50, 16777215));
 
-        horizontalLayout_30->addWidget(anodeStop_2);
+        horizontalLayout_30->addWidget(anodeStop);
 
-        anodeStep_2 = new QLineEdit(layoutWidget_2);
-        anodeStep_2->setObjectName(QString::fromUtf8("anodeStep_2"));
-        sizePolicy1.setHeightForWidth(anodeStep_2->sizePolicy().hasHeightForWidth());
-        anodeStep_2->setSizePolicy(sizePolicy1);
-        anodeStep_2->setMaximumSize(QSize(50, 16777215));
+        anodeStep = new QLineEdit(layoutWidget_2);
+        anodeStep->setObjectName(QString::fromUtf8("anodeStep"));
+        sizePolicy1.setHeightForWidth(anodeStep->sizePolicy().hasHeightForWidth());
+        anodeStep->setSizePolicy(sizePolicy1);
+        anodeStep->setMaximumSize(QSize(50, 16777215));
 
-        horizontalLayout_30->addWidget(anodeStep_2);
+        horizontalLayout_30->addWidget(anodeStep);
 
 
         verticalLayout_6->addLayout(horizontalLayout_30);
 
-        gridGroup_2 = new QHBoxLayout();
-        gridGroup_2->setObjectName(QString::fromUtf8("gridGroup_2"));
-        gridLabel_2 = new QLabel(layoutWidget_2);
-        gridLabel_2->setObjectName(QString::fromUtf8("gridLabel_2"));
-        sizePolicy3.setHeightForWidth(gridLabel_2->sizePolicy().hasHeightForWidth());
-        gridLabel_2->setSizePolicy(sizePolicy3);
-        gridLabel_2->setMinimumSize(QSize(100, 0));
+        gridGroup = new QHBoxLayout();
+        gridGroup->setObjectName(QString::fromUtf8("gridGroup"));
+        gridLabel = new QLabel(layoutWidget_2);
+        gridLabel->setObjectName(QString::fromUtf8("gridLabel"));
+        sizePolicy3.setHeightForWidth(gridLabel->sizePolicy().hasHeightForWidth());
+        gridLabel->setSizePolicy(sizePolicy3);
+        gridLabel->setMinimumSize(QSize(100, 0));
 
-        gridGroup_2->addWidget(gridLabel_2);
+        gridGroup->addWidget(gridLabel);
 
-        gridStart_2 = new QLineEdit(layoutWidget_2);
-        gridStart_2->setObjectName(QString::fromUtf8("gridStart_2"));
-        sizePolicy1.setHeightForWidth(gridStart_2->sizePolicy().hasHeightForWidth());
-        gridStart_2->setSizePolicy(sizePolicy1);
-        gridStart_2->setMinimumSize(QSize(50, 0));
-        gridStart_2->setMaximumSize(QSize(50, 16777215));
+        gridStart = new QLineEdit(layoutWidget_2);
+        gridStart->setObjectName(QString::fromUtf8("gridStart"));
+        sizePolicy1.setHeightForWidth(gridStart->sizePolicy().hasHeightForWidth());
+        gridStart->setSizePolicy(sizePolicy1);
+        gridStart->setMinimumSize(QSize(50, 0));
+        gridStart->setMaximumSize(QSize(50, 16777215));
 
-        gridGroup_2->addWidget(gridStart_2);
+        gridGroup->addWidget(gridStart);
 
-        gridStop_2 = new QLineEdit(layoutWidget_2);
-        gridStop_2->setObjectName(QString::fromUtf8("gridStop_2"));
-        sizePolicy1.setHeightForWidth(gridStop_2->sizePolicy().hasHeightForWidth());
-        gridStop_2->setSizePolicy(sizePolicy1);
-        gridStop_2->setMinimumSize(QSize(50, 0));
-        gridStop_2->setMaximumSize(QSize(50, 16777215));
+        gridStop = new QLineEdit(layoutWidget_2);
+        gridStop->setObjectName(QString::fromUtf8("gridStop"));
+        sizePolicy1.setHeightForWidth(gridStop->sizePolicy().hasHeightForWidth());
+        gridStop->setSizePolicy(sizePolicy1);
+        gridStop->setMinimumSize(QSize(50, 0));
+        gridStop->setMaximumSize(QSize(50, 16777215));
 
-        gridGroup_2->addWidget(gridStop_2);
+        gridGroup->addWidget(gridStop);
 
-        gridStep_2 = new QLineEdit(layoutWidget_2);
-        gridStep_2->setObjectName(QString::fromUtf8("gridStep_2"));
-        sizePolicy1.setHeightForWidth(gridStep_2->sizePolicy().hasHeightForWidth());
-        gridStep_2->setSizePolicy(sizePolicy1);
-        gridStep_2->setMinimumSize(QSize(50, 0));
-        gridStep_2->setMaximumSize(QSize(50, 16777215));
+        gridStep = new QLineEdit(layoutWidget_2);
+        gridStep->setObjectName(QString::fromUtf8("gridStep"));
+        sizePolicy1.setHeightForWidth(gridStep->sizePolicy().hasHeightForWidth());
+        gridStep->setSizePolicy(sizePolicy1);
+        gridStep->setMinimumSize(QSize(50, 0));
+        gridStep->setMaximumSize(QSize(50, 16777215));
 
-        gridGroup_2->addWidget(gridStep_2);
+        gridGroup->addWidget(gridStep);
 
 
-        verticalLayout_6->addLayout(gridGroup_2);
+        verticalLayout_6->addLayout(gridGroup);
 
         screenGroup_2 = new QHBoxLayout();
         screenGroup_2->setObjectName(QString::fromUtf8("screenGroup_2"));
-        screenLabel_2 = new QLabel(layoutWidget_2);
-        screenLabel_2->setObjectName(QString::fromUtf8("screenLabel_2"));
-        sizePolicy3.setHeightForWidth(screenLabel_2->sizePolicy().hasHeightForWidth());
-        screenLabel_2->setSizePolicy(sizePolicy3);
-        screenLabel_2->setMinimumSize(QSize(100, 0));
+        screenLabel = new QLabel(layoutWidget_2);
+        screenLabel->setObjectName(QString::fromUtf8("screenLabel"));
+        sizePolicy3.setHeightForWidth(screenLabel->sizePolicy().hasHeightForWidth());
+        screenLabel->setSizePolicy(sizePolicy3);
+        screenLabel->setMinimumSize(QSize(100, 0));
 
-        screenGroup_2->addWidget(screenLabel_2);
+        screenGroup_2->addWidget(screenLabel);
 
-        screenStart_2 = new QLineEdit(layoutWidget_2);
-        screenStart_2->setObjectName(QString::fromUtf8("screenStart_2"));
-        sizePolicy1.setHeightForWidth(screenStart_2->sizePolicy().hasHeightForWidth());
-        screenStart_2->setSizePolicy(sizePolicy1);
-        screenStart_2->setMinimumSize(QSize(50, 0));
-        screenStart_2->setMaximumSize(QSize(50, 16777215));
+        screenStart = new QLineEdit(layoutWidget_2);
+        screenStart->setObjectName(QString::fromUtf8("screenStart"));
+        sizePolicy1.setHeightForWidth(screenStart->sizePolicy().hasHeightForWidth());
+        screenStart->setSizePolicy(sizePolicy1);
+        screenStart->setMinimumSize(QSize(50, 0));
+        screenStart->setMaximumSize(QSize(50, 16777215));
 
-        screenGroup_2->addWidget(screenStart_2);
+        screenGroup_2->addWidget(screenStart);
 
-        screenStop_2 = new QLineEdit(layoutWidget_2);
-        screenStop_2->setObjectName(QString::fromUtf8("screenStop_2"));
-        sizePolicy1.setHeightForWidth(screenStop_2->sizePolicy().hasHeightForWidth());
-        screenStop_2->setSizePolicy(sizePolicy1);
-        screenStop_2->setMinimumSize(QSize(50, 0));
-        screenStop_2->setMaximumSize(QSize(50, 16777215));
+        screenStop = new QLineEdit(layoutWidget_2);
+        screenStop->setObjectName(QString::fromUtf8("screenStop"));
+        sizePolicy1.setHeightForWidth(screenStop->sizePolicy().hasHeightForWidth());
+        screenStop->setSizePolicy(sizePolicy1);
+        screenStop->setMinimumSize(QSize(50, 0));
+        screenStop->setMaximumSize(QSize(50, 16777215));
 
-        screenGroup_2->addWidget(screenStop_2);
+        screenGroup_2->addWidget(screenStop);
 
-        screenStep_2 = new QLineEdit(layoutWidget_2);
-        screenStep_2->setObjectName(QString::fromUtf8("screenStep_2"));
-        sizePolicy1.setHeightForWidth(screenStep_2->sizePolicy().hasHeightForWidth());
-        screenStep_2->setSizePolicy(sizePolicy1);
-        screenStep_2->setMinimumSize(QSize(50, 0));
-        screenStep_2->setMaximumSize(QSize(50, 16777215));
+        screenStep = new QLineEdit(layoutWidget_2);
+        screenStep->setObjectName(QString::fromUtf8("screenStep"));
+        sizePolicy1.setHeightForWidth(screenStep->sizePolicy().hasHeightForWidth());
+        screenStep->setSizePolicy(sizePolicy1);
+        screenStep->setMinimumSize(QSize(50, 0));
+        screenStep->setMaximumSize(QSize(50, 16777215));
 
-        screenGroup_2->addWidget(screenStep_2);
+        screenGroup_2->addWidget(screenStep);
 
 
         verticalLayout_6->addLayout(screenGroup_2);
@@ -770,14 +770,14 @@ public:
 
         horizontalLayout_31->addWidget(label_18);
 
-        iaMax_2 = new QLineEdit(layoutWidget_2);
-        iaMax_2->setObjectName(QString::fromUtf8("iaMax_2"));
-        sizePolicy1.setHeightForWidth(iaMax_2->sizePolicy().hasHeightForWidth());
-        iaMax_2->setSizePolicy(sizePolicy1);
-        iaMax_2->setMinimumSize(QSize(50, 0));
-        iaMax_2->setMaximumSize(QSize(50, 16777215));
+        iaMax = new QLineEdit(layoutWidget_2);
+        iaMax->setObjectName(QString::fromUtf8("iaMax"));
+        sizePolicy1.setHeightForWidth(iaMax->sizePolicy().hasHeightForWidth());
+        iaMax->setSizePolicy(sizePolicy1);
+        iaMax->setMinimumSize(QSize(50, 0));
+        iaMax->setMaximumSize(QSize(50, 16777215));
 
-        horizontalLayout_31->addWidget(iaMax_2);
+        horizontalLayout_31->addWidget(iaMax);
 
         horizontalSpacer_4 = new QSpacerItem(112, 20, QSizePolicy::Fixed, QSizePolicy::Minimum);
 
@@ -797,14 +797,14 @@ public:
 
         horizontalLayout_32->addWidget(label_19);
 
-        pMax_2 = new QLineEdit(layoutWidget_2);
-        pMax_2->setObjectName(QString::fromUtf8("pMax_2"));
-        sizePolicy1.setHeightForWidth(pMax_2->sizePolicy().hasHeightForWidth());
-        pMax_2->setSizePolicy(sizePolicy1);
-        pMax_2->setMinimumSize(QSize(50, 0));
-        pMax_2->setMaximumSize(QSize(50, 16777215));
+        pMax = new QLineEdit(layoutWidget_2);
+        pMax->setObjectName(QString::fromUtf8("pMax"));
+        sizePolicy1.setHeightForWidth(pMax->sizePolicy().hasHeightForWidth());
+        pMax->setSizePolicy(sizePolicy1);
+        pMax->setMinimumSize(QSize(50, 0));
+        pMax->setMaximumSize(QSize(50, 16777215));
 
-        horizontalLayout_32->addWidget(pMax_2);
+        horizontalLayout_32->addWidget(pMax);
 
         horizontalSpacer_5 = new QSpacerItem(112, 20, QSizePolicy::Fixed, QSizePolicy::Minimum);
 
@@ -820,78 +820,78 @@ public:
 
         verticalLayout_6->addItem(verticalSpacer_9);
 
-        heaterLayout_2 = new QHBoxLayout();
-        heaterLayout_2->setObjectName(QString::fromUtf8("heaterLayout_2"));
-        heaterButton_2 = new QPushButton(layoutWidget_2);
-        heaterButton_2->setObjectName(QString::fromUtf8("heaterButton_2"));
-        sizePolicy1.setHeightForWidth(heaterButton_2->sizePolicy().hasHeightForWidth());
-        heaterButton_2->setSizePolicy(sizePolicy1);
-        heaterButton_2->setMinimumSize(QSize(80, 0));
-        heaterButton_2->setCheckable(false);
+        heaterLayout = new QHBoxLayout();
+        heaterLayout->setObjectName(QString::fromUtf8("heaterLayout"));
+        heaterButton = new QPushButton(layoutWidget_2);
+        heaterButton->setObjectName(QString::fromUtf8("heaterButton"));
+        sizePolicy1.setHeightForWidth(heaterButton->sizePolicy().hasHeightForWidth());
+        heaterButton->setSizePolicy(sizePolicy1);
+        heaterButton->setMinimumSize(QSize(80, 0));
+        heaterButton->setCheckable(false);
 
-        heaterLayout_2->addWidget(heaterButton_2);
+        heaterLayout->addWidget(heaterButton);
 
         horizontalSpacer_13 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        heaterLayout_2->addItem(horizontalSpacer_13);
+        heaterLayout->addItem(horizontalSpacer_13);
 
 
-        verticalLayout_6->addLayout(heaterLayout_2);
+        verticalLayout_6->addLayout(heaterLayout);
 
         horizontalLayout_33 = new QHBoxLayout();
         horizontalLayout_33->setObjectName(QString::fromUtf8("horizontalLayout_33"));
-        heaterVLabel_2 = new QLabel(layoutWidget_2);
-        heaterVLabel_2->setObjectName(QString::fromUtf8("heaterVLabel_2"));
-        sizePolicy4.setHeightForWidth(heaterVLabel_2->sizePolicy().hasHeightForWidth());
-        heaterVLabel_2->setSizePolicy(sizePolicy4);
-        heaterVLabel_2->setMinimumSize(QSize(100, 0));
+        heaterVLabel = new QLabel(layoutWidget_2);
+        heaterVLabel->setObjectName(QString::fromUtf8("heaterVLabel"));
+        sizePolicy4.setHeightForWidth(heaterVLabel->sizePolicy().hasHeightForWidth());
+        heaterVLabel->setSizePolicy(sizePolicy4);
+        heaterVLabel->setMinimumSize(QSize(100, 0));
 
-        horizontalLayout_33->addWidget(heaterVLabel_2);
+        horizontalLayout_33->addWidget(heaterVLabel);
 
         horizontalSpacer_14 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout_33->addItem(horizontalSpacer_14);
 
-        heaterVlcd_2 = new QLCDNumber(layoutWidget_2);
-        heaterVlcd_2->setObjectName(QString::fromUtf8("heaterVlcd_2"));
+        heaterVlcd = new QLCDNumber(layoutWidget_2);
+        heaterVlcd->setObjectName(QString::fromUtf8("heaterVlcd"));
         QSizePolicy sizePolicy6(QSizePolicy::Fixed, QSizePolicy::Minimum);
         sizePolicy6.setHorizontalStretch(0);
         sizePolicy6.setVerticalStretch(0);
-        sizePolicy6.setHeightForWidth(heaterVlcd_2->sizePolicy().hasHeightForWidth());
-        heaterVlcd_2->setSizePolicy(sizePolicy6);
-        heaterVlcd_2->setMinimumSize(QSize(133, 0));
-        heaterVlcd_2->setDigitCount(6);
-        heaterVlcd_2->setSegmentStyle(QLCDNumber::Flat);
+        sizePolicy6.setHeightForWidth(heaterVlcd->sizePolicy().hasHeightForWidth());
+        heaterVlcd->setSizePolicy(sizePolicy6);
+        heaterVlcd->setMinimumSize(QSize(133, 0));
+        heaterVlcd->setDigitCount(6);
+        heaterVlcd->setSegmentStyle(QLCDNumber::Flat);
 
-        horizontalLayout_33->addWidget(heaterVlcd_2);
+        horizontalLayout_33->addWidget(heaterVlcd);
 
 
         verticalLayout_6->addLayout(horizontalLayout_33);
 
         horizontalLayout_34 = new QHBoxLayout();
         horizontalLayout_34->setObjectName(QString::fromUtf8("horizontalLayout_34"));
-        heaterILabel_2 = new QLabel(layoutWidget_2);
-        heaterILabel_2->setObjectName(QString::fromUtf8("heaterILabel_2"));
-        sizePolicy4.setHeightForWidth(heaterILabel_2->sizePolicy().hasHeightForWidth());
-        heaterILabel_2->setSizePolicy(sizePolicy4);
-        heaterILabel_2->setMinimumSize(QSize(100, 0));
+        heaterILabel = new QLabel(layoutWidget_2);
+        heaterILabel->setObjectName(QString::fromUtf8("heaterILabel"));
+        sizePolicy4.setHeightForWidth(heaterILabel->sizePolicy().hasHeightForWidth());
+        heaterILabel->setSizePolicy(sizePolicy4);
+        heaterILabel->setMinimumSize(QSize(100, 0));
 
-        horizontalLayout_34->addWidget(heaterILabel_2);
+        horizontalLayout_34->addWidget(heaterILabel);
 
         horizontalSpacer_17 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout_34->addItem(horizontalSpacer_17);
 
-        heaterIlcd_2 = new QLCDNumber(layoutWidget_2);
-        heaterIlcd_2->setObjectName(QString::fromUtf8("heaterIlcd_2"));
-        sizePolicy6.setHeightForWidth(heaterIlcd_2->sizePolicy().hasHeightForWidth());
-        heaterIlcd_2->setSizePolicy(sizePolicy6);
-        heaterIlcd_2->setMinimumSize(QSize(133, 0));
-        heaterIlcd_2->setLineWidth(1);
-        heaterIlcd_2->setDigitCount(6);
-        heaterIlcd_2->setSegmentStyle(QLCDNumber::Flat);
+        heaterIlcd = new QLCDNumber(layoutWidget_2);
+        heaterIlcd->setObjectName(QString::fromUtf8("heaterIlcd"));
+        sizePolicy6.setHeightForWidth(heaterIlcd->sizePolicy().hasHeightForWidth());
+        heaterIlcd->setSizePolicy(sizePolicy6);
+        heaterIlcd->setMinimumSize(QSize(133, 0));
+        heaterIlcd->setLineWidth(1);
+        heaterIlcd->setDigitCount(6);
+        heaterIlcd->setSegmentStyle(QLCDNumber::Flat);
 
-        horizontalLayout_34->addWidget(heaterIlcd_2);
+        horizontalLayout_34->addWidget(heaterIlcd);
 
 
         verticalLayout_6->addLayout(horizontalLayout_34);
@@ -902,11 +902,11 @@ public:
 
         horizontalLayout_35 = new QHBoxLayout();
         horizontalLayout_35->setObjectName(QString::fromUtf8("horizontalLayout_35"));
-        runButton_2 = new QPushButton(layoutWidget_2);
-        runButton_2->setObjectName(QString::fromUtf8("runButton_2"));
-        runButton_2->setCheckable(true);
+        runButton = new QPushButton(layoutWidget_2);
+        runButton->setObjectName(QString::fromUtf8("runButton"));
+        runButton->setCheckable(true);
 
-        horizontalLayout_35->addWidget(runButton_2);
+        horizontalLayout_35->addWidget(runButton);
 
         horizontalSpacer_18 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
@@ -915,12 +915,12 @@ public:
 
         verticalLayout_6->addLayout(horizontalLayout_35);
 
-        progressBar_2 = new QProgressBar(layoutWidget_2);
-        progressBar_2->setObjectName(QString::fromUtf8("progressBar_2"));
-        progressBar_2->setValue(24);
-        progressBar_2->setTextVisible(false);
+        progressBar = new QProgressBar(layoutWidget_2);
+        progressBar->setObjectName(QString::fromUtf8("progressBar"));
+        progressBar->setValue(24);
+        progressBar->setTextVisible(false);
 
-        verticalLayout_6->addWidget(progressBar_2);
+        verticalLayout_6->addWidget(progressBar);
 
         verticalSpacer_11 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
@@ -985,7 +985,7 @@ public:
 
         retranslateUi(ValveWorkbench);
 
-        tabWidget->setCurrentIndex(0);
+        tabWidget->setCurrentIndex(2);
 
 
         QMetaObject::connectSlotsByName(ValveWorkbench);
@@ -1035,15 +1035,15 @@ public:
         label_15->setText(QCoreApplication::translate("ValveWorkbench", "Start", nullptr));
         label_16->setText(QCoreApplication::translate("ValveWorkbench", "Stop", nullptr));
         label_17->setText(QCoreApplication::translate("ValveWorkbench", "Step", nullptr));
-        anodeLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Anode Voltage:", nullptr));
-        gridLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "-ve Grid Voltage:", nullptr));
-        screenLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Screen Voltage:", nullptr));
+        anodeLabel->setText(QCoreApplication::translate("ValveWorkbench", "Anode Voltage:", nullptr));
+        gridLabel->setText(QCoreApplication::translate("ValveWorkbench", "-ve Grid Voltage:", nullptr));
+        screenLabel->setText(QCoreApplication::translate("ValveWorkbench", "Screen Voltage:", nullptr));
         label_18->setText(QCoreApplication::translate("ValveWorkbench", "Max Ia (mA):", nullptr));
         label_19->setText(QCoreApplication::translate("ValveWorkbench", "Max P (W):", nullptr));
-        heaterButton_2->setText(QCoreApplication::translate("ValveWorkbench", "Heater", nullptr));
-        heaterVLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage (V)", nullptr));
-        heaterILabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (mA)", nullptr));
-        runButton_2->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
+        heaterButton->setText(QCoreApplication::translate("ValveWorkbench", "Heater", nullptr));
+        heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage (V)", nullptr));
+        heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (mA)", nullptr));
+        runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));

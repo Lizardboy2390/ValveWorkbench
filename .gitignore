@@ -11,6 +11,10 @@
 *.pro.user
 *.vcxproj.user
 
+# Generated files
+Makefile
+Makefile*.*
+
 # Precompiled Headers
 *.gch
 *.pch

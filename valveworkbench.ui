@@ -39,7 +39,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>2</number>
        </property>
        <widget class="QWidget" name="tab">
         <attribute name="title">
@@ -574,7 +574,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="deviceName_2">
+             <widget class="QLineEdit" name="deviceName">
               <property name="minimumSize">
                <size>
                 <width>160</width>
@@ -613,7 +613,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="deviceType_2">
+             <widget class="QComboBox" name="deviceType">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -646,7 +646,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="testType_2">
+             <widget class="QComboBox" name="testType">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -707,7 +707,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="heaterVoltage_2">
+             <widget class="QLineEdit" name="heaterVoltage">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -850,7 +850,7 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_30">
             <item>
-             <widget class="QLabel" name="anodeLabel_2">
+             <widget class="QLabel" name="anodeLabel">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                 <horstretch>100</horstretch>
@@ -869,7 +869,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="anodeStart_2">
+             <widget class="QLineEdit" name="anodeStart">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -891,7 +891,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="anodeStop_2">
+             <widget class="QLineEdit" name="anodeStop">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -907,7 +907,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="anodeStep_2">
+             <widget class="QLineEdit" name="anodeStep">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -925,9 +925,9 @@
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="gridGroup_2">
+           <layout class="QHBoxLayout" name="gridGroup">
             <item>
-             <widget class="QLabel" name="gridLabel_2">
+             <widget class="QLabel" name="gridLabel">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -946,7 +946,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="gridStart_2">
+             <widget class="QLineEdit" name="gridStart">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -968,7 +968,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="gridStop_2">
+             <widget class="QLineEdit" name="gridStop">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -990,7 +990,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="gridStep_2">
+             <widget class="QLineEdit" name="gridStep">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -1016,7 +1016,7 @@
           <item>
            <layout class="QHBoxLayout" name="screenGroup_2">
             <item>
-             <widget class="QLabel" name="screenLabel_2">
+             <widget class="QLabel" name="screenLabel">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -1035,7 +1035,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="screenStart_2">
+             <widget class="QLineEdit" name="screenStart">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -1057,7 +1057,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="screenStop_2">
+             <widget class="QLineEdit" name="screenStop">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -1079,7 +1079,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="screenStep_2">
+             <widget class="QLineEdit" name="screenStep">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -1132,7 +1132,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="iaMax_2">
+               <widget class="QLineEdit" name="iaMax">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -1199,7 +1199,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="pMax_2">
+               <widget class="QLineEdit" name="pMax">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -1257,9 +1257,9 @@
            </spacer>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="heaterLayout_2">
+           <layout class="QHBoxLayout" name="heaterLayout">
             <item>
-             <widget class="QPushButton" name="heaterButton_2">
+             <widget class="QPushButton" name="heaterButton">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -1298,7 +1298,7 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_33">
             <item>
-             <widget class="QLabel" name="heaterVLabel_2">
+             <widget class="QLabel" name="heaterVLabel">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -1330,7 +1330,7 @@
              </spacer>
             </item>
             <item>
-             <widget class="QLCDNumber" name="heaterVlcd_2">
+             <widget class="QLCDNumber" name="heaterVlcd">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
                 <horstretch>0</horstretch>
@@ -1356,7 +1356,7 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_34">
             <item>
-             <widget class="QLabel" name="heaterILabel_2">
+             <widget class="QLabel" name="heaterILabel">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -1388,7 +1388,7 @@
              </spacer>
             </item>
             <item>
-             <widget class="QLCDNumber" name="heaterIlcd_2">
+             <widget class="QLCDNumber" name="heaterIlcd">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
                 <horstretch>0</horstretch>
@@ -1433,7 +1433,7 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_35">
             <item>
-             <widget class="QPushButton" name="runButton_2">
+             <widget class="QPushButton" name="runButton">
               <property name="text">
                <string>Run Test</string>
               </property>
@@ -1458,7 +1458,7 @@
            </layout>
           </item>
           <item>
-           <widget class="QProgressBar" name="progressBar_2">
+           <widget class="QProgressBar" name="progressBar">
             <property name="value">
              <number>24</number>
             </property>

@@ -11,6 +11,7 @@ CONFIG += c++11
 SOURCES += \
     analyser/analyser.cpp \
     analyser/client.cpp \
+    ledindicator/ledindicator.cpp \
     main.cpp \
     preferencesdialog.cpp \
     valvemodel/data/dataset.cpp \
@@ -32,6 +33,7 @@ SOURCES += \
     valvemodel/circuit/triodeaccathodefollower.cpp \
     valvemodel/circuit/triodecommoncathode.cpp \
     valvemodel/circuit/triodedccathodefollower.cpp \
+    valvemodel/model/template.cpp \
     valvemodel/ui/uibridge.cpp \
     valvemodel/ui/plot.cpp \
     valvemodel/ui/parameter.cpp \
@@ -40,6 +42,7 @@ SOURCES += \
 HEADERS += \
     analyser/analyser.h \
     analyser/client.h \
+    ledindicator/ledindicator.h \
     preferencesdialog.h \
     valvemodel/constants.h \
     valvemodel/data/dataset.h \
@@ -61,6 +64,7 @@ HEADERS += \
     valvemodel/circuit/triodeaccathodefollower.h \
     valvemodel/circuit/triodecommoncathode.h \
     valvemodel/circuit/triodedccathodefollower.h \
+    valvemodel/model/template.h \
     valvemodel/ui/uibridge.h \
     valvemodel/ui/plot.h \
     valvemodel/ui/parameter.h \
