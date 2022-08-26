@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/meter32.png</file>
+        <file>icons/valve32.png</file>
+        <file>icons/model32.png</file>
+        <file>icons/sample32.png</file>
+        <file>icons/sweep32.png</file>
+    </qresource>
+</RCC>

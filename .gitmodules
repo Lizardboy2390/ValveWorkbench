@@ -1,0 +1,3 @@
+[submodule "valvemodel"]
+	path = valvemodel
+	url = git@github.com:olivergardiner/valvemodel.git
