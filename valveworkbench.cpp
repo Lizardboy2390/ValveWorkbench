@@ -24,7 +24,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     loadTemplate(0);
 
-    buildModelSelection();
+    //buildModelSelection();
 
     ui->runButton->setEnabled(false);
 
@@ -46,10 +46,6 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     checkComPorts();
 
     analyser = new Analyser(this, &serialPort, &timeoutTimer, &heaterTimer);
-
-
-
-    ui->setupUi(this);
 
     ui->graphicsView->setScene(plot.getScene());
 
@@ -269,7 +265,7 @@ void ValveWorkbench::testFinished()
     ui->runButton->setChecked(false);
     ui->progressBar->setVisible(false);
 
-    buildModelSelection();
+    //buildModelSelection();
 
     doPlot();
 }
@@ -304,6 +300,20 @@ void ValveWorkbench::setSerialPort(QString portName)
     serialPort.setStopBits(QSerialPort::OneStop);
     serialPort.setBaudRate(QSerialPort::Baud115200);
     serialPort.open(QSerialPort::ReadWrite);
+}
+
+void ValveWorkbench::doPlot()
+{
+    switch (testType) {
+    case ANODE_CHARACTERISTICS:
+        //plotAnode2();
+        break;
+    case TRANSFER_CHARACTERISTICS:
+        //plotTransfer();
+        break;
+    default:
+        break;
+    }
 }
 
 void ValveWorkbench::saveSamples(QString filename)
@@ -396,6 +406,23 @@ void ValveWorkbench::loadTemplate(int index)
 
     ui->testType->setCurrentIndex(tpl.getTestType());
     on_testType_currentIndexChanged(tpl.getTestType());
+}
+
+
+void ValveWorkbench::updateParameterDisplay()
+{
+    updateDoubleValue(ui->heaterVoltage, heaterVoltage);
+    updateDoubleValue(ui->anodeStart, anodeStart);
+    updateDoubleValue(ui->anodeStop, anodeStop);
+    updateDoubleValue(ui->anodeStep, anodeStep);
+    updateDoubleValue(ui->gridStart, gridStart);
+    updateDoubleValue(ui->gridStop, gridStop);
+    updateDoubleValue(ui->gridStep, gridStep);
+    updateDoubleValue(ui->screenStart, screenStart);
+    updateDoubleValue(ui->screenStop, screenStop);
+    updateDoubleValue(ui->screenStep, screenStop);
+    updateDoubleValue(ui->pMax, pMax);
+    updateDoubleValue(ui->iaMax, iaMax);
 }
 
 void ValveWorkbench::pentodeMode()
@@ -525,22 +552,22 @@ double ValveWorkbench::updateIaMax()
 // Slots
 //
 
-void ValveAnalyser::handleReadyRead()
+void ValveWorkbench::handleReadyRead()
 {
     analyser->handleReadyRead();
 }
 
-void ValveAnalyser::handleError(QSerialPort::SerialPortError error)
+void ValveWorkbench::handleError(QSerialPort::SerialPortError error)
 {
     analyser->handleError(error);
 }
 
-void ValveAnalyser::handleTimeout()
+void ValveWorkbench::handleTimeout()
 {
     analyser->handleCommandTimeout();
 }
 
-void ValveAnalyser::handleHeaterTimeout()
+void ValveWorkbench::handleHeaterTimeout()
 {
     analyser->handleHeaterTimeout();
 }
@@ -668,3 +695,170 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
         break;
     }
 }
+
+void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
+{
+    switch (ui->deviceType->itemData(index).toInt()) {
+    case PENTODE:
+        pentodeMode();
+        break;
+    case TRIODE:
+        triodeMode(index == DOUBLE_TRIODE);
+        break;
+    case DIODE:
+        diodeMode();
+        break;
+    default:
+        break;
+    }
+
+    ui->testType->setCurrentIndex(0);
+    on_testType_currentIndexChanged(0);
+}
+
+void ValveWorkbench::on_testType_currentIndexChanged(int index)
+{
+    switch (ui->testType->itemData(index).toInt()) {
+    case ANODE_CHARACTERISTICS: // Anode swept and Grid stepped
+        ui->anodeStop->setEnabled(true);
+        ui->anodeStep->setEnabled(false);
+        if (deviceType != DIODE) {
+            ui->gridStop->setEnabled(true);
+            ui->gridStep->setEnabled(true);
+        }
+        if (deviceType == PENTODE) { // Screen fixed (if Pentode)
+            ui->screenStop->setEnabled(false);
+            ui->screenStep->setEnabled(false);
+        }
+        break;
+    case TRANSFER_CHARACTERISTICS: // Grid swept
+        ui->gridStop->setEnabled(true);
+        ui->gridStep->setEnabled(false);
+        if (deviceType == PENTODE) { // Anode fixed and Screen stepped
+            ui->anodeStop->setEnabled(false);
+            ui->anodeStep->setEnabled(false);
+            ui->screenStop->setEnabled(true);
+            ui->screenStep->setEnabled(true);
+        } else { // (Triode) Anode stepped and no Screen
+            ui->anodeStop->setEnabled(true);
+            ui->anodeStep->setEnabled(true);
+        }
+        break;
+    case SCREEN_CHARACTERISTICS: // Screen fixed, Anode swept and Grid stepped
+        ui->anodeStop->setEnabled(true);
+        ui->anodeStep->setEnabled(false);
+        ui->gridStop->setEnabled(true);
+        ui->gridStep->setEnabled(true);
+        ui->screenStop->setEnabled(false);
+        ui->screenStep->setEnabled(false);
+        break;
+    default:
+        break;
+    }
+
+    testType = ui->testType->itemData(index).toInt();
+}
+
+void ValveWorkbench::on_anodeStart_editingFinished()
+{
+    anodeStart = updateVoltage(ui->anodeStart, anodeStart, ANODE);
+}
+
+void ValveWorkbench::on_anodeStop_editingFinished()
+{
+    anodeStop = updateVoltage(ui->anodeStop, anodeStop, ANODE);
+}
+
+void ValveWorkbench::on_anodeStep_editingFinished()
+{
+    anodeStep = updateVoltage(ui->anodeStep, anodeStep, ANODE);
+}
+
+void ValveWorkbench::on_gridStart_editingFinished()
+{
+    gridStart = updateVoltage(ui->gridStart, gridStart, GRID);
+}
+
+void ValveWorkbench::on_gridStop_editingFinished()
+{
+    gridStop = updateVoltage(ui->gridStop, gridStop, GRID);
+}
+
+void ValveWorkbench::on_gridStep_editingFinished()
+{
+    gridStep = updateVoltage(ui->gridStep, gridStep, GRID);
+}
+
+void ValveWorkbench::on_screenStart_editingFinished()
+{
+    screenStart = updateVoltage(ui->screenStart, screenStart, SCREEN);
+}
+
+void ValveWorkbench::on_screenStop_editingFinished()
+{
+    screenStop = updateVoltage(ui->screenStop, screenStop, SCREEN);
+}
+
+void ValveWorkbench::on_screenStep_editingFinished()
+{
+    screenStep = updateVoltage(ui->screenStep, screenStep, SCREEN);
+}
+
+void ValveWorkbench::on_heaterVoltage_editingFinished()
+{
+    heaterVoltage = updateVoltage(ui->heaterVoltage, heaterVoltage, HEATER);
+}
+
+void ValveWorkbench::on_iaMax_editingFinished()
+{
+    updateIaMax();
+}
+
+
+void ValveWorkbench::on_pMax_editingFinished()
+{
+    updatePMax();
+}
+
+void ValveWorkbench::on_actionOptions_triggered()
+{
+    PreferencesDialog dialog;
+
+    dialog.setPort(port);
+
+    if (dialog.exec() == 1) {
+        setSerialPort(dialog.getPort());
+
+        analyser->reset();
+    }
+}
+
+void ValveWorkbench::on_heaterButton_clicked()
+{
+    heaters = !heaters;
+
+    heaterIndicator->setState(heaters);
+    ui->runButton->setEnabled(heaters);
+    analyser->setHeaterVoltage(heaterVoltage);
+    analyser->setIsHeatersOn(heaters);
+}
+
+void ValveWorkbench::on_runButton_clicked()
+{
+    if (heaters) {
+        ui->runButton->setChecked(true);
+        ui->progressBar->reset();
+        ui->progressBar->setVisible(true);
+
+        analyser->setDeviceType(deviceType);
+        analyser->setTestType(testType);
+        analyser->setPMax(pMax);
+        analyser->setIaMax(iaMax);
+        analyser->setSweepParameters(anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep);
+
+        analyser->startTest();
+    } else {
+        ui->runButton->setChecked(false);
+    }
+}
+

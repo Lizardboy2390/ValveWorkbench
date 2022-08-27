@@ -18,6 +18,8 @@
 #include "analyser/analyser.h"
 #include "analyser/client.h"
 
+#include "preferencesdialog.h"
+
 #include "ledindicator/ledindicator.h"
 
 QT_BEGIN_NAMESPACE
@@ -113,9 +115,6 @@ private slots:
 
     void on_pMax_editingFinished();
 
-    void on_modelSelection_currentIndexChanged(int index);
-
-
 private:
     Ui::ValveWorkbench *ui;
 
@@ -179,7 +178,7 @@ private:
 
     void readConfig(QString filename);
 
-    void buildModelSelection();
+    //void buildModelSelection();
     void buildCircuitParameters();
     void buildCircuitSelection();
     void buildStdDeviceSelection();
@@ -202,4 +201,6 @@ private:
     double updateVoltage(QLineEdit *input, double oldValue, int electrode);
     double updatePMax();
     double updateIaMax();
+    void updateParameterDisplay();
+    void doPlot();
 };

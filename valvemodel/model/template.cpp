@@ -1,5 +1,5 @@
 #include "template.h"
-#include "valveanalyser.h"
+#include "../constants.h"
 
 Template::Template()
 {
