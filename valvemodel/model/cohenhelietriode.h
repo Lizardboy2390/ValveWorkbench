@@ -14,7 +14,9 @@ public:
     virtual void updateUI(QLabel *labels[], QLineEdit *values[]);
     virtual QString getName();
 
+    virtual void updateProperties(QTableWidget *properties);
+
 protected:
 	void setOptions();
-    double cohenHelieCurrent(double va, double vg, double kp, double kvb, double kvb2, double vct, double a, double mu);
+    double cohenHelieCurrent(double va, double vg, double kg1, double kp, double kvb, double kvb2, double vct, double a, double mu);
 };

@@ -16,13 +16,9 @@ public:
 
     void addSample(Sample *sample);
 
-    void nextSweep();
+    void nextSweep(double v1Nominal, double v2Nominal = 0.0);
 
     QList<QGraphicsItem *> *plot(Plot *plot);
-
-    void setDeviceType(int newDeviceType);
-
-    void setTestType(int newTestType);
 
     virtual void fromJson(QJsonObject source);
     virtual void toJson(QJsonObject &destination);
@@ -37,7 +33,9 @@ public:
     virtual void updatePlot(Plot *plot);
 
     int getDeviceType() const;
+    void setDeviceType(int newDeviceType);
     int getTestType() const;
+    void setTestType(int newTestType);
     double getHeaterVoltage() const;
     void setHeaterVoltage(double newHeaterVoltage);
     double getAnodeStart() const;
@@ -62,6 +60,9 @@ public:
     void setIaMax(double newIaMax);
     double getPMax() const;
     void setPMax(double newPMax);
+
+    Sweep *at(int i);
+    int count();
 
 protected:
     int deviceType = TRIODE;
@@ -90,6 +91,10 @@ protected:
 
     void anodeAxes(Plot *plot);
     QList<QGraphicsItem *> *plotTriodeAnode(Plot *plot);
+    QList<QGraphicsItem *> *plotTriodeTransfer(Plot *plot);
+    QList<QGraphicsItem *> *plotPentodeAnode(Plot *plot);
+    QList<QGraphicsItem *> *plotPentodeTransfer(Plot *plot);
+    QList<QGraphicsItem *> *plotPentodeScreen(Plot *plot);
     double interval(double maxValue);
 };
 

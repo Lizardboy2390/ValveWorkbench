@@ -1,12 +1,12 @@
-#ifndef GARDINERTRIODE_H
-#define GARDINERTRIODE_H
+#ifndef COHENHELIEPENTODE_H
+#define COHENHELIEPENTODE_H
 
-#include "model.h"
+#include "cohenhelietriode.h"
 
-class GardinerTriode : public Model
+class CohenHeliePentode : public CohenHelieTriode
 {
 public:
-    GardinerTriode();
+    CohenHeliePentode(int newType = COHEN_HELIE_PENTODE);
 
     virtual void addSample(double va, double ia, double vg1, double vg2 = 0.0);
     virtual double anodeCurrent(double va, double vg1, double vg2 = 0.0);
@@ -15,14 +15,13 @@ public:
     virtual void updateUI(QLabel *labels[], QLineEdit *values[]);
     virtual QString getName();
 
-    void setKg(double kg);
-    void setMu(double kg);
-    void setAlpha(double kg);
-    void setVct(double kg);
+    virtual void updateProperties(QTableWidget *properties);
+
+    int getType() const;
+    void setType(int newType);
 
 protected:
-    void setOptions();
-    double gardinerCurrent(double va, double vg, double kg, double kvb, double kvb2, double vct, double a, double mu);
+    int type;
 };
 
-#endif // GARDINERTRIODE_H
+#endif // COHENHELIEPENTODE_H

@@ -25,5 +25,6 @@ enum eItemType {
     TYP_MEASUREMENT,
     TYP_SWEEP,
     TYP_SAMPLE,
+    TYP_ESTIMATE,
     TYP_MODEL
 };

@@ -5,6 +5,27 @@ UIBridge::UIBridge()
 
 }
 
+void UIBridge::updateProperties(QTableWidget *properties)
+{
+    properties->clear();
+}
+
+void UIBridge::clearProperties(QTableWidget *properties)
+{
+    int count = properties->rowCount();
+    for (int i = 0; i < count; i++) {
+        properties->removeRow(0);
+    }
+}
+
+void UIBridge::addProperty(QTableWidget *properties, QString label, QString value)
+{
+    int row = properties->rowCount();
+    properties->insertRow(row);
+    properties->setItem(row, 0, new QTableWidgetItem(label));
+    properties->setItem(row, 1, new QTableWidgetItem(value));
+}
+
 void UIBridge::updateParameter(QLabel *uiLabel, QLineEdit *uiValue, QString label, double value)
 {
     uiLabel->setText(label);

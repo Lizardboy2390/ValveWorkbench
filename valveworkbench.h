@@ -9,8 +9,10 @@
 #include <QSerialPortInfo>
 #include <QTimer>
 
-#include "valvemodel/data/measurement.h"
+#include "valvemodel/data/project.h"
+#include "valvemodel/model/estimate.h"
 #include "valvemodel/model/device.h"
+#include "valvemodel/model/modelfactory.h"
 #include "valvemodel/circuit/circuit.h"
 #include "valvemodel/ui/plot.h"
 #include "valvemodel/model/template.h"
@@ -115,6 +117,14 @@ private slots:
 
     void on_pMax_editingFinished();
 
+    void on_btnSaveMeasurement_clicked();
+
+    void on_btnAddToProject_clicked();
+
+    void on_estimateButton_clicked();
+
+    void on_fitButton_clicked();
+
 private:
     Ui::ValveWorkbench *ui;
 
@@ -127,8 +137,10 @@ private:
 
     // Non-UI related member variables
     QList<Device *> devices;
-    Device* currentDevice = nullptr;
-    Device* customDevice = nullptr;
+    Device *currentDevice = nullptr;
+    Device *customDevice = nullptr;
+
+    QTreeWidgetItem *currentProject = nullptr;
 
     QList<Circuit *> circuits;
     QTreeWidgetItem *projectTree;
@@ -203,4 +215,5 @@ private:
     double updateIaMax();
     void updateParameterDisplay();
     void doPlot();
+    QTreeWidgetItem *getProject(QTreeWidgetItem *current);
 };

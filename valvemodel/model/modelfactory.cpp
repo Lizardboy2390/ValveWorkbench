@@ -9,13 +9,11 @@ Model *ModelFactory::createModel(int modelType)
         return new KorenTriode();
     case COHEN_HELIE_TRIODE:
         return new CohenHelieTriode();
-    case GARDINER_TRIODE:
-        return new GardinerTriode();
-    case GARDINER_PENTODE:
+    case COHEN_HELIE_PENTODE:
     case BEAM_TETRODE:
     case SECONDARY_EMISSION_PENTODE:
     case SECONDARY_EMISSION_BEAM_TETRODE:
-        return new GardinerPentode(modelType);
+        return new CohenHeliePentode(modelType);
     }
 
     return nullptr;

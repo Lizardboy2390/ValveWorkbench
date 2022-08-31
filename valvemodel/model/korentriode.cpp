@@ -4,9 +4,9 @@ struct KorenTriodeResidual {
     KorenTriodeResidual(double va, double vg, double ia) : va_(va), vg_(vg), ia_(ia) {}
 
     template <typename T>
-    bool operator()(const T* const kg, const T* const kp, const T* const kvb, const T* const a, const T* const mu, T* residual) const {
+    bool operator()(const T* const kg, const T* const kp, const T* const kvb, const T* const x, const T* const mu, T* residual) const {
         T e1t = log(1.0 + exp(kp[0] * (1.0 / mu[0] + vg_ / sqrt(kvb[0] + va_ * va_))));
-        T ia = pow((va_ / kp[0]) * e1t, a[0]) / kg[0];
+        T ia = pow((va_ / kp[0]) * e1t, x[0]) / kg[0];
         residual[0] = ia_ - ia;
         return !(isnan(ia) || isinf(ia));
     }
@@ -90,6 +90,11 @@ void KorenTriode::updateUI(QLabel *labels[], QLineEdit *values[])
 QString KorenTriode::getName()
 {
     return QString("Koren");
+}
+
+void KorenTriode::updateProperties(QTableWidget *properties)
+{
+
 }
 
 void KorenTriode::setOptions()

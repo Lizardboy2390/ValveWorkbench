@@ -10,7 +10,9 @@
 
 enum eSweepType {
     SWEEP_TRIODE_ANODE,
+    SWEEP_TRIODE_GRID,
     SWEEP_PENTODE_ANODE,
+    SWEEP_PENTODE_GRID,
     SWEEP_PENTODE_SCREEN
 };
 
@@ -18,7 +20,7 @@ class Sweep : DataSet
 {
 public:
     Sweep(eSweepType type);
-    Sweep(int deviceType, int testType);
+    Sweep(int deviceType, int testType, double v1Nominal = 0.0, double v2Nominal = 0.0);
 
     void addSample(Sample *sample);
     int count();

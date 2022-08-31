@@ -2,6 +2,8 @@
 #define PROJECT_H
 
 #include "measurement.h"
+#include "../model/estimate.h"
+#include "../model/model.h"
 
 class Project : DataSet
 {
@@ -17,9 +19,23 @@ public:
 
     virtual void updatePlot(Plot *plot);
 
+    int getDeviceType() const;
+    void setDeviceType(int newDeviceType);
+
+    const QString &getName() const;
+    void setName(const QString &newName);
+
+    bool addMeasurement(Measurement *measurement);
+    bool addEstimate(Estimate *estimate);
+    bool addModel(Model *model);
+
 protected:
     int deviceType;
     QString name;
+
+    QList<Measurement *> measurements;
+    QList<Estimate *> estimates;
+    QList<Model *> models;
 };
 
 #endif // PROJECT_H

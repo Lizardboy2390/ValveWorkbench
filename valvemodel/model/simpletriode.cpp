@@ -4,12 +4,12 @@ struct SimpleTriodeResidual {
     SimpleTriodeResidual(double va, double vg, double ia) : va_(va), vg_(vg), ia_(ia) {}
 
     template <typename T>
-    bool operator()(const T* const kg, const T* const vct, const T* const a, const T* const mu, T* residual) const {
+    bool operator()(const T* const kg, const T* const vct, const T* const x, const T* const mu, T* residual) const {
         T e1t = va_ / mu[0] + vg_ + vct[0];
         if (e1t < 0.0) {
             e1t = mu[0] - mu[0];
         }
-        T ia = pow(e1t, a[0]) / kg[0];
+        T ia = pow(e1t, x[0]) / kg[0];
         residual[0] = ia_ - ia;
         return !(isnan(ia) || isinf(ia));
     }
@@ -24,7 +24,7 @@ SimpleTriode::SimpleTriode()
 {
     parameter[PAR_KG1] = new Parameter("Kg:", 0.7);
     parameter[PAR_VCT] = new Parameter("Vct:", 0.1);
-    parameter[PAR_X] = new Parameter("Alpha:", 1.5);
+    parameter[PAR_X] = new Parameter("X:", 1.5);
     parameter[PAR_MU] = new Parameter("Mu:", 100.0);
 }
 
@@ -54,16 +54,16 @@ double SimpleTriode::anodeCurrent(double va, double vg1, double vg2)
 
 void SimpleTriode::fromJson(QJsonObject source)
 {
-    if (source.contains("kg") && source["kg"].isDouble()) {
-        parameter[PAR_KG1]->setValue(source["kg"].toDouble());
+    if (source.contains("kg1") && source["kg1"].isDouble()) {
+        parameter[PAR_KG1]->setValue(source["kg1"].toDouble());
     }
 
     if (source.contains("mu") && source["mu"].isDouble()) {
         parameter[PAR_MU]->setValue(source["mu"].toDouble());
     }
 
-    if (source.contains("alpha") && source["alpha"].isDouble()) {
-        parameter[PAR_X]->setValue(source["alpha"].toDouble());
+    if (source.contains("x") && source["x"].isDouble()) {
+        parameter[PAR_X]->setValue(source["x"].toDouble());
     }
 
     if (source.contains("vct") && source["vct"].isDouble()) {
@@ -74,9 +74,9 @@ void SimpleTriode::fromJson(QJsonObject source)
 void SimpleTriode::toJson(QJsonObject &destination, double vg1Max, double vg2Max)
 {
     QJsonObject model;
-    model["kg"] = parameter[PAR_KG1]->getValue();
+    model["kg1"] = parameter[PAR_KG1]->getValue();
     model["mu"] = parameter[PAR_MU]->getValue();
-    model["alpha"] = parameter[PAR_X]->getValue();
+    model["x"] = parameter[PAR_X]->getValue();
     model["vct"] = parameter[PAR_VCT]->getValue();
 
     QJsonObject triode;
@@ -99,6 +99,11 @@ void SimpleTriode::updateUI(QLabel *labels[], QLineEdit *values[])
 QString SimpleTriode::getName()
 {
     return QString("Simple");
+}
+
+void SimpleTriode::updateProperties(QTableWidget *properties)
+{
+
 }
 
 void SimpleTriode::setKg(double kg)

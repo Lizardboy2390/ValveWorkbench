@@ -59,8 +59,6 @@ public:
 
     double getMeasuredIg2Max() const;
 
-    const QList<QList<Sample *> > *getSweepResult() const;
-
     Measurement *getResult();
 
     bool getIsDataSetValid() const;
@@ -112,14 +110,12 @@ private:
     QString stepCommandPrefix;
     QString sweepCommandPrefix;
 
-    Measurement result;
-    QList<QList <Sample *>> sweepResult;
-    QList<Sample *> *currentSweep;
-    int setupIndex;
+    Measurement *result;
 
     int deviceType = TRIODE;
     int testType = ANODE_CHARACTERISTICS;
 
+    QList<double> stepValue;
     QList<int> stepParameter;
     QList<QList <int>> sweepParameter;
     int stepIndex;
@@ -127,6 +123,8 @@ private:
     int stepType;
     int sweepType;
     int sweepPoints = 40;
+
+    int sampleCount = 0;
 
     bool isHeatersOn = false;
     bool isStopRequested = false;

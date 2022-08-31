@@ -3,6 +3,7 @@
 
 #include <QJsonObject>
 #include <QString>
+#include <QFile>
 
 #include "ceres/ceres.h"
 #include "glog/logging.h"
@@ -27,6 +28,9 @@ public:
     double getC() const;
 
 protected:
+    QList<double> xs;
+    QList<double> ys;
+
     double a;
     double b;
     double c;

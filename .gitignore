@@ -9,6 +9,8 @@
 
 # Log files
 *.log
+*.csv
+*.xlsx
 
 # User project files
 *.pro.user

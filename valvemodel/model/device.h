@@ -19,8 +19,7 @@
 #include "simpletriode.h"
 #include "korentriode.h"
 #include "cohenhelietriode.h"
-#include "gardinertriode.h"
-#include "gardinerpentode.h"
+#include "cohenheliepentode.h"
 
 enum eModelDeviceType {
     MODEL_TRIODE,
@@ -71,6 +70,8 @@ public:
     void setDeviceType(int newDeviceType);
 
     QString getName();
+
+    virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
 
 private:
     int deviceType = MODEL_TRIODE;

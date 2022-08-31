@@ -264,10 +264,10 @@ void ValveWorkbench::testFinished()
 {
     ui->runButton->setChecked(false);
     ui->progressBar->setVisible(false);
+    ui->btnSaveMeasurement->setEnabled(true);
+    ui->btnAddToProject->setEnabled(true);
 
-    //buildModelSelection();
-
-    doPlot();
+    analyser->getResult()->updatePlot(&plot);
 }
 
 void ValveWorkbench::testAborted()
@@ -282,10 +282,13 @@ void ValveWorkbench::checkComPorts() {
     for (const QSerialPortInfo &serialPortInfo : serialPorts) {
         if (serialPortInfo.vendorIdentifier() == 0x1a86 && serialPortInfo.productIdentifier() == 0x7523) {
             port = serialPortInfo.portName();
+
+            setSerialPort(port);
+            return;
         }
     }
 
-    setSerialPort(port);
+    ui->tab_3->setEnabled(false);
 }
 
 void ValveWorkbench::setSerialPort(QString portName)
@@ -294,26 +297,19 @@ void ValveWorkbench::setSerialPort(QString portName)
         serialPort.close();
     }
 
+    if (portName == "") {
+        ui->tab_3->setEnabled(false);
+        return;
+    }
+
     serialPort.setPortName(portName);
     serialPort.setDataBits(QSerialPort::Data8);
     serialPort.setParity(QSerialPort::NoParity);
     serialPort.setStopBits(QSerialPort::OneStop);
     serialPort.setBaudRate(QSerialPort::Baud115200);
     serialPort.open(QSerialPort::ReadWrite);
-}
 
-void ValveWorkbench::doPlot()
-{
-    switch (testType) {
-    case ANODE_CHARACTERISTICS:
-        //plotAnode2();
-        break;
-    case TRANSFER_CHARACTERISTICS:
-        //plotTransfer();
-        break;
-    default:
-        break;
-    }
+    ui->tab_3->setEnabled(true);
 }
 
 void ValveWorkbench::saveSamples(QString filename)
@@ -653,16 +649,16 @@ void ValveWorkbench::on_cir7Value_editingFinished()
 
 void ValveWorkbench::on_actionNew_Project_triggered()
 {
-    QTreeWidgetItem *project = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
-    project->setText(0, "New project");
-    project->setIcon(0, QIcon(":/icons/valve32.png"));
-    project->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+    currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
+    currentProject->setText(0, "New project");
+    currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
+    currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+    currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) new Project()));
 }
 
 void ValveWorkbench::on_actionLoad_Measurement_triggered()
 {
-    QTreeWidgetItem *currentItem = ui->projectTree->currentItem();
-    if (currentItem->type() == TYP_PROJECT) {
+    if (currentProject != nullptr) {
         QString measurementlName = QFileDialog::getOpenFileName(this, "Open measurement", "", "*.json");
 
         if (measurementlName.isNull()) {
@@ -677,23 +673,63 @@ void ValveWorkbench::on_actionLoad_Measurement_triggered()
             QByteArray measurementData = measurementFile.readAll();
             Measurement *measurement = new Measurement();
             measurement->fromJson(QJsonDocument::fromJson(measurementData).object());
-            measurement->buildTree(currentItem);
+            measurement->buildTree(currentProject);
+            Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+            project->addMeasurement(measurement);
         }
     }
 }
 
-
 void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
+    ui->estimateButton->setEnabled(false);
+    ui->fitButton->setEnabled(false);
+
+    void *data = current->data(0, Qt::UserRole).value<void *>();
+
     switch(current->type()) {
     case TYP_PROJECT:
+        currentProject = current;
         break;
-    default:
-        DataSet *dataSet = (DataSet *) current->data(0, Qt::UserRole).value<void *>();
-        dataSet->updateProperties(ui->properties);
-        dataSet->updatePlot(&plot);
-        break;
+    case TYP_MEASUREMENT:
+        ui->estimateButton->setEnabled(true);
+        ui->fitButton->setEnabled(true);
+    case TYP_SWEEP:
+    case TYP_SAMPLE: {
+            currentProject = getProject(current);
+            DataSet *dataSet = (DataSet *) data;
+            dataSet->updateProperties(ui->properties);
+            dataSet->updatePlot(&plot);
+            break;
+        }
+    case TYP_ESTIMATE: {
+            currentProject = getProject(current);
+            Estimate *estimate = (Estimate *) data;
+            estimate->updateProperties(ui->properties);
+            break;
+        }
+    case TYP_MODEL: {
+            currentProject = getProject(current);
+            Model *model = (Model *) data;
+            model->updateProperties(ui->properties);
+            break;
+        }
     }
+}
+
+QTreeWidgetItem *ValveWorkbench::getProject(QTreeWidgetItem *current)
+{
+    QTreeWidgetItem *parent = current->parent();
+    if (parent != nullptr) {
+        if (parent->type() == TYP_PROJECT) {
+            //return (Project *) parent->data(0, Qt::UserRole).value<void *>();
+            return parent;
+        } else {
+            return getProject(parent);
+        }
+    }
+
+    return nullptr;
 }
 
 void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
@@ -744,12 +780,12 @@ void ValveWorkbench::on_testType_currentIndexChanged(int index)
             ui->anodeStep->setEnabled(true);
         }
         break;
-    case SCREEN_CHARACTERISTICS: // Screen fixed, Anode swept and Grid stepped
-        ui->anodeStop->setEnabled(true);
+    case SCREEN_CHARACTERISTICS: // Anode fixed, Screen swept and Grid stepped
+        ui->anodeStop->setEnabled(false);
         ui->anodeStep->setEnabled(false);
         ui->gridStop->setEnabled(true);
         ui->gridStep->setEnabled(true);
-        ui->screenStop->setEnabled(false);
+        ui->screenStop->setEnabled(true);
         ui->screenStep->setEnabled(false);
         break;
     default:
@@ -849,6 +885,8 @@ void ValveWorkbench::on_runButton_clicked()
         ui->runButton->setChecked(true);
         ui->progressBar->reset();
         ui->progressBar->setVisible(true);
+        ui->btnSaveMeasurement->setEnabled(false);
+        ui->btnAddToProject->setEnabled(false);
 
         analyser->setDeviceType(deviceType);
         analyser->setTestType(testType);
@@ -859,6 +897,76 @@ void ValveWorkbench::on_runButton_clicked()
         analyser->startTest();
     } else {
         ui->runButton->setChecked(false);
+    }
+}
+
+void ValveWorkbench::on_btnSaveMeasurement_clicked()
+{
+
+}
+
+void ValveWorkbench::on_btnAddToProject_clicked()
+{
+    if (currentProject == nullptr) {
+        on_actionNew_Project_triggered();
+    }
+
+    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+    Measurement *measurement = analyser->getResult();
+    if (project->addMeasurement(measurement)) {
+        measurement->buildTree(currentProject);
+        ui->tabWidget->setCurrentWidget(ui->tab_2);
+    }
+
+    ui->btnAddToProject->setEnabled(false);
+}
+
+
+void ValveWorkbench::on_estimateButton_clicked()
+{
+    Measurement *measurement = (Measurement *) ui->projectTree->currentItem()->data(0, Qt::UserRole).value<void *>();
+    if (measurement->getDeviceType() == TRIODE && measurement->getTestType() == ANODE_CHARACTERISTICS) {
+        Estimate *estimate = new Estimate();
+        estimate->estimate(measurement);
+
+        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+        estimate->buildTree(currentProject);
+        project->addEstimate(estimate);
+    }
+}
+
+
+void ValveWorkbench::on_fitButton_clicked()
+{
+    QList<QTreeWidgetItem *> items = ui->projectTree->selectedItems();
+
+    QList<Measurement *> measurements;
+    Estimate *estimate = new Estimate(); // If no Estimate is selected then default values will be used
+
+    int estimates = 0;
+    bool selectionValid = true;
+    for (int i = 0; i < items.count(); i++) {
+        QTreeWidgetItem *item = items.at(i);
+
+        if (item->type() == TYP_MEASUREMENT) {
+            measurements.append((Measurement *)item->data(0, Qt::UserRole).value<void *>());
+        } else if (item->type() == TYP_ESTIMATE) {
+            estimate = (Estimate *)item->data(0, Qt::UserRole).value<void *>();
+            estimates++;
+        } else { // If anything else is selected then it's not valid for fitting
+            selectionValid = false;
+        }
+
+        if (selectionValid && estimates < 2 && measurements.count() > 0) {
+            Model *model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
+            model->setEstimate(estimate);
+            model->addMeasurements(&measurements);
+            model->solve();
+
+            Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+            project->addModel(model);
+            model->buildTree(currentProject);
+        }
     }
 }
 

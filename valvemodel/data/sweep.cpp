@@ -5,17 +5,35 @@ Sweep::Sweep(eSweepType type_) : type(type_)
 
 }
 
-Sweep::Sweep(int deviceType, int testType)
+Sweep::Sweep(int deviceType, int testType, double v1Nominal, double v2Nominal)
 {
     if (deviceType == TRIODE) {
-        type = SWEEP_TRIODE_ANODE;
+        switch (testType) {
+        case ANODE_CHARACTERISTICS:
+            type = SWEEP_TRIODE_ANODE;
+            vg1Nominal = v1Nominal;
+            break;
+        case TRANSFER_CHARACTERISTICS:
+            type = SWEEP_TRIODE_GRID;
+            vaNominal = v1Nominal;
+            break;
+        }
     } else {
         switch (testType) {
         case ANODE_CHARACTERISTICS:
             type = SWEEP_PENTODE_ANODE;
+            vg1Nominal = v1Nominal;
+            vg2Nominal = v2Nominal;
+            break;
+        case TRANSFER_CHARACTERISTICS:
+            type = SWEEP_PENTODE_GRID;
+            vg2Nominal = v1Nominal;
+            vaNominal = v2Nominal;
             break;
         case SCREEN_CHARACTERISTICS:
             type = SWEEP_PENTODE_SCREEN;
+            vg1Nominal = v1Nominal;
+            vaNominal = v2Nominal;
             break;
         }
     }
@@ -44,6 +62,11 @@ void Sweep::fromJson(QJsonObject source)
             vg1Nominal = source["vg1Nominal"].toDouble();
         }
         break;
+    case SWEEP_TRIODE_GRID:
+        if (source.contains("vaNominal") && source["vaNominal"].isDouble()) {
+            vaNominal = source["vaNominal"].toDouble();
+        }
+        break;
     case SWEEP_PENTODE_ANODE:
         if (source.contains("vg1Nominal") && source["vg1Nominal"].isDouble()) {
             vg1Nominal = source["vg1Nominal"].toDouble();
@@ -51,6 +74,15 @@ void Sweep::fromJson(QJsonObject source)
 
         if (source.contains("vg2Nominal") && source["vg2Nominal"].isDouble()) {
             vg2Nominal = source["vg2Nominal"].toDouble();
+        }
+        break;
+    case SWEEP_PENTODE_GRID:
+        if (source.contains("vg2Nominal") && source["vg2Nominal"].isDouble()) {
+            vg2Nominal = source["vg2Nominal"].toDouble();
+        }
+
+        if (source.contains("vaNominal") && source["vaNominal"].isDouble()) {
+            vaNominal = source["vaNominal"].toDouble();
         }
         break;
     case SWEEP_PENTODE_SCREEN:
@@ -85,9 +117,16 @@ void Sweep::toJson(QJsonObject &destination)
     case SWEEP_TRIODE_ANODE:
         destination["vg1Nominal"] = vg1Nominal;
         break;
+    case SWEEP_TRIODE_GRID:
+        destination["vaNominal"] = vaNominal;
+        break;
     case SWEEP_PENTODE_ANODE:
         destination["vg1Nominal"] = vg1Nominal;
         destination["vg2Nominal"] = vg2Nominal;
+        break;
+    case SWEEP_PENTODE_GRID:
+        destination["vg2Nominal"] = vg2Nominal;
+        destination["vaNominal"] = vaNominal;
         break;
     case SWEEP_PENTODE_SCREEN:
         destination["vg1Nominal"] = vg1Nominal;

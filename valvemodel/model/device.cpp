@@ -43,12 +43,6 @@ Device::Device(QJsonDocument modelDocument)
                 vg1Max = triode["vg1Max"].toDouble();
             }
 
-            if (triode.contains("gardiner") && triode["gardiner"].isObject()) {
-                Model *newModel = new GardinerTriode();
-                newModel->fromJson(triode["gardiner"].toObject());
-                models.append(newModel);
-            }
-
             if (triode.contains("cohenHelie") && triode["cohenHelie"].isObject()) {
                 Model *newModel = new CohenHelieTriode();
                 newModel->fromJson(triode["cohenHelie"].toObject());
@@ -216,6 +210,11 @@ void Device::setDeviceType(int newDeviceType)
 QString Device::getName()
 {
     return name;
+}
+
+QTreeWidgetItem *Device::buildTree(QTreeWidgetItem *parent)
+{
+    return nullptr;
 }
 
 int Device::getModelType() const

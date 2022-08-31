@@ -2,12 +2,12 @@
 
 Measurement::Measurement()
 {
+    reset();
 }
 
 void Measurement::reset()
 {
     sweeps.clear();
-    nextSweep();
 }
 
 void Measurement::addSweep(Sweep *sweep)
@@ -20,9 +20,9 @@ void Measurement::addSample(Sample *sample)
     currentSweep->addSample(sample);
 }
 
-void Measurement::nextSweep()
+void Measurement::nextSweep(double v1Nominal, double v2Nominal)
 {
-    currentSweep = new Sweep(deviceType, testType);
+    currentSweep = new Sweep(deviceType, testType, v1Nominal, v2Nominal);
     addSweep(currentSweep);
 }
 
@@ -45,10 +45,10 @@ void Measurement::fromJson(QJsonObject source)
         QString sTestType = source["testType"].toString();
         if (sTestType == "anodeCharacteristics") {
             testType = ANODE_CHARACTERISTICS;
-            sweepType = SWEEP_TRIODE_ANODE;
-        } else {
-            testType = ANODE_CHARACTERISTICS;
-            sweepType = SWEEP_TRIODE_ANODE;
+        } else if (sTestType == "transferCharacteristics") {
+            testType = TRANSFER_CHARACTERISTICS;
+        } else if (sTestType == "screenCharacteristics") {
+            testType = SCREEN_CHARACTERISTICS;
         }
     }
 
@@ -104,7 +104,7 @@ void Measurement::fromJson(QJsonObject source)
         QJsonArray jsonSweeps = source["sweeps"].toArray();
         for (int i = 0; i < jsonSweeps.size(); i++) {
             if (jsonSweeps.at(i).isObject()) {
-                Sweep *sweep = new Sweep(sweepType);
+                Sweep *sweep = new Sweep(deviceType, testType);
                 sweep->fromJson(jsonSweeps.at(i).toObject());
                 sweeps.append(sweep);
             }
@@ -213,9 +213,23 @@ void Measurement::updateProperties(QTableWidget *properties)
 
 void Measurement::updatePlot(Plot *plot)
 {
-    anodeAxes(plot);
-
-    plotTriodeAnode(plot);
+    if (deviceType == TRIODE) {
+        if (testType == ANODE_CHARACTERISTICS) {
+            anodeAxes(plot);
+            plotTriodeAnode(plot);
+        } else if (testType == TRANSFER_CHARACTERISTICS) {
+            plotTriodeTransfer(plot);
+        }
+    } else if (deviceType == PENTODE) {
+        if (testType == ANODE_CHARACTERISTICS) {
+            anodeAxes(plot);
+            plotPentodeAnode(plot);
+        } else if (testType == TRANSFER_CHARACTERISTICS) {
+            plotPentodeTransfer(plot);
+        } else if (testType == SCREEN_CHARACTERISTICS) {
+            plotPentodeScreen(plot);
+        }
+    }
 }
 
 int Measurement::getDeviceType() const
@@ -223,9 +237,19 @@ int Measurement::getDeviceType() const
     return deviceType;
 }
 
+void Measurement::setDeviceType(int newDeviceType)
+{
+    deviceType = newDeviceType;
+}
+
 int Measurement::getTestType() const
 {
     return testType;
+}
+
+void Measurement::setTestType(int newTestType)
+{
+    testType = newTestType;
 }
 
 double Measurement::getHeaterVoltage() const
@@ -348,6 +372,16 @@ void Measurement::setPMax(double newPMax)
     pMax = newPMax;
 }
 
+Sweep *Measurement::at(int i)
+{
+    return sweeps.at(i);
+}
+
+int Measurement::count()
+{
+    return sweeps.count();
+}
+
 QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot)
 {
     QPen samplePen;
@@ -378,8 +412,36 @@ QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot)
              ia = iaNext;
          }
 
-        plot->createLabel(va, ia, vg);
+        plot->createLabel(va, ia, thisSweep->getVg1Nominal());
     }
+
+    return segments;
+}
+
+QList<QGraphicsItem *> *Measurement::plotTriodeTransfer(Plot *plot)
+{
+    QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
+
+    return segments;
+}
+
+QList<QGraphicsItem *> *Measurement::plotPentodeAnode(Plot *plot)
+{
+    QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
+
+    return segments;
+}
+
+QList<QGraphicsItem *> *Measurement::plotPentodeTransfer(Plot *plot)
+{
+    QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
+
+    return segments;
+}
+
+QList<QGraphicsItem *> *Measurement::plotPentodeScreen(Plot *plot)
+{
+    QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
 
     return segments;
 }

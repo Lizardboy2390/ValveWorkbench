@@ -78,6 +78,11 @@ void TriodeCommonCathode::plot(Plot *plot, Device *device)
     cathodeLoadLine = plot->getScene()->createItemGroup(cll);
 }
 
+QTreeWidgetItem *TriodeCommonCathode::buildTree(QTreeWidgetItem *parent)
+{
+    return nullptr;
+}
+
 void TriodeCommonCathode::update(int index)
 {
     switch (index) {

@@ -198,14 +198,9 @@ double Analyser::getMeasuredIg2Max() const
     return measuredIg2Max;
 }
 
-const QList<QList<Sample *> > *Analyser::getSweepResult() const
-{
-    return &sweepResult;
-}
-
 Measurement *Analyser::getResult()
 {
-    return &result;
+    return result;
 }
 
 bool Analyser::getIsDataSetValid() const
@@ -216,10 +211,11 @@ bool Analyser::getIsDataSetValid() const
 void Analyser::startTest()
 {
     // Clear down the previous result set
-    sweepResult.clear();
-    currentSweep = new QList<Sample *>;
-
-    result.reset();
+    result = new Measurement();
+    result->setTestType(testType);
+    result->setDeviceType(deviceType);
+    result->setIaMax(iaMax);
+    result->setPMax(pMax);
 
     measuredIaMax = 0.0;
     measuredIg2Max = 0.0;
@@ -237,11 +233,21 @@ void Analyser::startTest()
         sweepType = ANODE;
         sweepCommandPrefix = "S3 ";
 
+        result->setAnodeStart(anodeStart);
+        result->setAnodeStop(anodeStop);
+        result->setGridStart(gridStart);
+        result->setGridStop(gridStop);
+        result->setGridStep(gridStep);
+
+        result->nextSweep(gridStart, screenStart);
+
         steppedSweep(anodeStart, anodeStop, gridStart, gridStop, gridStep);
 
-        if (deviceType == PENTODE) {
+        if (deviceType == PENTODE) { // Anode swept, Grid stepped, Screen fixed
+            result->setScreenStart(screenStart);
+
             sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
-        } else {
+        } else { // Anode swept, Grid stepped
             sendCommand("S7 0");
         }
         sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
@@ -249,16 +255,38 @@ void Analyser::startTest()
         nextSample();
         break;
     case TRANSFER_CHARACTERISTICS:
-        stepType = ANODE;
-        stepCommandPrefix = "S3 ";
         sweepType = GRID;
         sweepCommandPrefix = "S2 ";
 
-        steppedSweep(gridStop, gridStart, anodeStart, anodeStop, anodeStep); // Sweep is reversed to finish on low (absolute) value
+        result->setGridStart(gridStart);
+        result->setGridStop(gridStop);
 
-        if (deviceType == PENTODE) {
-            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
-        } else {
+        if (deviceType == PENTODE) { // Anode fixed, Screen stepped, Grid swept
+            stepType = SCREEN;
+            stepCommandPrefix = "S7 ";
+
+            result->setAnodeStart(anodeStart);
+            result->setScreenStart(screenStart);
+            result->setScreenStop(screenStop);
+            result->setScreenStep(screenStep);
+
+            result->nextSweep(screenStart, anodeStart);
+
+            steppedSweep(gridStop, gridStart, screenStart, screenStop, screenStep); // Sweep is reversed to finish on low (absolute) value
+
+            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+        } else { // Anode stepped, Grid swept
+            stepType = ANODE;
+            stepCommandPrefix = "S3 ";
+
+            result->setAnodeStart(anodeStart);
+            result->setAnodeStop(anodeStop);
+            result->setAnodeStep(anodeStep);
+
+            result->nextSweep(anodeStart);
+
+            steppedSweep(gridStop, gridStart, anodeStart, anodeStop, anodeStep); // Sweep is reversed to finish on low (absolute) value
+
             sendCommand("S7 0");
         }
         sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
@@ -266,6 +294,26 @@ void Analyser::startTest()
         nextSample();
         break;
     case SCREEN_CHARACTERISTICS:
+        // Anode fixed, Grid stepped, Screen swept
+        stepType = GRID;
+        stepCommandPrefix = "S2 ";
+        sweepType = SCREEN;
+        sweepCommandPrefix = "S7 ";
+
+        result->setAnodeStart(anodeStart);
+        result->setGridStart(gridStart);
+        result->setGridStop(gridStop);
+        result->setGridStep(gridStep);
+        result->setScreenStart(screenStart);
+        result->setScreenStop(screenStop);
+
+        result->nextSweep(gridStart, anodeStart);
+
+        steppedSweep(screenStart, screenStop, gridStart, gridStop, gridStep);
+
+        sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+
+        nextSample();
         break;
     default:
         break;
@@ -287,13 +335,18 @@ void Analyser::nextSample() {
         stepIndex++;
         sweepIndex = 0;
         isEndSweep = false;
-        if (!currentSweep->isEmpty()) {
-            sweepResult.append(*currentSweep);
-            currentSweep = new QList<Sample *>;
-        }
 
         if (stepIndex < stepParameter.length()) { // There is another sweep to measure
-            result.nextSweep();
+            double v1Nominal = stepValue.at(stepIndex);
+            double v2Nominal = 0.0;
+            if (deviceType == PENTODE) {
+                if (testType == ANODE_CHARACTERISTICS) {
+                    v2Nominal = screenStart;
+                } else {
+                    v2Nominal = anodeStart;
+                }
+            }
+            result->nextSweep(v1Nominal, v2Nominal);
 
             //setupCommands.append("M1"); // Discharge the capacitor banks at the end of a sweep (or it may take a while)
             sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(stepIndex)));
@@ -403,8 +456,7 @@ void Analyser::checkResponse(QString response)
         if (isTestRunning) {
             // Store the measurement
             Sample *sample = createSample(response);
-            currentSweep->append(sample);
-            result.addSample(sample);
+            result->addSample(sample);
             double va = sample->getVa();
             double ia = sample->getIa();
 
@@ -418,8 +470,11 @@ void Analyser::checkResponse(QString response)
                 qInfo("Ending sweep due to exceeding power threshold");
             }
 
-            if (currentSweep->count() == 1) { // Only update the heater display at the beginning of a sweep
+            // (Ideally) Only update the heater display periodically (i.e. not every sample)
+            // Was previously done at the beginning of a sweep but could do it on a sample counter instead
+            if (sampleCount++ > 29) {
                 client->updateHeater(sample->getVh(), sample->getIh());
+                sampleCount = 0;
             }
 
             nextSample();
@@ -495,12 +550,18 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
 
     double stepVoltage = stepStart;
 
+    stepValue.clear();
     stepParameter.clear();
     sweepParameter.clear();
     stepIndex = 0;
     sweepIndex = 0;
 
     while (stepVoltage <= (stepStop + 0.01)) {
+        if (stepType == GRID) {
+            stepValue.append(-stepVoltage);
+        } else {
+            stepValue.append(stepVoltage);
+        }
         stepParameter.append(convertTargetVoltage(stepType, stepVoltage));
 
         QList<int> thisSweep;

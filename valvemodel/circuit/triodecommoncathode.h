@@ -18,6 +18,8 @@ public:
     virtual void updateUI(QLabel *labels[], QLineEdit *values[]);
     virtual void plot(Plot *plot, Device *device);
 
+    virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
+
 protected:
 
     virtual void update(int index);

@@ -95,6 +95,9 @@ public:
     QLabel *label;
     QTableWidget *properties;
     QSpacerItem *verticalSpacer_2;
+    QHBoxLayout *horizontalLayout_3;
+    QPushButton *estimateButton;
+    QPushButton *fitButton;
     QWidget *tab_3;
     QWidget *layoutWidget_2;
     QVBoxLayout *verticalLayout_6;
@@ -162,10 +165,16 @@ public:
     QSpacerItem *horizontalSpacer_18;
     QProgressBar *progressBar;
     QSpacerItem *verticalSpacer_11;
+    QHBoxLayout *horizontalLayout_2;
+    QPushButton *btnSaveMeasurement;
+    QPushButton *btnAddToProject;
     QSpacerItem *horizontalSpacer;
     QVBoxLayout *verticalLayout_2;
+    QSpacerItem *verticalSpacer_4;
+    QLabel *plotTitle;
     QGraphicsView *graphicsView;
     QSpacerItem *verticalSpacer_3;
+    QSpacerItem *horizontalSpacer_2;
     QMenuBar *menubar;
     QMenu *menuFile;
     QMenu *menuHelp;
@@ -175,7 +184,7 @@ public:
     {
         if (ValveWorkbench->objectName().isEmpty())
             ValveWorkbench->setObjectName(QString::fromUtf8("ValveWorkbench"));
-        ValveWorkbench->resize(997, 716);
+        ValveWorkbench->resize(997, 777);
         actionLoad_Model = new QAction(ValveWorkbench);
         actionLoad_Model->setObjectName(QString::fromUtf8("actionLoad_Model"));
         actionExit = new QAction(ValveWorkbench);
@@ -448,6 +457,8 @@ public:
         projectTree->setHeaderItem(__qtreewidgetitem);
         projectTree->setObjectName(QString::fromUtf8("projectTree"));
         projectTree->setMinimumSize(QSize(0, 300));
+        projectTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
+        projectTree->setSelectionBehavior(QAbstractItemView::SelectItems);
         projectTree->setHeaderHidden(true);
 
         verticalLayout_4->addWidget(projectTree);
@@ -478,6 +489,23 @@ public:
         verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout_4->addItem(verticalSpacer_2);
+
+        horizontalLayout_3 = new QHBoxLayout();
+        horizontalLayout_3->setObjectName(QString::fromUtf8("horizontalLayout_3"));
+        estimateButton = new QPushButton(layoutWidget1);
+        estimateButton->setObjectName(QString::fromUtf8("estimateButton"));
+        estimateButton->setEnabled(false);
+
+        horizontalLayout_3->addWidget(estimateButton);
+
+        fitButton = new QPushButton(layoutWidget1);
+        fitButton->setObjectName(QString::fromUtf8("fitButton"));
+        fitButton->setEnabled(false);
+
+        horizontalLayout_3->addWidget(fitButton);
+
+
+        verticalLayout_4->addLayout(horizontalLayout_3);
 
         tabWidget->addTab(tab_2, QString());
         tab_3 = new QWidget();
@@ -926,6 +954,23 @@ public:
 
         verticalLayout_6->addItem(verticalSpacer_11);
 
+        horizontalLayout_2 = new QHBoxLayout();
+        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
+        btnSaveMeasurement = new QPushButton(layoutWidget_2);
+        btnSaveMeasurement->setObjectName(QString::fromUtf8("btnSaveMeasurement"));
+        btnSaveMeasurement->setEnabled(false);
+
+        horizontalLayout_2->addWidget(btnSaveMeasurement);
+
+        btnAddToProject = new QPushButton(layoutWidget_2);
+        btnAddToProject->setObjectName(QString::fromUtf8("btnAddToProject"));
+        btnAddToProject->setEnabled(false);
+
+        horizontalLayout_2->addWidget(btnAddToProject);
+
+
+        verticalLayout_6->addLayout(horizontalLayout_2);
+
         tabWidget->addTab(tab_3, QString());
 
         horizontalLayout->addWidget(tabWidget);
@@ -936,6 +981,15 @@ public:
 
         verticalLayout_2 = new QVBoxLayout();
         verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
+        verticalSpacer_4 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+        verticalLayout_2->addItem(verticalSpacer_4);
+
+        plotTitle = new QLabel(horizontalLayoutWidget);
+        plotTitle->setObjectName(QString::fromUtf8("plotTitle"));
+
+        verticalLayout_2->addWidget(plotTitle);
+
         graphicsView = new QGraphicsView(horizontalLayoutWidget);
         graphicsView->setObjectName(QString::fromUtf8("graphicsView"));
         sizePolicy1.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
@@ -951,6 +1005,10 @@ public:
 
 
         horizontalLayout->addLayout(verticalLayout_2);
+
+        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout->addItem(horizontalSpacer_2);
 
         ValveWorkbench->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ValveWorkbench);
@@ -993,7 +1051,7 @@ public:
 
     void retranslateUi(QMainWindow *ValveWorkbench)
     {
-        ValveWorkbench->setWindowTitle(QCoreApplication::translate("ValveWorkbench", "Valve Designer", nullptr));
+        ValveWorkbench->setWindowTitle(QCoreApplication::translate("ValveWorkbench", "Valve Workbench", nullptr));
         actionLoad_Model->setText(QCoreApplication::translate("ValveWorkbench", "Load Model...", nullptr));
         actionExit->setText(QCoreApplication::translate("ValveWorkbench", "Exit", nullptr));
 #if QT_CONFIG(shortcut)
@@ -1025,6 +1083,8 @@ public:
         tabWidget->setTabText(tabWidget->indexOf(tab), QCoreApplication::translate("ValveWorkbench", "Designer", nullptr));
         label_2->setText(QCoreApplication::translate("ValveWorkbench", "Project Browser", nullptr));
         label->setText(QCoreApplication::translate("ValveWorkbench", "Properties", nullptr));
+        estimateButton->setText(QCoreApplication::translate("ValveWorkbench", "Estimate...", nullptr));
+        fitButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit...", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("ValveWorkbench", "Modeller", nullptr));
         pushButton_3->setText(QCoreApplication::translate("ValveWorkbench", "Load Template...", nullptr));
         pushButton_4->setText(QCoreApplication::translate("ValveWorkbench", "Save Template...", nullptr));
@@ -1044,7 +1104,10 @@ public:
         heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage (V)", nullptr));
         heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (mA)", nullptr));
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
+        btnSaveMeasurement->setText(QCoreApplication::translate("ValveWorkbench", "Save to File...", nullptr));
+        btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
+        plotTitle->setText(QString());
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));
     } // retranslateUi

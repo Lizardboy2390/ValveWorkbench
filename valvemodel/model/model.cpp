@@ -41,6 +41,41 @@ double Model::anodeVoltage(double ia, double vg1, double vg2)
     return va;
 }
 
+void Model::addMeasurement(Measurement *measurement)
+{
+    int sweeps = measurement->count();
+    for (int s = 0; s < sweeps; s++) {
+        Sweep *sweep = measurement->at(s);
+
+        int samples = sweep->count();
+            for (int i = 0; i < samples; i++) {
+            Sample *sample = sweep->at(i);
+
+            addSample(sample->getVa(), sample->getIa(), sample->getVg1(), sample->getVg2());
+        }
+    }
+}
+
+void Model::addMeasurements(QList<Measurement *> *measurements)
+{
+    for (int m = 0; m < measurements->count(); m++) {
+        addMeasurement(measurements->at(m));
+    }
+}
+
+void Model::setEstimate(Estimate *estimate)
+{
+    parameter[PAR_MU]->setValue(estimate->getMu());
+    parameter[PAR_KG1]->setValue(estimate->getKg1());
+    parameter[PAR_X]->setValue(estimate->getX());
+    parameter[PAR_KP]->setValue(estimate->getKp());
+    parameter[PAR_KVB]->setValue(estimate->getKvb());
+    parameter[PAR_KVB1]->setValue(estimate->getKvb1());
+    parameter[PAR_VCT]->setValue(estimate->getVct());
+
+    // TODO: Add pentode parameter estimates
+}
+
 void Model::solve()
 {
     setOptions();
@@ -49,6 +84,20 @@ void Model::solve()
     Solve(options, &problem, &summary);
 
     qInfo(summary.BriefReport().c_str());
+}
+
+QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)
+{
+    QTreeWidgetItem *item = new QTreeWidgetItem(parent, TYP_MODEL);
+
+    item->setText(0, "Model");
+    item->setIcon(0, QIcon(":/icons/estimate32.png"));
+    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+    item->setData(0, Qt::UserRole, QVariant::fromValue((void *) this));
+
+    parent->setExpanded(true);
+
+    return item;
 }
 
 void Model::setLowerBound(Parameter* parameter, double lowerBound)
@@ -66,4 +115,3 @@ void Model::setLimits(Parameter* parameter, double lowerBound, double upperBound
     problem.SetParameterLowerBound(parameter->getPointer(), 0, lowerBound);
     problem.SetParameterUpperBound(parameter->getPointer(), 0, upperBound);
 }
-

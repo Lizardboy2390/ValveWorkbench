@@ -4,9 +4,9 @@ struct CohenHelieTriodeResidual {
     CohenHelieTriodeResidual(double va, double vg, double ia) : va_(va), vg_(vg), ia_(ia) {}
 
     template <typename T>
-    bool operator()(const T* const kg, const T* const kp, const T* const kvb, const T* const kvb2, const T* const vct, const T* const a, const T* const mu, T* residual) const {
-        T e2t = log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg_ + vct[0]) / sqrt(kvb[0] + va_ * va_ + kvb2[0] * va_))));
-        T ia = pow((va_ / kp[0]) * e2t, a[0]) / kg[0];
+    bool operator()(const T* const kg, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, T* residual) const {
+        T epk = log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg_ + vct[0]) / sqrt(kvb[0] + va_ * va_ + kvb1[0] * va_))));
+        T ia = pow((va_ / kp[0]) * epk, x[0]) / kg[0];
         residual[0] = ia_ - ia;
         return !(isnan(ia) || isinf(ia));
     }
@@ -40,20 +40,21 @@ void CohenHelieTriode::addSample(double va, double ia, double vg1, double vg2)
 double CohenHelieTriode::anodeCurrent(double va, double vg1, double vg2)
 {
     return cohenHelieCurrent(va, vg1,
+        parameter[PAR_KG1]->getValue(),
         parameter[PAR_KP]->getValue(),
         parameter[PAR_KVB]->getValue(),
         parameter[PAR_KVB1]->getValue(),
         parameter[PAR_VCT]->getValue(),
         parameter[PAR_X]->getValue(),
-        parameter[PAR_MU]->getValue()) / parameter[PAR_KG1]->getValue();
+        parameter[PAR_MU]->getValue());
 }
 
 void CohenHelieTriode::fromJson(QJsonObject source)
 {
     KorenTriode::fromJson(source);
 
-    if (source.contains("kvb2") && source["kvb2"].isDouble()) {
-        parameter[PAR_KVB1]->setValue(source["kvb2"].toDouble());
+    if (source.contains("kvb1") && source["kvb1"].isDouble()) {
+        parameter[PAR_KVB1]->setValue(source["kvb1"].toDouble());
     }
 }
 
@@ -66,11 +67,11 @@ void CohenHelieTriode::toJson(QJsonObject &destination, double vg1Max, double vg
     model["vct"] = parameter[PAR_VCT]->getValue();
     model["kp"] = parameter[PAR_KP]->getValue();
     model["kvb"] = parameter[PAR_KVB]->getValue();
-    model["kvb2"] = parameter[PAR_KVB1]->getValue();
+    model["kvb1"] = parameter[PAR_KVB1]->getValue();
 
     QJsonObject triode;
     triode["vg1Max"] = vg1Max;
-    triode["improvedKoren"] = model;
+    triode["cohenHelie"] = model;
 
     destination["triode"] = triode;
 }
@@ -90,7 +91,20 @@ void CohenHelieTriode::updateUI(QLabel *labels[], QLineEdit *values[])
 
 QString CohenHelieTriode::getName()
 {
-    return QString(" Cohen Helie");
+    return QString("Cohen Helie");
+}
+
+void CohenHelieTriode::updateProperties(QTableWidget *properties)
+{
+    clearProperties(properties);
+
+    addProperty(properties, "Mu", QString("%1").arg(parameter[PAR_MU]->getValue()));
+    addProperty(properties, "Kg1", QString("%1").arg(parameter[PAR_KG1]->getValue()));
+    addProperty(properties, "X", QString("%1").arg(parameter[PAR_X]->getValue()));
+    addProperty(properties, "Kp", QString("%1").arg(parameter[PAR_KP]->getValue()));
+    addProperty(properties, "Kvb", QString("%1").arg(parameter[PAR_KVB]->getValue()));
+    addProperty(properties, "Kvb1", QString("%1").arg(parameter[PAR_KVB1]->getValue()));
+    addProperty(properties, "vct", QString("%1").arg(parameter[PAR_VCT]->getValue()));
 }
 
 void CohenHelieTriode::setOptions()
@@ -103,16 +117,11 @@ void CohenHelieTriode::setOptions()
     options.preconditioner_type = ceres::JACOBI;
 }
 
-double CohenHelieTriode::cohenHelieCurrent(double va, double vg, double kp, double kvb, double kvb2, double vct, double a, double mu)
+double CohenHelieTriode::cohenHelieCurrent(double v, double vg, double kg1, double kp, double kvb, double kvb1, double vct, double x, double mu)
 {
-    double x1 = std::sqrt(kvb + va * va + va * kvb2);
-    double x2 = kp * (1 / mu + (vg + vct) / x1);
-    double x3 = std::log(1.0 + std::exp(x2));
-    double et = (va / kp) * x3;
+    double f = std::sqrt(kvb + v * v + v * kvb1);
+    double y = kp * (1 / mu + (vg + vct) / f);
+    double ep = (v / kp) * std::log(1.0 + std::exp(y));
 
-    if (et < 0.0) {
-        et = 0.0;
-    }
-
-    return pow(et, a);
+    return pow(ep, x) / kg1;
 }

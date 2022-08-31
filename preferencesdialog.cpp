@@ -10,7 +10,9 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
     QList<QSerialPortInfo> serialPorts = QSerialPortInfo::availablePorts();
 
     for (const QSerialPortInfo &serialPort : serialPorts) {
-        ui->portSelect->addItem(serialPort.portName());
+        if (serialPort.vendorIdentifier() == 0x1a86 && serialPort.productIdentifier() == 0x7523) {
+            ui->portSelect->addItem(serialPort.portName());
+        }
     }
 }
 

@@ -6,8 +6,12 @@
 #include "ceres/ceres.h"
 #include "glog/logging.h"
 
+#include "estimate.h"
+
 #include "../ui/parameter.h"
 #include "../ui/uibridge.h"
+
+#include "../data/measurement.h"
 
 using ceres::AutoDiffCostFunction;
 using ceres::CostFunction;
@@ -26,26 +30,26 @@ enum eTriodeParameter {
     PAR_MU,
     PAR_KG1,
     PAR_X,
+    PAR_KP,
     PAR_KVB,
     PAR_KVB1,
     PAR_VCT,
     PAR_KG2,
     PAR_A,
     PAR_ALPHA,
+    PAR_BETA,
     PAR_OMEGA,
     PAR_LAMBDA,
     PAR_NU,
     PAR_S,
-    PAR_AP,
-    PAR_KP
+    PAR_AP
 };
 
 enum eModelType {
     SIMPLE_TRIODE,
     KOREN_TRIODE,
     COHEN_HELIE_TRIODE,
-    GARDINER_TRIODE,
-    GARDINER_PENTODE,
+    COHEN_HELIE_PENTODE,
     BEAM_TETRODE,
     SECONDARY_EMISSION_PENTODE,
     SECONDARY_EMISSION_BEAM_TETRODE
@@ -101,7 +105,13 @@ public:
     virtual double anodeVoltage(double ia, double vg1, double vg2 = 0.0);
     virtual QString getName() = 0;
 
+    void addMeasurement(Measurement *measurement);
+    void addMeasurements(QList<Measurement *> *measurements);
+    void setEstimate(Estimate *estimate);
+
     void solve();
+
+    virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
 
  protected:
     /**
@@ -109,9 +119,9 @@ public:
      */
 	Problem problem;
     /**
-     * @brief parameter The array of 8 model Parameters linked to the UI
+     * @brief parameter The array of 16 model Parameters linked to the UI
      */
-    Parameter *parameter[15];
+    Parameter *parameter[16];
     /**
      * @brief options The options to be used by Ceres for solving the model approximation
      */
