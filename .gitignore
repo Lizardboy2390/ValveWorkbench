@@ -1,3 +1,5 @@
+desktop.ini
+
 # Prerequisites
 *.d
 
@@ -11,6 +13,30 @@
 *.log
 *.csv
 *.xlsx
+
+ValveWizard/
+*.pdb
+*.zip
+
+# PCB Backup files
+~*.prj
+~*.sch
+~*.pcb
+
+# PCB Report files
+*.mop
+*Report).txt
+
+# Production PCB files
+*.gmo
+*.gbp
+*.gbs
+*.gbl
+*.drl
+*.gtp
+*.gts
+*.gtl
+*.gto
 
 # User project files
 *.pro.user
@@ -44,6 +70,7 @@ Makefile*.*
 *.out
 *.app
 
+docs/doxygen/
 *.~vsdx
 *.autosave
 debug/

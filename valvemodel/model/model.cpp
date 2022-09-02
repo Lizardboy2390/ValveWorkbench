@@ -83,7 +83,7 @@ void Model::solve()
     Solver::Summary summary;
     Solve(options, &problem, &summary);
 
-    qInfo(summary.BriefReport().c_str());
+    qInfo(summary.FullReport().c_str());
 }
 
 QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)
