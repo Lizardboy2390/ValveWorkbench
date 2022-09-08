@@ -13,6 +13,7 @@ desktop.ini
 *.log
 *.csv
 *.xlsx
+*.pdf
 
 ValveWizard/
 *.pdb
