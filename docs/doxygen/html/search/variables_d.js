@@ -1,0 +1,6 @@
+var searchData=
+[
+  ['offsetsandsize_0',['offsetsAndSize',['../structqt__meta__stringdata___led_indicator__t.html#a9758812504f75c7be73d8949adbf4403',1,'qt_meta_stringdata_LedIndicator_t::offsetsAndSize()'],['../structqt__meta__stringdata___preferences_dialog__t.html#a5080c7cf95521fa8da76f145161c6595',1,'qt_meta_stringdata_PreferencesDialog_t::offsetsAndSize()'],['../structqt__meta__stringdata___valve_design_calculator__t.html#a9ee88e7870d411ddce8b6cc94d487606',1,'qt_meta_stringdata_ValveDesignCalculator_t::offsetsAndSize()'],['../structqt__meta__stringdata___valve_modeller__t.html#af5c5e866b5fceb503f2c5eb111766315',1,'qt_meta_stringdata_ValveModeller_t::offsetsAndSize()'],['../structqt__meta__stringdata___valve_workbench__t.html#a7efa056c14d33d2e2bc21b6cc264c121',1,'qt_meta_stringdata_ValveWorkbench_t::offsetsAndSize()']]],
+  ['omega_1',['omega',['../class_estimate.html#acf1901daa4890024896a2317cedc16f6',1,'Estimate']]],
+  ['options_2',['options',['../class_linear_solver.html#a0cd77bbc3d4e3e0a4394989326c1b620',1,'LinearSolver::options()'],['../class_model.html#a78fcfa6afba9936ebbc83910a250aafc',1,'Model::options()'],['../class_quadratic_solver.html#a534c92d34eb5534e80ec4c857794eaff',1,'QuadraticSolver::options()']]]
+];

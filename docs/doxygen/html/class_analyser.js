@@ -1,0 +1,27 @@
+var class_analyser =
+[
+    [ "Analyser", "class_analyser.html#a07ed50ded4d7feba4844c824fbc7408a", null ],
+    [ "~Analyser", "class_analyser.html#adfdb6d462ed9c7c6616c0feb186add99", null ],
+    [ "getHwVersion", "class_analyser.html#ab328b3db2c38730dce1d1c7abb537ecb", null ],
+    [ "getIsDataSetValid", "class_analyser.html#ad283e7eebefe65db68cb0777a0c5064d", null ],
+    [ "getMeasuredIaMax", "class_analyser.html#a561eed50e47ba1be68968ae7bcda20e5", null ],
+    [ "getMeasuredIg2Max", "class_analyser.html#a2b9ac5fd2a7df589fbdb5a330c997bc7", null ],
+    [ "getResult", "class_analyser.html#a619b43214cf4e1b782dbc6669e9a7daa", null ],
+    [ "getSwVersion", "class_analyser.html#ab9562dbb3482ecfcab6b4151fd5ae2b9", null ],
+    [ "handleCommandTimeout", "class_analyser.html#aee66fe2b35b1be5e54092a5328eecf58", null ],
+    [ "handleError", "class_analyser.html#a45ae9e6f9379980f29010cef6bfa4b5c", null ],
+    [ "handleHeaterTimeout", "class_analyser.html#ac36c9f7bd52437b677ae9136bdd8e12b", null ],
+    [ "handleReadyRead", "class_analyser.html#ab47c70f396dd96d44fd9e6529969bf9d", null ],
+    [ "reset", "class_analyser.html#a83780649d4d023b1c62e7521d18d1c60", null ],
+    [ "setDeviceType", "class_analyser.html#ae044887d5b50579b0090ef3cf6db22d2", null ],
+    [ "setHeaterVoltage", "class_analyser.html#ae9e401a491cdbbf2f1812a67ba09fdf5", null ],
+    [ "setIaMax", "class_analyser.html#a1649555b995a2ce5e4e0a35f3117c5d5", null ],
+    [ "setIg2Max", "class_analyser.html#a8a598feeb5b4ed942545e19e42f213b0", null ],
+    [ "setIsHeatersOn", "class_analyser.html#aa0416777975cb07ef7aacb44fa600f5b", null ],
+    [ "setPMax", "class_analyser.html#a3b05cd12597ab45903f31379d7fa0ad2", null ],
+    [ "setSweepParameters", "class_analyser.html#af70f2a3099e9b97b90aab296a8b0a265", null ],
+    [ "setSweepPoints", "class_analyser.html#a87fae1b8c6ec1f83f183b73c096738e7", null ],
+    [ "setTestType", "class_analyser.html#aa2afe9f9afc70bfa7d5e1b0d4db363f4", null ],
+    [ "startTest", "class_analyser.html#ad0a3c8241e6e2c9d7f8d061759fc3803", null ],
+    [ "stopTest", "class_analyser.html#ad917c58cbc53df34b827d5009081c1a6", null ]
+];

@@ -1,0 +1,8 @@
+var searchData=
+[
+  ['dac1_5faddr_0',['DAC1_ADDR',['../_arduino_01_mega_2_analyser_valve_2_analyser_valve_8h.html#a6387a34a40eaf5aad767cbd7a73b05a5',1,'DAC1_ADDR():&#160;AnalyserValve.h'],['../_arduino_01_nano_2_analyser_valve_2_analyser_valve_8h.html#a6387a34a40eaf5aad767cbd7a73b05a5',1,'DAC1_ADDR():&#160;AnalyserValve.h']]],
+  ['dac2_5faddr_1',['DAC2_ADDR',['../_arduino_01_mega_2_analyser_valve_2_analyser_valve_8h.html#a8cd1c9ac0cc0df59247d241280c34b0e',1,'DAC2_ADDR():&#160;AnalyserValve.h'],['../_arduino_01_nano_2_analyser_valve_2_analyser_valve_8h.html#a8cd1c9ac0cc0df59247d241280c34b0e',1,'DAC2_ADDR():&#160;AnalyserValve.h']]],
+  ['diode_5fmode_2',['DIODE_MODE',['../_arduino_01_mega_2_analyser_valve_2_analyser_valve_8h.html#a81650d0bda3a3cafd8f5f990ba982450',1,'DIODE_MODE():&#160;AnalyserValve.h'],['../_arduino_01_nano_2_analyser_valve_2_analyser_valve_8h.html#a81650d0bda3a3cafd8f5f990ba982450',1,'DIODE_MODE():&#160;AnalyserValve.h']]],
+  ['discharge1_5fpin_3',['DISCHARGE1_PIN',['../_arduino_01_mega_2_analyser_valve_2_analyser_valve_8h.html#a03a9154b5cd59eb2aa539ead902bd5eb',1,'DISCHARGE1_PIN():&#160;AnalyserValve.h'],['../_arduino_01_nano_2_analyser_valve_2_analyser_valve_8h.html#a03a9154b5cd59eb2aa539ead902bd5eb',1,'DISCHARGE1_PIN():&#160;AnalyserValve.h']]],
+  ['discharge2_5fpin_4',['DISCHARGE2_PIN',['../_arduino_01_mega_2_analyser_valve_2_analyser_valve_8h.html#a6372b424e1c966900c0c12c354d61067',1,'DISCHARGE2_PIN():&#160;AnalyserValve.h'],['../_arduino_01_nano_2_analyser_valve_2_analyser_valve_8h.html#a6372b424e1c966900c0c12c354d61067',1,'DISCHARGE2_PIN():&#160;AnalyserValve.h']]]
+];

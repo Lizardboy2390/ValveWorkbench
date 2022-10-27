@@ -1,0 +1,28 @@
+var class_device =
+[
+    [ "Device", "class_device.html#a2a77424df261cf3a3f61e2e6c17fd5b2", null ],
+    [ "Device", "class_device.html#a4cbf4b92bba4bef24fc9d4cdfe7e76d5", null ],
+    [ "anodeAxes", "class_device.html#aeaf5194c26d9b342e7107fc0f4674718", null ],
+    [ "anodeCurrent", "class_device.html#aa3e222959fdf6da86b0e41e399c1899b", null ],
+    [ "anodePlot", "class_device.html#a590cfacf06bb0825cb3de0359563892b", null ],
+    [ "anodeVoltage", "class_device.html#ac770d711b6bbf3a72085588ccfa14bae", null ],
+    [ "buildTree", "class_device.html#a0d920095477165b7e069ff6be9490d10", null ],
+    [ "getDeviceType", "class_device.html#a77852f9759fbd0bcb80e89ca6d929223", null ],
+    [ "getIaMax", "class_device.html#ab0088fe06efae6986a0d2a5f867522d1", null ],
+    [ "getModelType", "class_device.html#a457421d40c8a516c763694f5d750a5f3", null ],
+    [ "getName", "class_device.html#ac32b18f070baf5c4e4be84117b911091", null ],
+    [ "getPaMax", "class_device.html#a4b166bb39721c1a8ad168126490b1fe0", null ],
+    [ "getParameter", "class_device.html#a7e12356ee17cb6712cf65983d17eb343", null ],
+    [ "getVaMax", "class_device.html#a2ea7a24bf5607eb34e0994cfdb8a1b24", null ],
+    [ "getVg1Max", "class_device.html#ad503658ad13e02408137ecdaa584c363", null ],
+    [ "getVg2Max", "class_device.html#a93940de0631a0e8d9fe5bf0ce7515c11", null ],
+    [ "interval", "class_device.html#a75c3d24dbc635c1da769ffb7f22d8b72", null ],
+    [ "selectModel", "class_device.html#a294f9465accdaf30c4671d78f05e6bda", null ],
+    [ "setDeviceType", "class_device.html#aa72589cc349b15269012582957d3e3dc", null ],
+    [ "setModelType", "class_device.html#a4d5a60b38d96f08b0aa077cb7aaa234e", null ],
+    [ "solve", "class_device.html#ae9ace17316fcef908f11bed9e5a234a5", null ],
+    [ "transferAxes", "class_device.html#a992743b2961e3d068e15214b77b19688", null ],
+    [ "transferPlot", "class_device.html#a35af77e61166d6cc8c5b0d8fbb493116", null ],
+    [ "updateModelSelect", "class_device.html#a51ae9d3d5c7b399a57aec4196aac13d5", null ],
+    [ "updateUI", "class_device.html#a587b50bdb304aa3bfa32810c6ca58d2b", null ]
+];

@@ -1,0 +1,27 @@
+var class_template =
+[
+    [ "Template", "class_template.html#afea5166b9ca0022fe21c2ed4882c161a", null ],
+    [ "getAlpha", "class_template.html#aafcbf9590da6be1a4ec8026ff405b412", null ],
+    [ "getDeviceType", "class_template.html#a6efd673ce50a920301f72b50105c42c8", null ],
+    [ "getIaMax", "class_template.html#a08f0454c80b53dd99de6f44f3e36b9e3", null ],
+    [ "getKg", "class_template.html#adc487e34357f8d683f57da67b78d90a9", null ],
+    [ "getKp", "class_template.html#a0b8a197aeab4f3a629ed8c43af1b7732", null ],
+    [ "getKvb", "class_template.html#ac1596b7dd6e413fdd64ffd77e49291f3", null ],
+    [ "getKvb2", "class_template.html#ae1545b21755b7fcd1b84b7d54a78f6c9", null ],
+    [ "getMu", "class_template.html#a467d2d7b7d6d786e2189ff7eb08dda50", null ],
+    [ "getName", "class_template.html#a2eca6ff2f628733f14ee2b643d64dd0b", null ],
+    [ "getPaMax", "class_template.html#abe47fbf46b368f23842db048b682af1c", null ],
+    [ "getTestType", "class_template.html#aef27c3c01795db18dc437dac64fe261a", null ],
+    [ "getVaStart", "class_template.html#a520438eb24fc6b37328c4e63b979aa6c", null ],
+    [ "getVaStep", "class_template.html#a98cc0545399282d553e0da6d013087ad", null ],
+    [ "getVaStop", "class_template.html#a36432d41f0ce21ca57a194f1bcbb1628", null ],
+    [ "getVct", "class_template.html#a257354d43ac94888151ea978a963b138", null ],
+    [ "getVgStart", "class_template.html#a98a2662b29434911b3e7a6175e0361fd", null ],
+    [ "getVgStep", "class_template.html#a39b7acfbd12eb30871665cd01ebac5f2", null ],
+    [ "getVgStop", "class_template.html#a8a53c2e53f4f85dc3d70e3bfd8e59d75", null ],
+    [ "getVHeater", "class_template.html#a7cd33b45a62ede256414710782240574", null ],
+    [ "getVsStart", "class_template.html#ada52ca8b5c9094295adfee12c85c9c96", null ],
+    [ "getVsStep", "class_template.html#a9ef0bd31ee6c18a22e797b714b8f7707", null ],
+    [ "getVsStop", "class_template.html#a41ffeb69be54399108082b62cc14321c", null ],
+    [ "read", "class_template.html#a564b87023ebbd558fd3e461c9e206048", null ]
+];

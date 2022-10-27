@@ -1,0 +1,7 @@
+var searchData=
+[
+  ['findia_0',['findIa',['../class_estimate.html#aaaa5d6ff5e20e71de8cd559e52a3a04a',1,'Estimate']]],
+  ['findva_1',['findVa',['../class_estimate.html#a74c42d6cd9eb358d08537edd1cd5a04c',1,'Estimate']]],
+  ['flushserialbuffer_2',['flushSerialBuffer',['../_arduino_01_mega_2_analyser_valve_2_analyser_valve_8h.html#aae174dce18f58c1973c974c927e63e6b',1,'flushSerialBuffer():&#160;AnalyserValve.h'],['../_arduino_01_nano_2_analyser_valve_2_analyser_valve_8h.html#aae174dce18f58c1973c974c927e63e6b',1,'flushSerialBuffer():&#160;AnalyserValve.h']]],
+  ['fromjson_3',['fromJson',['../class_data_set.html#a3f55bcfbd71c2262bdfac409f42c9917',1,'DataSet::fromJson()'],['../class_measurement.html#a77c88d2d840d6a163676318057de8204',1,'Measurement::fromJson()'],['../class_project.html#ab9e487b5dfd0fae50d9d24c34a30dd6b',1,'Project::fromJson()'],['../class_sample.html#a7c342e570c374ec64028e27804aa626a',1,'Sample::fromJson()'],['../class_sweep.html#ae430250fd22fe8cf49ccbdd1ed6ecb2d',1,'Sweep::fromJson()'],['../class_cohen_helie_pentode.html#a99f8b47aaa871d59e058742cfb91e5dd',1,'CohenHeliePentode::fromJson()'],['../class_cohen_helie_triode.html#a1182a569e0f7fd9f624fe8e46324c152',1,'CohenHelieTriode::fromJson()'],['../class_koren_triode.html#abee42f7e970e1c87dbfb8dc13e68cda9',1,'KorenTriode::fromJson()'],['../class_model.html#a037d5a0baee52cb53e7593b3bc5e2409',1,'Model::fromJson()'],['../class_simple_triode.html#a4f0063e202ffaf72939e6116173af2ff',1,'SimpleTriode::fromJson()']]]
+];

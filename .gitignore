@@ -71,7 +71,7 @@ Makefile*.*
 *.out
 *.app
 
-docs/doxygen/
+#docs/doxygen/
 *.~vsdx
 *.autosave
 debug/
