@@ -21,6 +21,8 @@
 #define HV2      7   //Anode voltage 2
 #define IA_HI_2  8   //Anode current hi 2
 #define IA_LO_2  9   //Anode current lo 2
+#define IA_XHI_1 10  //Anode current extra hi 1
+#define IA_XHI_2 11  //Anode current extra hi 2
 
 class Analyser
 {
@@ -133,15 +135,17 @@ private:
     bool isEndSweep = false;
     bool isDataSetValid = false;
     bool isVersionRead = false;
+    bool isMega = false;
 
     static QRegularExpression *sampleMatcher;
+    static QRegularExpression *sampleMatcher2;
     static QRegularExpression *getMatcher;
     static QRegularExpression *infoMatcher;
 
     Sample *createSample(QString response);
     int convertTargetVoltage(int electrode, double voltage);
     double convertMeasuredVoltage(int electrode, int voltage);
-    double convertMeasuredCurrent(int electrode, int current, int currentLo = 0);
+    double convertMeasuredCurrent(int electrode, int current, int currentLo = 0, int currentHi = 0);
     void sendCommand(QString command);
     void nextCommand();
     void nextSample();

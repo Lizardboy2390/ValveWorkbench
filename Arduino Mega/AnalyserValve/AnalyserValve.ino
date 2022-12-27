@@ -1,7 +1,6 @@
 #include <math.h>
 #include <avr/pgmspace.h>
 #include <Wire.h>   //Include the Wire library to talk I2C
-//#include <Adafruit_MCP4725.h> Could use the library for the MCP4725s but it's trivial with Wire
 
 #include "AnalyserValve.h"
 #include "CommandParser.h"
@@ -20,10 +19,6 @@ double iHeater = 0; // Persistent value used for rolling averaging
 #define AVG_FACTOR 0.99
 
 int duty_cycle = 0;      //Duty cycle of buck converter
-boolean hardware;         //Will be set to 1 if hardware ID pin is high (MASTER), else 0 (SLAVE).
-
-//Adafruit_MCP4725 dac1;
-//Adafruit_MCP4725 dac2;
 
 CommandParser parser(infoCommand, modeCommand, getCommand, setCommand, commandError);
 
@@ -49,80 +44,83 @@ const char *errorMessages[] = {
   "Unsafe to test"
 };
 
+//#define T1_COUNTER 65411;   // preload timer 65536-16MHz/256/500Hz
+#define T1_COUNTER 64911;   // preload timer 65536-16MHz/256/100Hz
+//#define T1_COUNTER 34286;   // preload timer 65536-16MHz/256/2Hz
+
 /************************************************************
    SETUP
  ************************************************************/
 void setup() {
   Serial.begin(115200); //Setup serial interface
-  //dac1.begin(DAC1_ADDR);
-  //dac2.begin(DAC2_ADDR);
 
-  pinMode(HARDWARE_ID_PIN, INPUT);
   //I2C SDA is on Arduino Nano pin A4 as standard
   //I2C SCL is on Arduino Nano pin A5 as standard. These pins need no further setup.
   //By default, analog input pins also need no setup
 
   analogReference(EXTERNAL);                //Use external voltage reference for ADC
-  TCCR0B = (TCCR0B & 0b11111000) | 0x01;    //Configure Timer0 for internal clock, no prescaling (bottom 3 bits of TCCR0B)
-  //Makes Arduino run 6.3 times faster than normal. NB: This affects Arduino delay() function!
+  TCCR3B = (TCCR3B & 0b11111000) | 0x01;    //Configure Timers 3 & 4 for internal clock, no prescaling (bottom 3 bits of TCCRxB) for higher PWM frequency
+  TCCR4B = (TCCR4B & 0b11111000) | 0x01;
 
-  analogWrite(PWM_PIN, 0);                  //Make sure PWM output is zero on startup
+/* Set up timer 1 if we want to use interrupts for heater control
+  noInterrupts();           // disable all interrupts
+  TCCR1A = 0;
+  TCCR1B = 0;
+  TCNT1 = T1_COUNTER;       // preload timer
+  TCCR1B |= (1 << CS12);    // 256 prescaler 
+  TIMSK1 |= (1 << TOIE1);   // enable timer overflow interrupt
+  interrupts();             // enable all interrupts
+*/
+
   pinMode(LED_BUILTIN, OUTPUT);             //Arduino built-in LED for debugging
-
-  hardware = digitalRead(HARDWARE_ID_PIN) == HIGH; //Identify if this is MASTER (1) or SLAVE (0) Arduino
 
   for (int i = 0; i < ARRAY_LENGTH; i++) {
     targetValues[i] = 0;
   }
 
-  if (hardware) { // MASTER mode
-    pinMode(CHARGE1_PIN, OUTPUT);
-    pinMode(DISCHARGE1_PIN, OUTPUT);
-    pinMode(FIRE1_PIN, OUTPUT);
-    pinMode(CHARGE2_PIN, OUTPUT);
-    pinMode(DISCHARGE2_PIN, OUTPUT);
-    pinMode(FIRE2_PIN, OUTPUT);
-    digitalWrite(FIRE1_PIN, LOW);
-    digitalWrite(FIRE2_PIN, LOW);
-    digitalWrite(CHARGE1_PIN, LOW);
-    digitalWrite(CHARGE2_PIN, LOW);
-    //digitalWrite(DISCHARGE1_PIN, HIGH); //make sure capacitor banks are discharged ready for first sweep
-    //digitalWrite(DISCHARGE2_PIN, HIGH);
-    dischargeHighVoltages(1);
-    dischargeHighVoltages(2);
-    Wire.begin(MASTER_ADDR);            //Register I2C address
-    Wire.onReceive(masterReceiveData);  //Interrupt when I2C data is being received
-    digitalWrite(LED_BUILTIN, HIGH);
-    setGridVolts();
-  }
-  else { // else this is SLAVE hardware
-    pinMode(PWM_PIN, OUTPUT);
-    pinMode(LV_DETECT_PIN, INPUT);
-    analogWrite(PWM_PIN, 0);            //Set heater to 0V at start-up
-    Wire.begin(SLAVE_ADDR);             //Register I2C address
-    Wire.onReceive(slaveReceiveData);   //Interrupt when I2C data is being received
-    Wire.onRequest(slaveAnswerRequest); //Interrupt when master demands a response
-    digitalWrite(LED_BUILTIN, LOW);
-  }
+  digitalWrite(LED_BUILTIN, HIGH);
+
+  pinMode(CHARGE1_PIN, OUTPUT);
+  pinMode(DISCHARGE1_PIN, OUTPUT);
+  pinMode(FIRE1_PIN, OUTPUT);
+  pinMode(CHARGE2_PIN, OUTPUT);
+  pinMode(DISCHARGE2_PIN, OUTPUT);
+  pinMode(FIRE2_PIN, OUTPUT);
+
+  digitalWrite(FIRE1_PIN, LOW);
+  digitalWrite(FIRE2_PIN, LOW);
+  digitalWrite(CHARGE1_PIN, LOW);
+  digitalWrite(CHARGE2_PIN, LOW);
+
+  dischargeHighVoltages(1);
+  dischargeHighVoltages(2);
+
+  Wire.begin(MASTER_ADDR); 
+    
+  setGridVolts();
+
+  pinMode(PWM_PIN, OUTPUT);
+  analogWrite(PWM_PIN, 0);            
+
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 /************************************************************
    MAIN LOOP
  ************************************************************/
 void loop() {
-  if (hardware == MASTER) {
-    while (Serial.available() > 0) {
-      parser.parseInput(Serial.read());
-    }
-
-    if (++slaveCounter > 10000) { // Periodically poll the Slave to get heater values
-      requestFromSlave();
-      slaveCounter = 0;
-    }
-  } else { // SLAVE mode
-    setHeaterVolts();
+  while (Serial.available() > 0) {
+    parser.parseInput(Serial.read());
   }
+
+  setHeaterVolts(); // Only if we're not using timer interrupts 
 } //End of main program loop
+
+ISR(TIMER1_OVF_vect)        // interrupt service routine 
+{
+  TCNT1 = T1_COUNTER;       // preload timer
+  setHeaterVolts();
+}
 
 // USB command interface functions
 
@@ -134,14 +132,12 @@ void infoCommand(int index) {
 
   switch (index) {
     case 0: // H/W Version info
-      Serial.print("OK: Info(");
-      Serial.print(index);
-      Serial.println(') = Rev 1 (Nano)');
+      Serial.println("OK: Info(0) = Rev 2 (Mega Pro)");
       break;
     case 1: // S/W Version info
       Serial.print("OK: Info(");
       Serial.print(index);
-      Serial.println(') = 1.0.0');
+      Serial.println(") = 0.0.1");
       break;
     default:
       success = -ERR_INVALID_MODE;
@@ -169,8 +165,8 @@ void modeCommand(int index) {
       for (int i = 0; i < ARRAY_LENGTH; i++) {
         targetValues[i] = 0;
       }
-      sendToSlave();
       setGridVolts();
+      duty_cycle = 0;
       Serial.print("OK: Mode(");
       Serial.print(index);
       Serial.println(')');
@@ -234,9 +230,9 @@ void modeCommand(int index) {
 }
 
 void printValues() {
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < ARRAY_LENGTH; i++) {
     Serial.print(measuredValues[i]);
-    if (i < 9) {
+    if (i < ARRAY_LENGTH - 1) {
       Serial.print(", ");
     } else {
       Serial.println("");
@@ -277,7 +273,7 @@ void setCommand(int index, int intParam) {
     targetValues[index] = intParam;
 
     if (index < 2) {
-      sendToSlave();
+      //sendToSlave();
     } else if (index == VG1 || index == VG2) {
       setGridVolts();
     }
@@ -287,7 +283,11 @@ void setCommand(int index, int intParam) {
     Serial.print(") = ");
     Serial.println(intParam);
   } else {
-    Serial.print("ERR: ");
+    Serial.print("ERR: Set(");
+    Serial.print(index);
+    Serial.print(") = ");
+    Serial.println(intParam);
+    Serial.print(" ");
     Serial.println(errorMessages[-success]);
   }
 }
@@ -317,80 +317,6 @@ void commandError(const char *command) {
   Serial.println(command);
 }
 
-// Master/slave I2C interface functions
-
-/****************************************************************************
-  Send target heater value to slave
-****************************************************************************/
-void sendToSlave() {
-  byte byte1;
-  byte byte2;
-  Wire.beginTransmission(SLAVE_ADDR);
-  byte1 = highByte(targetValues[VH]); //Arduino function breaks word into bytes
-  byte2 = lowByte(targetValues[VH]);
-  Wire.write(byte1);
-  Wire.write(byte2);
-  Wire.endTransmission();
-}
-
-/****************************************************************************
-  Upon receiving data, populate the measured values array
-****************************************************************************/
-void masterReceiveData(int howMany) { //called by ISR when I2C data arrives
-  byte byte1;
-  byte byte2;
-  for (int i = 0; i < (howMany >> 1); i++) { //receive bytes in pairs
-    byte1 = Wire.read();
-    byte2 = Wire.read();
-    measuredValues[i] = word(byte1, byte2); //Arduino function concatenates bytes into word
-  }
-  while (Wire.available() > 0) { //Ignore any garbage
-    Wire.read();
-  }
-}
-
-/****************************************************************************
-  Request measured heater values from slave
-****************************************************************************/
-void requestFromSlave() {
-  byte byte1;
-  byte byte2;
-  Wire.requestFrom(SLAVE_ADDR, 4); //Request four bytes
-  for (int i = 0; i < 2; i++) {
-    byte1 = Wire.read();
-    byte2 = Wire.read();
-    measuredValues[i] = word(byte1, byte2); //Arduino function concatenates bytes into word
-  }
-}
-
-/****************************************************************************
-  Upon receiving data, populate the target values array
-****************************************************************************/
-void slaveReceiveData(int howMany) {      //called by ISR when I2C data arrives
-  for (int i = 0; i < (howMany >> 1); i++) { //receive bytes in pairs
-    byte byte1 = Wire.read();
-    byte byte2 = Wire.read();
-    targetValues[i] = word(byte1, byte2); //Arduino function concatenates bytes into word
-  }
-  while (Wire.available() > 0) { //Discard any garbage
-    Wire.read();
-  }
-}
-
-/****************************************************************************
-  Upon request, send measured heater values to the master
-****************************************************************************/
-void slaveAnswerRequest() {
-  byte byte1;
-  byte byte2;
-  for (int i = 0; i < 2; i++) { //Send only the first two words in array
-    byte1 = highByte(measuredValues[i]); //Arduino function breaks word into bytes
-    byte2 = lowByte(measuredValues[i]);
-    Wire.write(byte1);
-    Wire.write(byte2);
-  }
-}
-
 // Testing functions
 
 /************************************************************
@@ -402,7 +328,6 @@ int runTest() {
   status = chargeHighVoltages();
   if (status > 0) {
     doMeasurement();
-    requestFromSlave();
   }
 
   return status;
@@ -413,27 +338,24 @@ int runTest() {
  ************************************************************/
 void setHeaterVolts() { //Manages the heater buck-converter
   int Vh_adc = analogRead(VH_PIN);
-  int Ih_adc = analogRead(IH_PIN);
+  int Ih_adc = analogRead(IH_PIN);    //This is the *voltage* developed across the heater current sensing resistor
   
-  Vh_adc = Vh_adc - (Ih_adc / 8);   //Divide Ih_adc value by 8 and subtract from Vh_adc value to get corrected voltage across heater
+  Vh_adc = Vh_adc - (Ih_adc * 470 / 3770);     //Divide Ih_adc value by 8 and subtract from Vh_adc value to get corrected voltage across heater
+                                      //NB: Factor of 8 is determined by the voltage scaling of the heater voltage sense (470R/3K3 resistive divider)
   
-  if (duty_cycle > 0) {               //Duty cycle is always trying to decrement as a fail-safe measure
-    duty_cycle --;                   //but don't let it drop below zero (wrap around)
+  duty_cycle += sgn(targetValues[VH] + 0 - Vh_adc);  // (offset is empirical)
+
+  if (duty_cycle < 0) {               //Ensure that the duty cycle is between 0 and 255
+    duty_cycle = 0;
+  } else if (duty_cycle > 255) {
+    duty_cycle = 255;
   }
 
-  if (Ih_adc < 110) {                               //If heater current is less than 2 amps it is safe to proceed.
-    if (Vh_adc < targetValues[VH]) {  //If heater voltage is too low, increment duty cycle
-      if (duty_cycle < 254) {                   //But don't let duty cycle exceed 255 (wrap around)
-        duty_cycle += 2;
-      }
-    }
+  if (Ih_adc > 55) {                  //If heater current is more than 2 amps the device has a problem and we should turn the heaters off
+    duty_cycle = 0;
   }
 
-  if (!digitalRead(LV_DETECT_PIN)) {
-    duty_cycle = 0;                                //Disable buck converter if heater power supply is off
-  }
-
-  analogWrite(PWM_PIN, duty_cycle);                 //Update buck converter with new duty cycle
+  analogWrite(PWM_PIN, duty_cycle);   //Update buck converter with new duty cycle
 
   vHeater = (vHeater * AVG_FACTOR + ((double) Vh_adc));
   iHeater = (iHeater * AVG_FACTOR + ((double) Ih_adc));
@@ -467,26 +389,18 @@ void setGridVolts() {
   }
 }
 
-/* void setGridVolts() {
-  dac1.setVoltage(targetValues[VG1], false);
-  dac2.setVoltage(targetValues[VG2], false);
-  } */
-
 /****************************************************************************
   Charges up the high-voltage capacitor banks to the target values
 ****************************************************************************/
 int chargeHighVoltages() { //Manages the HV supply
   digitalWrite(FIRE1_PIN, LOW);                       //Turn off MOSFETs (fail-safe measure)
   digitalWrite(FIRE2_PIN, LOW);
-#ifdef WIZARD_MODE
-  digitalWrite(CHARGE1_PIN, LOW); // If we're in Wizard mode we treat the charge pins as digital output (i.e. on or off)
-  digitalWrite(CHARGE2_PIN, LOW);
-#else
-  analogWrite(CHARGE1_PIN, 0); // If we're in PWM mode then set the duty cycle for the charge pins to 0
+  analogWrite(CHARGE1_PIN, 0);
   analogWrite(CHARGE2_PIN, 0);
-#endif // WIZARD_MODE
-  digitalWrite(DISCHARGE1_PIN, LOW);
-  digitalWrite(DISCHARGE2_PIN, LOW);
+  //digitalWrite(DISCHARGE1_PIN, LOW);
+  //digitalWrite(DISCHARGE2_PIN, LOW);
+  analogWrite(DISCHARGE1_PIN, 0);
+  analogWrite(DISCHARGE2_PIN, 0);
 
   measuredValues[HV1] = analogRead(VA1_PIN);         //Measure the high voltage and store the value
   measuredValues[HV2] = analogRead(VA2_PIN);         //Measure the high voltage and store the value
@@ -508,14 +422,14 @@ int chargeHighVoltages() { //Manages the HV supply
 
   //while ((measuredValues[HV1] != targetValues[HV1]) || (measuredValues[HV2] != targetValues[HV2])) {
   while (!checkAnodeVoltage(measuredValues[HV1], targetValues[HV1]) || !checkAnodeVoltage(measuredValues[HV2], targetValues[HV2])) {    
+    setHeaterVolts(); //Keep the heater happy
+
     int timeout2 = 0;
     while (measuredValues[HV1] < (targetValues[HV1] + OVERVOLTAGE)) { //If voltage is too low, charge capacitor
-#ifdef WIZARD_MODE
-      digitalWrite(CHARGE1_PIN, HIGH); // If we're in Wizard mode we treat the charge pins as digital output (i.e. on or off)
-#else
+      setHeaterVolts(); //Keep the heater happy
+
       int duty = setDuty(measuredValues[HV1], targetValues[HV1]);
       analogWrite(CHARGE1_PIN, duty); // If we're in PWM mode then set the duty cycle according to the (inverse) voltage gap
-#endif // WIZARD_MODE
       measuredValues[HV1] = analogRead(VA1_PIN);    //Keep checking the voltage
       if (timeout2++ > HT_TIMEOUT) {
         chargeOff();
@@ -528,12 +442,10 @@ int chargeHighVoltages() { //Manages the HV supply
     timeout2 = 0;
     measuredValues[HV2] = analogRead(VA2_PIN);          //Measure the high voltage and store the value
     while (measuredValues[HV2] < (targetValues[HV2] + OVERVOLTAGE)) { //If voltage is too low, charge capacitor
-#ifdef WIZARD_MODE
-      digitalWrite(CHARGE2_PIN, HIGH); // If we're in Wizard mode we treat the charge pins as digital output (i.e. on or off)
-#else
+      setHeaterVolts(); //Keep the heater happy
+
       int duty = setDuty(measuredValues[HV2], targetValues[HV2]);
       analogWrite(CHARGE2_PIN, duty); // If we're in PWM mode then set the duty cycle according to the (inverse) voltage gap
-#endif // WIZARD_MODE
       measuredValues[HV2] = analogRead(VA2_PIN);    //Keep checking the voltage
       if (timeout2++ > HT_TIMEOUT) {
         chargeOff();
@@ -554,13 +466,8 @@ int chargeHighVoltages() { //Manages the HV supply
 }
 
 void chargeOff() {
-#ifdef WIZARD_MODE
-    digitalWrite(CHARGE1_PIN, LOW);
-    digitalWrite(CHARGE2_PIN, LOW);
-#else
     analogWrite(CHARGE1_PIN, 0);
     analogWrite(CHARGE2_PIN, 0);
-#endif
 }
 
 bool checkAnodeVoltage(int measured, int target) {
@@ -590,6 +497,9 @@ int setDuty(int measured, int target) {
   Takes a measurement and puts the results in the measuredValues[] array
 ****************************************************************************/
 void doMeasurement(void) {
+
+  noInterrupts();                   //We don't want the measurement to be affected by servicing the heater
+
   digitalWrite(FIRE1_PIN, HIGH);    //Apply high voltage to the DUT
   digitalWrite(FIRE2_PIN, HIGH);
 
@@ -597,6 +507,8 @@ void doMeasurement(void) {
   
   digitalWrite(FIRE1_PIN, LOW);      //Remove high voltage from the DUT
   digitalWrite(FIRE2_PIN, LOW);
+
+  interrupts();
 }
 
 void measureValues() {
@@ -606,12 +518,16 @@ void measureValues() {
   measuredValues[IA_HI_1] = analogRead(IA1_HI_PIN);
   measuredValues[IA_LO_1] = analogRead(IA1_LO_PIN);
   measuredValues[IA_LO_1] = analogRead(IA1_LO_PIN);
+  measuredValues[IA_XHI_1] = analogRead(IA1_XHI_PIN);
+  measuredValues[IA_XHI_1] = analogRead(IA1_XHI_PIN);
   
   measuredValues[HV2] = analogRead(VA2_PIN);
   measuredValues[IA_HI_2] = analogRead(IA2_HI_PIN);
   measuredValues[IA_HI_2] = analogRead(IA2_HI_PIN);
   measuredValues[IA_LO_2] = analogRead(IA2_LO_PIN);
   measuredValues[IA_LO_2] = analogRead(IA2_LO_PIN);
+  measuredValues[IA_XHI_2] = analogRead(IA2_XHI_PIN);
+  measuredValues[IA_XHI_2] = analogRead(IA2_XHI_PIN);
 }
 
 /****************************************************************************
@@ -620,33 +536,43 @@ void measureValues() {
 void dischargeHighVoltages(int bank) {
   if (bank == 1) {
     digitalWrite(FIRE1_PIN, LOW);
-#ifdef WIZARD_MODE
-    digitalWrite(CHARGE1_PIN, LOW); // If we're in Wizard mode we treat the charge pins as digital output (i.e. on or off)
-#else
     analogWrite(CHARGE1_PIN, 0); // If we're in PWM mode then set the duty cycle for the charge pins to 0
-#endif // WIZARD_MODE
-    digitalWrite(DISCHARGE1_PIN, HIGH);
+    //digitalWrite(DISCHARGE1_PIN, HIGH);
+    analogWrite(DISCHARGE1_PIN, 128); //to be kind to the discharge resistor!
     measuredValues[IA_HI_1] = analogRead(IA1_HI_PIN); // Needs some delay for the switch to close
     measuredValues[IA_HI_1] = analogRead(IA1_HI_PIN);
     measuredValues[IA_LO_1] = analogRead(IA1_LO_PIN);
     while (analogRead(IA1_HI_PIN) > 0) { //wait until no discharge current is detected
     //while (analogRead(VA1_PIN) > 0) { //wait until no appreciable voltage is detected
+      setHeaterVolts(); //Keep the heater happy
     }
     digitalWrite(DISCHARGE1_PIN, LOW);
   } else if (bank == 2) {
     digitalWrite(FIRE2_PIN, LOW);
-#ifdef WIZARD_MODE
-    digitalWrite(CHARGE2_PIN, LOW);
-#else
     analogWrite(CHARGE2_PIN, 0);
-#endif // WIZARD_MODE
-    digitalWrite(DISCHARGE2_PIN, HIGH);
+    //digitalWrite(DISCHARGE2_PIN, HIGH);
+    analogWrite(DISCHARGE2_PIN, 128); //to be kind to the discharge resistor!
     measuredValues[IA_HI_2] = analogRead(IA2_HI_PIN);
     measuredValues[IA_HI_2] = analogRead(IA2_HI_PIN);
     measuredValues[IA_LO_2] = analogRead(IA2_LO_PIN);
     while (analogRead(IA2_HI_PIN) > 0) { //wait until no discharge current is detected
     //while (analogRead(VA2_PIN) > 0) { //wait until no appreciable voltage is detected
+      setHeaterVolts(); //Keep the heater happy
     }
     digitalWrite(DISCHARGE2_PIN, LOW);
+  }
+}
+
+int sgn(int value) {
+  if (value == 0) {
+    return 0;
+  }
+
+  if (value > 0) {
+    return 1;
+  }
+
+  if (value < 0) {
+    return -1;
   }
 }

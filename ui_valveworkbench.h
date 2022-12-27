@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'valveworkbench.ui'
 **
-** Created by: Qt User Interface Compiler version 6.2.1
+** Created by: Qt User Interface Compiler version 6.4.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -183,42 +183,42 @@ public:
     void setupUi(QMainWindow *ValveWorkbench)
     {
         if (ValveWorkbench->objectName().isEmpty())
-            ValveWorkbench->setObjectName(QString::fromUtf8("ValveWorkbench"));
+            ValveWorkbench->setObjectName("ValveWorkbench");
         ValveWorkbench->resize(997, 777);
         actionLoad_Model = new QAction(ValveWorkbench);
-        actionLoad_Model->setObjectName(QString::fromUtf8("actionLoad_Model"));
+        actionLoad_Model->setObjectName("actionLoad_Model");
         actionExit = new QAction(ValveWorkbench);
-        actionExit->setObjectName(QString::fromUtf8("actionExit"));
+        actionExit->setObjectName("actionExit");
         actionPrint = new QAction(ValveWorkbench);
-        actionPrint->setObjectName(QString::fromUtf8("actionPrint"));
+        actionPrint->setObjectName("actionPrint");
         actionNew_Project = new QAction(ValveWorkbench);
-        actionNew_Project->setObjectName(QString::fromUtf8("actionNew_Project"));
+        actionNew_Project->setObjectName("actionNew_Project");
         actionOpen_Project = new QAction(ValveWorkbench);
-        actionOpen_Project->setObjectName(QString::fromUtf8("actionOpen_Project"));
+        actionOpen_Project->setObjectName("actionOpen_Project");
         actionLoad_Measurement = new QAction(ValveWorkbench);
-        actionLoad_Measurement->setObjectName(QString::fromUtf8("actionLoad_Measurement"));
+        actionLoad_Measurement->setObjectName("actionLoad_Measurement");
         actionSave_Project = new QAction(ValveWorkbench);
-        actionSave_Project->setObjectName(QString::fromUtf8("actionSave_Project"));
+        actionSave_Project->setObjectName("actionSave_Project");
         actionSave_As = new QAction(ValveWorkbench);
-        actionSave_As->setObjectName(QString::fromUtf8("actionSave_As"));
+        actionSave_As->setObjectName("actionSave_As");
         actionClose_Project = new QAction(ValveWorkbench);
-        actionClose_Project->setObjectName(QString::fromUtf8("actionClose_Project"));
+        actionClose_Project->setObjectName("actionClose_Project");
         actionOptions = new QAction(ValveWorkbench);
-        actionOptions->setObjectName(QString::fromUtf8("actionOptions"));
+        actionOptions->setObjectName("actionOptions");
         actionLoad_Template = new QAction(ValveWorkbench);
-        actionLoad_Template->setObjectName(QString::fromUtf8("actionLoad_Template"));
+        actionLoad_Template->setObjectName("actionLoad_Template");
         actionLoad_Device = new QAction(ValveWorkbench);
-        actionLoad_Device->setObjectName(QString::fromUtf8("actionLoad_Device"));
+        actionLoad_Device->setObjectName("actionLoad_Device");
         centralwidget = new QWidget(ValveWorkbench);
-        centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
+        centralwidget->setObjectName("centralwidget");
         horizontalLayoutWidget = new QWidget(centralwidget);
-        horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
+        horizontalLayoutWidget->setObjectName("horizontalLayoutWidget");
         horizontalLayoutWidget->setGeometry(QRect(19, 9, 961, 661));
         horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
-        horizontalLayout->setObjectName(QString::fromUtf8("horizontalLayout"));
+        horizontalLayout->setObjectName("horizontalLayout");
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
         tabWidget = new QTabWidget(horizontalLayoutWidget);
-        tabWidget->setObjectName(QString::fromUtf8("tabWidget"));
+        tabWidget->setObjectName("tabWidget");
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -226,22 +226,22 @@ public:
         tabWidget->setSizePolicy(sizePolicy);
         tabWidget->setMinimumSize(QSize(350, 0));
         tab = new QWidget();
-        tab->setObjectName(QString::fromUtf8("tab"));
+        tab->setObjectName("tab");
         layoutWidget = new QWidget(tab);
-        layoutWidget->setObjectName(QString::fromUtf8("layoutWidget"));
+        layoutWidget->setObjectName("layoutWidget");
         layoutWidget->setGeometry(QRect(10, 10, 250, 461));
         verticalLayout = new QVBoxLayout(layoutWidget);
-        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout->setObjectName("verticalLayout");
         verticalLayout->setContentsMargins(0, 0, 0, 0);
         horizontalLayout_16 = new QHBoxLayout();
-        horizontalLayout_16->setObjectName(QString::fromUtf8("horizontalLayout_16"));
+        horizontalLayout_16->setObjectName("horizontalLayout_16");
         label_4 = new QLabel(layoutWidget);
-        label_4->setObjectName(QString::fromUtf8("label_4"));
+        label_4->setObjectName("label_4");
 
         horizontalLayout_16->addWidget(label_4);
 
         stdDeviceSelection = new QComboBox(layoutWidget);
-        stdDeviceSelection->setObjectName(QString::fromUtf8("stdDeviceSelection"));
+        stdDeviceSelection->setObjectName("stdDeviceSelection");
         QSizePolicy sizePolicy1(QSizePolicy::Fixed, QSizePolicy::Fixed);
         sizePolicy1.setHorizontalStretch(0);
         sizePolicy1.setVerticalStretch(0);
@@ -256,14 +256,14 @@ public:
         verticalLayout->addLayout(horizontalLayout_16);
 
         horizontalLayout_17 = new QHBoxLayout();
-        horizontalLayout_17->setObjectName(QString::fromUtf8("horizontalLayout_17"));
+        horizontalLayout_17->setObjectName("horizontalLayout_17");
         label_5 = new QLabel(layoutWidget);
-        label_5->setObjectName(QString::fromUtf8("label_5"));
+        label_5->setObjectName("label_5");
 
         horizontalLayout_17->addWidget(label_5);
 
         stdModelSelection = new QComboBox(layoutWidget);
-        stdModelSelection->setObjectName(QString::fromUtf8("stdModelSelection"));
+        stdModelSelection->setObjectName("stdModelSelection");
         sizePolicy1.setHeightForWidth(stdModelSelection->sizePolicy().hasHeightForWidth());
         stdModelSelection->setSizePolicy(sizePolicy1);
         stdModelSelection->setMinimumSize(QSize(160, 0));
@@ -275,9 +275,9 @@ public:
         verticalLayout->addLayout(horizontalLayout_17);
 
         horizontalLayout_4 = new QHBoxLayout();
-        horizontalLayout_4->setObjectName(QString::fromUtf8("horizontalLayout_4"));
+        horizontalLayout_4->setObjectName("horizontalLayout_4");
         label_3 = new QLabel(layoutWidget);
-        label_3->setObjectName(QString::fromUtf8("label_3"));
+        label_3->setObjectName("label_3");
         QSizePolicy sizePolicy2(QSizePolicy::Preferred, QSizePolicy::Preferred);
         sizePolicy2.setHorizontalStretch(0);
         sizePolicy2.setVerticalStretch(0);
@@ -289,7 +289,7 @@ public:
         horizontalLayout_4->addWidget(label_3);
 
         circuitSelection = new QComboBox(layoutWidget);
-        circuitSelection->setObjectName(QString::fromUtf8("circuitSelection"));
+        circuitSelection->setObjectName("circuitSelection");
         sizePolicy1.setHeightForWidth(circuitSelection->sizePolicy().hasHeightForWidth());
         circuitSelection->setSizePolicy(sizePolicy1);
         circuitSelection->setMinimumSize(QSize(160, 0));
@@ -301,14 +301,14 @@ public:
         verticalLayout->addLayout(horizontalLayout_4);
 
         horizontalLayout_5 = new QHBoxLayout();
-        horizontalLayout_5->setObjectName(QString::fromUtf8("horizontalLayout_5"));
+        horizontalLayout_5->setObjectName("horizontalLayout_5");
         cir1Label = new QLabel(layoutWidget);
-        cir1Label->setObjectName(QString::fromUtf8("cir1Label"));
+        cir1Label->setObjectName("cir1Label");
 
         horizontalLayout_5->addWidget(cir1Label);
 
         cir1Value = new QLineEdit(layoutWidget);
-        cir1Value->setObjectName(QString::fromUtf8("cir1Value"));
+        cir1Value->setObjectName("cir1Value");
         sizePolicy1.setHeightForWidth(cir1Value->sizePolicy().hasHeightForWidth());
         cir1Value->setSizePolicy(sizePolicy1);
         cir1Value->setMinimumSize(QSize(60, 0));
@@ -320,14 +320,14 @@ public:
         verticalLayout->addLayout(horizontalLayout_5);
 
         horizontalLayout_7 = new QHBoxLayout();
-        horizontalLayout_7->setObjectName(QString::fromUtf8("horizontalLayout_7"));
+        horizontalLayout_7->setObjectName("horizontalLayout_7");
         cir3Label = new QLabel(layoutWidget);
-        cir3Label->setObjectName(QString::fromUtf8("cir3Label"));
+        cir3Label->setObjectName("cir3Label");
 
         horizontalLayout_7->addWidget(cir3Label);
 
         cir3Value = new QLineEdit(layoutWidget);
-        cir3Value->setObjectName(QString::fromUtf8("cir3Value"));
+        cir3Value->setObjectName("cir3Value");
         sizePolicy1.setHeightForWidth(cir3Value->sizePolicy().hasHeightForWidth());
         cir3Value->setSizePolicy(sizePolicy1);
         cir3Value->setMinimumSize(QSize(60, 0));
@@ -339,14 +339,14 @@ public:
         verticalLayout->addLayout(horizontalLayout_7);
 
         horizontalLayout_6 = new QHBoxLayout();
-        horizontalLayout_6->setObjectName(QString::fromUtf8("horizontalLayout_6"));
+        horizontalLayout_6->setObjectName("horizontalLayout_6");
         cir2Label = new QLabel(layoutWidget);
-        cir2Label->setObjectName(QString::fromUtf8("cir2Label"));
+        cir2Label->setObjectName("cir2Label");
 
         horizontalLayout_6->addWidget(cir2Label);
 
         cir2Value = new QLineEdit(layoutWidget);
-        cir2Value->setObjectName(QString::fromUtf8("cir2Value"));
+        cir2Value->setObjectName("cir2Value");
         sizePolicy1.setHeightForWidth(cir2Value->sizePolicy().hasHeightForWidth());
         cir2Value->setSizePolicy(sizePolicy1);
         cir2Value->setMinimumSize(QSize(60, 0));
@@ -358,14 +358,14 @@ public:
         verticalLayout->addLayout(horizontalLayout_6);
 
         horizontalLayout_13 = new QHBoxLayout();
-        horizontalLayout_13->setObjectName(QString::fromUtf8("horizontalLayout_13"));
+        horizontalLayout_13->setObjectName("horizontalLayout_13");
         cir7Label = new QLabel(layoutWidget);
-        cir7Label->setObjectName(QString::fromUtf8("cir7Label"));
+        cir7Label->setObjectName("cir7Label");
 
         horizontalLayout_13->addWidget(cir7Label);
 
         cir7Value = new QLineEdit(layoutWidget);
-        cir7Value->setObjectName(QString::fromUtf8("cir7Value"));
+        cir7Value->setObjectName("cir7Value");
         sizePolicy1.setHeightForWidth(cir7Value->sizePolicy().hasHeightForWidth());
         cir7Value->setSizePolicy(sizePolicy1);
         cir7Value->setMinimumSize(QSize(60, 0));
@@ -377,14 +377,14 @@ public:
         verticalLayout->addLayout(horizontalLayout_13);
 
         horizontalLayout_10 = new QHBoxLayout();
-        horizontalLayout_10->setObjectName(QString::fromUtf8("horizontalLayout_10"));
+        horizontalLayout_10->setObjectName("horizontalLayout_10");
         cir5Label = new QLabel(layoutWidget);
-        cir5Label->setObjectName(QString::fromUtf8("cir5Label"));
+        cir5Label->setObjectName("cir5Label");
 
         horizontalLayout_10->addWidget(cir5Label);
 
         cir5Value = new QLineEdit(layoutWidget);
-        cir5Value->setObjectName(QString::fromUtf8("cir5Value"));
+        cir5Value->setObjectName("cir5Value");
         sizePolicy1.setHeightForWidth(cir5Value->sizePolicy().hasHeightForWidth());
         cir5Value->setSizePolicy(sizePolicy1);
         cir5Value->setMinimumSize(QSize(60, 0));
@@ -396,14 +396,14 @@ public:
         verticalLayout->addLayout(horizontalLayout_10);
 
         horizontalLayout_12 = new QHBoxLayout();
-        horizontalLayout_12->setObjectName(QString::fromUtf8("horizontalLayout_12"));
+        horizontalLayout_12->setObjectName("horizontalLayout_12");
         cir6Label = new QLabel(layoutWidget);
-        cir6Label->setObjectName(QString::fromUtf8("cir6Label"));
+        cir6Label->setObjectName("cir6Label");
 
         horizontalLayout_12->addWidget(cir6Label);
 
         cir6Value = new QLineEdit(layoutWidget);
-        cir6Value->setObjectName(QString::fromUtf8("cir6Value"));
+        cir6Value->setObjectName("cir6Value");
         sizePolicy1.setHeightForWidth(cir6Value->sizePolicy().hasHeightForWidth());
         cir6Value->setSizePolicy(sizePolicy1);
         cir6Value->setMinimumSize(QSize(60, 0));
@@ -415,14 +415,14 @@ public:
         verticalLayout->addLayout(horizontalLayout_12);
 
         horizontalLayout_8 = new QHBoxLayout();
-        horizontalLayout_8->setObjectName(QString::fromUtf8("horizontalLayout_8"));
+        horizontalLayout_8->setObjectName("horizontalLayout_8");
         cir4Label = new QLabel(layoutWidget);
-        cir4Label->setObjectName(QString::fromUtf8("cir4Label"));
+        cir4Label->setObjectName("cir4Label");
 
         horizontalLayout_8->addWidget(cir4Label);
 
         cir4Value = new QLineEdit(layoutWidget);
-        cir4Value->setObjectName(QString::fromUtf8("cir4Value"));
+        cir4Value->setObjectName("cir4Value");
         sizePolicy1.setHeightForWidth(cir4Value->sizePolicy().hasHeightForWidth());
         cir4Value->setSizePolicy(sizePolicy1);
         cir4Value->setMinimumSize(QSize(60, 0));
@@ -439,15 +439,15 @@ public:
 
         tabWidget->addTab(tab, QString());
         tab_2 = new QWidget();
-        tab_2->setObjectName(QString::fromUtf8("tab_2"));
+        tab_2->setObjectName("tab_2");
         layoutWidget1 = new QWidget(tab_2);
-        layoutWidget1->setObjectName(QString::fromUtf8("layoutWidget1"));
+        layoutWidget1->setObjectName("layoutWidget1");
         layoutWidget1->setGeometry(QRect(10, 10, 258, 598));
         verticalLayout_4 = new QVBoxLayout(layoutWidget1);
-        verticalLayout_4->setObjectName(QString::fromUtf8("verticalLayout_4"));
+        verticalLayout_4->setObjectName("verticalLayout_4");
         verticalLayout_4->setContentsMargins(0, 0, 0, 0);
         label_2 = new QLabel(layoutWidget1);
-        label_2->setObjectName(QString::fromUtf8("label_2"));
+        label_2->setObjectName("label_2");
 
         verticalLayout_4->addWidget(label_2);
 
@@ -455,7 +455,7 @@ public:
         QTreeWidgetItem *__qtreewidgetitem = new QTreeWidgetItem();
         __qtreewidgetitem->setText(0, QString::fromUtf8("1"));
         projectTree->setHeaderItem(__qtreewidgetitem);
-        projectTree->setObjectName(QString::fromUtf8("projectTree"));
+        projectTree->setObjectName("projectTree");
         projectTree->setMinimumSize(QSize(0, 300));
         projectTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
         projectTree->setSelectionBehavior(QAbstractItemView::SelectItems);
@@ -464,7 +464,7 @@ public:
         verticalLayout_4->addWidget(projectTree);
 
         label = new QLabel(layoutWidget1);
-        label->setObjectName(QString::fromUtf8("label"));
+        label->setObjectName("label");
 
         verticalLayout_4->addWidget(label);
 
@@ -473,7 +473,7 @@ public:
             properties->setColumnCount(2);
         if (properties->rowCount() < 15)
             properties->setRowCount(15);
-        properties->setObjectName(QString::fromUtf8("properties"));
+        properties->setObjectName("properties");
         properties->setMinimumSize(QSize(0, 200));
         properties->setRowCount(15);
         properties->setColumnCount(2);
@@ -491,15 +491,15 @@ public:
         verticalLayout_4->addItem(verticalSpacer_2);
 
         horizontalLayout_3 = new QHBoxLayout();
-        horizontalLayout_3->setObjectName(QString::fromUtf8("horizontalLayout_3"));
+        horizontalLayout_3->setObjectName("horizontalLayout_3");
         estimateButton = new QPushButton(layoutWidget1);
-        estimateButton->setObjectName(QString::fromUtf8("estimateButton"));
+        estimateButton->setObjectName("estimateButton");
         estimateButton->setEnabled(false);
 
         horizontalLayout_3->addWidget(estimateButton);
 
         fitButton = new QPushButton(layoutWidget1);
-        fitButton->setObjectName(QString::fromUtf8("fitButton"));
+        fitButton->setObjectName("fitButton");
         fitButton->setEnabled(false);
 
         horizontalLayout_3->addWidget(fitButton);
@@ -509,22 +509,22 @@ public:
 
         tabWidget->addTab(tab_2, QString());
         tab_3 = new QWidget();
-        tab_3->setObjectName(QString::fromUtf8("tab_3"));
+        tab_3->setObjectName("tab_3");
         layoutWidget_2 = new QWidget(tab_3);
-        layoutWidget_2->setObjectName(QString::fromUtf8("layoutWidget_2"));
+        layoutWidget_2->setObjectName("layoutWidget_2");
         layoutWidget_2->setGeometry(QRect(10, 10, 300, 608));
         verticalLayout_6 = new QVBoxLayout(layoutWidget_2);
-        verticalLayout_6->setObjectName(QString::fromUtf8("verticalLayout_6"));
+        verticalLayout_6->setObjectName("verticalLayout_6");
         verticalLayout_6->setContentsMargins(0, 0, 0, 0);
         horizontalLayout_24 = new QHBoxLayout();
-        horizontalLayout_24->setObjectName(QString::fromUtf8("horizontalLayout_24"));
+        horizontalLayout_24->setObjectName("horizontalLayout_24");
         pushButton_3 = new QPushButton(layoutWidget_2);
-        pushButton_3->setObjectName(QString::fromUtf8("pushButton_3"));
+        pushButton_3->setObjectName("pushButton_3");
 
         horizontalLayout_24->addWidget(pushButton_3);
 
         pushButton_4 = new QPushButton(layoutWidget_2);
-        pushButton_4->setObjectName(QString::fromUtf8("pushButton_4"));
+        pushButton_4->setObjectName("pushButton_4");
 
         horizontalLayout_24->addWidget(pushButton_4);
 
@@ -532,14 +532,14 @@ public:
         verticalLayout_6->addLayout(horizontalLayout_24);
 
         horizontalLayout_25 = new QHBoxLayout();
-        horizontalLayout_25->setObjectName(QString::fromUtf8("horizontalLayout_25"));
+        horizontalLayout_25->setObjectName("horizontalLayout_25");
         label_13 = new QLabel(layoutWidget_2);
-        label_13->setObjectName(QString::fromUtf8("label_13"));
+        label_13->setObjectName("label_13");
 
         horizontalLayout_25->addWidget(label_13);
 
         deviceName = new QLineEdit(layoutWidget_2);
-        deviceName->setObjectName(QString::fromUtf8("deviceName"));
+        deviceName->setObjectName("deviceName");
         deviceName->setMinimumSize(QSize(160, 0));
         deviceName->setMaximumSize(QSize(160, 16777215));
 
@@ -549,9 +549,9 @@ public:
         verticalLayout_6->addLayout(horizontalLayout_25);
 
         horizontalLayout_26 = new QHBoxLayout();
-        horizontalLayout_26->setObjectName(QString::fromUtf8("horizontalLayout_26"));
+        horizontalLayout_26->setObjectName("horizontalLayout_26");
         deviceTypeLabel_2 = new QLabel(layoutWidget_2);
-        deviceTypeLabel_2->setObjectName(QString::fromUtf8("deviceTypeLabel_2"));
+        deviceTypeLabel_2->setObjectName("deviceTypeLabel_2");
         QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Preferred);
         sizePolicy3.setHorizontalStretch(0);
         sizePolicy3.setVerticalStretch(0);
@@ -562,7 +562,7 @@ public:
         horizontalLayout_26->addWidget(deviceTypeLabel_2);
 
         deviceType = new QComboBox(layoutWidget_2);
-        deviceType->setObjectName(QString::fromUtf8("deviceType"));
+        deviceType->setObjectName("deviceType");
         sizePolicy1.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
         deviceType->setSizePolicy(sizePolicy1);
         deviceType->setMinimumSize(QSize(160, 0));
@@ -574,14 +574,14 @@ public:
         verticalLayout_6->addLayout(horizontalLayout_26);
 
         horizontalLayout_27 = new QHBoxLayout();
-        horizontalLayout_27->setObjectName(QString::fromUtf8("horizontalLayout_27"));
+        horizontalLayout_27->setObjectName("horizontalLayout_27");
         label_14 = new QLabel(layoutWidget_2);
-        label_14->setObjectName(QString::fromUtf8("label_14"));
+        label_14->setObjectName("label_14");
 
         horizontalLayout_27->addWidget(label_14);
 
         testType = new QComboBox(layoutWidget_2);
-        testType->setObjectName(QString::fromUtf8("testType"));
+        testType->setObjectName("testType");
         sizePolicy1.setHeightForWidth(testType->sizePolicy().hasHeightForWidth());
         testType->setSizePolicy(sizePolicy1);
         testType->setMinimumSize(QSize(160, 0));
@@ -597,9 +597,9 @@ public:
         verticalLayout_6->addItem(verticalSpacer_8);
 
         horizontalLayout_28 = new QHBoxLayout();
-        horizontalLayout_28->setObjectName(QString::fromUtf8("horizontalLayout_28"));
+        horizontalLayout_28->setObjectName("horizontalLayout_28");
         heaterLabel_2 = new QLabel(layoutWidget_2);
-        heaterLabel_2->setObjectName(QString::fromUtf8("heaterLabel_2"));
+        heaterLabel_2->setObjectName("heaterLabel_2");
         sizePolicy3.setHeightForWidth(heaterLabel_2->sizePolicy().hasHeightForWidth());
         heaterLabel_2->setSizePolicy(sizePolicy3);
         heaterLabel_2->setMinimumSize(QSize(100, 0));
@@ -607,7 +607,7 @@ public:
         horizontalLayout_28->addWidget(heaterLabel_2);
 
         heaterVoltage = new QLineEdit(layoutWidget_2);
-        heaterVoltage->setObjectName(QString::fromUtf8("heaterVoltage"));
+        heaterVoltage->setObjectName("heaterVoltage");
         sizePolicy1.setHeightForWidth(heaterVoltage->sizePolicy().hasHeightForWidth());
         heaterVoltage->setSizePolicy(sizePolicy1);
         heaterVoltage->setMinimumSize(QSize(50, 0));
@@ -623,13 +623,13 @@ public:
         verticalLayout_6->addLayout(horizontalLayout_28);
 
         horizontalLayout_29 = new QHBoxLayout();
-        horizontalLayout_29->setObjectName(QString::fromUtf8("horizontalLayout_29"));
+        horizontalLayout_29->setObjectName("horizontalLayout_29");
         horizontalSpacer_16 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout_29->addItem(horizontalSpacer_16);
 
         label_15 = new QLabel(layoutWidget_2);
-        label_15->setObjectName(QString::fromUtf8("label_15"));
+        label_15->setObjectName("label_15");
         sizePolicy1.setHeightForWidth(label_15->sizePolicy().hasHeightForWidth());
         label_15->setSizePolicy(sizePolicy1);
         label_15->setMinimumSize(QSize(50, 20));
@@ -639,7 +639,7 @@ public:
         horizontalLayout_29->addWidget(label_15);
 
         label_16 = new QLabel(layoutWidget_2);
-        label_16->setObjectName(QString::fromUtf8("label_16"));
+        label_16->setObjectName("label_16");
         QSizePolicy sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Preferred);
         sizePolicy4.setHorizontalStretch(0);
         sizePolicy4.setVerticalStretch(0);
@@ -652,7 +652,7 @@ public:
         horizontalLayout_29->addWidget(label_16);
 
         label_17 = new QLabel(layoutWidget_2);
-        label_17->setObjectName(QString::fromUtf8("label_17"));
+        label_17->setObjectName("label_17");
         sizePolicy4.setHeightForWidth(label_17->sizePolicy().hasHeightForWidth());
         label_17->setSizePolicy(sizePolicy4);
         label_17->setMinimumSize(QSize(50, 0));
@@ -665,9 +665,9 @@ public:
         verticalLayout_6->addLayout(horizontalLayout_29);
 
         horizontalLayout_30 = new QHBoxLayout();
-        horizontalLayout_30->setObjectName(QString::fromUtf8("horizontalLayout_30"));
+        horizontalLayout_30->setObjectName("horizontalLayout_30");
         anodeLabel = new QLabel(layoutWidget_2);
-        anodeLabel->setObjectName(QString::fromUtf8("anodeLabel"));
+        anodeLabel->setObjectName("anodeLabel");
         QSizePolicy sizePolicy5(QSizePolicy::Expanding, QSizePolicy::Preferred);
         sizePolicy5.setHorizontalStretch(100);
         sizePolicy5.setVerticalStretch(0);
@@ -678,7 +678,7 @@ public:
         horizontalLayout_30->addWidget(anodeLabel);
 
         anodeStart = new QLineEdit(layoutWidget_2);
-        anodeStart->setObjectName(QString::fromUtf8("anodeStart"));
+        anodeStart->setObjectName("anodeStart");
         sizePolicy1.setHeightForWidth(anodeStart->sizePolicy().hasHeightForWidth());
         anodeStart->setSizePolicy(sizePolicy1);
         anodeStart->setMinimumSize(QSize(50, 0));
@@ -687,7 +687,7 @@ public:
         horizontalLayout_30->addWidget(anodeStart);
 
         anodeStop = new QLineEdit(layoutWidget_2);
-        anodeStop->setObjectName(QString::fromUtf8("anodeStop"));
+        anodeStop->setObjectName("anodeStop");
         sizePolicy1.setHeightForWidth(anodeStop->sizePolicy().hasHeightForWidth());
         anodeStop->setSizePolicy(sizePolicy1);
         anodeStop->setMaximumSize(QSize(50, 16777215));
@@ -695,7 +695,7 @@ public:
         horizontalLayout_30->addWidget(anodeStop);
 
         anodeStep = new QLineEdit(layoutWidget_2);
-        anodeStep->setObjectName(QString::fromUtf8("anodeStep"));
+        anodeStep->setObjectName("anodeStep");
         sizePolicy1.setHeightForWidth(anodeStep->sizePolicy().hasHeightForWidth());
         anodeStep->setSizePolicy(sizePolicy1);
         anodeStep->setMaximumSize(QSize(50, 16777215));
@@ -706,9 +706,9 @@ public:
         verticalLayout_6->addLayout(horizontalLayout_30);
 
         gridGroup = new QHBoxLayout();
-        gridGroup->setObjectName(QString::fromUtf8("gridGroup"));
+        gridGroup->setObjectName("gridGroup");
         gridLabel = new QLabel(layoutWidget_2);
-        gridLabel->setObjectName(QString::fromUtf8("gridLabel"));
+        gridLabel->setObjectName("gridLabel");
         sizePolicy3.setHeightForWidth(gridLabel->sizePolicy().hasHeightForWidth());
         gridLabel->setSizePolicy(sizePolicy3);
         gridLabel->setMinimumSize(QSize(100, 0));
@@ -716,7 +716,7 @@ public:
         gridGroup->addWidget(gridLabel);
 
         gridStart = new QLineEdit(layoutWidget_2);
-        gridStart->setObjectName(QString::fromUtf8("gridStart"));
+        gridStart->setObjectName("gridStart");
         sizePolicy1.setHeightForWidth(gridStart->sizePolicy().hasHeightForWidth());
         gridStart->setSizePolicy(sizePolicy1);
         gridStart->setMinimumSize(QSize(50, 0));
@@ -725,7 +725,7 @@ public:
         gridGroup->addWidget(gridStart);
 
         gridStop = new QLineEdit(layoutWidget_2);
-        gridStop->setObjectName(QString::fromUtf8("gridStop"));
+        gridStop->setObjectName("gridStop");
         sizePolicy1.setHeightForWidth(gridStop->sizePolicy().hasHeightForWidth());
         gridStop->setSizePolicy(sizePolicy1);
         gridStop->setMinimumSize(QSize(50, 0));
@@ -734,7 +734,7 @@ public:
         gridGroup->addWidget(gridStop);
 
         gridStep = new QLineEdit(layoutWidget_2);
-        gridStep->setObjectName(QString::fromUtf8("gridStep"));
+        gridStep->setObjectName("gridStep");
         sizePolicy1.setHeightForWidth(gridStep->sizePolicy().hasHeightForWidth());
         gridStep->setSizePolicy(sizePolicy1);
         gridStep->setMinimumSize(QSize(50, 0));
@@ -746,9 +746,9 @@ public:
         verticalLayout_6->addLayout(gridGroup);
 
         screenGroup_2 = new QHBoxLayout();
-        screenGroup_2->setObjectName(QString::fromUtf8("screenGroup_2"));
+        screenGroup_2->setObjectName("screenGroup_2");
         screenLabel = new QLabel(layoutWidget_2);
-        screenLabel->setObjectName(QString::fromUtf8("screenLabel"));
+        screenLabel->setObjectName("screenLabel");
         sizePolicy3.setHeightForWidth(screenLabel->sizePolicy().hasHeightForWidth());
         screenLabel->setSizePolicy(sizePolicy3);
         screenLabel->setMinimumSize(QSize(100, 0));
@@ -756,7 +756,7 @@ public:
         screenGroup_2->addWidget(screenLabel);
 
         screenStart = new QLineEdit(layoutWidget_2);
-        screenStart->setObjectName(QString::fromUtf8("screenStart"));
+        screenStart->setObjectName("screenStart");
         sizePolicy1.setHeightForWidth(screenStart->sizePolicy().hasHeightForWidth());
         screenStart->setSizePolicy(sizePolicy1);
         screenStart->setMinimumSize(QSize(50, 0));
@@ -765,7 +765,7 @@ public:
         screenGroup_2->addWidget(screenStart);
 
         screenStop = new QLineEdit(layoutWidget_2);
-        screenStop->setObjectName(QString::fromUtf8("screenStop"));
+        screenStop->setObjectName("screenStop");
         sizePolicy1.setHeightForWidth(screenStop->sizePolicy().hasHeightForWidth());
         screenStop->setSizePolicy(sizePolicy1);
         screenStop->setMinimumSize(QSize(50, 0));
@@ -774,7 +774,7 @@ public:
         screenGroup_2->addWidget(screenStop);
 
         screenStep = new QLineEdit(layoutWidget_2);
-        screenStep->setObjectName(QString::fromUtf8("screenStep"));
+        screenStep->setObjectName("screenStep");
         sizePolicy1.setHeightForWidth(screenStep->sizePolicy().hasHeightForWidth());
         screenStep->setSizePolicy(sizePolicy1);
         screenStep->setMinimumSize(QSize(50, 0));
@@ -786,11 +786,11 @@ public:
         verticalLayout_6->addLayout(screenGroup_2);
 
         verticalLayout_7 = new QVBoxLayout();
-        verticalLayout_7->setObjectName(QString::fromUtf8("verticalLayout_7"));
+        verticalLayout_7->setObjectName("verticalLayout_7");
         horizontalLayout_31 = new QHBoxLayout();
-        horizontalLayout_31->setObjectName(QString::fromUtf8("horizontalLayout_31"));
+        horizontalLayout_31->setObjectName("horizontalLayout_31");
         label_18 = new QLabel(layoutWidget_2);
-        label_18->setObjectName(QString::fromUtf8("label_18"));
+        label_18->setObjectName("label_18");
         sizePolicy3.setHeightForWidth(label_18->sizePolicy().hasHeightForWidth());
         label_18->setSizePolicy(sizePolicy3);
         label_18->setMinimumSize(QSize(120, 0));
@@ -799,7 +799,7 @@ public:
         horizontalLayout_31->addWidget(label_18);
 
         iaMax = new QLineEdit(layoutWidget_2);
-        iaMax->setObjectName(QString::fromUtf8("iaMax"));
+        iaMax->setObjectName("iaMax");
         sizePolicy1.setHeightForWidth(iaMax->sizePolicy().hasHeightForWidth());
         iaMax->setSizePolicy(sizePolicy1);
         iaMax->setMinimumSize(QSize(50, 0));
@@ -815,9 +815,9 @@ public:
         verticalLayout_7->addLayout(horizontalLayout_31);
 
         horizontalLayout_32 = new QHBoxLayout();
-        horizontalLayout_32->setObjectName(QString::fromUtf8("horizontalLayout_32"));
+        horizontalLayout_32->setObjectName("horizontalLayout_32");
         label_19 = new QLabel(layoutWidget_2);
-        label_19->setObjectName(QString::fromUtf8("label_19"));
+        label_19->setObjectName("label_19");
         sizePolicy3.setHeightForWidth(label_19->sizePolicy().hasHeightForWidth());
         label_19->setSizePolicy(sizePolicy3);
         label_19->setMinimumSize(QSize(120, 0));
@@ -826,7 +826,7 @@ public:
         horizontalLayout_32->addWidget(label_19);
 
         pMax = new QLineEdit(layoutWidget_2);
-        pMax->setObjectName(QString::fromUtf8("pMax"));
+        pMax->setObjectName("pMax");
         sizePolicy1.setHeightForWidth(pMax->sizePolicy().hasHeightForWidth());
         pMax->setSizePolicy(sizePolicy1);
         pMax->setMinimumSize(QSize(50, 0));
@@ -849,9 +849,9 @@ public:
         verticalLayout_6->addItem(verticalSpacer_9);
 
         heaterLayout = new QHBoxLayout();
-        heaterLayout->setObjectName(QString::fromUtf8("heaterLayout"));
+        heaterLayout->setObjectName("heaterLayout");
         heaterButton = new QPushButton(layoutWidget_2);
-        heaterButton->setObjectName(QString::fromUtf8("heaterButton"));
+        heaterButton->setObjectName("heaterButton");
         sizePolicy1.setHeightForWidth(heaterButton->sizePolicy().hasHeightForWidth());
         heaterButton->setSizePolicy(sizePolicy1);
         heaterButton->setMinimumSize(QSize(80, 0));
@@ -867,9 +867,9 @@ public:
         verticalLayout_6->addLayout(heaterLayout);
 
         horizontalLayout_33 = new QHBoxLayout();
-        horizontalLayout_33->setObjectName(QString::fromUtf8("horizontalLayout_33"));
+        horizontalLayout_33->setObjectName("horizontalLayout_33");
         heaterVLabel = new QLabel(layoutWidget_2);
-        heaterVLabel->setObjectName(QString::fromUtf8("heaterVLabel"));
+        heaterVLabel->setObjectName("heaterVLabel");
         sizePolicy4.setHeightForWidth(heaterVLabel->sizePolicy().hasHeightForWidth());
         heaterVLabel->setSizePolicy(sizePolicy4);
         heaterVLabel->setMinimumSize(QSize(100, 0));
@@ -881,7 +881,7 @@ public:
         horizontalLayout_33->addItem(horizontalSpacer_14);
 
         heaterVlcd = new QLCDNumber(layoutWidget_2);
-        heaterVlcd->setObjectName(QString::fromUtf8("heaterVlcd"));
+        heaterVlcd->setObjectName("heaterVlcd");
         QSizePolicy sizePolicy6(QSizePolicy::Fixed, QSizePolicy::Minimum);
         sizePolicy6.setHorizontalStretch(0);
         sizePolicy6.setVerticalStretch(0);
@@ -897,9 +897,9 @@ public:
         verticalLayout_6->addLayout(horizontalLayout_33);
 
         horizontalLayout_34 = new QHBoxLayout();
-        horizontalLayout_34->setObjectName(QString::fromUtf8("horizontalLayout_34"));
+        horizontalLayout_34->setObjectName("horizontalLayout_34");
         heaterILabel = new QLabel(layoutWidget_2);
-        heaterILabel->setObjectName(QString::fromUtf8("heaterILabel"));
+        heaterILabel->setObjectName("heaterILabel");
         sizePolicy4.setHeightForWidth(heaterILabel->sizePolicy().hasHeightForWidth());
         heaterILabel->setSizePolicy(sizePolicy4);
         heaterILabel->setMinimumSize(QSize(100, 0));
@@ -911,7 +911,7 @@ public:
         horizontalLayout_34->addItem(horizontalSpacer_17);
 
         heaterIlcd = new QLCDNumber(layoutWidget_2);
-        heaterIlcd->setObjectName(QString::fromUtf8("heaterIlcd"));
+        heaterIlcd->setObjectName("heaterIlcd");
         sizePolicy6.setHeightForWidth(heaterIlcd->sizePolicy().hasHeightForWidth());
         heaterIlcd->setSizePolicy(sizePolicy6);
         heaterIlcd->setMinimumSize(QSize(133, 0));
@@ -929,9 +929,9 @@ public:
         verticalLayout_6->addItem(verticalSpacer_10);
 
         horizontalLayout_35 = new QHBoxLayout();
-        horizontalLayout_35->setObjectName(QString::fromUtf8("horizontalLayout_35"));
+        horizontalLayout_35->setObjectName("horizontalLayout_35");
         runButton = new QPushButton(layoutWidget_2);
-        runButton->setObjectName(QString::fromUtf8("runButton"));
+        runButton->setObjectName("runButton");
         runButton->setCheckable(true);
 
         horizontalLayout_35->addWidget(runButton);
@@ -944,7 +944,7 @@ public:
         verticalLayout_6->addLayout(horizontalLayout_35);
 
         progressBar = new QProgressBar(layoutWidget_2);
-        progressBar->setObjectName(QString::fromUtf8("progressBar"));
+        progressBar->setObjectName("progressBar");
         progressBar->setValue(24);
         progressBar->setTextVisible(false);
 
@@ -955,15 +955,15 @@ public:
         verticalLayout_6->addItem(verticalSpacer_11);
 
         horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
+        horizontalLayout_2->setObjectName("horizontalLayout_2");
         btnSaveMeasurement = new QPushButton(layoutWidget_2);
-        btnSaveMeasurement->setObjectName(QString::fromUtf8("btnSaveMeasurement"));
+        btnSaveMeasurement->setObjectName("btnSaveMeasurement");
         btnSaveMeasurement->setEnabled(false);
 
         horizontalLayout_2->addWidget(btnSaveMeasurement);
 
         btnAddToProject = new QPushButton(layoutWidget_2);
-        btnAddToProject->setObjectName(QString::fromUtf8("btnAddToProject"));
+        btnAddToProject->setObjectName("btnAddToProject");
         btnAddToProject->setEnabled(false);
 
         horizontalLayout_2->addWidget(btnAddToProject);
@@ -980,18 +980,18 @@ public:
         horizontalLayout->addItem(horizontalSpacer);
 
         verticalLayout_2 = new QVBoxLayout();
-        verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
+        verticalLayout_2->setObjectName("verticalLayout_2");
         verticalSpacer_4 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout_2->addItem(verticalSpacer_4);
 
         plotTitle = new QLabel(horizontalLayoutWidget);
-        plotTitle->setObjectName(QString::fromUtf8("plotTitle"));
+        plotTitle->setObjectName("plotTitle");
 
         verticalLayout_2->addWidget(plotTitle);
 
         graphicsView = new QGraphicsView(horizontalLayoutWidget);
-        graphicsView->setObjectName(QString::fromUtf8("graphicsView"));
+        graphicsView->setObjectName("graphicsView");
         sizePolicy1.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
         graphicsView->setSizePolicy(sizePolicy1);
         graphicsView->setMinimumSize(QSize(550, 500));
@@ -1012,15 +1012,15 @@ public:
 
         ValveWorkbench->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ValveWorkbench);
-        menubar->setObjectName(QString::fromUtf8("menubar"));
+        menubar->setObjectName("menubar");
         menubar->setGeometry(QRect(0, 0, 997, 22));
         menuFile = new QMenu(menubar);
-        menuFile->setObjectName(QString::fromUtf8("menuFile"));
+        menuFile->setObjectName("menuFile");
         menuHelp = new QMenu(menubar);
-        menuHelp->setObjectName(QString::fromUtf8("menuHelp"));
+        menuHelp->setObjectName("menuHelp");
         ValveWorkbench->setMenuBar(menubar);
         statusbar = new QStatusBar(ValveWorkbench);
-        statusbar->setObjectName(QString::fromUtf8("statusbar"));
+        statusbar->setObjectName("statusbar");
         ValveWorkbench->setStatusBar(statusbar);
 
         menubar->addAction(menuFile->menuAction());

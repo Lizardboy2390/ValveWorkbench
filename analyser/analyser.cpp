@@ -1,8 +1,9 @@
 #include "analyser.h"
 
 QRegularExpression *Analyser::sampleMatcher = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
+QRegularExpression *Analyser::sampleMatcher2 = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
 QRegularExpression *Analyser::getMatcher = new QRegularExpression(R"(^OK: Get\((\d+)\) = (\d+))");
-QRegularExpression *Analyser::infoMatcher = new QRegularExpression(R"(^OK: Info\((\d+)\) = (.*))");
+QRegularExpression *Analyser::infoMatcher = new QRegularExpression(R"(^OK: Info\((\d+)\) = (.*)\r)");
 
 Analyser::Analyser(Client *client_, QSerialPort *port, QTimer *timeout, QTimer *heater) : client(client_), serialPort(port), timeoutTimer(timeout), heaterTimer(heater)
 {
@@ -18,15 +19,23 @@ Analyser::~Analyser()
 
 Sample *Analyser::createSample(QString response)
 {
-    QRegularExpressionMatch match = sampleMatcher->match(response);
+    QRegularExpressionMatch match = sampleMatcher2->match(response);
 
     double vg1 = convertMeasuredVoltage(GRID, match.captured(3).toInt());
     double va = convertMeasuredVoltage(ANODE, match.captured(4).toInt());
-    double ia = convertMeasuredCurrent(ANODE, match.captured(5).toInt(), match.captured(6).toInt()) * 1000;
+    double ia = convertMeasuredCurrent(ANODE, match.captured(5).toInt(), match.captured(6).toInt(), match.captured(11).toInt()) * 1000;
     double vg2 = convertMeasuredVoltage(SCREEN, match.captured(8).toInt());
-    double ig2 = convertMeasuredCurrent(SCREEN, match.captured(9).toInt(), match.captured(10).toInt()) * 1000;
+    double ig2 = convertMeasuredCurrent(SCREEN, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
     double vh = convertMeasuredVoltage(HEATER, match.captured(1).toInt());
     double ih = convertMeasuredCurrent(HEATER, match.captured(2).toInt());
+
+    // This line adjusts the anode current measurement to account for the current that always flows through the voltage sense network
+    // The resistance of the voltage sense network (3 x 470k + 2 * 4k7) is 1.4194M and the current needs to be adjusted for mA
+    ia = ia - va / 1419.4;
+    // For very low anode currents, this could lead to very small negative values, hence...
+    if (ia < 0.0) {
+        ia = 0.0;
+    }
 
     if (ia > measuredIaMax) {
         measuredIaMax = ia;
@@ -83,10 +92,9 @@ double Analyser::convertMeasuredVoltage(int electrode, int voltage)
     return value;
 }
 
-double Analyser::convertMeasuredCurrent(int electrode, int current, int currentLo)
+double Analyser::convertMeasuredCurrent(int electrode, int current, int currentLo, int currentHi)
 {
     double value = 0;
-    double voltageHi;
 
     switch (electrode) {
     case HEATER:
@@ -94,12 +102,21 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
         break;
     case ANODE:
     case SCREEN:
-        voltageHi = ((double) current) / 1023 / 2.0 * vRefMaster;
-        if (voltageHi < 1.9) { // If we're close to 3 diode drops we should use the Lo value
+        if (isMega && currentHi < 1023) { // We haven't saturated the ADC
+            value = ((double) currentHi) * vRefMaster / 1023 / 8.0 / 33.333333;
+        } else if (current < 1000) { // We haven't saturated the ADC
+                                     // (slight safety factor as the voltage at saturation is 2.048v
+                                     // and this could be close to onset of diode conduction)
+            value = ((double) current) * vRefMaster / 1023 / 2.0 / 33.333333;
+        } else {
+            value = ((double) currentLo) * vRefMaster / 1023 / 2.0 / 3.333333;
+        }
+        /*voltageHi = ((double) current) / 1023 / 2.0 * vRefMaster;
+        if (voltageHi < 1.9) {
             value = voltageHi / 33.333333;
         } else {
             value = (((double) currentLo) / 1023 / 2.0 * vRefMaster / 3.333333);
-        }
+        }*/
         break;
     case GRID:
         break;
@@ -446,9 +463,13 @@ void Analyser::checkResponse(QString response)
             int info = match.captured(1).toInt();
             QString value = match.captured(2);
 
-            if (info == 1) {
+            if (info == 0) {
                 hwVersion = value;
-            } else if (info == 2) {
+                isMega = (hwVersion == "Rev 2 (Mega Pro)");
+                if (isMega) {
+                    vRefSlave = 4.096;
+                }
+            } else if (info == 1) {
                 swVersion = value;
             }
         }

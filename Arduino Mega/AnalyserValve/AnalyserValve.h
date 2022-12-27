@@ -3,37 +3,35 @@
 #define PENTODE_MODE 3
 #define MIN_HV_INCREMENT 5 //Minimum increment between each high-voltage datapoint in a sweep, in volts
 
-#define MASTER 1            //For when hardware ID pin is high
-#define SLAVE 0             //For when hardware ID pin is low
-
-#define MASTER_ADDR 0x0A      //I2C Address of the MASTER Arduino
-#define SLAVE_ADDR 0x0B       //I2C Address of the SLAVE Arduino
-#define DAC1_ADDR 0x60  //I2C Address of one MCP4725, by default pin A0 is pulled to GND.
-#define DAC2_ADDR 0x61   //I2C Address of other MCP4725; its pin A0 must be pulled HIGH to make address 0x61 (also remove pull-up resistors). Note that the breakout board uses the MCP4725A0.
+#define MASTER_ADDR 0x0A     //I2C Address of the Arduino Mega Pro
+#define DAC1_ADDR 0x60       //I2C Address of one MCP4725, by default pin A0 is pulled to GND.
+#define DAC2_ADDR 0x61       //I2C Address of other MCP4725; its pin A0 must be pulled HIGH to make address 0x61 (also remove pull-up resistors). Note that the breakout board uses the MCP4725A0.
 //NB: I2C can send 32 ints per transmission.
 
-//#define WIZARD_MODE
+#define VH_PIN A1            //Heater-voltage sense from buck regulator
+#define IH_PIN A0            //Heater-current sense from buck regulator
+#define PWM_PIN 2            //PWM drive signal to buck regulator MOSFET
 
-#define HARDWARE_ID_PIN 12   //High for master, low for slave
-#define VH_PIN A2            //Heater-voltage sense from buck regulator
-#define IH_PIN A3            //Heater-current sense from buck regulator
-#define PWM_PIN 6            //PWM drive signal to buck regulator MOSFET
-//#define CHARGE1_PIN 8        //Drive to high-voltage charge MOSFET
-#define CHARGE1_PIN 9        //Drive to high-voltage charge MOSFET - moved to pin D9 in order to enable PWM
-#define DISCHARGE1_PIN 11    //Drive to high-voltage discharge MOSFET 
-#define FIRE1_PIN 7          //Drive to 'apply high voltage' MOSFET 
-#define VA1_PIN A6           //High voltage sense 1
-#define VA2_PIN A7           //High voltage sense 2
-#define IA1_HI_PIN A1        //Small anode-current sense (large sense resistance) 
-#define IA1_LO_PIN A0        //Large anode-current sense (small sense resistance)
-#define IA2_HI_PIN A3        //Small anode-current sense (large sense resistance) 
-#define IA2_LO_PIN A2        //Large anode-current sense (small sense resistance)
-#define DISCHARGE2_PIN 4
-#define FIRE2_PIN 2
-#define CHARGE2_PIN 3       
-#define LV_DETECT_PIN 9  //Pin to detect if heater power supply is present
+#define CHARGE1_PIN 6        //Drive to high-voltage charge MOSFET (PWM)
+#define DISCHARGE1_PIN 5     //Drive to high-voltage discharge MOSFET (PWM)
+#define FIRE1_PIN 14         //Drive to 'apply high voltage' MOSFET 
 
-#define ARRAY_LENGTH 10         
+#define CHARGE2_PIN 4        //Drive to high-voltage charge MOSFET (PWM)
+#define DISCHARGE2_PIN 3     //Drive to high-voltage discharge MOSFET (PWM)
+#define FIRE2_PIN 15         //Drive to 'apply high voltage' MOSFET
+
+#define VA1_PIN A8           //High voltage sense 1
+#define VA2_PIN A9           //High voltage sense 2
+
+#define IA1_XHI_PIN A4       //Small anode-current sense (extra large sense resistance) 
+#define IA1_HI_PIN A3        //Small anode-current sense (large sense resistance) 
+#define IA1_LO_PIN A2        //Large anode-current sense (small sense resistance)
+
+#define IA2_XHI_PIN A7        //Small anode-current sense (extra large sense resistance) 
+#define IA2_HI_PIN A5        //Small anode-current sense (large sense resistance) 
+#define IA2_LO_PIN A6        //Large anode-current sense (small sense resistance)
+
+#define ARRAY_LENGTH 12         
 
 //INDICES FOR BOTH ARRAYS
 #define VH       0   //Heater voltage  [example: 12.6V = adc391   6.3V = adc195] 
@@ -46,6 +44,8 @@
 #define HV2      7   //Anode voltage 2
 #define IA_HI_2  8   //Anode current hi 2
 #define IA_LO_2  9   //Anode current lo 2
+#define IA_XHI_1 10  //Anode current extra hi 1
+#define IA_XHI_2 11  //Anode current extra hi 2
 
 #define HT_TIMEOUT 64000
 #define CHARGING_SPEED 32
@@ -64,12 +64,6 @@ void setCommand(int index, int intParam);
 void commandError(const char *command);
 void printValues();
 
-void sendToSlave();
-void masterReceiveData(int howMany);
-void requestFromSlave();
-void slaveReceiveData(int howMany);
-void slaveAnswerRequest();
-
 int runTest();
 void setHeaterVolts();
 void setGridVolts();
@@ -80,3 +74,4 @@ void dischargeHighVoltages(int bank);
 void chargeOff();
 void doMeasurement();
 void measureValues();
+int sgn(int value);
