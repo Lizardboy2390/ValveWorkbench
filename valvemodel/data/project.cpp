@@ -36,9 +36,9 @@ void Project::updateProperties(QTableWidget *properties)
     clearProperties(properties);
 }
 
-void Project::updatePlot(Plot *plot)
+QGraphicsItemGroup *Project::updatePlot(Plot *plot)
 {
-
+    return nullptr;
 }
 
 int Project::getDeviceType() const

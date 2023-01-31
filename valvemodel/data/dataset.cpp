@@ -21,3 +21,12 @@ void DataSet::addProperty(QTableWidget *properties, QString label, QString value
     properties->setItem(row, 1, new QTableWidgetItem(value));
 }
 
+QGraphicsItemGroup *DataSet::createGroup(QList<QGraphicsItem *> *segments)
+{
+    QGraphicsItemGroup *group = new QGraphicsItemGroup();
+    for (QGraphicsItem *segment: *segments) {
+        group->addToGroup(segment);
+    }
+
+    return group;
+}

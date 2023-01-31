@@ -26,7 +26,7 @@ public:
 
     virtual void updateProperties(QTableWidget *properties);
 
-    virtual void updatePlot(Plot *plot);
+    virtual QGraphicsItemGroup *updatePlot(Plot *plot);
 
 private:
     double vg1 = 0.0;

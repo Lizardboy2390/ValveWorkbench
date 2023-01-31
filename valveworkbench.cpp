@@ -2,6 +2,7 @@
 #include "ui_valveworkbench.h"
 
 #include "valvemodel/circuit/triodecommoncathode.h"
+#include "valvemodel/data/sweep.h"
 
 ValveWorkbench::ValveWorkbench(QWidget *parent)
     : QMainWindow(parent)
@@ -35,6 +36,10 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     heaterIndicator = new LedIndicator();
     heaterIndicator->setOffColor(QColorConstants::LightGray);
     ui->heaterLayout->addWidget(heaterIndicator);
+
+    ui->measureCheck->setVisible(false);
+    ui->estCheck->setVisible(false);
+    ui->modelCheck->setVisible(false);
 
     ui->graphicsView->setScene(plot.getScene());
 
@@ -267,7 +272,10 @@ void ValveWorkbench::testFinished()
     ui->btnSaveMeasurement->setEnabled(true);
     ui->btnAddToProject->setEnabled(true);
 
-    analyser->getResult()->updatePlot(&plot);
+    currentMeasurement = analyser->getResult();
+    measuredCurves = currentMeasurement->updatePlot(&plot);
+    plot.add(measuredCurves);
+    ui->measureCheck->setChecked(true);
 }
 
 void ValveWorkbench::testAborted()
@@ -691,29 +699,85 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
     case TYP_PROJECT:
         currentProject = current;
         break;
-    case TYP_MEASUREMENT:
-        ui->estimateButton->setEnabled(true);
-        ui->fitButton->setEnabled(true);
-    case TYP_SWEEP:
-    case TYP_SAMPLE: {
+    case TYP_MEASUREMENT: {
+            if (currentMeasurementItem != nullptr) {
+                QFont font = currentMeasurementItem->font(0);
+                font.setBold(false);
+                currentMeasurementItem->setFont(0, font);
+            }
+            currentMeasurementItem = current;
+            QFont font = currentMeasurementItem->font(0);
+            font.setBold(true);
+            currentMeasurementItem->setFont(0, font);
+            currentMeasurement = (Measurement *) data;
+
+            ui->estimateButton->setEnabled(true);
+            ui->fitButton->setEnabled(true);
             currentProject = getProject(current);
-            DataSet *dataSet = (DataSet *) data;
-            dataSet->updateProperties(ui->properties);
-            dataSet->updatePlot(&plot);
+            currentMeasurement->updateProperties(ui->properties);
+            measuredCurves = currentMeasurement->updatePlot(&plot);
+            plot.add(measuredCurves);
+            ui->measureCheck->setChecked(true);
+            break;
+        }
+    case TYP_SWEEP: {
+            if (currentMeasurementItem != nullptr) {
+                QFont font = currentMeasurementItem->font(0);
+                font.setBold(false);
+                currentMeasurementItem->setFont(0, font);
+            }
+
+            currentMeasurementItem = current->parent();
+            QFont font = currentMeasurementItem->font(0);
+            font.setBold(true);
+            currentMeasurementItem->setFont(0, font);
+            currentMeasurement = (Measurement *) currentMeasurementItem->data(0, Qt::UserRole).value<void *>();
+
+            currentProject = getProject(current);
+            Sweep *sweep = (Sweep *) data;
+            sweep->updateProperties(ui->properties);
+            measuredCurves = sweep->updatePlot(&plot);
+            plot.add(measuredCurves);
+            ui->measureCheck->setChecked(true);
             break;
         }
     case TYP_ESTIMATE: {
+            if (currentEstimateItem != nullptr) {
+                QFont font = currentEstimateItem->font(0);
+                font.setBold(false);
+                currentEstimateItem->setFont(0, font);
+            }
+            currentEstimateItem = current;
+            QFont font = currentEstimateItem->font(0);
+            font.setBold(true);
+            currentEstimateItem->setFont(0, font);
             currentProject = getProject(current);
             Estimate *estimate = (Estimate *) data;
             estimate->updateProperties(ui->properties);
+            estimatedCurves = estimate->plotModel(&plot, currentMeasurement);
+            plot.add(estimatedCurves);
             break;
         }
     case TYP_MODEL: {
+            if (currentModelItem != nullptr) {
+                QFont font = currentModelItem->font(0);
+                font.setBold(false);
+                currentModelItem->setFont(0, font);
+            }
+            currentModelItem = current;
+            QFont font = currentModelItem->font(0);
+            font.setBold(true);
+            currentModelItem->setFont(0, font);
             currentProject = getProject(current);
             Model *model = (Model *) data;
             model->updateProperties(ui->properties);
+            modelledCurves = model->plotModel(&plot, currentMeasurement);
+            plot.add(modelledCurves);
             break;
-        }
+        }       
+    case TYP_SAMPLE:
+    default:
+        break;
     }
 }
 
@@ -924,10 +988,9 @@ void ValveWorkbench::on_btnAddToProject_clicked()
 
 void ValveWorkbench::on_estimateButton_clicked()
 {
-    Measurement *measurement = (Measurement *) ui->projectTree->currentItem()->data(0, Qt::UserRole).value<void *>();
-    if (measurement->getDeviceType() == TRIODE && measurement->getTestType() == ANODE_CHARACTERISTICS) {
+    if (currentMeasurement->getDeviceType() == TRIODE && currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
         Estimate *estimate = new Estimate();
-        estimate->estimate(measurement);
+        estimate->estimate(currentMeasurement);
 
         Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
         estimate->buildTree(currentProject);
@@ -935,29 +998,29 @@ void ValveWorkbench::on_estimateButton_clicked()
     }
 }
 
-
 void ValveWorkbench::on_fitButton_clicked()
 {
     QList<QTreeWidgetItem *> items = ui->projectTree->selectedItems();
 
     QList<Measurement *> measurements;
-    Estimate *estimate = new Estimate(); // If no Estimate is selected then default values will be used
+    Estimate *estimate;
+    if (currentEstimateItem != nullptr) {
+        estimate = (Estimate *) currentEstimateItem->data(0, Qt::UserRole).value<void *>();
+    } else {
+        estimate = new Estimate(); // If no Estimate is selected then default values will be used
+    }
 
-    int estimates = 0;
     bool selectionValid = true;
     for (int i = 0; i < items.count(); i++) {
         QTreeWidgetItem *item = items.at(i);
 
         if (item->type() == TYP_MEASUREMENT) {
             measurements.append((Measurement *)item->data(0, Qt::UserRole).value<void *>());
-        } else if (item->type() == TYP_ESTIMATE) {
-            estimate = (Estimate *)item->data(0, Qt::UserRole).value<void *>();
-            estimates++;
         } else { // If anything else is selected then it's not valid for fitting
             selectionValid = false;
         }
 
-        if (selectionValid && estimates < 2 && measurements.count() > 0) {
+        if (selectionValid && measurements.count() > 0) {
             Model *model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
             model->setEstimate(estimate);
             model->addMeasurements(&measurements);
@@ -968,5 +1031,49 @@ void ValveWorkbench::on_fitButton_clicked()
             model->buildTree(currentProject);
         }
     }
+}
+
+
+void ValveWorkbench::on_tabWidget_currentChanged(int index)
+{
+    switch (index) {
+    case 0:
+        ui->measureCheck->setVisible(false);
+        ui->estCheck->setVisible(false);
+        ui->modelCheck->setVisible(false);
+        break;
+    case 1:
+        ui->measureCheck->setVisible(true);
+        ui->estCheck->setVisible(true);
+        ui->modelCheck->setVisible(true);
+        break;
+    case 2:
+        ui->measureCheck->setVisible(false);
+        ui->estCheck->setVisible(false);
+        ui->modelCheck->setVisible(false);
+        break;
+    default:
+        break;
+    }
+}
+
+
+void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
+{
+    if (measuredCurves != nullptr) {
+        measuredCurves->setVisible(ui->measureCheck->isChecked());
+    }
+}
+
+
+void ValveWorkbench::on_estCheck_stateChanged(int arg1)
+{
+
+}
+
+
+void ValveWorkbench::on_modelCheck_stateChanged(int arg1)
+{
+
 }
 

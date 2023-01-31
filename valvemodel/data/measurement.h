@@ -2,8 +2,12 @@
 
 #include <QTreeWidgetItem>
 
-#include "sweep.h"
 #include "../ui/plot.h"
+
+#include "dataset.h"
+
+class Sample;
+class Sweep;
 
 class Measurement : DataSet
 {
@@ -30,7 +34,9 @@ public:
 
     virtual void updateProperties(QTableWidget *properties);
 
-    virtual void updatePlot(Plot *plot);
+    virtual QGraphicsItemGroup *updatePlot(Plot *plot);
+
+    QGraphicsItemGroup *updatePlot(Plot *plot, Sweep *sweep);
 
     int getDeviceType() const;
     void setDeviceType(int newDeviceType);
@@ -90,7 +96,7 @@ protected:
     Sweep *currentSweep;
 
     void anodeAxes(Plot *plot);
-    QList<QGraphicsItem *> *plotTriodeAnode(Plot *plot);
+    QList<QGraphicsItem *> *plotTriodeAnode(Plot *plot, Sweep *sweep = nullptr);
     QList<QGraphicsItem *> *plotTriodeTransfer(Plot *plot);
     QList<QGraphicsItem *> *plotPentodeAnode(Plot *plot);
     QList<QGraphicsItem *> *plotPentodeTransfer(Plot *plot);

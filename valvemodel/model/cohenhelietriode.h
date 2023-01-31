@@ -16,7 +16,8 @@ public:
 
     virtual void updateProperties(QTableWidget *properties);
 
+    static double cohenHelieCurrent(double va, double vg, double kg1, double kp, double kvb, double kvb2, double vct, double a, double mu);
+
 protected:
 	void setOptions();
-    double cohenHelieCurrent(double va, double vg, double kg1, double kp, double kvb, double kvb2, double vct, double a, double mu);
 };

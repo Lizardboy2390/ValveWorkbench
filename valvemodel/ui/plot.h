@@ -17,6 +17,7 @@ public:
     QGraphicsLineItem *createSegment(double x1, double y1, double x2, double y2, QPen pen);
     QGraphicsTextItem *createLabel(double x, double y, double value);
     void clear();
+    void add(QGraphicsItem *item);
 
 private:
     QGraphicsScene *scene;

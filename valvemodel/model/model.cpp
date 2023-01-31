@@ -1,4 +1,5 @@
 #include "model.h"
+#include "../data/sweep.h"
 
 /**
  * @brief Model::anodeVoltage
@@ -65,6 +66,8 @@ void Model::addMeasurements(QList<Measurement *> *measurements)
 
 void Model::setEstimate(Estimate *estimate)
 {
+    this->estimate = estimate;
+
     parameter[PAR_MU]->setValue(estimate->getMu());
     parameter[PAR_KG1]->setValue(estimate->getKg1());
     parameter[PAR_X]->setValue(estimate->getX());
@@ -98,6 +101,48 @@ QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)
     parent->setExpanded(true);
 
     return item;
+}
+
+QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
+{
+    QGraphicsItemGroup *group = new QGraphicsItemGroup();
+    QPen modelPen;
+    modelPen.setColor(QColor::fromRgb(255, 0, 0));
+
+    int deviceType = measurement->getDeviceType();
+    int testType = measurement->getTestType();
+    if (deviceType == TRIODE) {
+        if (testType == ANODE_CHARACTERISTICS) {
+            double vgStart = measurement->getGridStart();
+            double vgStop = measurement->getGridStop();
+            double vgStep = measurement->getGridStep();
+
+            double vg1 = vgStart;
+            while ( vg1 <= vgStop) {
+                double vaStart = measurement->getAnodeStart();
+                double vaStop = measurement->getAnodeStop();
+                double vaInc = (vaStop - vaStart) / 50;
+
+                double vaPrev = vaStart;
+                double iaPrev = anodeCurrent(vaStart, vgStart);
+
+                double va = vaStart + vaInc;
+                while (va < vaStop) {
+                    double ia = anodeCurrent(va, -vg1);
+                    group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, modelPen));
+
+                    vaPrev = va;
+                    iaPrev = ia;
+
+                    va += vaInc;
+                }
+
+                vg1 += vgStep;
+            }
+        }
+    }
+
+    return group;
 }
 
 void Model::setLowerBound(Parameter* parameter, double lowerBound)

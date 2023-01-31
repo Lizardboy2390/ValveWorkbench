@@ -1,4 +1,5 @@
 #include "measurement.h"
+#include "sweep.h"
 
 Measurement::Measurement()
 {
@@ -12,6 +13,7 @@ void Measurement::reset()
 
 void Measurement::addSweep(Sweep *sweep)
 {
+    sweep->setMeasurement(this);
     sweeps.append(sweep);
 }
 
@@ -211,25 +213,32 @@ void Measurement::updateProperties(QTableWidget *properties)
     addProperty(properties, "Sweeps", QString("%1").arg(sweeps.size()));
 }
 
-void Measurement::updatePlot(Plot *plot)
+QGraphicsItemGroup *Measurement::updatePlot(Plot *plot, Sweep *sweep)
 {
     if (deviceType == TRIODE) {
         if (testType == ANODE_CHARACTERISTICS) {
             anodeAxes(plot);
-            plotTriodeAnode(plot);
+            return createGroup(plotTriodeAnode(plot, sweep));
         } else if (testType == TRANSFER_CHARACTERISTICS) {
-            plotTriodeTransfer(plot);
+            return createGroup(plotTriodeTransfer(plot));
         }
     } else if (deviceType == PENTODE) {
         if (testType == ANODE_CHARACTERISTICS) {
             anodeAxes(plot);
-            plotPentodeAnode(plot);
+            return createGroup(plotPentodeAnode(plot));
         } else if (testType == TRANSFER_CHARACTERISTICS) {
-            plotPentodeTransfer(plot);
+            return createGroup(plotPentodeTransfer(plot));
         } else if (testType == SCREEN_CHARACTERISTICS) {
-            plotPentodeScreen(plot);
+            return createGroup(plotPentodeScreen(plot));
         }
     }
+
+    return nullptr;
+}
+
+QGraphicsItemGroup *Measurement::updatePlot(Plot *plot)
+{
+    return updatePlot(plot, nullptr);
 }
 
 int Measurement::getDeviceType() const
@@ -382,37 +391,22 @@ int Measurement::count()
     return sweeps.count();
 }
 
-QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot)
+QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot, Sweep *sweep)
 {
     QPen samplePen;
     samplePen.setColor(QColor::fromRgb(0, 0, 0));
 
     QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
 
-    int nSweeps = sweeps.size();
-    for (int i = 0; i < nSweeps; i++) {
-        Sweep *thisSweep = sweeps.at(i);
+    if (sweep == nullptr) {
+        int nSweeps = sweeps.size();
+        for (int i = 0; i < nSweeps; i++) {
+            Sweep *thisSweep = sweeps.at(i);
 
-        Sample *firstSample = thisSweep->at(0);
-
-        double vg = firstSample->getVg1();
-        double va = firstSample->getVa();
-        double ia = firstSample->getIa();
-
-        int samples = thisSweep->count();
-        for (int j = 1; j < samples; j++) {
-             Sample *sample = thisSweep->at(j);
-
-             double vaNext = sample->getVa();
-             double iaNext = sample->getIa();
-
-             segments->append(plot->createSegment(va, ia, vaNext, iaNext, samplePen));
-
-             va = vaNext;
-             ia = iaNext;
-         }
-
-        plot->createLabel(va, ia, thisSweep->getVg1Nominal());
+            thisSweep->plotTriodeAnode(plot, &samplePen, segments);
+        }
+    } else {
+        sweep->plotTriodeAnode(plot, &samplePen, segments);
     }
 
     return segments;

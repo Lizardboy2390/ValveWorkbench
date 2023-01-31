@@ -125,6 +125,14 @@ private slots:
 
     void on_fitButton_clicked();
 
+    void on_tabWidget_currentChanged(int index);
+
+    void on_measureCheck_stateChanged(int arg1);
+
+    void on_estCheck_stateChanged(int arg1);
+
+    void on_modelCheck_stateChanged(int arg1);
+
 private:
     Ui::ValveWorkbench *ui;
 
@@ -170,8 +178,15 @@ private:
     QFile *logFile;
 
     LedIndicator *heaterIndicator;
+
     QGraphicsItemGroup *measuredCurves = nullptr;
+    QGraphicsItemGroup *estimatedCurves = nullptr;
     QGraphicsItemGroup *modelledCurves = nullptr;
+
+    Measurement *currentMeasurement = nullptr;
+    QTreeWidgetItem *currentMeasurementItem = nullptr;
+    QTreeWidgetItem *currentEstimateItem = nullptr;
+    QTreeWidgetItem *currentModelItem = nullptr;
 
     Analyser *analyser;
     QString port;

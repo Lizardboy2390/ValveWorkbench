@@ -8,6 +8,8 @@
 #include "../constants.h"
 #include "../ui/plot.h"
 
+class Measurement;
+
 enum eSweepType {
     SWEEP_TRIODE_ANODE,
     SWEEP_TRIODE_GRID,
@@ -34,7 +36,9 @@ public:
 
     virtual void updateProperties(QTableWidget *properties);
 
-    virtual void updatePlot(Plot *plot);
+    virtual QGraphicsItemGroup *updatePlot(Plot *plot);
+
+    void plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments);
 
     double getVaNominal() const;
     void setVaNominal(double newVaNominal);
@@ -43,6 +47,10 @@ public:
     double getVg2Nominal() const;
     void setVg2Nominal(double newVg2Nominal);
 
+    void setMeasurement(Measurement *measurement);
+
+    Measurement *getMeasurement() const;
+
 protected:
     QList<Sample *> samples;
 
@@ -50,6 +58,8 @@ protected:
     double vaNominal;
     double vg1Nominal;
     double vg2Nominal;
+
+    Measurement *measurement = nullptr;
 };
 
 #endif // SWEEP_H

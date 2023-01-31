@@ -116,3 +116,8 @@ void Plot::clear()
 {
     scene->clear();
 }
+
+void Plot::add(QGraphicsItem *item)
+{
+    scene->addItem(item);
+}

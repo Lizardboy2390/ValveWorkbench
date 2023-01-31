@@ -12,6 +12,7 @@
 #include <QtCore/QVariant>
 #include <QtGui/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGraphicsView>
 #include <QtWidgets/QHBoxLayout>
@@ -174,6 +175,15 @@ public:
     QLabel *plotTitle;
     QGraphicsView *graphicsView;
     QSpacerItem *verticalSpacer_3;
+    QHBoxLayout *horizontalLayout_9;
+    QSpacerItem *horizontalSpacer_3;
+    QCheckBox *measureCheck;
+    QSpacerItem *horizontalSpacer_7;
+    QCheckBox *estCheck;
+    QSpacerItem *horizontalSpacer_8;
+    QCheckBox *modelCheck;
+    QSpacerItem *horizontalSpacer_6;
+    QSpacerItem *verticalSpacer_5;
     QSpacerItem *horizontalSpacer_2;
     QMenuBar *menubar;
     QMenu *menuFile;
@@ -1003,6 +1013,46 @@ public:
 
         verticalLayout_2->addItem(verticalSpacer_3);
 
+        horizontalLayout_9 = new QHBoxLayout();
+        horizontalLayout_9->setObjectName("horizontalLayout_9");
+        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_9->addItem(horizontalSpacer_3);
+
+        measureCheck = new QCheckBox(horizontalLayoutWidget);
+        measureCheck->setObjectName("measureCheck");
+
+        horizontalLayout_9->addWidget(measureCheck);
+
+        horizontalSpacer_7 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_9->addItem(horizontalSpacer_7);
+
+        estCheck = new QCheckBox(horizontalLayoutWidget);
+        estCheck->setObjectName("estCheck");
+
+        horizontalLayout_9->addWidget(estCheck);
+
+        horizontalSpacer_8 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_9->addItem(horizontalSpacer_8);
+
+        modelCheck = new QCheckBox(horizontalLayoutWidget);
+        modelCheck->setObjectName("modelCheck");
+
+        horizontalLayout_9->addWidget(modelCheck);
+
+        horizontalSpacer_6 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_9->addItem(horizontalSpacer_6);
+
+
+        verticalLayout_2->addLayout(horizontalLayout_9);
+
+        verticalSpacer_5 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+        verticalLayout_2->addItem(verticalSpacer_5);
+
 
         horizontalLayout->addLayout(verticalLayout_2);
 
@@ -1043,7 +1093,7 @@ public:
 
         retranslateUi(ValveWorkbench);
 
-        tabWidget->setCurrentIndex(0);
+        tabWidget->setCurrentIndex(2);
 
 
         QMetaObject::connectSlotsByName(ValveWorkbench);
@@ -1108,6 +1158,9 @@ public:
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         plotTitle->setText(QString());
+        measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));
+        estCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Estimated Model", nullptr));
+        modelCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Fitted Model", nullptr));
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));
     } // retranslateUi

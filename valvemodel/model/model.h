@@ -113,6 +113,8 @@ public:
 
     virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
 
+    QGraphicsItemGroup *plotModel(Plot *plot, Measurement *measurement);
+
  protected:
     /**
      * @brief problem The Ceres Problem used for model fitting
@@ -126,6 +128,8 @@ public:
      * @brief options The options to be used by Ceres for solving the model approximation
      */
     Solver::Options options;
+
+    Estimate *estimate;
 
     void setLowerBound(Parameter* parameter, double lowerBound);
     void setUpperBound(Parameter* parameter, double upperBound);

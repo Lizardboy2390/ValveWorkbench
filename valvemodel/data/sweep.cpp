@@ -1,4 +1,5 @@
 #include "sweep.h"
+#include "measurement.h"
 
 Sweep::Sweep(eSweepType type_) : type(type_)
 {
@@ -199,9 +200,13 @@ void Sweep::updateProperties(QTableWidget *properties)
     }
 }
 
-void Sweep::updatePlot(Plot *plot)
+QGraphicsItemGroup *Sweep::updatePlot(Plot *plot)
 {
+    if (measurement != nullptr) {
+        return(measurement->updatePlot(plot, this));
+    }
 
+    return nullptr;
 }
 
 double Sweep::getVaNominal() const
@@ -232,4 +237,38 @@ double Sweep::getVg2Nominal() const
 void Sweep::setVg2Nominal(double newVg2Nominal)
 {
     vg2Nominal = newVg2Nominal;
+}
+
+void Sweep::setMeasurement(Measurement *measurement)
+{
+    this->measurement = measurement;
+}
+
+Measurement *Sweep::getMeasurement() const
+{
+    return measurement;
+}
+
+void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
+{
+    Sample *firstSample = samples.at(0);
+
+    double vg = firstSample->getVg1();
+    double va = firstSample->getVa();
+    double ia = firstSample->getIa();
+
+    int nSamples = samples.count();
+    for (int j = 1; j < nSamples; j++) {
+         Sample *sample = samples.at(j);
+
+         double vaNext = sample->getVa();
+         double iaNext = sample->getIa();
+
+         segments->append(plot->createSegment(va, ia, vaNext, iaNext, *samplePen));
+
+         va = vaNext;
+         ia = iaNext;
+     }
+
+    segments->append(plot->createLabel(va, ia, vg1Nominal));
 }

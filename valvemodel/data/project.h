@@ -17,7 +17,7 @@ public:
 
     virtual void updateProperties(QTableWidget *properties);
 
-    virtual void updatePlot(Plot *plot);
+    virtual QGraphicsItemGroup *updatePlot(Plot *plot);
 
     int getDeviceType() const;
     void setDeviceType(int newDeviceType);

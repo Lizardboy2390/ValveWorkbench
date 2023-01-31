@@ -106,7 +106,7 @@ void Sample::updateProperties(QTableWidget *properties)
     addProperty(properties, "Ih", QString("%1").arg(ih));
 }
 
-void Sample::updatePlot(Plot *plot)
+QGraphicsItemGroup *Sample::updatePlot(Plot *plot)
 {
-
+    return nullptr;
 }

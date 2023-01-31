@@ -19,10 +19,12 @@ public:
 
     virtual void updateProperties(QTableWidget *properties) = 0;
 
-    virtual void updatePlot(Plot *plot) = 0;
+    virtual QGraphicsItemGroup *updatePlot(Plot *plot) = 0;
 
 protected:
     void clearProperties(QTableWidget *properties);
     void addProperty(QTableWidget *properties, QString label, QString value);
+
+    QGraphicsItemGroup *createGroup(QList<QGraphicsItem *> *segments);
 };
 
