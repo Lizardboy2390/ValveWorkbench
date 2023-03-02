@@ -51,6 +51,9 @@ public:
 
     Measurement *getMeasurement() const;
 
+    void plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments);
+    void plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments);
+    void plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments);
 protected:
     QList<Sample *> samples;
 

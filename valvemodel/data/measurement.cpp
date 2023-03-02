@@ -197,7 +197,10 @@ QString Measurement::testName()
 {
     switch(testType) {
     case ANODE_CHARACTERISTICS:
-        return QString("Anode Sweep");
+        return QString("Anode Charcteristics");
+        break;
+    case TRANSFER_CHARACTERISTICS:
+        return QString("Transfer Characteristics");
         break;
     }
 
@@ -220,6 +223,7 @@ QGraphicsItemGroup *Measurement::updatePlot(Plot *plot, Sweep *sweep)
             anodeAxes(plot);
             return createGroup(plotTriodeAnode(plot, sweep));
         } else if (testType == TRANSFER_CHARACTERISTICS) {
+            transferAxes(plot);
             return createGroup(plotTriodeTransfer(plot));
         }
     } else if (deviceType == PENTODE) {
@@ -227,8 +231,10 @@ QGraphicsItemGroup *Measurement::updatePlot(Plot *plot, Sweep *sweep)
             anodeAxes(plot);
             return createGroup(plotPentodeAnode(plot));
         } else if (testType == TRANSFER_CHARACTERISTICS) {
+            transferAxes(plot);
             return createGroup(plotPentodeTransfer(plot));
         } else if (testType == SCREEN_CHARACTERISTICS) {
+            screenAxes(plot);
             return createGroup(plotPentodeScreen(plot));
         }
     }
@@ -412,29 +418,74 @@ QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot, Sweep *sweep)
     return segments;
 }
 
-QList<QGraphicsItem *> *Measurement::plotTriodeTransfer(Plot *plot)
+QList<QGraphicsItem *> *Measurement::plotTriodeTransfer(Plot *plot, Sweep *sweep)
 {
+    QPen samplePen;
+    samplePen.setColor(QColor::fromRgb(0, 0, 0));
+
     QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
+
+    if (sweep == nullptr) {
+        int nSweeps = sweeps.size();
+        for (int i = 0; i < nSweeps; i++) {
+            Sweep *thisSweep = sweeps.at(i);
+
+            thisSweep->plotTriodeTransfer(plot, &samplePen, segments);
+        }
+    } else {
+        sweep->plotTriodeTransfer(plot, &samplePen, segments);
+    }
 
     return segments;
 }
 
-QList<QGraphicsItem *> *Measurement::plotPentodeAnode(Plot *plot)
+QList<QGraphicsItem *> *Measurement::plotPentodeAnode(Plot *plot, Sweep *sweep)
 {
+    QPen samplePen;
+    samplePen.setColor(QColor::fromRgb(0, 0, 0));
+
     QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
+
+    if (sweep == nullptr) {
+        int nSweeps = sweeps.size();
+        for (int i = 0; i < nSweeps; i++) {
+            Sweep *thisSweep = sweeps.at(i);
+
+            thisSweep->plotPentodeAnode(plot, &samplePen, segments);
+        }
+    } else {
+        sweep->plotPentodeAnode(plot, &samplePen, segments);
+    }
 
     return segments;
 }
 
-QList<QGraphicsItem *> *Measurement::plotPentodeTransfer(Plot *plot)
+QList<QGraphicsItem *> *Measurement::plotPentodeTransfer(Plot *plot, Sweep *sweep)
 {
+    QPen samplePen;
+    samplePen.setColor(QColor::fromRgb(0, 0, 0));
+
     QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
+
+    if (sweep == nullptr) {
+        int nSweeps = sweeps.size();
+        for (int i = 0; i < nSweeps; i++) {
+            Sweep *thisSweep = sweeps.at(i);
+
+            thisSweep->plotPentodeTransfer(plot, &samplePen, segments);
+        }
+    } else {
+        sweep->plotPentodeTransfer(plot, &samplePen, segments);
+    }
 
     return segments;
 }
 
-QList<QGraphicsItem *> *Measurement::plotPentodeScreen(Plot *plot)
+QList<QGraphicsItem *> *Measurement::plotPentodeScreen(Plot *plot, Sweep *sweep)
 {
+    QPen samplePen;
+    samplePen.setColor(QColor::fromRgb(0, 0, 0));
+
     QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
 
     return segments;
@@ -448,6 +499,26 @@ void Measurement::anodeAxes(Plot *plot)
     double iaInterval = interval(iaMax);
 
     plot->setAxes(0.0, anodeStop, vaInterval, 0.0, iaMax, iaInterval, 2, 1);
+}
+
+void Measurement::transferAxes(Plot *plot)
+{
+    plot->clear();
+
+    double vg1Interval = interval(gridStop);
+    double iaInterval = interval(iaMax);
+
+    plot->setAxes(-gridStop, 0.0, vg1Interval, 0.0, iaMax, iaInterval, 2, 1);
+}
+
+void Measurement::screenAxes(Plot *plot)
+{
+    plot->clear();
+
+    double vg1Interval = interval(gridStop);
+    double iaInterval = interval(iaMax);
+
+    plot->setAxes(-gridStop, 0.0, vg1Interval, 0.0, iaMax, iaInterval, 2, 1);
 }
 
 double Measurement::interval(double maxValue)

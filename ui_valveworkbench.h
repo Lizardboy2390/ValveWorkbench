@@ -522,7 +522,7 @@ public:
         tab_3->setObjectName("tab_3");
         layoutWidget_2 = new QWidget(tab_3);
         layoutWidget_2->setObjectName("layoutWidget_2");
-        layoutWidget_2->setGeometry(QRect(10, 10, 300, 608));
+        layoutWidget_2->setGeometry(QRect(10, 10, 300, 626));
         verticalLayout_6 = new QVBoxLayout(layoutWidget_2);
         verticalLayout_6->setObjectName("verticalLayout_6");
         verticalLayout_6->setContentsMargins(0, 0, 0, 0);

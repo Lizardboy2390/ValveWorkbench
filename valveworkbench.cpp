@@ -431,12 +431,14 @@ void ValveWorkbench::updateParameterDisplay()
 
 void ValveWorkbench::pentodeMode()
 {
+    updateParameterDisplay();
+
     deviceType = PENTODE;
 
     ui->testType->clear();
     ui->testType->addItem("Anode Characteristics", ANODE_CHARACTERISTICS);
     ui->testType->addItem("Transfer Characteristics", TRANSFER_CHARACTERISTICS);
-    ui->testType->addItem("Screen Characteristics", SCREEN_CHARACTERISTICS);
+    // ui->testType->addItem("Screen Characteristics", SCREEN_CHARACTERISTICS);
 
     ui->gridLabel->setEnabled(true);
     ui->gridStart->setEnabled(true);
@@ -451,6 +453,8 @@ void ValveWorkbench::pentodeMode()
 
 void ValveWorkbench::triodeMode(bool doubleTriode)
 {
+    updateParameterDisplay();
+
     deviceType = TRIODE;
 
     ui->testType->clear();
@@ -727,7 +731,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 currentMeasurementItem->setFont(0, font);
             }
 
-            currentMeasurementItem = current->parent();
+            currentMeasurementItem = current;
             QFont font = currentMeasurementItem->font(0);
             font.setBold(true);
             currentMeasurementItem->setFont(0, font);
@@ -775,7 +779,23 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             plot.add(modelledCurves);
             break;
         }       
-    case TYP_SAMPLE:
+    case TYP_SAMPLE: {
+            if (currentMeasurementItem != nullptr) {
+                QFont font = currentMeasurementItem->font(0);
+                font.setBold(false);
+                currentMeasurementItem->setFont(0, font);
+            }
+            currentMeasurementItem = current;
+            QFont font = currentMeasurementItem->font(0);
+            font.setBold(true);
+            currentMeasurementItem->setFont(0, font);
+            currentMeasurement = (Measurement *) data;
+
+            currentProject = getProject(current);
+            Sample *sample = (Sample *) data;
+            sample->updateProperties(ui->properties);
+            break;
+        }
     default:
         break;
     }
@@ -818,25 +838,39 @@ void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
 
 void ValveWorkbench::on_testType_currentIndexChanged(int index)
 {
+    updateParameterDisplay();
+
+    if (deviceType == TRIODE) {
+        ui->screenStart->setText("");
+        ui->screenStop->setText("");
+        ui->screenStep->setText("");
+    }
+
     switch (ui->testType->itemData(index).toInt()) {
     case ANODE_CHARACTERISTICS: // Anode swept and Grid stepped
         ui->anodeStop->setEnabled(true);
         ui->anodeStep->setEnabled(false);
+        ui->anodeStep->setText("");
         if (deviceType != DIODE) {
             ui->gridStop->setEnabled(true);
             ui->gridStep->setEnabled(true);
         }
         if (deviceType == PENTODE) { // Screen fixed (if Pentode)
             ui->screenStop->setEnabled(false);
+            ui->screenStop->setText("");
             ui->screenStep->setEnabled(false);
+            ui->screenStep->setText("");
         }
         break;
     case TRANSFER_CHARACTERISTICS: // Grid swept
         ui->gridStop->setEnabled(true);
         ui->gridStep->setEnabled(false);
+        ui->gridStep->setText("");
         if (deviceType == PENTODE) { // Anode fixed and Screen stepped
             ui->anodeStop->setEnabled(false);
+            ui->anodeStop->setText("");
             ui->anodeStep->setEnabled(false);
+            ui->anodeStep->setText("");
             ui->screenStop->setEnabled(true);
             ui->screenStep->setEnabled(true);
         } else { // (Triode) Anode stepped and no Screen

@@ -167,8 +167,14 @@ QString Sweep::sweepName()
     case SWEEP_TRIODE_ANODE:
         return QString("Vg1 = %1").arg(vg1Nominal);
         break;
+    case SWEEP_TRIODE_GRID:
+        return QString("Va = %1").arg(vaNominal);
+        break;
     case SWEEP_PENTODE_ANODE:
         return QString("Vg1 = %1, Vg2 = %2").arg(vg1Nominal).arg(vg2Nominal);
+        break;
+    case SWEEP_PENTODE_GRID:
+        return QString("Va = %1, Vg2 = %2").arg(vaNominal).arg(vg2Nominal);
         break;
     case SWEEP_PENTODE_SCREEN:
         return QString("Vg1 = %1, Va = %2").arg(vg1Nominal).arg(vaNominal);
@@ -187,9 +193,18 @@ void Sweep::updateProperties(QTableWidget *properties)
         addProperty(properties, "Type", "Triode Anode");
         addProperty(properties, "Vg1", QString("%1").arg(vg1Nominal));
         break;
+    case SWEEP_TRIODE_GRID:
+        addProperty(properties, "Type", "Triode Grid");
+        addProperty(properties, "Va", QString("%1").arg(vaNominal));
+        break;
     case SWEEP_PENTODE_ANODE:
         addProperty(properties, "Type", "Pentode Anode");
         addProperty(properties, "Vg1", QString("%1").arg(vg1Nominal));
+        addProperty(properties, "Vg2", QString("%1").arg(vg2Nominal));
+        break;
+    case SWEEP_PENTODE_GRID:
+        addProperty(properties, "Type", "Pentode Grid");
+        addProperty(properties, "Va", QString("%1").arg(vaNominal));
         addProperty(properties, "Vg2", QString("%1").arg(vg2Nominal));
         break;
     case SWEEP_PENTODE_SCREEN:
@@ -272,3 +287,76 @@ void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> 
 
     segments->append(plot->createLabel(va, ia, vg1Nominal));
 }
+
+void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
+{
+    Sample *firstSample = samples.at(0);
+
+    double vg = firstSample->getVg1();
+    double va = firstSample->getVa();
+    double ia = firstSample->getIa();
+
+    int nSamples = samples.count();
+    for (int j = 1; j < nSamples; j++) {
+         Sample *sample = samples.at(j);
+
+         double vgNext = sample->getVg1();
+         double iaNext = sample->getIa();
+
+         segments->append(plot->createSegment(vg, ia, vgNext, iaNext, *samplePen));
+
+         vg = vgNext;
+         ia = iaNext;
+     }
+
+    segments->append(plot->createLabel(vg, ia, vaNominal));
+}
+
+void Sweep::plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
+{
+    Sample *firstSample = samples.at(0);
+
+    double vg = firstSample->getVg1();
+    double va = firstSample->getVa();
+    double ia = firstSample->getIa();
+
+    int nSamples = samples.count();
+    for (int j = 1; j < nSamples; j++) {
+         Sample *sample = samples.at(j);
+
+         double vaNext = sample->getVa();
+         double iaNext = sample->getIa();
+
+         segments->append(plot->createSegment(va, ia, vaNext, iaNext, *samplePen));
+
+         va = vaNext;
+         ia = iaNext;
+     }
+
+    segments->append(plot->createLabel(va, ia, vg1Nominal));
+}
+
+void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
+{
+    Sample *firstSample = samples.at(0);
+
+    double vg = firstSample->getVg1();
+    double vg2 = firstSample->getVg2();
+    double ia = firstSample->getIa();
+
+    int nSamples = samples.count();
+    for (int j = 1; j < nSamples; j++) {
+         Sample *sample = samples.at(j);
+
+         double vgNext = sample->getVg1();
+         double iaNext = sample->getIa();
+
+         segments->append(plot->createSegment(vg, ia, vgNext, iaNext, *samplePen));
+
+         vg = vgNext;
+         ia = iaNext;
+     }
+
+    segments->append(plot->createLabel(vg, ia, vg2Nominal));
+}
+

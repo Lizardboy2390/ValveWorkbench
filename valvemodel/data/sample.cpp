@@ -86,6 +86,7 @@ QTreeWidgetItem *Sample::buildTree(QTreeWidgetItem *parent)
 {
     QTreeWidgetItem *item = new QTreeWidgetItem(parent, TYP_SAMPLE);
 
+    item->setText(0, "Sample");
     item->setIcon(0, QIcon(":/icons/sample32.png"));
     item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
     item->setData(0, Qt::UserRole, QVariant::fromValue((void *) this));

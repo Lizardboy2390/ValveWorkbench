@@ -13,7 +13,7 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
     yStop = _yStop;
 
     xScale = PLOT_WIDTH / (xStop - xStart);
-    yScale = PLOT_HEIGHT /(yStop - yStart);
+    yScale = PLOT_HEIGHT / (yStop - yStart);
 
     double rounding = 0.5;
 
@@ -37,7 +37,7 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
             QGraphicsTextItem *text;
             char labelText[16];
             if (xMajorDivision < 1.0) {
-                sprintf(labelText, "%f.1", x);
+                sprintf(labelText, "%.1f", x);
             } else {
                 sprintf(labelText, "%d", (int) (x + rounding));
             }
