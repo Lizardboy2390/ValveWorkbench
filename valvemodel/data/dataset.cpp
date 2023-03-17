@@ -13,12 +13,28 @@ void DataSet::clearProperties(QTableWidget *properties)
     }
 }
 
-void DataSet::addProperty(QTableWidget *properties, QString label, QString value)
+void DataSet::addProperty(QTableWidget *properties, QString label, QString value, int field)
 {
     int row = properties->rowCount();
     properties->insertRow(row);
-    properties->setItem(row, 0, new QTableWidgetItem(label));
-    properties->setItem(row, 1, new QTableWidgetItem(value));
+
+    QTableWidgetItem *labelItem = new QTableWidgetItem(label);
+    labelItem->setFlags(Qt::ItemIsEnabled);
+    properties->setItem(row, 0, labelItem);
+    QTableWidgetItem *valueItem = new QTableWidgetItem(value);
+    if (field > 0) {
+        valueItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsEditable);
+        valueItem->setData(Qt::UserRole, QVariant::fromValue((DataSet *) this));
+        valueItem->setData(Qt::UserRole + 1, QVariant::fromValue(field));
+    } else {
+        valueItem->setFlags(Qt::ItemIsEnabled);
+    }
+    properties->setItem(row, 1, valueItem);
+}
+
+void DataSet::editCallback(QTableWidgetItem *item)
+{
+    propertyEdited(item);
 }
 
 QGraphicsItemGroup *DataSet::createGroup(QList<QGraphicsItem *> *segments)

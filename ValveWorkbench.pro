@@ -14,6 +14,7 @@ SOURCES += \
     ledindicator/ledindicator.cpp \
     main.cpp \
     preferencesdialog.cpp \
+    projectdialog.cpp \
     valvemodel/data/dataset.cpp \
     valvemodel/data/measurement.cpp \
     valvemodel/data/project.cpp \
@@ -44,6 +45,7 @@ HEADERS += \
     analyser/client.h \
     ledindicator/ledindicator.h \
     preferencesdialog.h \
+    projectdialog.h \
     valvemodel/constants.h \
     valvemodel/data/dataset.h \
     valvemodel/data/measurement.h \
@@ -73,6 +75,7 @@ HEADERS += \
 
 FORMS += \
     preferencesdialog.ui \
+    projectdialog.ui \
     valveworkbench.ui
 
 # Default rules for deployment.

@@ -29,13 +29,22 @@ public:
     bool addEstimate(Estimate *estimate);
     bool addModel(Model *model);
 
+    int getPentodeType() const;
+    void setPentodeType(int newPentodeType);
+
+    void setTreeItem(QTreeWidgetItem *item);
+
 protected:
     int deviceType;
+    int pentodeType;
     QString name;
 
     QList<Measurement *> measurements;
     QList<Estimate *> estimates;
     QList<Model *> models;
+
+    QString getTypeName();
+    void propertyEdited(QTableWidgetItem *item);
 };
 
 #endif // PROJECT_H

@@ -4,6 +4,8 @@
 #include "valvemodel/circuit/triodecommoncathode.h"
 #include "valvemodel/data/sweep.h"
 
+#include <QMessageBox>
+
 ValveWorkbench::ValveWorkbench(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::ValveWorkbench)
@@ -661,11 +663,22 @@ void ValveWorkbench::on_cir7Value_editingFinished()
 
 void ValveWorkbench::on_actionNew_Project_triggered()
 {
-    currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
-    currentProject->setText(0, "New project");
-    currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
-    currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-    currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) new Project()));
+    ProjectDialog dialog;
+
+    if (dialog.exec() == 1) {
+        Project *project = new Project();
+        project->setName(dialog.getName());
+        project->setDeviceType(dialog.getDeviceType());
+        project->setPentodeType(dialog.getPentodeType());
+
+        currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
+        currentProject->setText(0, dialog.getName());
+        currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
+        currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) project));
+
+        project->setTreeItem(currentProject);
+    }
 }
 
 void ValveWorkbench::on_actionLoad_Measurement_triggered()
@@ -694,14 +707,15 @@ void ValveWorkbench::on_actionLoad_Measurement_triggered()
 
 void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
-    ui->estimateButton->setEnabled(false);
-    ui->fitButton->setEnabled(false);
+    //ui->estimateButton->setEnabled(false);
+    //ui->fitButton->setEnabled(false);
 
     void *data = current->data(0, Qt::UserRole).value<void *>();
 
     switch(current->type()) {
     case TYP_PROJECT:
         currentProject = current;
+        ((Project *)data)->updateProperties(ui->properties);
         break;
     case TYP_MEASUREMENT: {
             if (currentMeasurementItem != nullptr) {
@@ -715,8 +729,8 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             currentMeasurementItem->setFont(0, font);
             currentMeasurement = (Measurement *) data;
 
-            ui->estimateButton->setEnabled(true);
-            ui->fitButton->setEnabled(true);
+            //ui->estimateButton->setEnabled(true);
+            //ui->fitButton->setEnabled(true);
             currentProject = getProject(current);
             currentMeasurement->updateProperties(ui->properties);
             measuredCurves = currentMeasurement->updatePlot(&plot);
@@ -1019,17 +1033,48 @@ void ValveWorkbench::on_btnAddToProject_clicked()
     ui->btnAddToProject->setEnabled(false);
 }
 
-
 void ValveWorkbench::on_estimateButton_clicked()
 {
-    if (currentMeasurement->getDeviceType() == TRIODE && currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
-        Estimate *estimate = new Estimate();
-        estimate->estimate(currentMeasurement);
+    int children = currentProject->childCount();
+    bool foundAnodeCharacteristic = false;
 
-        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-        estimate->buildTree(currentProject);
-        project->addEstimate(estimate);
+    Estimate *estimate = new Estimate();
+
+    for (int i = 0; i < children && !foundAnodeCharacteristic; i++) {
+        QTreeWidgetItem *child = currentProject->child(i);
+        if (child->type() == TYP_MEASUREMENT) {
+            Measurement *measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+            if (measurement->getTestType() == ANODE_CHARACTERISTICS) {
+                estimate->estimate(measurement);
+                foundAnodeCharacteristic = true;
+            }
+        }
     }
+
+    if (!foundAnodeCharacteristic) {
+        QMessageBox message;
+        message.setText("There is no Anode Characteristic measurement in the project - this is required for model fitting");
+        message.exec();
+
+        return;
+    }
+
+    Model *model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
+    model->setEstimate(estimate);
+
+    for (int i = 0; i < children; i++) {
+        QTreeWidgetItem *child = currentProject->child(i);
+        if (child->type() == TYP_MEASUREMENT) {
+            Measurement *measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+            model->addMeasurement(measurement);
+        }
+    }
+
+    model->solve();
+
+    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+    project->addModel(model);
+    model->buildTree(currentProject);
 }
 
 void ValveWorkbench::on_fitButton_clicked()
@@ -1067,7 +1112,6 @@ void ValveWorkbench::on_fitButton_clicked()
     }
 }
 
-
 void ValveWorkbench::on_tabWidget_currentChanged(int index)
 {
     switch (index) {
@@ -1080,6 +1124,19 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
         ui->measureCheck->setVisible(true);
         ui->estCheck->setVisible(true);
         ui->modelCheck->setVisible(true);
+        if (currentProject != nullptr) {
+            Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+            if (project->getDeviceType() == TRIODE) {
+                ui->estimateButton->setVisible(true);
+                ui->fitButton->setVisible(false);
+            } else if (project->getDeviceType() == PENTODE) {
+                ui->estimateButton->setVisible(false);
+                ui->fitButton->setVisible(true);
+            }
+        } else {
+            ui->estimateButton->setVisible(false);
+            ui->fitButton->setVisible(false);
+        }
         break;
     case 2:
         ui->measureCheck->setVisible(false);
@@ -1109,5 +1166,14 @@ void ValveWorkbench::on_estCheck_stateChanged(int arg1)
 void ValveWorkbench::on_modelCheck_stateChanged(int arg1)
 {
 
+}
+
+
+void ValveWorkbench::on_properties_itemChanged(QTableWidgetItem *item)
+{
+    DataSet *dataSet = item->data(Qt::UserRole).value<DataSet *>();
+    if (dataSet != nullptr) {
+        dataSet->editCallback(item);
+    }
 }
 

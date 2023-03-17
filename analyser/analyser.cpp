@@ -438,6 +438,10 @@ void Analyser::checkResponse(QString response)
     message += response;
     qInfo(message.toStdString().c_str());
 
+    if (response == "\n") {
+        return;
+    }
+
     if (isStopRequested) {
         isStopRequested = false;
         isTestRunning = false;

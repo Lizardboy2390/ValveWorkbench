@@ -360,3 +360,8 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
     segments->append(plot->createLabel(vg, ia, vg2Nominal));
 }
 
+void Sweep::propertyEdited(QTableWidgetItem *item)
+{
+
+}
+

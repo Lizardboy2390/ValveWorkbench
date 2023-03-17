@@ -104,5 +104,6 @@ protected:
     double interval(double maxValue);
     void transferAxes(Plot *plot);
     void screenAxes(Plot *plot);
+    void propertyEdited(QTableWidgetItem *item);
 };
 

@@ -111,3 +111,8 @@ QGraphicsItemGroup *Sample::updatePlot(Plot *plot)
 {
     return nullptr;
 }
+
+void Sample::propertyEdited(QTableWidgetItem *item)
+{
+
+}

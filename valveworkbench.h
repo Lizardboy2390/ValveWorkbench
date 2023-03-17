@@ -21,6 +21,7 @@
 #include "analyser/client.h"
 
 #include "preferencesdialog.h"
+#include "projectdialog.h"
 
 #include "ledindicator/ledindicator.h"
 
@@ -132,6 +133,8 @@ private slots:
     void on_estCheck_stateChanged(int arg1);
 
     void on_modelCheck_stateChanged(int arg1);
+
+    void on_properties_itemChanged(QTableWidgetItem *item);
 
 private:
     Ui::ValveWorkbench *ui;

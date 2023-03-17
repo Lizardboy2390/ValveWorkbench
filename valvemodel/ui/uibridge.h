@@ -20,7 +20,7 @@ public:
 
 protected:
     void clearProperties(QTableWidget *properties);
-    void addProperty(QTableWidget *properties, QString label, QString value);
+    void addProperty(QTableWidget *properties, QString label, QString value, bool editable = false);
     void updateParameter(QLabel *uiLabel, QLineEdit *uiValue, QString label, double value);
     void updateParameter(QLabel *uiLabel, QLineEdit *uiValue, Parameter *parameter);
 };

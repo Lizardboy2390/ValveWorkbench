@@ -21,9 +21,15 @@ public:
 
     virtual QGraphicsItemGroup *updatePlot(Plot *plot) = 0;
 
+    void editCallback(QTableWidgetItem *item);
+
 protected:
+    QTreeWidgetItem *treeItem = nullptr;
+
     void clearProperties(QTableWidget *properties);
-    void addProperty(QTableWidget *properties, QString label, QString value);
+    void addProperty(QTableWidget *properties, QString label, QString value, int field = 0);
+
+    virtual void propertyEdited(QTableWidgetItem *item) = 0;
 
     QGraphicsItemGroup *createGroup(QList<QGraphicsItem *> *segments);
 };

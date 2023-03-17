@@ -7,6 +7,14 @@ enum eDevice {
     DIODE
 };
 
+enum ePentode {
+    PNT_OTHER_DEVICE,
+    PNT_TRUE_PENTODE,
+    PNT_BEAM_TETRODE,
+    PNT_TRUE_PENTODE_SE,
+    PNT_BEAM_TETRODE_SE
+};
+
 enum eTest {
     ANODE_CHARACTERISTICS,
     SCREEN_CHARACTERISTICS,

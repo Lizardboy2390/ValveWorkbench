@@ -63,6 +63,7 @@ protected:
     double vg2Nominal;
 
     Measurement *measurement = nullptr;
+    void propertyEdited(QTableWidgetItem *item);
 };
 
 #endif // SWEEP_H

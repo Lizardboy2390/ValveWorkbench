@@ -521,6 +521,11 @@ void Measurement::screenAxes(Plot *plot)
     plot->setAxes(-gridStop, 0.0, vg1Interval, 0.0, iaMax, iaInterval, 2, 1);
 }
 
+void Measurement::propertyEdited(QTableWidgetItem *item)
+{
+
+}
+
 double Measurement::interval(double maxValue)
 {
     double interval = 0.5;

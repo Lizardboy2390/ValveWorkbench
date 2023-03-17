@@ -28,6 +28,9 @@ public:
 
     virtual QGraphicsItemGroup *updatePlot(Plot *plot);
 
+protected:
+    void propertyEdited(QTableWidgetItem *item);
+
 private:
     double vg1 = 0.0;
     double va = 0.0;
