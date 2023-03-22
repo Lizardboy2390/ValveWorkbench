@@ -22,10 +22,6 @@ private:
 
 SimpleTriode::SimpleTriode()
 {
-    parameter[PAR_KG1] = new Parameter("Kg:", 0.7);
-    parameter[PAR_VCT] = new Parameter("Vct:", 0.1);
-    parameter[PAR_X] = new Parameter("X:", 1.5);
-    parameter[PAR_MU] = new Parameter("Mu:", 100.0);
 }
 
 void SimpleTriode::addSample(double va, double ia, double vg1, double vg2)
@@ -99,6 +95,11 @@ void SimpleTriode::updateUI(QLabel *labels[], QLineEdit *values[])
 QString SimpleTriode::getName()
 {
     return QString("Simple");
+}
+
+int SimpleTriode::getType()
+{
+    return SIMPLE_TRIODE;
 }
 
 void SimpleTriode::updateProperties(QTableWidget *properties)

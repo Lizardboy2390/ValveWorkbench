@@ -1,5 +1,7 @@
 #include "project.h"
 
+#include <QJsonArray>
+
 Project::Project()
 {
     deviceType = TRIODE;
@@ -8,25 +10,71 @@ Project::Project()
 
 void Project::fromJson(QJsonObject source)
 {
+    measurements.clear();
+    models.clear();
+    estimates.clear();
 
+    if (source.contains("name") && source["name"].isString()) {
+        name = source["name"].toString();
+    }
+
+    if (source.contains("deviceType") && source["deviceType"].isString()) {
+        QString sDeviceType = source["deviceType"].toString();
+        if (sDeviceType == "pentode") {
+            deviceType = PENTODE;
+        } else {
+            deviceType = TRIODE;
+        }
+    }
+
+    if (source.contains("measurements") && source["measurements"].isArray()) {
+        QJsonArray measurementsArray = source["measurements"].toArray();
+        for (int i = 0; i < measurementsArray.size(); i++) {
+            if (measurementsArray.at(i).isObject()) {
+                Measurement *measurement = new Measurement();
+                measurement->fromJson(measurementsArray.at(i).toObject());
+
+                measurements.append(measurement);
+            }
+        }
+    }
 }
 
 void Project::toJson(QJsonObject &destination)
 {
+    QJsonObject projectObject;
 
+    projectObject["name"] = name;
+
+    if (deviceType == TRIODE) {
+        projectObject["deviceType"] = "triode";
+    } else if (deviceType == PENTODE) {
+        projectObject["deviceType"] = "pentode";
+    }
+
+    QJsonArray measurementsArray;
+    for (int i = 0; i < measurements.size(); i++) {
+        QJsonObject measurementObject;
+        measurements.at(i)->toJson(measurementObject);
+
+        measurementsArray.append(measurementObject);
+    }
+
+    projectObject["measurements"] = measurementsArray;
+
+    destination["project"] = projectObject;
 }
 
 QTreeWidgetItem *Project::buildTree(QTreeWidgetItem *parent)
 {
-    treeItem = new QTreeWidgetItem(parent, TYP_PROJECT);
-
-    treeItem->setText(0, "New project");
-    treeItem->setIcon(0, QIcon(":/icons/valve32.png"));
-    treeItem->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable);
-    treeItem->setData(0, Qt::UserRole, QVariant::fromValue((void *) this));
+    treeItem = parent;
 
     for (int i = 0; i < measurements.size(); i++) {
         measurements.at(i)->buildTree(treeItem);
+    }
+
+    for (int i = 0; i < models.size(); i++) {
+        models.at(i)->buildTree(treeItem);
     }
 
     return treeItem;

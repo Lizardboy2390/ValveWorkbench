@@ -14,6 +14,7 @@ public:
     virtual void toJson(QJsonObject &destination, double vg1Max, double vg2Max = 0);
     virtual void updateUI(QLabel *labels[], QLineEdit *values[]);
     virtual QString getName();
+    virtual int getType();
 
     virtual void updateProperties(QTableWidget *properties);
 

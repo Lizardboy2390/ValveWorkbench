@@ -97,8 +97,8 @@ public:
     QTableWidget *properties;
     QSpacerItem *verticalSpacer_2;
     QHBoxLayout *horizontalLayout_3;
-    QPushButton *estimateButton;
-    QPushButton *fitButton;
+    QPushButton *fitTriodeButton;
+    QPushButton *fitPentodeButton;
     QWidget *tab_3;
     QWidget *layoutWidget_2;
     QVBoxLayout *verticalLayout_6;
@@ -502,17 +502,17 @@ public:
 
         horizontalLayout_3 = new QHBoxLayout();
         horizontalLayout_3->setObjectName("horizontalLayout_3");
-        estimateButton = new QPushButton(layoutWidget1);
-        estimateButton->setObjectName("estimateButton");
-        estimateButton->setEnabled(true);
+        fitTriodeButton = new QPushButton(layoutWidget1);
+        fitTriodeButton->setObjectName("fitTriodeButton");
+        fitTriodeButton->setEnabled(true);
 
-        horizontalLayout_3->addWidget(estimateButton);
+        horizontalLayout_3->addWidget(fitTriodeButton);
 
-        fitButton = new QPushButton(layoutWidget1);
-        fitButton->setObjectName("fitButton");
-        fitButton->setEnabled(true);
+        fitPentodeButton = new QPushButton(layoutWidget1);
+        fitPentodeButton->setObjectName("fitPentodeButton");
+        fitPentodeButton->setEnabled(true);
 
-        horizontalLayout_3->addWidget(fitButton);
+        horizontalLayout_3->addWidget(fitPentodeButton);
 
 
         verticalLayout_4->addLayout(horizontalLayout_3);
@@ -1133,8 +1133,8 @@ public:
         tabWidget->setTabText(tabWidget->indexOf(tab), QCoreApplication::translate("ValveWorkbench", "Designer", nullptr));
         label_2->setText(QCoreApplication::translate("ValveWorkbench", "Project Browser", nullptr));
         label->setText(QCoreApplication::translate("ValveWorkbench", "Properties", nullptr));
-        estimateButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Triode", nullptr));
-        fitButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Pentode...", nullptr));
+        fitTriodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Triode", nullptr));
+        fitPentodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Pentode...", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("ValveWorkbench", "Modeller", nullptr));
         pushButton_3->setText(QCoreApplication::translate("ValveWorkbench", "Load Template...", nullptr));
         pushButton_4->setText(QCoreApplication::translate("ValveWorkbench", "Save Template...", nullptr));

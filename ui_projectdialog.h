@@ -12,13 +12,13 @@
 #include <QtCore/QVariant>
 #include <QtWidgets/QAbstractButton>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QCheckBox>
-#include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
+#include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QRadioButton>
 #include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
@@ -34,13 +34,17 @@ public:
     QHBoxLayout *horizontalLayout;
     QLabel *label;
     QLineEdit *projectName;
-    QHBoxLayout *horizontalLayout_2;
-    QLabel *label_2;
-    QComboBox *deviceType;
-    QHBoxLayout *horizontalLayout_3;
-    QLabel *label_3;
-    QComboBox *pentodeType;
-    QCheckBox *secondaryEmission;
+    QGroupBox *groupBox;
+    QWidget *widget;
+    QVBoxLayout *verticalLayout_3;
+    QSpacerItem *verticalSpacer_2;
+    QHBoxLayout *horizontalLayout_4;
+    QSpacerItem *horizontalSpacer;
+    QRadioButton *radioTriode;
+    QSpacerItem *horizontalSpacer_3;
+    QRadioButton *radioPentode;
+    QSpacerItem *horizontalSpacer_2;
+    QSpacerItem *verticalSpacer_3;
     QSpacerItem *verticalSpacer;
 
     void setupUi(QDialog *ProjectDialog)
@@ -73,53 +77,64 @@ public:
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(projectName->sizePolicy().hasHeightForWidth());
         projectName->setSizePolicy(sizePolicy);
-        projectName->setMinimumSize(QSize(150, 0));
+        projectName->setMinimumSize(QSize(200, 0));
 
         horizontalLayout->addWidget(projectName);
 
 
         verticalLayout->addLayout(horizontalLayout);
 
-        horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setObjectName("horizontalLayout_2");
-        label_2 = new QLabel(verticalLayoutWidget);
-        label_2->setObjectName("label_2");
+        groupBox = new QGroupBox(verticalLayoutWidget);
+        groupBox->setObjectName("groupBox");
+        QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(groupBox->sizePolicy().hasHeightForWidth());
+        groupBox->setSizePolicy(sizePolicy1);
+        groupBox->setMinimumSize(QSize(0, 60));
+        widget = new QWidget(groupBox);
+        widget->setObjectName("widget");
+        widget->setGeometry(QRect(10, 10, 341, 51));
+        verticalLayout_3 = new QVBoxLayout(widget);
+        verticalLayout_3->setObjectName("verticalLayout_3");
+        verticalLayout_3->setContentsMargins(0, 0, 0, 0);
+        verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
-        horizontalLayout_2->addWidget(label_2);
+        verticalLayout_3->addItem(verticalSpacer_2);
 
-        deviceType = new QComboBox(verticalLayoutWidget);
-        deviceType->setObjectName("deviceType");
-        sizePolicy.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
-        deviceType->setSizePolicy(sizePolicy);
-        deviceType->setMinimumSize(QSize(150, 0));
+        horizontalLayout_4 = new QHBoxLayout();
+        horizontalLayout_4->setObjectName("horizontalLayout_4");
+        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        horizontalLayout_2->addWidget(deviceType);
+        horizontalLayout_4->addItem(horizontalSpacer);
 
+        radioTriode = new QRadioButton(widget);
+        radioTriode->setObjectName("radioTriode");
 
-        verticalLayout->addLayout(horizontalLayout_2);
+        horizontalLayout_4->addWidget(radioTriode);
 
-        horizontalLayout_3 = new QHBoxLayout();
-        horizontalLayout_3->setObjectName("horizontalLayout_3");
-        label_3 = new QLabel(verticalLayoutWidget);
-        label_3->setObjectName("label_3");
+        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        horizontalLayout_3->addWidget(label_3);
+        horizontalLayout_4->addItem(horizontalSpacer_3);
 
-        pentodeType = new QComboBox(verticalLayoutWidget);
-        pentodeType->setObjectName("pentodeType");
-        sizePolicy.setHeightForWidth(pentodeType->sizePolicy().hasHeightForWidth());
-        pentodeType->setSizePolicy(sizePolicy);
-        pentodeType->setMinimumSize(QSize(150, 0));
+        radioPentode = new QRadioButton(widget);
+        radioPentode->setObjectName("radioPentode");
 
-        horizontalLayout_3->addWidget(pentodeType);
+        horizontalLayout_4->addWidget(radioPentode);
+
+        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_4->addItem(horizontalSpacer_2);
 
 
-        verticalLayout->addLayout(horizontalLayout_3);
+        verticalLayout_3->addLayout(horizontalLayout_4);
 
-        secondaryEmission = new QCheckBox(verticalLayoutWidget);
-        secondaryEmission->setObjectName("secondaryEmission");
+        verticalSpacer_3 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
-        verticalLayout->addWidget(secondaryEmission);
+        verticalLayout_3->addItem(verticalSpacer_3);
+
+
+        verticalLayout->addWidget(groupBox);
 
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
@@ -137,9 +152,9 @@ public:
     {
         ProjectDialog->setWindowTitle(QCoreApplication::translate("ProjectDialog", "Dialog", nullptr));
         label->setText(QCoreApplication::translate("ProjectDialog", "Project Name", nullptr));
-        label_2->setText(QCoreApplication::translate("ProjectDialog", "Device Type", nullptr));
-        label_3->setText(QCoreApplication::translate("ProjectDialog", "Pentode Type", nullptr));
-        secondaryEmission->setText(QCoreApplication::translate("ProjectDialog", "With Secondary Emission", nullptr));
+        groupBox->setTitle(QCoreApplication::translate("ProjectDialog", "Device Type", nullptr));
+        radioTriode->setText(QCoreApplication::translate("ProjectDialog", "Triode", nullptr));
+        radioPentode->setText(QCoreApplication::translate("ProjectDialog", "Pentode", nullptr));
     } // retranslateUi
 
 };

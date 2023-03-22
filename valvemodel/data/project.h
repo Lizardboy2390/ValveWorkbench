@@ -37,7 +37,7 @@ public:
 protected:
     int deviceType;
     int pentodeType;
-    QString name;
+    QString name = "New Project";
 
     QList<Measurement *> measurements;
     QList<Estimate *> estimates;

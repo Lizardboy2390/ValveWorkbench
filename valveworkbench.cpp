@@ -4,6 +4,10 @@
 #include "valvemodel/circuit/triodecommoncathode.h"
 #include "valvemodel/data/sweep.h"
 
+#include "preferencesdialog.h"
+#include "projectdialog.h"
+#include "pentodefitdialog.h"
+
 #include <QMessageBox>
 
 ValveWorkbench::ValveWorkbench(QWidget *parent)
@@ -15,6 +19,16 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         qWarning("Couldn't open log file.");
         logFile = nullptr;
     }
+
+    anodeStart = 0.0;
+    anodeStep = 0.0;
+    anodeStop = 0.0;
+    gridStart = 0.0;
+    gridStep = 0.0;
+    gridStop = 0.0;
+    screenStart = 0.0;
+    screenStep = 0.0;
+    screenStop = 0.0;
 
     readConfig(tr("analyser.json"));
 
@@ -42,6 +56,9 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->measureCheck->setVisible(false);
     ui->estCheck->setVisible(false);
     ui->modelCheck->setVisible(false);
+
+    ui->fitPentodeButton->setVisible(false);
+    ui->fitTriodeButton->setVisible(false);
 
     ui->graphicsView->setScene(plot.getScene());
 
@@ -669,7 +686,6 @@ void ValveWorkbench::on_actionNew_Project_triggered()
         Project *project = new Project();
         project->setName(dialog.getName());
         project->setDeviceType(dialog.getDeviceType());
-        project->setPentodeType(dialog.getPentodeType());
 
         currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
         currentProject->setText(0, dialog.getName());
@@ -789,8 +805,10 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             currentProject = getProject(current);
             Model *model = (Model *) data;
             model->updateProperties(ui->properties);
-            modelledCurves = model->plotModel(&plot, currentMeasurement);
-            plot.add(modelledCurves);
+            if (currentMeasurement != nullptr) {
+                modelledCurves = model->plotModel(&plot, currentMeasurement);
+                plot.add(modelledCurves);
+            }
             break;
         }       
     case TYP_SAMPLE: {
@@ -828,6 +846,42 @@ QTreeWidgetItem *ValveWorkbench::getProject(QTreeWidgetItem *current)
     }
 
     return nullptr;
+}
+
+Model *ValveWorkbench::findModel(int type)
+{
+    int children = currentProject->childCount();
+    Model *foundModel = nullptr;
+
+    for (int i = 0; i < children && foundModel == nullptr; i++) {
+        QTreeWidgetItem *child = currentProject->child(i);
+        if (child->type() == TYP_MODEL) {
+            Model *model = (Model *) child->data(0, Qt::UserRole).value<void *>();
+            if (model->getType() == type) {
+                foundModel = model;
+            }
+        }
+    }
+
+    return foundModel;
+}
+
+Measurement *ValveWorkbench::findMeasurement(int deviceType, int testType)
+{
+    int children = currentProject->childCount();
+    Measurement *foundMeasurement = nullptr;
+
+    for (int i = 0; i < children && foundMeasurement == nullptr; i++) {
+        QTreeWidgetItem *child = currentProject->child(i);
+        if (child->type() == TYP_MEASUREMENT) {
+            Measurement *measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+            if (measurement->getDeviceType() == deviceType && measurement->getTestType() == testType) {
+                foundMeasurement = measurement;
+            }
+        }
+    }
+
+    return foundMeasurement;
 }
 
 void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
@@ -1033,40 +1087,32 @@ void ValveWorkbench::on_btnAddToProject_clicked()
     ui->btnAddToProject->setEnabled(false);
 }
 
-void ValveWorkbench::on_estimateButton_clicked()
+void ValveWorkbench::on_fitTriodeButton_clicked()
 {
-    int children = currentProject->childCount();
-    bool foundAnodeCharacteristic = false;
+    Measurement *measurement = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
 
-    Estimate *estimate = new Estimate();
-
-    for (int i = 0; i < children && !foundAnodeCharacteristic; i++) {
-        QTreeWidgetItem *child = currentProject->child(i);
-        if (child->type() == TYP_MEASUREMENT) {
-            Measurement *measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
-            if (measurement->getTestType() == ANODE_CHARACTERISTICS) {
-                estimate->estimate(measurement);
-                foundAnodeCharacteristic = true;
-            }
-        }
-    }
-
-    if (!foundAnodeCharacteristic) {
+    if (measurement == nullptr) {
         QMessageBox message;
-        message.setText("There is no Anode Characteristic measurement in the project - this is required for model fitting");
+        message.setText("There is no Triode Anode Characteristic measurement in the project - this is required for model fitting");
         message.exec();
 
         return;
     }
 
-    Model *model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
-    model->setEstimate(estimate);
+    Estimate estimate;
+    estimate.estimateTriode(measurement);
 
+    Model *model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
+    model->setEstimate(&estimate);
+
+    int children = currentProject->childCount();
     for (int i = 0; i < children; i++) {
         QTreeWidgetItem *child = currentProject->child(i);
         if (child->type() == TYP_MEASUREMENT) {
             Measurement *measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
-            model->addMeasurement(measurement);
+            if (measurement->getDeviceType() == TRIODE) {
+                model->addMeasurement(measurement);
+            }
         }
     }
 
@@ -1077,39 +1123,37 @@ void ValveWorkbench::on_estimateButton_clicked()
     model->buildTree(currentProject);
 }
 
-void ValveWorkbench::on_fitButton_clicked()
+void ValveWorkbench::on_fitPentodeButton_clicked()
 {
-    QList<QTreeWidgetItem *> items = ui->projectTree->selectedItems();
+    int children = currentProject->childCount();
 
-    QList<Measurement *> measurements;
-    Estimate *estimate;
-    if (currentEstimateItem != nullptr) {
-        estimate = (Estimate *) currentEstimateItem->data(0, Qt::UserRole).value<void *>();
-    } else {
-        estimate = new Estimate(); // If no Estimate is selected then default values will be used
-    }
+    CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
 
-    bool selectionValid = true;
-    for (int i = 0; i < items.count(); i++) {
-        QTreeWidgetItem *item = items.at(i);
-
-        if (item->type() == TYP_MEASUREMENT) {
-            measurements.append((Measurement *)item->data(0, Qt::UserRole).value<void *>());
-        } else { // If anything else is selected then it's not valid for fitting
-            selectionValid = false;
-        }
-
-        if (selectionValid && measurements.count() > 0) {
-            Model *model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
-            model->setEstimate(estimate);
-            model->addMeasurements(&measurements);
-            model->solve();
-
-            Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-            project->addModel(model);
-            model->buildTree(currentProject);
+    if (triodeModel == nullptr) {
+        on_fitTriodeButton_clicked();
+        triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
+        if (triodeModel == nullptr) {
+            return;
         }
     }
+
+    Measurement *measurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
+
+    if (measurement == nullptr) {
+        QMessageBox message;
+        message.setText("There is no Pentode Anode Characteristic measurement in the project - this is required for model fitting");
+        message.exec();
+
+        return;
+    }
+
+    PentodeFitDialog dialog;
+    if (dialog.exec() == 0) {
+        return;
+    }
+
+    Estimate estimate;
+    //estimate.estimatePentode(measurement, triodeModel, COHEN_HELIE_PENTODE, false);
 }
 
 void ValveWorkbench::on_tabWidget_currentChanged(int index)
@@ -1127,15 +1171,15 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
         if (currentProject != nullptr) {
             Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
             if (project->getDeviceType() == TRIODE) {
-                ui->estimateButton->setVisible(true);
-                ui->fitButton->setVisible(false);
+                ui->fitTriodeButton->setVisible(true);
+                ui->fitPentodeButton->setVisible(false);
             } else if (project->getDeviceType() == PENTODE) {
-                ui->estimateButton->setVisible(false);
-                ui->fitButton->setVisible(true);
+                ui->fitTriodeButton->setVisible(false);
+                ui->fitPentodeButton->setVisible(true);
             }
         } else {
-            ui->estimateButton->setVisible(false);
-            ui->fitButton->setVisible(false);
+            ui->fitTriodeButton->setVisible(false);
+            ui->fitPentodeButton->setVisible(false);
         }
         break;
     case 2:
@@ -1174,6 +1218,74 @@ void ValveWorkbench::on_properties_itemChanged(QTableWidgetItem *item)
     DataSet *dataSet = item->data(Qt::UserRole).value<DataSet *>();
     if (dataSet != nullptr) {
         dataSet->editCallback(item);
+    }
+}
+
+
+void ValveWorkbench::on_actionSave_Project_triggered()
+{
+    if (currentProject != nullptr) {
+        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+
+        QString projectName = QFileDialog::getSaveFileName(this, "Save Project", "", "*.vwp");
+
+        if (projectName.isNull()) {
+            return;
+        }
+
+        QFile projectFile(projectName);
+
+        if (!projectFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
+            qWarning("Couldn't open project file for Save.");
+        } else {
+            QJsonObject projectObject;
+
+            project->toJson(projectObject);
+            projectFile.write(QJsonDocument(projectObject).toJson());
+        }
+    }
+}
+
+
+void ValveWorkbench::on_actionOpen_Project_triggered()
+{
+    QString projectName = QFileDialog::getOpenFileName(this, "Open project", "", "*.vwp");
+
+    if (projectName.isNull()) {
+        return;
+    }
+
+    QFile projectFile(projectName);
+
+    if (!projectFile.open(QIODevice::ReadOnly)) {
+        qWarning("Couldn't open project file for Open.");
+    } else {
+        QByteArray projectData = projectFile.readAll();
+        Project *project = new Project();
+
+        QJsonDocument projectDocument(QJsonDocument::fromJson(projectData));
+        if (projectDocument.isObject()) {
+            QJsonObject projectObject = projectDocument.object();
+            if (projectObject.contains("project") && projectObject["project"].isObject()) {
+                project->fromJson(projectObject["project"].toObject());
+            }
+        }
+
+        currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
+        currentProject->setText(0, project->getName());
+        currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
+        currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) project));
+
+        project->buildTree(currentProject);
+
+        if (project->getDeviceType() == TRIODE) {
+            ui->fitTriodeButton->setVisible(true);
+            ui->fitPentodeButton->setVisible(false);
+        } else {
+            ui->fitTriodeButton->setVisible(false);
+            ui->fitPentodeButton->setVisible(true);
+        }
     }
 }
 

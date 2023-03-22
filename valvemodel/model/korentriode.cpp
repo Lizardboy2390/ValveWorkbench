@@ -19,8 +19,7 @@ private:
 
 KorenTriode::KorenTriode()
 {
-    parameter[PAR_KP] = new Parameter("Kp:", 500.0);
-    parameter[PAR_KVB] = new Parameter("Kvb:", 300.0);
+
 }
 
 void KorenTriode::addSample(double va, double ia, double vg1, double vg2)
@@ -90,6 +89,11 @@ void KorenTriode::updateUI(QLabel *labels[], QLineEdit *values[])
 QString KorenTriode::getName()
 {
     return QString("Koren");
+}
+
+int KorenTriode::getType()
+{
+    return KOREN_TRIODE;
 }
 
 void KorenTriode::updateProperties(QTableWidget *properties)

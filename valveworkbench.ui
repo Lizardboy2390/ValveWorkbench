@@ -538,7 +538,7 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
-             <widget class="QPushButton" name="estimateButton">
+             <widget class="QPushButton" name="fitTriodeButton">
               <property name="enabled">
                <bool>true</bool>
               </property>
@@ -548,7 +548,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="fitButton">
+             <widget class="QPushButton" name="fitPentodeButton">
               <property name="enabled">
                <bool>true</bool>
               </property>

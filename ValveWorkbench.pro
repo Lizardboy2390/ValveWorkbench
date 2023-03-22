@@ -13,6 +13,7 @@ SOURCES += \
     analyser/client.cpp \
     ledindicator/ledindicator.cpp \
     main.cpp \
+    pentodefitdialog.cpp \
     preferencesdialog.cpp \
     projectdialog.cpp \
     valvemodel/data/dataset.cpp \
@@ -44,6 +45,7 @@ HEADERS += \
     analyser/analyser.h \
     analyser/client.h \
     ledindicator/ledindicator.h \
+    pentodefitdialog.h \
     preferencesdialog.h \
     projectdialog.h \
     valvemodel/constants.h \
@@ -74,6 +76,7 @@ HEADERS += \
     valveworkbench.h
 
 FORMS += \
+    pentodefitdialog.ui \
     preferencesdialog.ui \
     projectdialog.ui \
     valveworkbench.ui

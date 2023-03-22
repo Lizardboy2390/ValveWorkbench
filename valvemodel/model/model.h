@@ -6,8 +6,6 @@
 #include "ceres/ceres.h"
 #include "glog/logging.h"
 
-#include "estimate.h"
-
 #include "../ui/parameter.h"
 #include "../ui/uibridge.h"
 
@@ -66,6 +64,8 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
+class Estimate;
+
 /**
  * @brief The Model class
  *
@@ -76,6 +76,8 @@ template <typename T> int sgn(T val) {
 class Model : public UIBridge
 {
 public:
+    Model();
+
     /**
      * @brief addSample adds a sample to the sample set that will be use to fit the model
      * @param va The anode voltage
@@ -104,6 +106,7 @@ public:
     virtual double anodeCurrent(double va, double vg1, double vg2 = 0.0) = 0;
     virtual double anodeVoltage(double ia, double vg1, double vg2 = 0.0);
     virtual QString getName() = 0;
+    virtual int getType() = 0;
 
     void addMeasurement(Measurement *measurement);
     void addMeasurements(QList<Measurement *> *measurements);
@@ -114,6 +117,8 @@ public:
     virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
 
     QGraphicsItemGroup *plotModel(Plot *plot, Measurement *measurement);
+
+    double getParameter(int parameterIndex);
 
  protected:
     /**

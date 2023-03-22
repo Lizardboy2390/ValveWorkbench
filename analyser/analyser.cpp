@@ -100,6 +100,7 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
     switch (electrode) {
     case HEATER:
         value = (((double) current) / 1023 / 0.22 * vRefSlave);
+        value *= 1.15; // Compensate for unexplained 15% underage - could be because measurement is not buffered onto the ADC
         break;
     case ANODE:
     case SCREEN:
@@ -456,10 +457,14 @@ void Analyser::checkResponse(QString response)
 
             if (variable == VH) {
                 double measuredHeaterVoltage = convertMeasuredVoltage(HEATER, value);
-                client->updateHeater(measuredHeaterVoltage, -1.0);
+                aveHeaterVoltage = aveHeaterVoltage * 0.75 + measuredHeaterVoltage;
+                //client->updateHeater(measuredHeaterVoltage, -1.0);
+                client->updateHeater(aveHeaterVoltage / 4.0, -1.0);
             } else if (variable == IH) {
                 double measuredHeaterCurrent = convertMeasuredCurrent(HEATER, value);
-                client->updateHeater(-1.0, measuredHeaterCurrent);
+                aveHeaterCurrent = aveHeaterCurrent * 0.75 + measuredHeaterCurrent;
+                //client->updateHeater(-1.0, measuredHeaterCurrent);
+                client->updateHeater(-1.0, aveHeaterCurrent / 4.0);
             }
         }
     } else if (response.startsWith("OK: Info")) {

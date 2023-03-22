@@ -76,6 +76,8 @@ private:
     double vRefSlave = 2.048;
 
     double heaterVoltage;
+    double aveHeaterVoltage = 0;
+    double aveHeaterCurrent = 0;
 
     double anodeStart;
     double anodeStop;

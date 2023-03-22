@@ -35,6 +35,11 @@ QString CohenHeliePentode::getName()
     return "Cohen Helie Pentode";
 }
 
+int CohenHeliePentode::getType()
+{
+    return COHEN_HELIE_PENTODE;
+}
+
 void CohenHeliePentode::updateProperties(QTableWidget *properties)
 {
 

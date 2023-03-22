@@ -20,9 +20,6 @@
 #include "analyser/analyser.h"
 #include "analyser/client.h"
 
-#include "preferencesdialog.h"
-#include "projectdialog.h"
-
 #include "ledindicator/ledindicator.h"
 
 QT_BEGIN_NAMESPACE
@@ -122,9 +119,9 @@ private slots:
 
     void on_btnAddToProject_clicked();
 
-    void on_estimateButton_clicked();
+    void on_fitTriodeButton_clicked();
 
-    void on_fitButton_clicked();
+    void on_fitPentodeButton_clicked();
 
     void on_tabWidget_currentChanged(int index);
 
@@ -135,6 +132,10 @@ private slots:
     void on_modelCheck_stateChanged(int arg1);
 
     void on_properties_itemChanged(QTableWidgetItem *item);
+
+    void on_actionSave_Project_triggered();
+
+    void on_actionOpen_Project_triggered();
 
 private:
     Ui::ValveWorkbench *ui;
@@ -234,4 +235,6 @@ private:
     void updateParameterDisplay();
     void doPlot();
     QTreeWidgetItem *getProject(QTreeWidgetItem *current);
+    Model *findModel(int type);
+    Measurement *findMeasurement(int deviceType, int measurementType);
 };

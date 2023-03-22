@@ -39,6 +39,9 @@ ValveWizard/
 *.gtl
 *.gto
 
+# Valve Workbench files
+*.vwp
+
 # User project files
 *.pro.user
 *.vcxproj.user

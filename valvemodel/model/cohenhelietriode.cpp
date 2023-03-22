@@ -19,7 +19,7 @@ private:
 
 CohenHelieTriode::CohenHelieTriode()
 {
-    parameter[PAR_KVB1] = new Parameter("Kvb2:", 30.0);
+
 }
 
 void CohenHelieTriode::addSample(double va, double ia, double vg1, double vg2)
@@ -94,6 +94,11 @@ QString CohenHelieTriode::getName()
     return QString("Cohen Helie");
 }
 
+int CohenHelieTriode::getType()
+{
+    return COHEN_HELIE_TRIODE;
+}
+
 void CohenHelieTriode::updateProperties(QTableWidget *properties)
 {
     clearProperties(properties);
@@ -119,9 +124,26 @@ void CohenHelieTriode::setOptions()
 
 double CohenHelieTriode::cohenHelieCurrent(double v, double vg, double kg1, double kp, double kvb, double kvb1, double vct, double x, double mu)
 {
-    double f = std::sqrt(kvb + v * v + v * kvb1);
+    return cohenHelieEpk(v, vg, kp, kvb, kvb1, vct, x, mu) / kg1;
+}
+
+double CohenHelieTriode::cohenHelieEpk(double v, double vg, double kp, double kvb, double kvb1, double vct, double x, double mu)
+{
+    double f = std::sqrt(kvb + v * kvb1 + v * v);
     double y = kp * (1 / mu + (vg + vct) / f);
     double ep = (v / kp) * std::log(1.0 + std::exp(y));
 
-    return pow(ep, x) / kg1;
+    return pow(ep, x);
+}
+
+double CohenHelieTriode::cohenHelieEpk(double v, double vg)
+{
+    double kp = parameter[PAR_KP]->getValue();
+    double kvb = parameter[PAR_KVB]->getValue();
+    double kvb1 = parameter[PAR_KVB1]->getValue();
+    double vct = parameter[PAR_VCT]->getValue();
+    double x = parameter[PAR_X]->getValue();
+    double mu = parameter[PAR_MU]->getValue();
+
+    return cohenHelieEpk(v, vg, kp, kvb, kvb, vct, x, mu);
 }
