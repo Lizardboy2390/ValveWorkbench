@@ -100,7 +100,7 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
     switch (electrode) {
     case HEATER:
         value = (((double) current) / 1023 / 0.22 * vRefSlave);
-        value *= 1.15; // Compensate for unexplained 15% underage - could be because measurement is not buffered onto the ADC
+        value *= 1.4; // Compensate for unexplained 15% underage - could be because measurement is not buffered onto the ADC
         break;
     case ANODE:
     case SCREEN:
@@ -599,7 +599,8 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
 
         double sweep = 0.0;
         while (sweep <= 1.01) {
-            double sweepVoltage = sweepStart + (sweepStop - sweepStart) * sampleFunction(sweep);
+            //double sweepVoltage = sweepStart + (sweepStop - sweepStart) * sampleFunction(sweep);
+            double sweepVoltage = sweepStart + (sweepStop - sweepStart) * sweep;
             thisSweep.append(convertTargetVoltage(sweepType, sweepVoltage));
             sweep += increment;
         }

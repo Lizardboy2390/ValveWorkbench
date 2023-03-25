@@ -36,6 +36,9 @@ enum eTriodeParameter {
     PAR_A,
     PAR_ALPHA,
     PAR_BETA,
+    PAR_GAMMA,
+    PAR_BLEND,
+    PAR_ONSET,
     PAR_OMEGA,
     PAR_LAMBDA,
     PAR_NU,
@@ -85,7 +88,7 @@ public:
      * @param vg1 The grid voltage
      * @param vg2 For pentodes only, the screen grid voltage
      */
-	virtual void addSample(double va, double ia, double vg1, double vg2 = 0.0) = 0;
+    virtual void addSample(double va, double ia, double vg1, double vg2 = 0.0, double ig2 = 0.0) = 0;
     /**
      * @brief fromJson reads the model parameters from a Json object
      * @param source The Json object to read
@@ -128,7 +131,7 @@ public:
     /**
      * @brief parameter The array of 16 model Parameters linked to the UI
      */
-    Parameter *parameter[16];
+    Parameter *parameter[20];
     /**
      * @brief options The options to be used by Ceres for solving the model approximation
      */

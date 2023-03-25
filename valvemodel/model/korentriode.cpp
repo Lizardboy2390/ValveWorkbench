@@ -22,7 +22,7 @@ KorenTriode::KorenTriode()
 
 }
 
-void KorenTriode::addSample(double va, double ia, double vg1, double vg2)
+void KorenTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
     problem.AddResidualBlock(
         new AutoDiffCostFunction<KorenTriodeResidual, 1, 1, 1, 1, 1, 1>(

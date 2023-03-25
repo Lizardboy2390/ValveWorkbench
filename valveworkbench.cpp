@@ -1125,8 +1125,6 @@ void ValveWorkbench::on_fitTriodeButton_clicked()
 
 void ValveWorkbench::on_fitPentodeButton_clicked()
 {
-    int children = currentProject->childCount();
-
     CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
 
     if (triodeModel == nullptr) {
@@ -1147,13 +1145,35 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
         return;
     }
 
-    PentodeFitDialog dialog;
+    /*PentodeFitDialog dialog;
     if (dialog.exec() == 0) {
         return;
     }
 
+    int deviceType = dialog.isTruePentode() ? COHEN_HELIE_PENTODE : BEAM_TETRODE;*/
+
     Estimate estimate;
-    //estimate.estimatePentode(measurement, triodeModel, COHEN_HELIE_PENTODE, false);
+    estimate.estimatePentode(measurement, triodeModel, COHEN_HELIE_PENTODE, false);
+
+    Model *model = ModelFactory::createModel(COHEN_HELIE_PENTODE);
+    model->setEstimate(&estimate);
+
+    int children = currentProject->childCount();
+    for (int i = 0; i < children; i++) {
+        QTreeWidgetItem *child = currentProject->child(i);
+        if (child->type() == TYP_MEASUREMENT) {
+            measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+            if (measurement->getDeviceType() == PENTODE) {
+                model->addMeasurement(measurement);
+            }
+        }
+    }
+
+    model->solve();
+
+    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+    project->addModel(model);
+    model->buildTree(currentProject);
 }
 
 void ValveWorkbench::on_tabWidget_currentChanged(int index)
@@ -1235,7 +1255,7 @@ void ValveWorkbench::on_actionSave_Project_triggered()
 
         QFile projectFile(projectName);
 
-        if (!projectFile.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
+        if (!projectFile.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text)) {
             qWarning("Couldn't open project file for Save.");
         } else {
             QJsonObject projectObject;
@@ -1257,7 +1277,7 @@ void ValveWorkbench::on_actionOpen_Project_triggered()
 
     QFile projectFile(projectName);
 
-    if (!projectFile.open(QIODevice::ReadOnly)) {
+    if (!projectFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning("Couldn't open project file for Open.");
     } else {
         QByteArray projectData = projectFile.readAll();

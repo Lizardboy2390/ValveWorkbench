@@ -126,7 +126,7 @@ private:
     int sweepIndex;
     int stepType;
     int sweepType;
-    int sweepPoints = 40;
+    int sweepPoints = 60;
 
     int sampleCount = 0;
 

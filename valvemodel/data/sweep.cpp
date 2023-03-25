@@ -312,6 +312,30 @@ void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem 
     segments->append(plot->createLabel(vg, ia, vaNominal));
 }
 
+void Sweep::plotPentodeScreen(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
+{
+    Sample *firstSample = samples.at(0);
+
+    double vg = firstSample->getVg1();
+    double va = firstSample->getVa();
+    double ig2 = firstSample->getIg2();
+
+    int nSamples = samples.count();
+    for (int j = 1; j < nSamples; j++) {
+         Sample *sample = samples.at(j);
+
+         double vaNext = sample->getVa();
+         double ig2Next = sample->getIg2();
+
+         segments->append(plot->createSegment(va, ig2, vaNext, ig2Next, *samplePen));
+
+         va = vaNext;
+         ig2 = ig2Next;
+     }
+
+    segments->append(plot->createLabel(va, ig2, vg1Nominal));
+}
+
 void Sweep::plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
     Sample *firstSample = samples.at(0);

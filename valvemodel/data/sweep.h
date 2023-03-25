@@ -53,6 +53,7 @@ public:
 
     void plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments);
     void plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments);
+    void plotPentodeScreen(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments);
     void plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments);
 protected:
     QList<Sample *> samples;

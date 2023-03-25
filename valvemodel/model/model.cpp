@@ -27,6 +27,9 @@ Model::Model()
     parameter[PAR_A] = new Parameter("A:", 0.0);
     parameter[PAR_ALPHA] = new Parameter("Alpha:", 0.0);
     parameter[PAR_BETA] = new Parameter("Beta:", 0.0);
+    parameter[PAR_GAMMA] = new Parameter("Gamma:", 1.0);
+    parameter[PAR_BLEND] = new Parameter("Blend:", 0.5);
+    parameter[PAR_ONSET] = new Parameter("Onset:", 0.0);
 
     parameter[PAR_OMEGA] = new Parameter("Omega:", 30.0);
     parameter[PAR_LAMBDA] = new Parameter("Lambda:", 30.0);
@@ -103,13 +106,16 @@ void Model::setEstimate(Estimate *estimate)
     parameter[PAR_A]->setValue(estimate->getA());
     parameter[PAR_ALPHA]->setValue(estimate->getAlpha());
     parameter[PAR_BETA]->setValue(estimate->getBeta());
+    parameter[PAR_GAMMA]->setValue(estimate->getGamma());
+
+    parameter[PAR_BLEND]->setValue(estimate->getBlend());
+    parameter[PAR_ONSET]->setValue(estimate->getOnset());
 
     parameter[PAR_OMEGA]->setValue(estimate->getOmega());
     parameter[PAR_NU]->setValue(estimate->getNu());
     parameter[PAR_LAMBDA]->setValue(estimate->getLambda());
     parameter[PAR_S]->setValue(estimate->getS());
     parameter[PAR_AP]->setValue(estimate->getAp());
-    // TODO: Add pentode parameter estimates
 }
 
 void Model::solve()
@@ -150,6 +156,8 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
             double vgStop = measurement->getGridStop();
             double vgStep = measurement->getGridStep();
 
+            double vg2 = measurement->getScreenStart();
+
             double vg1 = vgStart;
             while ( vg1 <= vgStop) {
                 double vaStart = measurement->getAnodeStart();
@@ -157,11 +165,42 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
                 double vaInc = (vaStop - vaStart) / 50;
 
                 double vaPrev = vaStart;
-                double iaPrev = anodeCurrent(vaStart, vgStart);
+                double iaPrev = anodeCurrent(vaStart, -vg1, vg2);
 
                 double va = vaStart + vaInc;
                 while (va < vaStop) {
-                    double ia = anodeCurrent(va, -vg1);
+                    double ia = anodeCurrent(va, -vg1, vg2);
+                    group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, modelPen));
+
+                    vaPrev = va;
+                    iaPrev = ia;
+
+                    va += vaInc;
+                }
+
+                vg1 += vgStep;
+            }
+        }
+    } else if (deviceType == PENTODE) {
+        if (testType == ANODE_CHARACTERISTICS) {
+            double vgStart = measurement->getGridStart();
+            double vgStop = measurement->getGridStop();
+            double vgStep = measurement->getGridStep();
+
+            double vg2 = measurement->getScreenStart();
+
+            double vg1 = vgStart;
+            while ( vg1 <= vgStop) {
+                double vaStart = measurement->getAnodeStart();
+                double vaStop = measurement->getAnodeStop();
+                double vaInc = (vaStop - vaStart) / 50;
+
+                double vaPrev = vaStart;
+                double iaPrev = anodeCurrent(vaStart, -vg1, vg2);
+
+                double va = vaStart + vaInc;
+                while (va < vaStop) {
+                    double ia = anodeCurrent(va, -vg1, vg2);
                     group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, modelPen));
 
                     vaPrev = va;

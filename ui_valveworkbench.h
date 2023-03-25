@@ -1093,7 +1093,7 @@ public:
 
         retranslateUi(ValveWorkbench);
 
-        tabWidget->setCurrentIndex(1);
+        tabWidget->setCurrentIndex(0);
 
 
         QMetaObject::connectSlotsByName(ValveWorkbench);
@@ -1152,7 +1152,7 @@ public:
         label_19->setText(QCoreApplication::translate("ValveWorkbench", "Max P (W):", nullptr));
         heaterButton->setText(QCoreApplication::translate("ValveWorkbench", "Heater", nullptr));
         heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage (V)", nullptr));
-        heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (mA)", nullptr));
+        heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (A)", nullptr));
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
         btnSaveMeasurement->setText(QCoreApplication::translate("ValveWorkbench", "Save to File...", nullptr));
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));

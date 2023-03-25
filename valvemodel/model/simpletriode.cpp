@@ -24,7 +24,7 @@ SimpleTriode::SimpleTriode()
 {
 }
 
-void SimpleTriode::addSample(double va, double ia, double vg1, double vg2)
+void SimpleTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
     problem.AddResidualBlock(
         new AutoDiffCostFunction<SimpleTriodeResidual, 1, 1, 1, 1, 1>(

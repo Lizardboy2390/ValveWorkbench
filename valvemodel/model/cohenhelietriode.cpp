@@ -22,7 +22,7 @@ CohenHelieTriode::CohenHelieTriode()
 
 }
 
-void CohenHelieTriode::addSample(double va, double ia, double vg1, double vg2)
+void CohenHelieTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
     problem.AddResidualBlock(
         new AutoDiffCostFunction<CohenHelieTriodeResidual, 1, 1, 1, 1, 1, 1, 1, 1>(
@@ -145,5 +145,5 @@ double CohenHelieTriode::cohenHelieEpk(double v, double vg)
     double x = parameter[PAR_X]->getValue();
     double mu = parameter[PAR_MU]->getValue();
 
-    return cohenHelieEpk(v, vg, kp, kvb, kvb, vct, x, mu);
+    return cohenHelieEpk(v, vg, kp, kvb, kvb1, vct, x, mu);
 }

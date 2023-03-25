@@ -29,7 +29,7 @@ class Ui_PentodeFitDialog
 public:
     QDialogButtonBox *buttonBox;
     QGroupBox *groupBox;
-    QWidget *widget;
+    QWidget *layoutWidget;
     QVBoxLayout *verticalLayout;
     QSpacerItem *verticalSpacer;
     QHBoxLayout *horizontalLayout;
@@ -39,7 +39,7 @@ public:
     QRadioButton *radioBeamTetrode;
     QSpacerItem *horizontalSpacer_3;
     QSpacerItem *verticalSpacer_2;
-    QCheckBox *checkBox;
+    QCheckBox *checkSecondary;
 
     void setupUi(QDialog *PentodeFitDialog)
     {
@@ -54,10 +54,10 @@ public:
         groupBox = new QGroupBox(PentodeFitDialog);
         groupBox->setObjectName("groupBox");
         groupBox->setGeometry(QRect(20, 10, 361, 61));
-        widget = new QWidget(groupBox);
-        widget->setObjectName("widget");
-        widget->setGeometry(QRect(3, 10, 351, 51));
-        verticalLayout = new QVBoxLayout(widget);
+        layoutWidget = new QWidget(groupBox);
+        layoutWidget->setObjectName("layoutWidget");
+        layoutWidget->setGeometry(QRect(3, 10, 351, 51));
+        verticalLayout = new QVBoxLayout(layoutWidget);
         verticalLayout->setObjectName("verticalLayout");
         verticalLayout->setContentsMargins(0, 0, 0, 0);
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
@@ -70,7 +70,7 @@ public:
 
         horizontalLayout->addItem(horizontalSpacer_2);
 
-        radioTruePentode = new QRadioButton(widget);
+        radioTruePentode = new QRadioButton(layoutWidget);
         radioTruePentode->setObjectName("radioTruePentode");
 
         horizontalLayout->addWidget(radioTruePentode);
@@ -79,7 +79,7 @@ public:
 
         horizontalLayout->addItem(horizontalSpacer);
 
-        radioBeamTetrode = new QRadioButton(widget);
+        radioBeamTetrode = new QRadioButton(layoutWidget);
         radioBeamTetrode->setObjectName("radioBeamTetrode");
 
         horizontalLayout->addWidget(radioBeamTetrode);
@@ -95,9 +95,9 @@ public:
 
         verticalLayout->addItem(verticalSpacer_2);
 
-        checkBox = new QCheckBox(PentodeFitDialog);
-        checkBox->setObjectName("checkBox");
-        checkBox->setGeometry(QRect(20, 100, 191, 20));
+        checkSecondary = new QCheckBox(PentodeFitDialog);
+        checkSecondary->setObjectName("checkSecondary");
+        checkSecondary->setGeometry(QRect(20, 100, 191, 20));
 
         retranslateUi(PentodeFitDialog);
         QObject::connect(buttonBox, &QDialogButtonBox::accepted, PentodeFitDialog, qOverload<>(&QDialog::accept));
@@ -112,7 +112,7 @@ public:
         groupBox->setTitle(QCoreApplication::translate("PentodeFitDialog", "PentodeType", nullptr));
         radioTruePentode->setText(QCoreApplication::translate("PentodeFitDialog", "True Pentode", nullptr));
         radioBeamTetrode->setText(QCoreApplication::translate("PentodeFitDialog", "Beam Tetrode", nullptr));
-        checkBox->setText(QCoreApplication::translate("PentodeFitDialog", "Include Secondary Emission", nullptr));
+        checkSecondary->setText(QCoreApplication::translate("PentodeFitDialog", "Include Secondary Emission", nullptr));
     } // retranslateUi
 
 };
