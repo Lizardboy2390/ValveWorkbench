@@ -83,26 +83,6 @@ QGraphicsItemGroup *Estimate::plotModel(Plot *plot, Measurement *measurement)
     return group;
 }
 
-double Estimate::getBlend() const
-{
-    return blend;
-}
-
-void Estimate::setBlend(double newBlend)
-{
-    blend = newBlend;
-}
-
-double Estimate::getOnset() const
-{
-    return onset;
-}
-
-void Estimate::setOnset(double newOnset)
-{
-    onset = newOnset;
-}
-
 double Estimate::getGamma() const
 {
     return gamma;
@@ -388,6 +368,7 @@ void Estimate::estimateAlphaBeta(Measurement *measurement, CohenHelieTriode *tri
 
     double alphasAve = 0.0;
     double betaAve = 0.0;
+    double alphas;
 
     int sweeps = measurement->count();
     for (int sw = 0; sw < sweeps; sw++) {
@@ -401,7 +382,7 @@ void Estimate::estimateAlphaBeta(Measurement *measurement, CohenHelieTriode *tri
             if (sample->getVa() < vaThreshold) {
                 double y = sample->getIg2() * kg2 / triodeModel->cohenHelieEpk(sample->getVg2(), sample->getVg1()) - 1.0;
 
-                if (modelType == COHEN_HELIE_PENTODE) {
+                if (modelType == REEFMAN_DERK_PENTODE) {
                     solver.addSample(sample->getVa(), 1.0 / y);
                 } else {
                     solver.addSample(pow(sample->getVa(), 1.5), std::log(y));
@@ -411,7 +392,7 @@ void Estimate::estimateAlphaBeta(Measurement *measurement, CohenHelieTriode *tri
 
         solver.solve();
 
-        if (modelType == COHEN_HELIE_PENTODE) {
+        if (modelType == REEFMAN_DERK_PENTODE) {
             alphasAve += 1.0 / solver.getB();
             betaAve += alphasAve * solver.getA();
         } else {

@@ -1,5 +1,6 @@
 #include "preferencesdialog.h"
 #include "ui_preferencesdialog.h"
+#include "valvemodel/model/model.h"
 
 PreferencesDialog::PreferencesDialog(QWidget *parent) :
     QDialog(parent),
@@ -14,6 +15,13 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
             ui->portSelect->addItem(serialPort.portName());
         }
     }
+
+    ui->pentodeFit->addItem("Gardiner", GARDINER_PENTODE);
+    ui->pentodeFit->addItem("Reefman (Derk)", REEFMAN_DERK_PENTODE);
+    ui->pentodeFit->addItem("Reefman (DerkE)", REEFMAN_DERK_E_PENTODE);
+
+    ui->sampling->addItem("Linear", 0);
+    ui->sampling->addItem("Logarithmic", 1);
 }
 
 PreferencesDialog::~PreferencesDialog()
@@ -33,4 +41,14 @@ void PreferencesDialog::setPort(QString port)
 QString PreferencesDialog::getPort()
 {
     return ui->portSelect->currentText();
+}
+
+int PreferencesDialog::getPentodeModelType()
+{
+    return ui->pentodeFit->currentData().toInt();
+}
+
+int PreferencesDialog::getSamplingType()
+{
+    return ui->sampling->currentData().toInt();
 }

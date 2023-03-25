@@ -19,7 +19,7 @@
 #include "simpletriode.h"
 #include "korentriode.h"
 #include "cohenhelietriode.h"
-#include "cohenheliepentode.h"
+#include "reefmanpentode.h"
 
 enum eModelDeviceType {
     MODEL_TRIODE,

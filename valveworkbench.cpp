@@ -54,7 +54,6 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->heaterLayout->addWidget(heaterIndicator);
 
     ui->measureCheck->setVisible(false);
-    ui->estCheck->setVisible(false);
     ui->modelCheck->setVisible(false);
 
     ui->fitPentodeButton->setVisible(false);
@@ -1024,12 +1023,14 @@ void ValveWorkbench::on_pMax_editingFinished()
 
 void ValveWorkbench::on_actionOptions_triggered()
 {
-    PreferencesDialog dialog;
+    preferencesDialog.setPort(port);
 
-    dialog.setPort(port);
+    if (preferencesDialog.exec() == 1) {
+        setSerialPort(preferencesDialog.getPort());
 
-    if (dialog.exec() == 1) {
-        setSerialPort(dialog.getPort());
+        pentodeModel = preferencesDialog.getPentodeModelType();
+
+        samplingType = preferencesDialog.getSamplingType();
 
         analyser->reset();
     }
@@ -1153,9 +1154,9 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
     int deviceType = dialog.isTruePentode() ? COHEN_HELIE_PENTODE : BEAM_TETRODE;*/
 
     Estimate estimate;
-    estimate.estimatePentode(measurement, triodeModel, COHEN_HELIE_PENTODE, false);
+    estimate.estimatePentode(measurement, triodeModel, pentodeModel, false);
 
-    Model *model = ModelFactory::createModel(COHEN_HELIE_PENTODE);
+    Model *model = ModelFactory::createModel(pentodeModel);
     model->setEstimate(&estimate);
 
     int children = currentProject->childCount();
@@ -1181,12 +1182,10 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
     switch (index) {
     case 0:
         ui->measureCheck->setVisible(false);
-        ui->estCheck->setVisible(false);
         ui->modelCheck->setVisible(false);
         break;
     case 1:
         ui->measureCheck->setVisible(true);
-        ui->estCheck->setVisible(true);
         ui->modelCheck->setVisible(true);
         if (currentProject != nullptr) {
             Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
@@ -1204,7 +1203,6 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
         break;
     case 2:
         ui->measureCheck->setVisible(false);
-        ui->estCheck->setVisible(false);
         ui->modelCheck->setVisible(false);
         break;
     default:

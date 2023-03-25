@@ -3,7 +3,8 @@
 #include "simpletriode.h"
 #include "korentriode.h"
 #include "cohenhelietriode.h"
-#include "cohenheliepentode.h"
+#include "reefmanpentode.h"
+#include "gardinerpentode.h"
 
 class ModelFactory
 {

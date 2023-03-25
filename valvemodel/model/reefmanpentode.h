@@ -1,12 +1,17 @@
-#ifndef COHENHELIEPENTODE_H
-#define COHENHELIEPENTODE_H
+#ifndef REEFMANPENTODE_H
+#define REEFMANPENTODE_H
 
 #include "cohenhelietriode.h"
 
-class CohenHeliePentode : public CohenHelieTriode
+enum eReefmanModelType {
+    DERK,
+    DERK_E
+};
+
+class ReefmanPentode : public CohenHelieTriode
 {
 public:
-    CohenHeliePentode(int newType = COHEN_HELIE_PENTODE);
+    ReefmanPentode(int newType = DERK);
 
     virtual void addSample(double va, double ia, double vg1, double vg2 = 0.0, double ig2 = 0.0);
     virtual double anodeCurrent(double va, double vg1, double vg2 = 0.0);
@@ -24,11 +29,14 @@ public:
     bool withSecondaryEmission() const;
     void setSecondaryEmission(bool newSecondaryEmission);
 
+    int getModelType() const;
+    void setModelType(int newModelType);
+
 protected:
-    int deviceType;
+    int modelType;
     bool secondaryEmission;
 
     void setOptions();
 };
 
-#endif // COHENHELIEPENTODE_H
+#endif // REEFMANPENTODE_H

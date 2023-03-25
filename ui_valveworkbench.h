@@ -179,8 +179,6 @@ public:
     QSpacerItem *horizontalSpacer_3;
     QCheckBox *measureCheck;
     QSpacerItem *horizontalSpacer_7;
-    QCheckBox *estCheck;
-    QSpacerItem *horizontalSpacer_8;
     QCheckBox *modelCheck;
     QSpacerItem *horizontalSpacer_6;
     QSpacerItem *verticalSpacer_5;
@@ -1028,15 +1026,6 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_7);
 
-        estCheck = new QCheckBox(horizontalLayoutWidget);
-        estCheck->setObjectName("estCheck");
-
-        horizontalLayout_9->addWidget(estCheck);
-
-        horizontalSpacer_8 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        horizontalLayout_9->addItem(horizontalSpacer_8);
-
         modelCheck = new QCheckBox(horizontalLayoutWidget);
         modelCheck->setObjectName("modelCheck");
 
@@ -1080,11 +1069,6 @@ public:
         menuFile->addAction(actionSave_Project);
         menuFile->addAction(actionSave_As);
         menuFile->addAction(actionClose_Project);
-        menuFile->addSeparator();
-        menuFile->addAction(actionLoad_Device);
-        menuFile->addAction(actionLoad_Model);
-        menuFile->addAction(actionLoad_Measurement);
-        menuFile->addAction(actionLoad_Template);
         menuFile->addSeparator();
         menuFile->addAction(actionPrint);
         menuFile->addAction(actionExit);
@@ -1159,7 +1143,6 @@ public:
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         plotTitle->setText(QString());
         measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));
-        estCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Estimated Model", nullptr));
         modelCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Fitted Model", nullptr));
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));

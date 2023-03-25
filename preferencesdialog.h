@@ -19,6 +19,9 @@ public:
     void setPort(QString port);
     QString getPort();
 
+    int getPentodeModelType();
+    int getSamplingType();
+
 private slots:
 
 private:

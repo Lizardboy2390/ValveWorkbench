@@ -37,6 +37,8 @@ public:
     void setAlpha(double newAlpha);
     double getBeta() const;
     void setBeta(double newBeta);
+    double getGamma() const;
+    void setGamma(double newGamma);
     double getOmega() const;
     void setOmega(double newOmega);
     double getLambda() const;
@@ -61,15 +63,6 @@ public:
 
     QGraphicsItemGroup *plotModel(Plot *plot, Measurement *measurement);
 
-    double getBlend() const;
-    void setBlend(double newBlend);
-
-    double getOnset() const;
-    void setOnset(double newOnset);
-
-    double getGamma() const;
-    void setGamma(double newGamma);
-
 protected:
     double mu = 40.0;
     double kg1 = 0.5;
@@ -79,15 +72,11 @@ protected:
     double kvb1 = 10;
     double vct = 0.2;
 
-    double kg2 = 2.5;
+    double kg2 = 2.0;
     double a = 0.0;
     double alpha = 0.0;
-    double alphas = 0.0;
     double beta = 0.5;
-    double gamma = 1.2;
-
-    double blend = 0.5;
-    double onset = 1.0;
+    double gamma = 1.0;
 
     double omega = 0.0;
     double lambda = 0.0;

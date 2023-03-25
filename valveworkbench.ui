@@ -1645,26 +1645,6 @@
           </spacer>
          </item>
          <item>
-          <widget class="QCheckBox" name="estCheck">
-           <property name="text">
-            <string>Show Estimated Model</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_8">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
           <widget class="QCheckBox" name="modelCheck">
            <property name="text">
             <string>Show Fitted Model</string>
@@ -1735,11 +1715,6 @@
     <addaction name="actionSave_Project"/>
     <addaction name="actionSave_As"/>
     <addaction name="actionClose_Project"/>
-    <addaction name="separator"/>
-    <addaction name="actionLoad_Device"/>
-    <addaction name="actionLoad_Model"/>
-    <addaction name="actionLoad_Measurement"/>
-    <addaction name="actionLoad_Template"/>
     <addaction name="separator"/>
     <addaction name="actionPrint"/>
     <addaction name="actionExit"/>

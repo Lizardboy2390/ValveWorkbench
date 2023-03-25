@@ -21,6 +21,7 @@
 #include "analyser/client.h"
 
 #include "ledindicator/ledindicator.h"
+#include "preferencesdialog.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ValveWorkbench; }
@@ -159,6 +160,8 @@ private:
 
     int deviceType = TRIODE;
     int testType = ANODE_CHARACTERISTICS;
+    int pentodeModel = GARDINER_PENTODE;
+    int samplingType = 0;
 
     double heaterVoltage;
 
@@ -203,6 +206,8 @@ private:
 
     QJsonObject config;
     QList<Template> templates;
+
+    PreferencesDialog preferencesDialog;
 
     void checkComPorts();
     void setSerialPort(QString portName);

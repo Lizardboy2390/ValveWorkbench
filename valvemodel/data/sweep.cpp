@@ -333,7 +333,7 @@ void Sweep::plotPentodeScreen(Plot *plot, QPen *samplePen, QList<QGraphicsItem *
          ig2 = ig2Next;
      }
 
-    segments->append(plot->createLabel(va, ig2, vg1Nominal));
+    //segments->append(plot->createLabel(va, ig2, vg1Nominal));
 }
 
 void Sweep::plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)

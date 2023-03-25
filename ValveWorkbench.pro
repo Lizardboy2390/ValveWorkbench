@@ -21,15 +21,16 @@ SOURCES += \
     valvemodel/data/project.cpp \
     valvemodel/data/sample.cpp \
     valvemodel/data/sweep.cpp \
-    valvemodel/model/cohenheliepentode.cpp \
     valvemodel/model/cohenhelietriode.cpp \
     valvemodel/model/device.cpp \
     valvemodel/model/estimate.cpp \
+    valvemodel/model/gardinerpentode.cpp \
     valvemodel/model/linearsolver.cpp \
     valvemodel/model/model.cpp \
     valvemodel/model/modelfactory.cpp \
     valvemodel/model/korentriode.cpp \
     valvemodel/model/quadraticsolver.cpp \
+    valvemodel/model/reefmanpentode.cpp \
     valvemodel/model/simpletriode.cpp \
     valvemodel/circuit/circuit.cpp \
     valvemodel/circuit/triodeaccathodefollower.cpp \
@@ -54,15 +55,16 @@ HEADERS += \
     valvemodel/data/project.h \
     valvemodel/data/sample.h \
     valvemodel/data/sweep.h \
-    valvemodel/model/cohenheliepentode.h \
     valvemodel/model/cohenhelietriode.h \
     valvemodel/model/device.h \
     valvemodel/model/estimate.h \
+    valvemodel/model/gardinerpentode.h \
     valvemodel/model/korentriode.h \
     valvemodel/model/linearsolver.h \
     valvemodel/model/model.h \
     valvemodel/model/modelfactory.h \
     valvemodel/model/quadraticsolver.h \
+    valvemodel/model/reefmanpentode.h \
     valvemodel/model/simpletriode.h \
     valvemodel/circuit/circuit.h \
     valvemodel/circuit/triodeaccathodefollower.h \

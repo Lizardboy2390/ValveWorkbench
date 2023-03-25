@@ -33,6 +33,14 @@ public:
     QLabel *label;
     QComboBox *portSelect;
     QSpacerItem *horizontalSpacer;
+    QHBoxLayout *horizontalLayout_2;
+    QLabel *label_2;
+    QComboBox *pentodeFit;
+    QSpacerItem *horizontalSpacer_2;
+    QHBoxLayout *horizontalLayout_3;
+    QLabel *label_3;
+    QComboBox *sampling;
+    QSpacerItem *horizontalSpacer_3;
     QSpacerItem *verticalSpacer;
 
     void setupUi(QDialog *PreferencesDialog)
@@ -47,7 +55,7 @@ public:
         buttonBox->setStandardButtons(QDialogButtonBox::Cancel|QDialogButtonBox::Ok);
         verticalLayoutWidget = new QWidget(PreferencesDialog);
         verticalLayoutWidget->setObjectName("verticalLayoutWidget");
-        verticalLayoutWidget->setGeometry(QRect(20, 19, 361, 91));
+        verticalLayoutWidget->setGeometry(QRect(20, 19, 361, 181));
         verticalLayout = new QVBoxLayout(verticalLayoutWidget);
         verticalLayout->setObjectName("verticalLayout");
         verticalLayout->setContentsMargins(0, 0, 0, 0);
@@ -60,7 +68,7 @@ public:
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(label->sizePolicy().hasHeightForWidth());
         label->setSizePolicy(sizePolicy);
-        label->setMinimumSize(QSize(103, 0));
+        label->setMinimumSize(QSize(140, 0));
 
         horizontalLayout->addWidget(label);
 
@@ -71,7 +79,7 @@ public:
         sizePolicy1.setVerticalStretch(0);
         sizePolicy1.setHeightForWidth(portSelect->sizePolicy().hasHeightForWidth());
         portSelect->setSizePolicy(sizePolicy1);
-        portSelect->setMinimumSize(QSize(80, 0));
+        portSelect->setMinimumSize(QSize(120, 0));
 
         horizontalLayout->addWidget(portSelect);
 
@@ -81,6 +89,56 @@ public:
 
 
         verticalLayout->addLayout(horizontalLayout);
+
+        horizontalLayout_2 = new QHBoxLayout();
+        horizontalLayout_2->setObjectName("horizontalLayout_2");
+        label_2 = new QLabel(verticalLayoutWidget);
+        label_2->setObjectName("label_2");
+        sizePolicy.setHeightForWidth(label_2->sizePolicy().hasHeightForWidth());
+        label_2->setSizePolicy(sizePolicy);
+        label_2->setMinimumSize(QSize(140, 0));
+
+        horizontalLayout_2->addWidget(label_2);
+
+        pentodeFit = new QComboBox(verticalLayoutWidget);
+        pentodeFit->setObjectName("pentodeFit");
+        sizePolicy1.setHeightForWidth(pentodeFit->sizePolicy().hasHeightForWidth());
+        pentodeFit->setSizePolicy(sizePolicy1);
+        pentodeFit->setMinimumSize(QSize(120, 0));
+
+        horizontalLayout_2->addWidget(pentodeFit);
+
+        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_2->addItem(horizontalSpacer_2);
+
+
+        verticalLayout->addLayout(horizontalLayout_2);
+
+        horizontalLayout_3 = new QHBoxLayout();
+        horizontalLayout_3->setObjectName("horizontalLayout_3");
+        label_3 = new QLabel(verticalLayoutWidget);
+        label_3->setObjectName("label_3");
+        sizePolicy.setHeightForWidth(label_3->sizePolicy().hasHeightForWidth());
+        label_3->setSizePolicy(sizePolicy);
+        label_3->setMinimumSize(QSize(140, 0));
+
+        horizontalLayout_3->addWidget(label_3);
+
+        sampling = new QComboBox(verticalLayoutWidget);
+        sampling->setObjectName("sampling");
+        sizePolicy1.setHeightForWidth(sampling->sizePolicy().hasHeightForWidth());
+        sampling->setSizePolicy(sizePolicy1);
+        sampling->setMinimumSize(QSize(120, 0));
+
+        horizontalLayout_3->addWidget(sampling);
+
+        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_3->addItem(horizontalSpacer_3);
+
+
+        verticalLayout->addLayout(horizontalLayout_3);
 
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
@@ -97,7 +155,9 @@ public:
     void retranslateUi(QDialog *PreferencesDialog)
     {
         PreferencesDialog->setWindowTitle(QCoreApplication::translate("PreferencesDialog", "Preferences", nullptr));
-        label->setText(QCoreApplication::translate("PreferencesDialog", "Port:", nullptr));
+        label->setText(QCoreApplication::translate("PreferencesDialog", "Analyser Port:", nullptr));
+        label_2->setText(QCoreApplication::translate("PreferencesDialog", "Pentode Fit:", nullptr));
+        label_3->setText(QCoreApplication::translate("PreferencesDialog", "Anode sampling:", nullptr));
     } // retranslateUi
 
 };

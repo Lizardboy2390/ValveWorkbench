@@ -28,8 +28,6 @@ Model::Model()
     parameter[PAR_ALPHA] = new Parameter("Alpha:", 0.0);
     parameter[PAR_BETA] = new Parameter("Beta:", 0.0);
     parameter[PAR_GAMMA] = new Parameter("Gamma:", 1.0);
-    parameter[PAR_BLEND] = new Parameter("Blend:", 0.5);
-    parameter[PAR_ONSET] = new Parameter("Onset:", 0.0);
 
     parameter[PAR_OMEGA] = new Parameter("Omega:", 30.0);
     parameter[PAR_LAMBDA] = new Parameter("Lambda:", 30.0);
@@ -107,9 +105,6 @@ void Model::setEstimate(Estimate *estimate)
     parameter[PAR_ALPHA]->setValue(estimate->getAlpha());
     parameter[PAR_BETA]->setValue(estimate->getBeta());
     parameter[PAR_GAMMA]->setValue(estimate->getGamma());
-
-    parameter[PAR_BLEND]->setValue(estimate->getBlend());
-    parameter[PAR_ONSET]->setValue(estimate->getOnset());
 
     parameter[PAR_OMEGA]->setValue(estimate->getOmega());
     parameter[PAR_NU]->setValue(estimate->getNu());
