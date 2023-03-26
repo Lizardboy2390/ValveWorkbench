@@ -313,6 +313,7 @@ void Estimate::estimateKg2(Measurement *measurement, CohenHelieTriode *triodeMod
     }
 
     kg2 = kg2Sum / sweeps;
+    kg2 = 3.5 * kg1;
 }
 
 /**
@@ -348,6 +349,7 @@ void Estimate::estimateA(Measurement *measurement, CohenHelieTriode *triodeModel
     }
 
     a = aSum / sweeps;
+    a = 0.0;
 }
 
 /**

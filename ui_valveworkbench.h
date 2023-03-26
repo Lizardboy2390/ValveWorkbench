@@ -450,7 +450,7 @@ public:
         tab_2->setObjectName("tab_2");
         layoutWidget1 = new QWidget(tab_2);
         layoutWidget1->setObjectName("layoutWidget1");
-        layoutWidget1->setGeometry(QRect(10, 10, 258, 598));
+        layoutWidget1->setGeometry(QRect(10, 10, 258, 630));
         verticalLayout_4 = new QVBoxLayout(layoutWidget1);
         verticalLayout_4->setObjectName("verticalLayout_4");
         verticalLayout_4->setContentsMargins(0, 0, 0, 0);
@@ -482,7 +482,7 @@ public:
         if (properties->rowCount() < 15)
             properties->setRowCount(15);
         properties->setObjectName("properties");
-        properties->setMinimumSize(QSize(0, 200));
+        properties->setMinimumSize(QSize(0, 212));
         properties->setRowCount(15);
         properties->setColumnCount(2);
         properties->horizontalHeader()->setVisible(false);
@@ -1077,7 +1077,7 @@ public:
 
         retranslateUi(ValveWorkbench);
 
-        tabWidget->setCurrentIndex(0);
+        tabWidget->setCurrentIndex(1);
 
 
         QMetaObject::connectSlotsByName(ValveWorkbench);

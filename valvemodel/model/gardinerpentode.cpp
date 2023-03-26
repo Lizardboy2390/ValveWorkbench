@@ -39,6 +39,16 @@ double GardinerPentode::anodeCurrent(double va, double vg1, double vg2)
     return ia;
 }
 
+double GardinerPentode::screenCurrent(double va, double vg1, double vg2)
+{
+    double epk = cohenHelieEpk(vg2, vg1);
+
+    double ig2 = epk * (1.0 + parameter[PAR_A]->getValue() * va) / parameter[PAR_KG1]->getValue();
+    ig2 -= anodeCurrent(va, vg1, vg2);
+
+    return ig2;
+}
+
 GardinerPentode::GardinerPentode()
 {
     secondaryEmission = false;
@@ -134,23 +144,28 @@ void GardinerPentode::setSecondaryEmission(bool newSecondaryEmission)
 
 void GardinerPentode::setOptions()
 {
-    problem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
+    //problem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
     //problem.SetParameterBlockConstant(parameter[PAR_X]->getPointer());
     problem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
-    problem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
+    //problem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
     problem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
     problem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
     problem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
 
     problem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
     problem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
-    problem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.0);
-    problem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 1.0);
-    problem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 1.5);
+    problem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.00001);
+    problem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.5);
+    problem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.0);
 
     options.max_num_iterations = 200;
     options.max_num_consecutive_invalid_steps = 20;
     options.use_inner_iterations = true;
-    options.linear_solver_type = ceres::DENSE_QR;
+    options.use_nonmonotonic_steps = true;
+    //options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
+    options.trust_region_strategy_type = ceres::DOGLEG;
+    //options.linear_solver_type = ceres::DENSE_QR;
+    options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
+    //options.preconditioner_type = ceres::JACOBI;
     options.preconditioner_type = ceres::SUBSET;
 }

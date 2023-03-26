@@ -39,7 +39,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="tab">
         <attribute name="title">
@@ -429,7 +429,7 @@
            <x>10</x>
            <y>10</y>
            <width>258</width>
-           <height>598</height>
+           <height>630</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -476,7 +476,7 @@
             <property name="minimumSize">
              <size>
               <width>0</width>
-              <height>200</height>
+              <height>212</height>
              </size>
             </property>
             <property name="rowCount">

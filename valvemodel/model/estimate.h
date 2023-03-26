@@ -75,7 +75,7 @@ protected:
     double kg2 = 2.0;
     double a = 0.0;
     double alpha = 0.0;
-    double beta = 0.5;
+    double beta = 0.15;
     double gamma = 1.0;
 
     double omega = 0.0;

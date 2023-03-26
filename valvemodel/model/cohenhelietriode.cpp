@@ -63,7 +63,7 @@ void CohenHelieTriode::toJson(QJsonObject &destination, double vg1Max, double vg
     QJsonObject model;
     model["kg"] = parameter[PAR_KG1]->getValue();
     model["mu"] = parameter[PAR_MU]->getValue();
-    model["alpha"] = parameter[PAR_X]->getValue();
+    model["x"] = parameter[PAR_X]->getValue();
     model["vct"] = parameter[PAR_VCT]->getValue();
     model["kp"] = parameter[PAR_KP]->getValue();
     model["kvb"] = parameter[PAR_KVB]->getValue();
@@ -118,8 +118,15 @@ void CohenHelieTriode::setOptions()
 
     setLimits(parameter[PAR_KVB1], 0.0, 1000.0); // 0.0 <= Kvb2 <= 1000.0
     setLimits(parameter[PAR_VCT], 0.0, 2.0); // 0.0 <= Vct <= 2.0
-    options.linear_solver_type = ceres::CGNR;
-    options.preconditioner_type = ceres::JACOBI;
+    //options.use_inner_iterations = true;
+    //options.use_nonmonotonic_steps = true;
+    //options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
+    //options.trust_region_strategy_type = ceres::DOGLEG;
+    //options.linear_solver_type = ceres::CGNR;
+    options.linear_solver_type = ceres::DENSE_QR;
+    //options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
+    //options.preconditioner_type = ceres::JACOBI;
+    options.preconditioner_type = ceres::SUBSET;
 }
 
 double CohenHelieTriode::cohenHelieCurrent(double v, double vg, double kg1, double kp, double kvb, double kvb1, double vct, double x, double mu)
