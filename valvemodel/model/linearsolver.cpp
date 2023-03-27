@@ -6,7 +6,7 @@ struct LinearResidual {
     template <typename T>
     bool operator()(const T* const a, const T* const b, T* residual) const {
         residual[0] = y_ - (a[0] * x_ + b[0]);
-        return true;
+        return !(isnan(y_) || isnan(x_) || isinf(y_) || isinf(x_));
     }
 
 private:
@@ -35,6 +35,8 @@ void LinearSolver::solve()
     Solver::Summary summary;
     Solve(options, &problem, &summary);
 
+    converged = summary.termination_type == ceres::CONVERGENCE;
+
     qInfo(summary.BriefReport().c_str());
 
     QFile *logFile = new QFile("linear.csv");
@@ -57,4 +59,9 @@ double LinearSolver::getA() const
 double LinearSolver::getB() const
 {
     return b;
+}
+
+bool LinearSolver::isConverged() const
+{
+    return converged;
 }

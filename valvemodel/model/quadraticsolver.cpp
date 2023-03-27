@@ -4,9 +4,8 @@ struct QuadraticResidual {
     QuadraticResidual(double x, double y) : y_(y), x_(x) {}
 
     template <typename T>
-    // bool operator()(const T* const a, const T* const b, const T* const c, T* residual) const {
-    bool operator()(const T* const b, const T* const c, T* residual) const {
-        residual[0] = y_ - (x_ * x_ + b[0] * x_ + c[0]);
+    bool operator()(const T* const a, const T* const b, const T* const c, T* residual) const {
+        residual[0] = y_ - (a[0] * x_ * x_ + b[0] * x_ + c[0]);
         return true;
     }
 
@@ -26,19 +25,26 @@ void QuadraticSolver::addSample(double x, double y)
     ys.append(y);
 
     problem.AddResidualBlock(
-        // new AutoDiffCostFunction<QuadraticResidual, 1, 1, 1, 1>(
-                new AutoDiffCostFunction<QuadraticResidual, 1, 1, 1>(
+        new AutoDiffCostFunction<QuadraticResidual, 1, 1, 1, 1>(
             new QuadraticResidual(x, y)),
-        // NULL, &a, &b, &c);
-        NULL, &b, &c);
+        NULL, &a, &b, &c);
 }
 
 void QuadraticSolver::solve()
 {
-    problem.SetParameterLowerBound(&b, 0, 0.0);
-    problem.SetParameterLowerBound(&c, 0, 0.0);
+    if (requirePositive) {
+        problem.SetParameterLowerBound(&b, 0, 0.0);
+        problem.SetParameterLowerBound(&c, 0, 0.0);
+    }
+
+    if (fixedA) {
+        problem.SetParameterBlockConstant(&a);
+    }
+
     Solver::Summary summary;
     Solve(options, &problem, &summary);
+
+    converged = summary.termination_type == ceres::CONVERGENCE;
 
     qInfo(summary.BriefReport().c_str());
 
@@ -67,4 +73,29 @@ double QuadraticSolver::getB() const
 double QuadraticSolver::getC() const
 {
     return c;
+}
+
+bool QuadraticSolver::getFixedA() const
+{
+    return fixedA;
+}
+
+void QuadraticSolver::setFixedA(bool newFixedA)
+{
+    fixedA = newFixedA;
+}
+
+bool QuadraticSolver::getRequirePositive() const
+{
+    return requirePositive;
+}
+
+void QuadraticSolver::setRequirePositive(bool newRequirePositive)
+{
+    requirePositive = newRequirePositive;
+}
+
+bool QuadraticSolver::isConverged() const
+{
+    return converged;
 }

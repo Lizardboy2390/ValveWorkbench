@@ -18,6 +18,7 @@ public:
     QGraphicsTextItem *createLabel(double x, double y, double value);
     void clear();
     void add(QGraphicsItem *item);
+    void remove(QGraphicsItem *item);
 
 private:
     QGraphicsScene *scene;

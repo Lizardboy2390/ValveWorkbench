@@ -30,6 +30,7 @@ void Estimate::estimatePentode(Measurement *measurement, CohenHelieTriode *triod
 
     estimateKg2(measurement, triodeModel);
     estimateA(measurement, triodeModel);
+    estimateBetaGamma(measurement, triodeModel);
     //estimateAlphaBeta(measurement, triodeModel, modelType);
     if (secondaryEmission) {
         // Estimate S, ap, omega, nu and lambda
@@ -264,6 +265,8 @@ void Estimate::estimateKp(Measurement *measurement)
 void Estimate::estimateKvbKvb1(Measurement *measurement)
 {
     QuadraticSolver *solver = new QuadraticSolver();
+    solver->setFixedA(true);
+    solver->setRequirePositive(true);
 
     double iThresh = measurement->getIaMax() * 0.20;
 
@@ -298,7 +301,9 @@ void Estimate::estimateKvbKvb1(Measurement *measurement)
  * @param triodeModel
  *
  * Estimating Kg2 is trivial as it simply involves a linear calculation with regard to Epk at when Va is high.
- * This is easily achieved by taking the average value of Kg2 for the sample at the end of each sweep.
+ * This is easily achieved by taking the average value of Kg2 for the sample at the end of each sweep. However,
+ * it is important that the sweep terminates at high Va and early sweep terminations due to Pa being exceeded
+ * must be excluded.
  */
 void Estimate::estimateKg2(Measurement *measurement, CohenHelieTriode *triodeModel)
 {
@@ -306,14 +311,18 @@ void Estimate::estimateKg2(Measurement *measurement, CohenHelieTriode *triodeMod
 
     double kg2Sum = 0.0;
 
-    for (int sw = 0; sw < sweeps; sw++) {
+    for (int sw = 0; sw < sweeps; sw++) { // Take the sweep with lowest -Vg1 that has a valid sample
         Sweep *sweep = measurement->at(sw);
         Sample *sample = sweep->at(sweep->count() - 1);
-        kg2Sum += triodeModel->cohenHelieEpk(sample->getVg2(), sample->getVg1()) / sample->getIg2();
+        if (sample->getVa() / measurement->getAnodeStop() > 0.9) { // Make sure we're over 90% Va(max)
+            kg2 = triodeModel->cohenHelieEpk(sample->getVg2(), sample->getVg1()) / sample->getIg2();
+            return;
+        }
     }
 
-    kg2 = kg2Sum / sweeps;
-    kg2 = 3.5 * kg1;
+    kg2 = 4.5 * kg1;
+
+    return;
 }
 
 /**
@@ -394,6 +403,8 @@ void Estimate::estimateAlphaBeta(Measurement *measurement, CohenHelieTriode *tri
 
         solver.solve();
 
+        alphas = 1.0 / solver.getB();
+        betaAve += alphas * solver.getA();
         if (modelType == REEFMAN_DERK_PENTODE) {
             alphasAve += 1.0 / solver.getB();
             betaAve += alphasAve * solver.getA();
@@ -403,10 +414,43 @@ void Estimate::estimateAlphaBeta(Measurement *measurement, CohenHelieTriode *tri
         }
     }
 
-    alphas = alphasAve / sweeps;
     beta = betaAve / sweeps;
+}
 
-    alpha = 1.0 - (1 + alphas) * triodeModel->getParameter(PAR_KG1) / kg2;
+void Estimate::estimateBetaGamma(Measurement *measurement, CohenHelieTriode *triodeModel)
+{
+    // First find the earliest sweep with enough data points
+    int n = 0;
+    Sweep *sweep = measurement->at(n);
+    while (sweep->count() < 10 && n < measurement->count() && sweep->at(sweep->count() - 1)->getVa() < measurement->getAnodeStop() * 0.9) {
+        sweep = measurement->at(++n);
+    }
+
+    LinearSolver solver(0.0, 0.0);
+
+    int samples = sweep->count();
+    for (int sa = 1; sa < samples; sa++) {
+        Sample *sample = sweep->at(sa);
+        double iaExp = triodeModel->cohenHelieEpk(sample->getVg2(),sample->getVg1()) * (1.0 / triodeModel->getParameter(PAR_KG1) - 1.0 / kg2);
+        double r = sample->getIa() / iaExp;
+        double g = 1.0 - r;
+        double x1 = 1.0 / g - 1.0;
+
+        if (sample->getVa() > 0.0 && x1 > 0.0 && sample->getVa() < measurement->getAnodeStop() / 5.0) {
+            solver.addSample(std::log(sample->getVa()), std::log(x1));
+        }
+    }
+
+    solver.solve();
+
+    beta = exp(solver.getB());
+    gamma = solver.getA();
+
+    beta = 0.1;
+    gamma = 1.0;
+    //if (gamma < 1.0) { // Don't start with gamma too low
+    //    gamma = 1.0;
+    //}
 }
 
 double Estimate::getMu() const

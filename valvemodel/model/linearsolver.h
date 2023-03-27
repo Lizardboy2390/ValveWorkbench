@@ -26,12 +26,16 @@ public:
     double getA() const;
     double getB() const;
 
+    bool isConverged() const;
+
 protected:
     QList<double> xs;
     QList<double> ys;
 
     double a;
     double b;
+
+    bool converged = false;
     /**
      * @brief problem The Ceres Problem used for model fitting
      */

@@ -10,12 +10,19 @@ struct UnifiedPentodeResidual {
         T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
         T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
         T shift = beta[0] * (1.0 - alpha[0] * vg1_);
-        //T g = exp(-pow(shift * va_, gamma[0]));
-        T g = 1.0 / (1.0 + pow(shift * va_, gamma[0]));
+        T g = exp(-pow(shift * va_, gamma[0]));
+        //T g = 1.0 / (1.0 + pow(shift * va_, gamma[0]));
+        if (isnan(g)) { // Should only happen if Va is 0 and this is a better test than == 0.0
+            g = gamma[0] / gamma[0];
+        }
         T scale = 1.0 - g;
         T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * scale + a[0] * va_ / kg1[0]);
-        residual[0] = ia_ - ia;
-        return !(isnan(ia) || isinf(ia));
+        if (!(isnan(ia) || isinf(ia))) {
+            residual[0] = ia_ - ia;
+        } else {
+            return false;
+        }
+        return true;
     }
 
 private:
@@ -31,8 +38,8 @@ double GardinerPentode::anodeCurrent(double va, double vg1, double vg2)
     double epk = cohenHelieEpk(vg2, vg1);
     double k = 1.0 / parameter[PAR_KG1]->getValue() - 1.0 / parameter[PAR_KG2]->getValue();
     double shift = parameter[PAR_BETA]->getValue() * (1.0 - parameter[PAR_ALPHA]->getValue() * vg1);
-    //double g = exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
-    double g = 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
+    double g = exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
+    //double g = 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
     double scale = 1.0 - g;
     double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG1]->getValue());
 
@@ -132,6 +139,16 @@ void GardinerPentode::updateProperties(QTableWidget *properties)
     addProperty(properties, "gamma", QString("%1").arg(parameter[PAR_GAMMA]->getValue()));
 }
 
+void GardinerPentode::setupRetry()
+{
+    parameter[PAR_BETA]->setValue(parameter[PAR_BETA]->getValue() / 1.1);
+    if (parameter[PAR_GAMMA]->getValue() < 1.3) {
+        parameter[PAR_GAMMA]->setValue(parameter[PAR_GAMMA]->getValue() * 1.1);
+    } else if (parameter[PAR_GAMMA]->getValue() < 1.7) {
+        parameter[PAR_GAMMA]->setValue(parameter[PAR_GAMMA]->getValue() * 0.9);
+    }
+}
+
 bool GardinerPentode::withSecondaryEmission() const
 {
     return secondaryEmission;
@@ -152,20 +169,24 @@ void GardinerPentode::setOptions()
     problem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
     problem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
 
+    problem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
+
     problem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
     problem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
     problem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.00001);
     problem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.5);
     problem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.0);
 
+    //problem.SetParameterUpperBound(parameter[PAR_KG2]->getPointer(), 0, parameter[PAR_KG1]->getValue() * 6.0);
+
     options.max_num_iterations = 200;
     options.max_num_consecutive_invalid_steps = 20;
-    options.use_inner_iterations = true;
-    options.use_nonmonotonic_steps = true;
+    //options.use_inner_iterations = true;
+    //options.use_nonmonotonic_steps = true;
     //options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-    options.trust_region_strategy_type = ceres::DOGLEG;
-    //options.linear_solver_type = ceres::DENSE_QR;
-    options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
+    //options.trust_region_strategy_type = ceres::DOGLEG;
+    options.linear_solver_type = ceres::DENSE_QR;
+    //options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
     //options.preconditioner_type = ceres::JACOBI;
-    options.preconditioner_type = ceres::SUBSET;
+    //options.preconditioner_type = ceres::SUBSET;
 }

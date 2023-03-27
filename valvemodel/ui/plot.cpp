@@ -119,5 +119,14 @@ void Plot::clear()
 
 void Plot::add(QGraphicsItem *item)
 {
-    scene->addItem(item);
+    if (item != nullptr) {
+        scene->addItem(item);
+    }
+}
+
+void Plot::remove(QGraphicsItem *item)
+{
+    if (item != nullptr) {
+        scene->removeItem(item);
+    }
 }

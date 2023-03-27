@@ -72,8 +72,6 @@ private slots:
 
     void on_actionNew_Project_triggered();
 
-    void on_actionLoad_Measurement_triggered();
-
     void on_projectTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 
     void on_heaterButton_clicked();
@@ -137,6 +135,8 @@ private slots:
     void on_actionSave_Project_triggered();
 
     void on_actionOpen_Project_triggered();
+
+    void on_actionClose_Project_triggered();
 
 private:
     Ui::ValveWorkbench *ui;
@@ -242,4 +242,6 @@ private:
     QTreeWidgetItem *getProject(QTreeWidgetItem *current);
     Model *findModel(int type);
     Measurement *findMeasurement(int deviceType, int measurementType);
+    void setSelectedTreeItem(QTreeWidgetItem *item, bool selected);
+    void setFitButtons();
 };

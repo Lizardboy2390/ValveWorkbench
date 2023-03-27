@@ -66,6 +66,11 @@ double Model::anodeVoltage(double ia, double vg1, double vg2)
     return va;
 }
 
+void Model::setupRetry()
+{
+
+}
+
 void Model::addMeasurement(Measurement *measurement)
 {
     int sweeps = measurement->count();
@@ -119,6 +124,8 @@ void Model::solve()
 
     Solver::Summary summary;
     Solve(options, &problem, &summary);
+
+    converged = summary.termination_type == ceres::CONVERGENCE;
 
     qInfo(summary.FullReport().c_str());
 }
@@ -215,6 +222,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
 double Model::getParameter(int parameterIndex)
 {
     return parameter[parameterIndex]->getValue();
+}
+
+bool Model::isConverged() const
+{
+    return converged;
 }
 
 void Model::setLowerBound(Parameter* parameter, double lowerBound)

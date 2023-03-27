@@ -598,34 +598,6 @@ void ValveWorkbench::handleHeaterTimeout()
     analyser->handleHeaterTimeout();
 }
 
-void ValveWorkbench::on_actionExit_triggered()
-{
-    QCoreApplication::quit();
-}
-
-void ValveWorkbench::on_actionPrint_triggered()
-{
-
-}
-
-void ValveWorkbench::on_actionLoad_Model_triggered()
-{
-    QString modelName = QFileDialog::getOpenFileName(this, "Open model", "", "*.json");
-
-    if (modelName.isNull()) {
-        return;
-    }
-
-    QFile modelFile(modelName);
-
-    if (!modelFile.open(QIODevice::ReadOnly)) {
-        qWarning("Couldn't open config file.");
-    } else {
-        QByteArray modelData = modelFile.readAll();
-        currentDevice = new Device(QJsonDocument::fromJson(modelData));
-    }
-}
-
 void ValveWorkbench::on_stdDeviceSelection_currentIndexChanged(int index)
 {
     selectStdDevice(ui->stdDeviceSelection->currentData().toInt());
@@ -666,7 +638,6 @@ void ValveWorkbench::on_cir5Value_editingFinished()
     updateCircuitParameter(4);
 }
 
-
 void ValveWorkbench::on_cir6Value_editingFinished()
 {
     updateCircuitParameter(5);
@@ -675,6 +646,49 @@ void ValveWorkbench::on_cir6Value_editingFinished()
 void ValveWorkbench::on_cir7Value_editingFinished()
 {
     updateCircuitParameter(6);
+}
+
+void ValveWorkbench::on_actionExit_triggered()
+{
+    QCoreApplication::quit();
+}
+
+void ValveWorkbench::on_actionPrint_triggered()
+{
+
+}
+
+void ValveWorkbench::on_actionOptions_triggered()
+{
+    preferencesDialog.setPort(port);
+
+    if (preferencesDialog.exec() == 1) {
+        setSerialPort(preferencesDialog.getPort());
+
+        pentodeModel = preferencesDialog.getPentodeModelType();
+
+        samplingType = preferencesDialog.getSamplingType();
+
+        analyser->reset();
+    }
+}
+
+void ValveWorkbench::on_actionLoad_Model_triggered()
+{
+    QString modelName = QFileDialog::getOpenFileName(this, "Open model", "", "*.json");
+
+    if (modelName.isNull()) {
+        return;
+    }
+
+    QFile modelFile(modelName);
+
+    if (!modelFile.open(QIODevice::ReadOnly)) {
+        qWarning("Couldn't open config file.");
+    } else {
+        QByteArray modelData = modelFile.readAll();
+        currentDevice = new Device(QJsonDocument::fromJson(modelData));
+    }
 }
 
 void ValveWorkbench::on_actionNew_Project_triggered()
@@ -686,6 +700,7 @@ void ValveWorkbench::on_actionNew_Project_triggered()
         project->setName(dialog.getName());
         project->setDeviceType(dialog.getDeviceType());
 
+        setSelectedTreeItem(currentProject, false);
         currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
         currentProject->setText(0, dialog.getName());
         currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
@@ -693,30 +708,84 @@ void ValveWorkbench::on_actionNew_Project_triggered()
         currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) project));
 
         project->setTreeItem(currentProject);
+        setSelectedTreeItem(currentProject, true);
     }
 }
 
-void ValveWorkbench::on_actionLoad_Measurement_triggered()
+void ValveWorkbench::on_actionSave_Project_triggered()
 {
     if (currentProject != nullptr) {
-        QString measurementlName = QFileDialog::getOpenFileName(this, "Open measurement", "", "*.json");
+        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
 
-        if (measurementlName.isNull()) {
+        QString projectName = QFileDialog::getSaveFileName(this, "Save Project", "", "*.vwp");
+
+        if (projectName.isNull()) {
             return;
         }
 
-        QFile measurementFile(measurementlName);
+        QFile projectFile(projectName);
 
-        if (!measurementFile.open(QIODevice::ReadOnly)) {
-            qWarning("Couldn't open measurement file.");
+        if (!projectFile.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text)) {
+            qWarning("Couldn't open project file for Save.");
         } else {
-            QByteArray measurementData = measurementFile.readAll();
-            Measurement *measurement = new Measurement();
-            measurement->fromJson(QJsonDocument::fromJson(measurementData).object());
-            measurement->buildTree(currentProject);
-            Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-            project->addMeasurement(measurement);
+            QJsonObject projectObject;
+
+            project->toJson(projectObject);
+            projectFile.write(QJsonDocument(projectObject).toJson());
         }
+    }
+}
+
+void ValveWorkbench::on_actionOpen_Project_triggered()
+{
+    QString projectName = QFileDialog::getOpenFileName(this, "Open project", "", "*.vwp");
+
+    if (projectName.isNull()) {
+        return;
+    }
+
+    ui->tabWidget->setCurrentIndex(1);
+
+    QFile projectFile(projectName);
+
+    if (!projectFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning("Couldn't open project file for Open.");
+    } else {
+        QByteArray projectData = projectFile.readAll();
+        Project *project = new Project();
+
+        QJsonDocument projectDocument(QJsonDocument::fromJson(projectData));
+        if (projectDocument.isObject()) {
+            QJsonObject projectObject = projectDocument.object();
+            if (projectObject.contains("project") && projectObject["project"].isObject()) {
+                project->fromJson(projectObject["project"].toObject());
+            }
+        }
+
+        setSelectedTreeItem(currentProject, false);
+        currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
+        currentProject->setText(0, project->getName());
+        currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
+        currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) project));
+        setSelectedTreeItem(currentProject, true);
+        setFitButtons();
+
+        project->buildTree(currentProject);
+    }
+}
+
+void ValveWorkbench::on_actionClose_Project_triggered()
+{
+    if (currentProject != nullptr) {
+        if (getProject(currentMeasurementItem) == currentProject) {
+            currentMeasurementItem = nullptr;
+        }
+        if (getProject(currentModelItem) == currentProject) {
+            currentModelItem = nullptr;
+        }
+        delete currentProject;
+        currentProject = nullptr;
     }
 }
 
@@ -729,27 +798,27 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
     switch(current->type()) {
     case TYP_PROJECT:
+        setSelectedTreeItem(currentProject, false);
         currentProject = current;
+        setSelectedTreeItem(currentProject, true);
+        setFitButtons();
         ((Project *)data)->updateProperties(ui->properties);
         break;
     case TYP_MEASUREMENT: {
-            if (currentMeasurementItem != nullptr) {
-                QFont font = currentMeasurementItem->font(0);
-                font.setBold(false);
-                currentMeasurementItem->setFont(0, font);
-            }
+            setSelectedTreeItem(currentMeasurementItem, false);
             currentMeasurementItem = current;
-            QFont font = currentMeasurementItem->font(0);
-            font.setBold(true);
-            currentMeasurementItem->setFont(0, font);
+            setSelectedTreeItem(currentMeasurementItem, true);
             currentMeasurement = (Measurement *) data;
 
-            //ui->estimateButton->setEnabled(true);
-            //ui->fitButton->setEnabled(true);
+            setSelectedTreeItem(currentProject, false);
             currentProject = getProject(current);
+            setSelectedTreeItem(currentProject, true);
+            setFitButtons();
+
             currentMeasurement->updateProperties(ui->properties);
             measuredCurves = currentMeasurement->updatePlot(&plot);
             plot.add(measuredCurves);
+            modelledCurves = nullptr;
             ui->measureCheck->setChecked(true);
             break;
         }
@@ -766,7 +835,11 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             currentMeasurementItem->setFont(0, font);
             currentMeasurement = (Measurement *) currentMeasurementItem->data(0, Qt::UserRole).value<void *>();
 
+            setSelectedTreeItem(currentProject, false);
             currentProject = getProject(current);
+            setSelectedTreeItem(currentProject, true);
+            setFitButtons();
+
             Sweep *sweep = (Sweep *) data;
             sweep->updateProperties(ui->properties);
             measuredCurves = sweep->updatePlot(&plot);
@@ -792,21 +865,23 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             break;
         }
     case TYP_MODEL: {
-            if (currentModelItem != nullptr) {
-                QFont font = currentModelItem->font(0);
-                font.setBold(false);
-                currentModelItem->setFont(0, font);
-            }
+            setSelectedTreeItem(currentModelItem, false);
             currentModelItem = current;
-            QFont font = currentModelItem->font(0);
-            font.setBold(true);
-            currentModelItem->setFont(0, font);
+            setSelectedTreeItem(currentModelItem, true);
+
+            setSelectedTreeItem(currentProject, false);
             currentProject = getProject(current);
+            setSelectedTreeItem(currentProject, true);
+            setFitButtons();
+
             Model *model = (Model *) data;
             model->updateProperties(ui->properties);
             if (currentMeasurement != nullptr) {
-                modelledCurves = model->plotModel(&plot, currentMeasurement);
-                plot.add(modelledCurves);
+                if ((currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE) || (currentMeasurement->getDeviceType() == PENTODE && model->getType() == GARDINER_PENTODE)) {
+                    plot.remove(modelledCurves);
+                    modelledCurves = model->plotModel(&plot, currentMeasurement);
+                    plot.add(modelledCurves);
+                }
             }
             break;
         }       
@@ -822,7 +897,11 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             currentMeasurementItem->setFont(0, font);
             currentMeasurement = (Measurement *) data;
 
+            setSelectedTreeItem(currentProject, false);
             currentProject = getProject(current);
+            setSelectedTreeItem(currentProject, true);
+            setFitButtons();
+
             Sample *sample = (Sample *) data;
             sample->updateProperties(ui->properties);
             break;
@@ -834,6 +913,10 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
 QTreeWidgetItem *ValveWorkbench::getProject(QTreeWidgetItem *current)
 {
+    if (current == nullptr) {
+        return nullptr;
+    }
+
     QTreeWidgetItem *parent = current->parent();
     if (parent != nullptr) {
         if (parent->type() == TYP_PROJECT) {
@@ -881,6 +964,32 @@ Measurement *ValveWorkbench::findMeasurement(int deviceType, int testType)
     }
 
     return foundMeasurement;
+}
+
+void ValveWorkbench::setSelectedTreeItem(QTreeWidgetItem *item, bool selected)
+{
+    if (item != nullptr) {
+        QFont font = item->font(0);
+        font.setBold(selected);
+        item->setFont(0, font);
+    }
+}
+
+void ValveWorkbench::setFitButtons()
+{
+    if (currentProject == nullptr) {
+        ui->fitTriodeButton->setVisible(false);
+        ui->fitPentodeButton->setVisible(false);
+    } else {
+        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+        if (project->getDeviceType() == TRIODE) {
+            ui->fitTriodeButton->setVisible(true);
+            ui->fitPentodeButton->setVisible(false);
+        } else {
+            ui->fitTriodeButton->setVisible(false);
+            ui->fitPentodeButton->setVisible(true);
+        }
+    }
 }
 
 void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
@@ -1021,21 +1130,6 @@ void ValveWorkbench::on_pMax_editingFinished()
     updatePMax();
 }
 
-void ValveWorkbench::on_actionOptions_triggered()
-{
-    preferencesDialog.setPort(port);
-
-    if (preferencesDialog.exec() == 1) {
-        setSerialPort(preferencesDialog.getPort());
-
-        pentodeModel = preferencesDialog.getPentodeModelType();
-
-        samplingType = preferencesDialog.getSamplingType();
-
-        analyser->reset();
-    }
-}
-
 void ValveWorkbench::on_heaterButton_clicked()
 {
     heaters = !heaters;
@@ -1119,6 +1213,14 @@ void ValveWorkbench::on_fitTriodeButton_clicked()
 
     model->solve();
 
+    if (!model->isConverged()) {
+        QMessageBox message;
+        message.setText("The model fitting did not converge - please check that your measurements are valid");
+        message.exec();
+
+        return;
+    }
+
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
     project->addModel(model);
     model->buildTree(currentProject);
@@ -1171,6 +1273,14 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
     }
 
     model->solve();
+
+    if (!model->isConverged()) {
+        QMessageBox message;
+        message.setText("The model fitting did not converge - please check that your measurements are valid");
+        message.exec();
+
+        return;
+    }
 
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
     project->addModel(model);
@@ -1236,74 +1346,6 @@ void ValveWorkbench::on_properties_itemChanged(QTableWidgetItem *item)
     DataSet *dataSet = item->data(Qt::UserRole).value<DataSet *>();
     if (dataSet != nullptr) {
         dataSet->editCallback(item);
-    }
-}
-
-
-void ValveWorkbench::on_actionSave_Project_triggered()
-{
-    if (currentProject != nullptr) {
-        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-
-        QString projectName = QFileDialog::getSaveFileName(this, "Save Project", "", "*.vwp");
-
-        if (projectName.isNull()) {
-            return;
-        }
-
-        QFile projectFile(projectName);
-
-        if (!projectFile.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text)) {
-            qWarning("Couldn't open project file for Save.");
-        } else {
-            QJsonObject projectObject;
-
-            project->toJson(projectObject);
-            projectFile.write(QJsonDocument(projectObject).toJson());
-        }
-    }
-}
-
-
-void ValveWorkbench::on_actionOpen_Project_triggered()
-{
-    QString projectName = QFileDialog::getOpenFileName(this, "Open project", "", "*.vwp");
-
-    if (projectName.isNull()) {
-        return;
-    }
-
-    QFile projectFile(projectName);
-
-    if (!projectFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning("Couldn't open project file for Open.");
-    } else {
-        QByteArray projectData = projectFile.readAll();
-        Project *project = new Project();
-
-        QJsonDocument projectDocument(QJsonDocument::fromJson(projectData));
-        if (projectDocument.isObject()) {
-            QJsonObject projectObject = projectDocument.object();
-            if (projectObject.contains("project") && projectObject["project"].isObject()) {
-                project->fromJson(projectObject["project"].toObject());
-            }
-        }
-
-        currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
-        currentProject->setText(0, project->getName());
-        currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
-        currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-        currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) project));
-
-        project->buildTree(currentProject);
-
-        if (project->getDeviceType() == TRIODE) {
-            ui->fitTriodeButton->setVisible(true);
-            ui->fitPentodeButton->setVisible(false);
-        } else {
-            ui->fitTriodeButton->setVisible(false);
-            ui->fitPentodeButton->setVisible(true);
-        }
     }
 }
 

@@ -27,9 +27,22 @@ public:
     double getB() const;
     double getC() const;
 
+    bool getFixedA() const;
+    void setFixedA(bool newFixedA);
+
+    bool getRequirePositive() const;
+    void setRequirePositive(bool newRequirePositive);
+
+    bool isConverged() const;
+
 protected:
     QList<double> xs;
     QList<double> ys;
+
+    bool fixedA = false;
+    bool requirePositive = false;
+
+    bool converged = false;
 
     double a;
     double b;

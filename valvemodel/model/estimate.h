@@ -94,5 +94,6 @@ protected:
     void estimateKg2(Measurement *measurement, CohenHelieTriode *triodeModel);
     void estimateA(Measurement *measurement, CohenHelieTriode *triodeModel);
     void estimateAlphaBeta(Measurement *measurement, CohenHelieTriode *triodeModel, int modelType);
+    void estimateBetaGamma(Measurement *measurement, CohenHelieTriode *triodeModel);
 };
 

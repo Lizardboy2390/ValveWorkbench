@@ -110,6 +110,8 @@ public:
     virtual QString getName() = 0;
     virtual int getType() = 0;
 
+    virtual void setupRetry();
+
     void addMeasurement(Measurement *measurement);
     void addMeasurements(QList<Measurement *> *measurements);
     void setEstimate(Estimate *estimate);
@@ -122,7 +124,9 @@ public:
 
     double getParameter(int parameterIndex);
 
- protected:
+    bool isConverged() const;
+
+protected:
     /**
      * @brief problem The Ceres Problem used for model fitting
      */
@@ -137,6 +141,8 @@ public:
     Solver::Options options;
 
     Estimate *estimate;
+
+    bool converged = false;
 
     void setLowerBound(Parameter* parameter, double lowerBound);
     void setUpperBound(Parameter* parameter, double upperBound);

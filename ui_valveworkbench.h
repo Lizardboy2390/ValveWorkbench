@@ -43,13 +43,10 @@ public:
     QAction *actionPrint;
     QAction *actionNew_Project;
     QAction *actionOpen_Project;
-    QAction *actionLoad_Measurement;
     QAction *actionSave_Project;
     QAction *actionSave_As;
     QAction *actionClose_Project;
     QAction *actionOptions;
-    QAction *actionLoad_Template;
-    QAction *actionLoad_Device;
     QWidget *centralwidget;
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
@@ -203,8 +200,6 @@ public:
         actionNew_Project->setObjectName("actionNew_Project");
         actionOpen_Project = new QAction(ValveWorkbench);
         actionOpen_Project->setObjectName("actionOpen_Project");
-        actionLoad_Measurement = new QAction(ValveWorkbench);
-        actionLoad_Measurement->setObjectName("actionLoad_Measurement");
         actionSave_Project = new QAction(ValveWorkbench);
         actionSave_Project->setObjectName("actionSave_Project");
         actionSave_As = new QAction(ValveWorkbench);
@@ -213,10 +208,6 @@ public:
         actionClose_Project->setObjectName("actionClose_Project");
         actionOptions = new QAction(ValveWorkbench);
         actionOptions->setObjectName("actionOptions");
-        actionLoad_Template = new QAction(ValveWorkbench);
-        actionLoad_Template->setObjectName("actionLoad_Template");
-        actionLoad_Device = new QAction(ValveWorkbench);
-        actionLoad_Device->setObjectName("actionLoad_Device");
         centralwidget = new QWidget(ValveWorkbench);
         centralwidget->setObjectName("centralwidget");
         horizontalLayoutWidget = new QWidget(centralwidget);
@@ -1077,7 +1068,7 @@ public:
 
         retranslateUi(ValveWorkbench);
 
-        tabWidget->setCurrentIndex(1);
+        tabWidget->setCurrentIndex(0);
 
 
         QMetaObject::connectSlotsByName(ValveWorkbench);
@@ -1089,21 +1080,27 @@ public:
         actionLoad_Model->setText(QCoreApplication::translate("ValveWorkbench", "Load Model...", nullptr));
         actionExit->setText(QCoreApplication::translate("ValveWorkbench", "Exit", nullptr));
 #if QT_CONFIG(shortcut)
-        actionExit->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+W", nullptr));
+        actionExit->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+Q", nullptr));
 #endif // QT_CONFIG(shortcut)
         actionPrint->setText(QCoreApplication::translate("ValveWorkbench", "Print...", nullptr));
 #if QT_CONFIG(shortcut)
         actionPrint->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+P", nullptr));
 #endif // QT_CONFIG(shortcut)
         actionNew_Project->setText(QCoreApplication::translate("ValveWorkbench", "New Project", nullptr));
+#if QT_CONFIG(shortcut)
+        actionNew_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+N", nullptr));
+#endif // QT_CONFIG(shortcut)
         actionOpen_Project->setText(QCoreApplication::translate("ValveWorkbench", "Open Project", nullptr));
-        actionLoad_Measurement->setText(QCoreApplication::translate("ValveWorkbench", "Load Measurement...", nullptr));
+#if QT_CONFIG(shortcut)
+        actionOpen_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+O", nullptr));
+#endif // QT_CONFIG(shortcut)
         actionSave_Project->setText(QCoreApplication::translate("ValveWorkbench", "Save Project", nullptr));
         actionSave_As->setText(QCoreApplication::translate("ValveWorkbench", "Save As...", nullptr));
         actionClose_Project->setText(QCoreApplication::translate("ValveWorkbench", "Close Project", nullptr));
+#if QT_CONFIG(shortcut)
+        actionClose_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+W", nullptr));
+#endif // QT_CONFIG(shortcut)
         actionOptions->setText(QCoreApplication::translate("ValveWorkbench", "Options", nullptr));
-        actionLoad_Template->setText(QCoreApplication::translate("ValveWorkbench", "Load Template...", nullptr));
-        actionLoad_Device->setText(QCoreApplication::translate("ValveWorkbench", "Load Device...", nullptr));
         label_4->setText(QCoreApplication::translate("ValveWorkbench", "Device:", nullptr));
         label_5->setText(QCoreApplication::translate("ValveWorkbench", "Model:", nullptr));
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
