@@ -454,11 +454,11 @@ QList<QGraphicsItem *> *Measurement::plotPentodeAnode(Plot *plot, Sweep *sweep)
             Sweep *thisSweep = sweeps.at(i);
 
             thisSweep->plotPentodeAnode(plot, &samplePen, segments);
-            //thisSweep->plotPentodeScreen(plot, &samplePenS, segments);
+            thisSweep->plotPentodeScreen(plot, &samplePenS, segments);
         }
     } else {
         sweep->plotPentodeAnode(plot, &samplePen, segments);
-        //sweep->plotPentodeScreen(plot, &samplePenS, segments);
+        sweep->plotPentodeScreen(plot, &samplePenS, segments);
     }
 
     return segments;

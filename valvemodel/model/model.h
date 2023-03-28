@@ -37,8 +37,10 @@ enum eTriodeParameter {
     PAR_ALPHA,
     PAR_BETA,
     PAR_GAMMA,
-    PAR_BLEND,
-    PAR_ONSET,
+    PAR_TAU,
+    PAR_RHO,
+    PAR_THETA,
+    PAR_PSI,
     PAR_OMEGA,
     PAR_LAMBDA,
     PAR_NU,
@@ -53,6 +55,11 @@ enum eModelType {
     REEFMAN_DERK_PENTODE,
     REEFMAN_DERK_E_PENTODE,
     GARDINER_PENTODE
+};
+
+enum eModeType {
+    NORMAL_MODE,
+    SCREEN_MODE
 };
 
 /**
@@ -107,10 +114,9 @@ public:
      */
     virtual double anodeCurrent(double va, double vg1, double vg2 = 0.0) = 0;
     virtual double anodeVoltage(double ia, double vg1, double vg2 = 0.0);
+    virtual double screenCurrent(double va, double vg1, double vg2 = 0.0);
     virtual QString getName() = 0;
     virtual int getType() = 0;
-
-    virtual void setupRetry();
 
     void addMeasurement(Measurement *measurement);
     void addMeasurements(QList<Measurement *> *measurements);
@@ -126,23 +132,35 @@ public:
 
     bool isConverged() const;
 
+    int getMode() const;
+    void setMode(int newMode);
+
 protected:
     /**
      * @brief problem The Ceres Problem used for model fitting
      */
-	Problem problem;
+    Problem problem;
+    /**
+     * @brief problem The Ceres Problem used for model fitting (screen current)
+     */
+    Problem screenProblem;
     /**
      * @brief parameter The array of 16 model Parameters linked to the UI
      */
-    Parameter *parameter[20];
+    Parameter *parameter[24];
     /**
      * @brief options The options to be used by Ceres for solving the model approximation
      */
     Solver::Options options;
+    /**
+     * @brief options The options to be used by Ceres for solving the model approximation (sceen current)
+     */
+    Solver::Options screenOptions;
 
     Estimate *estimate;
 
     bool converged = false;
+    int mode = NORMAL_MODE;
 
     void setLowerBound(Parameter* parameter, double lowerBound);
     void setUpperBound(Parameter* parameter, double upperBound);

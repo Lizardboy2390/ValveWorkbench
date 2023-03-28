@@ -29,6 +29,11 @@ Model::Model()
     parameter[PAR_BETA] = new Parameter("Beta:", 0.0);
     parameter[PAR_GAMMA] = new Parameter("Gamma:", 1.0);
 
+    parameter[PAR_TAU] = new Parameter("Tau:", 0.1);
+    parameter[PAR_RHO] = new Parameter("Rho:", 0.1);
+    parameter[PAR_THETA] = new Parameter("Theta:", 0.1);
+    parameter[PAR_PSI] = new Parameter("Psi:", 0.1);
+
     parameter[PAR_OMEGA] = new Parameter("Omega:", 30.0);
     parameter[PAR_LAMBDA] = new Parameter("Lambda:", 30.0);
     parameter[PAR_NU] = new Parameter("Nu:", 0.0);
@@ -66,9 +71,9 @@ double Model::anodeVoltage(double ia, double vg1, double vg2)
     return va;
 }
 
-void Model::setupRetry()
+double Model::screenCurrent(double va, double vg1, double vg2)
 {
-
+    return 0.0;
 }
 
 void Model::addMeasurement(Measurement *measurement)
@@ -81,7 +86,7 @@ void Model::addMeasurement(Measurement *measurement)
             for (int i = 0; i < samples; i++) {
             Sample *sample = sweep->at(i);
 
-            addSample(sample->getVa(), sample->getIa(), sample->getVg1(), sample->getVg2());
+            addSample(sample->getVa(), sample->getIa(), sample->getVg1(), sample->getVg2(), sample->getIg2());
         }
     }
 }
@@ -110,6 +115,10 @@ void Model::setEstimate(Estimate *estimate)
     parameter[PAR_ALPHA]->setValue(estimate->getAlpha());
     parameter[PAR_BETA]->setValue(estimate->getBeta());
     parameter[PAR_GAMMA]->setValue(estimate->getGamma());
+    //parameter[PAR_TAU]->setValue(estimate->getPsi());
+    //parameter[PAR_RHO]->setValue(estimate->getPsi());
+    //parameter[PAR_THETA]->setValue(estimate->getPsi());
+    parameter[PAR_PSI]->setValue(estimate->getPsi());
 
     parameter[PAR_OMEGA]->setValue(estimate->getOmega());
     parameter[PAR_NU]->setValue(estimate->getNu());
@@ -120,10 +129,17 @@ void Model::setEstimate(Estimate *estimate)
 
 void Model::solve()
 {
+    converged = false;
+
     setOptions();
 
     Solver::Summary summary;
-    Solve(options, &problem, &summary);
+
+    if (mode == NORMAL_MODE) {
+        Solve(options, &problem, &summary);
+    } else if (mode == SCREEN_MODE) {
+        Solve(options, &screenProblem, &summary);
+    }
 
     converged = summary.termination_type == ceres::CONVERGENCE;
 
@@ -147,8 +163,10 @@ QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)
 QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
 {
     QGraphicsItemGroup *group = new QGraphicsItemGroup();
-    QPen modelPen;
-    modelPen.setColor(QColor::fromRgb(255, 0, 0));
+    QPen anodePen;
+    anodePen.setColor(QColor::fromRgb(255, 0, 0));
+    QPen screenPen;
+    screenPen.setColor(QColor::fromRgb(0, 0, 255));
 
     int deviceType = measurement->getDeviceType();
     int testType = measurement->getTestType();
@@ -172,7 +190,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
                 double va = vaStart + vaInc;
                 while (va < vaStop) {
                     double ia = anodeCurrent(va, -vg1, vg2);
-                    group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, modelPen));
+                    group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, anodePen));
 
                     vaPrev = va;
                     iaPrev = ia;
@@ -203,10 +221,24 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
                 double va = vaStart + vaInc;
                 while (va < vaStop) {
                     double ia = anodeCurrent(va, -vg1, vg2);
-                    group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, modelPen));
+                    group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, anodePen));
 
                     vaPrev = va;
                     iaPrev = ia;
+
+                    va += vaInc;
+                }
+
+                vaPrev = vaStart;
+                double ig2Prev = screenCurrent(vaStart, -vg1, vg2);
+
+                va = vaStart + vaInc;
+                while (va < vaStop) {
+                    double ig2 = screenCurrent(va, -vg1, vg2);
+                    group->addToGroup(plot->createSegment(vaPrev, ig2Prev, va, ig2, screenPen));
+
+                    vaPrev = va;
+                    ig2Prev = ig2;
 
                     va += vaInc;
                 }
@@ -227,6 +259,16 @@ double Model::getParameter(int parameterIndex)
 bool Model::isConverged() const
 {
     return converged;
+}
+
+int Model::getMode() const
+{
+    return mode;
+}
+
+void Model::setMode(int newMode)
+{
+    mode = newMode;
 }
 
 void Model::setLowerBound(Parameter* parameter, double lowerBound)

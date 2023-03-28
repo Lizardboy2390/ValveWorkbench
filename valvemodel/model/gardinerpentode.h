@@ -16,11 +16,9 @@ public:
     virtual QString getName();
     virtual int getType();
 
-    double screenCurrent(double va, double vg1, double vg2);
+    virtual double screenCurrent(double va, double vg1, double vg2 = 0.0);
 
     virtual void updateProperties(QTableWidget *properties);
-
-    virtual void setupRetry();
 
     bool withSecondaryEmission() const;
     void setSecondaryEmission(bool newSecondaryEmission);

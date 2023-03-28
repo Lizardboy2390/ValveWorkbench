@@ -1260,6 +1260,7 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
 
     Model *model = ModelFactory::createModel(pentodeModel);
     model->setEstimate(&estimate);
+    model->setMode(NORMAL_MODE);
 
     int children = currentProject->childCount();
     for (int i = 0; i < children; i++) {
@@ -1276,7 +1277,19 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
 
     if (!model->isConverged()) {
         QMessageBox message;
-        message.setText("The model fitting did not converge - please check that your measurements are valid");
+        message.setText("The anode current fitting did not converge - please check that your measurements are valid");
+        message.exec();
+
+        return;
+    }
+
+    model->setMode(SCREEN_MODE);
+
+    model->solve();
+
+    if (!model->isConverged()) {
+        QMessageBox message;
+        message.setText("The screen current fitting did not converge - please check that your measurements are valid");
         message.exec();
 
         return;

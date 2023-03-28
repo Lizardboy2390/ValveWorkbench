@@ -84,6 +84,16 @@ QGraphicsItemGroup *Estimate::plotModel(Plot *plot, Measurement *measurement)
     return group;
 }
 
+double Estimate::getPsi() const
+{
+    return psi;
+}
+
+void Estimate::setPsi(double newPsi)
+{
+    psi = newPsi;
+}
+
 double Estimate::getGamma() const
 {
     return gamma;

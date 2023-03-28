@@ -63,6 +63,9 @@ public:
 
     QGraphicsItemGroup *plotModel(Plot *plot, Measurement *measurement);
 
+    double getPsi() const;
+    void setPsi(double newPsi);
+
 protected:
     double mu = 40.0;
     double kg1 = 0.5;
@@ -77,6 +80,7 @@ protected:
     double alpha = 0.0;
     double beta = 0.15;
     double gamma = 1.0;
+    double psi = 3.5;
 
     double omega = 0.0;
     double lambda = 0.0;
