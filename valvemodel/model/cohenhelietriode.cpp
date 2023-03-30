@@ -24,7 +24,7 @@ CohenHelieTriode::CohenHelieTriode()
 
 void CohenHelieTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
-    problem.AddResidualBlock(
+    anodeProblem.AddResidualBlock(
         new AutoDiffCostFunction<CohenHelieTriodeResidual, 1, 1, 1, 1, 1, 1, 1, 1>(
             new CohenHelieTriodeResidual(va, vg1, ia)),
         NULL,
@@ -37,16 +37,21 @@ void CohenHelieTriode::addSample(double va, double ia, double vg1, double vg2, d
         parameter[PAR_MU]->getPointer());
 }
 
-double CohenHelieTriode::anodeCurrent(double va, double vg1, double vg2)
+double CohenHelieTriode::triodeAnodeCurrent(double va, double vg1)
 {
     return cohenHelieCurrent(va, vg1,
-        parameter[PAR_KG1]->getValue(),
-        parameter[PAR_KP]->getValue(),
-        parameter[PAR_KVB]->getValue(),
-        parameter[PAR_KVB1]->getValue(),
-        parameter[PAR_VCT]->getValue(),
-        parameter[PAR_X]->getValue(),
-        parameter[PAR_MU]->getValue());
+                             parameter[PAR_KG1]->getValue(),
+                             parameter[PAR_KP]->getValue(),
+                             parameter[PAR_KVB]->getValue(),
+                             parameter[PAR_KVB1]->getValue(),
+                             parameter[PAR_VCT]->getValue(),
+                             parameter[PAR_X]->getValue(),
+                             parameter[PAR_MU]->getValue());
+}
+
+double CohenHelieTriode::anodeCurrent(double va, double vg1, double vg2)
+{
+    return triodeAnodeCurrent(va, vg1);
 }
 
 void CohenHelieTriode::fromJson(QJsonObject source)

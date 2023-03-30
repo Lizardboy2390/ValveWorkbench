@@ -59,7 +59,8 @@ enum eModelType {
 
 enum eModeType {
     NORMAL_MODE,
-    SCREEN_MODE
+    SCREEN_MODE,
+    ANODE_REMODEL_MODE
 };
 
 /**
@@ -112,6 +113,7 @@ public:
      * @param vg2 For pentodes only, the screen grid voltage
      * @return The anode current in mA
      */
+    virtual double triodeAnodeCurrent(double va, double vg1) = 0;
     virtual double anodeCurrent(double va, double vg1, double vg2 = 0.0) = 0;
     virtual double anodeVoltage(double ia, double vg1, double vg2 = 0.0);
     virtual double screenCurrent(double va, double vg1, double vg2 = 0.0);
@@ -135,11 +137,15 @@ public:
     int getMode() const;
     void setMode(int newMode);
 
+    bool withSecondaryEmission() const;
+    void setSecondaryEmission(bool newSecondaryEmission);
+
 protected:
     /**
      * @brief problem The Ceres Problem used for model fitting
      */
-    Problem problem;
+    Problem anodeProblem;
+    Problem anodeRemodelProblem;
     /**
      * @brief problem The Ceres Problem used for model fitting (screen current)
      */
@@ -161,6 +167,8 @@ protected:
 
     bool converged = false;
     int mode = NORMAL_MODE;
+
+    bool secondaryEmission;
 
     void setLowerBound(Parameter* parameter, double lowerBound);
     void setUpperBound(Parameter* parameter, double upperBound);

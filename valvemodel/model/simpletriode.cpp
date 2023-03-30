@@ -26,7 +26,7 @@ SimpleTriode::SimpleTriode()
 
 void SimpleTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
-    problem.AddResidualBlock(
+    anodeProblem.AddResidualBlock(
         new AutoDiffCostFunction<SimpleTriodeResidual, 1, 1, 1, 1, 1>(
             new SimpleTriodeResidual(va, vg1, ia)),
         NULL,
@@ -34,6 +34,11 @@ void SimpleTriode::addSample(double va, double ia, double vg1, double vg2, doubl
         parameter[PAR_VCT]->getPointer(),
         parameter[PAR_X]->getPointer(),
         parameter[PAR_MU]->getPointer());
+}
+
+double SimpleTriode::triodeAnodeCurrent(double va, double vg1)
+{
+    return anodeCurrent(va, vg1);
 }
 
 double SimpleTriode::anodeCurrent(double va, double vg1, double vg2)

@@ -136,9 +136,11 @@ void Model::solve()
     Solver::Summary summary;
 
     if (mode == NORMAL_MODE) {
-        Solve(options, &problem, &summary);
+        Solve(options, &anodeProblem, &summary);
     } else if (mode == SCREEN_MODE) {
         Solve(options, &screenProblem, &summary);
+    } else if (mode == ANODE_REMODEL_MODE) {
+        Solve(options, &anodeRemodelProblem, &summary);
     }
 
     converged = summary.termination_type == ceres::CONVERGENCE;
@@ -271,18 +273,28 @@ void Model::setMode(int newMode)
     mode = newMode;
 }
 
+bool Model::withSecondaryEmission() const
+{
+    return secondaryEmission;
+}
+
+void Model::setSecondaryEmission(bool newSecondaryEmission)
+{
+    secondaryEmission = newSecondaryEmission;
+}
+
 void Model::setLowerBound(Parameter* parameter, double lowerBound)
 {
-    problem.SetParameterLowerBound(parameter->getPointer(), 0, lowerBound);
+    anodeProblem.SetParameterLowerBound(parameter->getPointer(), 0, lowerBound);
 }
 
 void Model::setUpperBound(Parameter* parameter, double upperBound)
 {
-    problem.SetParameterUpperBound(parameter->getPointer(), 0, upperBound);
+    anodeProblem.SetParameterUpperBound(parameter->getPointer(), 0, upperBound);
 }
 
 void Model::setLimits(Parameter* parameter, double lowerBound, double upperBound)
 {
-    problem.SetParameterLowerBound(parameter->getPointer(), 0, lowerBound);
-    problem.SetParameterUpperBound(parameter->getPointer(), 0, upperBound);
+    anodeProblem.SetParameterLowerBound(parameter->getPointer(), 0, lowerBound);
+    anodeProblem.SetParameterUpperBound(parameter->getPointer(), 0, upperBound);
 }

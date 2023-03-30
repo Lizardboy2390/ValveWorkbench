@@ -21,6 +21,8 @@ public:
 
     int getPentodeModelType();
     int getSamplingType();
+    bool useRemodelling();
+    bool useSecondaryEmission();
 
 private slots:
 

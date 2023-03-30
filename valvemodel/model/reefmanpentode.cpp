@@ -65,7 +65,7 @@ ReefmanPentode::ReefmanPentode(int newType) : modelType(newType)
 void ReefmanPentode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
     if (modelType == DERK) {
-        problem.AddResidualBlock(
+        anodeProblem.AddResidualBlock(
             new AutoDiffCostFunction<DerkPentodeResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
                 new DerkPentodeResidual(va, vg1, ia, vg2, ig2)),
             NULL,
@@ -81,7 +81,7 @@ void ReefmanPentode::addSample(double va, double ia, double vg1, double vg2, dou
             parameter[PAR_ALPHA]->getPointer(),
             parameter[PAR_BETA]->getPointer());
     } else {
-        problem.AddResidualBlock(
+        anodeProblem.AddResidualBlock(
             new AutoDiffCostFunction<DerkEPentodeResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
                 new DerkEPentodeResidual(va, vg1, ia, vg2, ig2)),
             NULL,
@@ -178,17 +178,17 @@ void ReefmanPentode::setModelType(int newModelType)
 
 void ReefmanPentode::setOptions()
 {
-    problem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
+    anodeProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
     //problem.SetParameterBlockConstant(parameter[PAR_X]->getPointer());
-    problem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
-    problem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
-    problem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
-    problem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
-    problem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
+    anodeProblem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
+    anodeProblem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
+    anodeProblem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
+    anodeProblem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
+    anodeProblem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
 
-    problem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
-    problem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
-    problem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.0);
+    anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
+    anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
+    anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.0);
 
     options.max_num_iterations = 200;
     options.max_num_consecutive_invalid_steps = 20;

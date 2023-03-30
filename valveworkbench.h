@@ -114,8 +114,6 @@ private slots:
 
     void on_pMax_editingFinished();
 
-    void on_btnSaveMeasurement_clicked();
-
     void on_btnAddToProject_clicked();
 
     void on_fitTriodeButton_clicked();
@@ -137,6 +135,8 @@ private slots:
     void on_actionOpen_Project_triggered();
 
     void on_actionClose_Project_triggered();
+
+    void on_compareButton_clicked();
 
 private:
     Ui::ValveWorkbench *ui;

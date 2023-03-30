@@ -52,3 +52,13 @@ int PreferencesDialog::getSamplingType()
 {
     return ui->sampling->currentData().toInt();
 }
+
+bool PreferencesDialog::useRemodelling()
+{
+    return ui->checkRemodel->isChecked();
+}
+
+bool PreferencesDialog::useSecondaryEmission()
+{
+    return ui->checkSecodary->isChecked();
+}

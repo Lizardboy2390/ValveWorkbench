@@ -100,8 +100,7 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
     switch (electrode) {
     case HEATER:
         value = (((double) current) / 1023 / 0.22 * vRefSlave);
-        value += 0.05; // apparent 50mA offset (i.e. 0.011v across R sense)
-        //value *= 1.4; // Compensate for unexplained 15% underage - could be because measurement is not buffered onto the ADC
+        value += 0.045; // apparent 45mA offset (i.e. 0.011v across R sense)
         break;
     case ANODE:
     case SCREEN:

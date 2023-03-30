@@ -20,12 +20,8 @@ public:
 
     virtual void updateProperties(QTableWidget *properties);
 
-    bool withSecondaryEmission() const;
-    void setSecondaryEmission(bool newSecondaryEmission);
 
 protected:
-    bool secondaryEmission;
-
     void setOptions();
 };
 

@@ -44,7 +44,6 @@ public:
     QAction *actionNew_Project;
     QAction *actionOpen_Project;
     QAction *actionSave_Project;
-    QAction *actionSave_As;
     QAction *actionClose_Project;
     QAction *actionOptions;
     QWidget *centralwidget;
@@ -96,6 +95,7 @@ public:
     QHBoxLayout *horizontalLayout_3;
     QPushButton *fitTriodeButton;
     QPushButton *fitPentodeButton;
+    QPushButton *compareButton;
     QWidget *tab_3;
     QWidget *layoutWidget_2;
     QVBoxLayout *verticalLayout_6;
@@ -164,8 +164,9 @@ public:
     QProgressBar *progressBar;
     QSpacerItem *verticalSpacer_11;
     QHBoxLayout *horizontalLayout_2;
-    QPushButton *btnSaveMeasurement;
+    QSpacerItem *horizontalSpacer_8;
     QPushButton *btnAddToProject;
+    QSpacerItem *horizontalSpacer_9;
     QSpacerItem *horizontalSpacer;
     QVBoxLayout *verticalLayout_2;
     QSpacerItem *verticalSpacer_4;
@@ -202,8 +203,6 @@ public:
         actionOpen_Project->setObjectName("actionOpen_Project");
         actionSave_Project = new QAction(ValveWorkbench);
         actionSave_Project->setObjectName("actionSave_Project");
-        actionSave_As = new QAction(ValveWorkbench);
-        actionSave_As->setObjectName("actionSave_As");
         actionClose_Project = new QAction(ValveWorkbench);
         actionClose_Project->setObjectName("actionClose_Project");
         actionOptions = new QAction(ValveWorkbench);
@@ -441,7 +440,7 @@ public:
         tab_2->setObjectName("tab_2");
         layoutWidget1 = new QWidget(tab_2);
         layoutWidget1->setObjectName("layoutWidget1");
-        layoutWidget1->setGeometry(QRect(10, 10, 258, 630));
+        layoutWidget1->setGeometry(QRect(10, 10, 263, 634));
         verticalLayout_4 = new QVBoxLayout(layoutWidget1);
         verticalLayout_4->setObjectName("verticalLayout_4");
         verticalLayout_4->setContentsMargins(0, 0, 0, 0);
@@ -502,6 +501,11 @@ public:
         fitPentodeButton->setEnabled(true);
 
         horizontalLayout_3->addWidget(fitPentodeButton);
+
+        compareButton = new QPushButton(layoutWidget1);
+        compareButton->setObjectName("compareButton");
+
+        horizontalLayout_3->addWidget(compareButton);
 
 
         verticalLayout_4->addLayout(horizontalLayout_3);
@@ -955,17 +959,19 @@ public:
 
         horizontalLayout_2 = new QHBoxLayout();
         horizontalLayout_2->setObjectName("horizontalLayout_2");
-        btnSaveMeasurement = new QPushButton(layoutWidget_2);
-        btnSaveMeasurement->setObjectName("btnSaveMeasurement");
-        btnSaveMeasurement->setEnabled(false);
+        horizontalSpacer_8 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        horizontalLayout_2->addWidget(btnSaveMeasurement);
+        horizontalLayout_2->addItem(horizontalSpacer_8);
 
         btnAddToProject = new QPushButton(layoutWidget_2);
         btnAddToProject->setObjectName("btnAddToProject");
         btnAddToProject->setEnabled(false);
 
         horizontalLayout_2->addWidget(btnAddToProject);
+
+        horizontalSpacer_9 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_2->addItem(horizontalSpacer_9);
 
 
         verticalLayout_6->addLayout(horizontalLayout_2);
@@ -1058,7 +1064,6 @@ public:
         menuFile->addAction(actionNew_Project);
         menuFile->addAction(actionOpen_Project);
         menuFile->addAction(actionSave_Project);
-        menuFile->addAction(actionSave_As);
         menuFile->addAction(actionClose_Project);
         menuFile->addSeparator();
         menuFile->addAction(actionPrint);
@@ -1068,7 +1073,7 @@ public:
 
         retranslateUi(ValveWorkbench);
 
-        tabWidget->setCurrentIndex(0);
+        tabWidget->setCurrentIndex(1);
 
 
         QMetaObject::connectSlotsByName(ValveWorkbench);
@@ -1095,7 +1100,9 @@ public:
         actionOpen_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+O", nullptr));
 #endif // QT_CONFIG(shortcut)
         actionSave_Project->setText(QCoreApplication::translate("ValveWorkbench", "Save Project", nullptr));
-        actionSave_As->setText(QCoreApplication::translate("ValveWorkbench", "Save As...", nullptr));
+#if QT_CONFIG(shortcut)
+        actionSave_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+S", nullptr));
+#endif // QT_CONFIG(shortcut)
         actionClose_Project->setText(QCoreApplication::translate("ValveWorkbench", "Close Project", nullptr));
 #if QT_CONFIG(shortcut)
         actionClose_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+W", nullptr));
@@ -1116,6 +1123,7 @@ public:
         label->setText(QCoreApplication::translate("ValveWorkbench", "Properties", nullptr));
         fitTriodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Triode", nullptr));
         fitPentodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Pentode...", nullptr));
+        compareButton->setText(QCoreApplication::translate("ValveWorkbench", "Compare Device", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("ValveWorkbench", "Modeller", nullptr));
         pushButton_3->setText(QCoreApplication::translate("ValveWorkbench", "Load Template...", nullptr));
         pushButton_4->setText(QCoreApplication::translate("ValveWorkbench", "Save Template...", nullptr));
@@ -1135,7 +1143,6 @@ public:
         heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage (V)", nullptr));
         heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (A)", nullptr));
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
-        btnSaveMeasurement->setText(QCoreApplication::translate("ValveWorkbench", "Save to File...", nullptr));
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         plotTitle->setText(QString());

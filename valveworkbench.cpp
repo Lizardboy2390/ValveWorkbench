@@ -6,7 +6,7 @@
 
 #include "preferencesdialog.h"
 #include "projectdialog.h"
-#include "pentodefitdialog.h"
+#include "comparedialog.h"
 
 #include <QMessageBox>
 
@@ -287,7 +287,6 @@ void ValveWorkbench::testFinished()
 {
     ui->runButton->setChecked(false);
     ui->progressBar->setVisible(false);
-    ui->btnSaveMeasurement->setEnabled(true);
     ui->btnAddToProject->setEnabled(true);
 
     currentMeasurement = analyser->getResult();
@@ -1146,7 +1145,6 @@ void ValveWorkbench::on_runButton_clicked()
         ui->runButton->setChecked(true);
         ui->progressBar->reset();
         ui->progressBar->setVisible(true);
-        ui->btnSaveMeasurement->setEnabled(false);
         ui->btnAddToProject->setEnabled(false);
 
         analyser->setDeviceType(deviceType);
@@ -1159,11 +1157,6 @@ void ValveWorkbench::on_runButton_clicked()
     } else {
         ui->runButton->setChecked(false);
     }
-}
-
-void ValveWorkbench::on_btnSaveMeasurement_clicked()
-{
-
 }
 
 void ValveWorkbench::on_btnAddToProject_clicked()
@@ -1248,19 +1241,13 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
         return;
     }
 
-    /*PentodeFitDialog dialog;
-    if (dialog.exec() == 0) {
-        return;
-    }
-
-    int deviceType = dialog.isTruePentode() ? COHEN_HELIE_PENTODE : BEAM_TETRODE;*/
-
     Estimate estimate;
     estimate.estimatePentode(measurement, triodeModel, pentodeModel, false);
 
     Model *model = ModelFactory::createModel(pentodeModel);
     model->setEstimate(&estimate);
     model->setMode(NORMAL_MODE);
+    model->setSecondaryEmission(preferencesDialog.useSecondaryEmission());
 
     int children = currentProject->childCount();
     for (int i = 0; i < children; i++) {
@@ -1293,6 +1280,20 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
         message.exec();
 
         return;
+    }
+
+    if (preferencesDialog.useRemodelling()) {
+        model->setMode(ANODE_REMODEL_MODE);
+
+        model->solve();
+
+        if (!model->isConverged()) {
+            QMessageBox message;
+            message.setText("The anode current fitting (remodelling) did not converge - please check that your measurements are valid");
+            message.exec();
+
+            return;
+        }
     }
 
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
@@ -1360,5 +1361,39 @@ void ValveWorkbench::on_properties_itemChanged(QTableWidgetItem *item)
     if (dataSet != nullptr) {
         dataSet->editCallback(item);
     }
+}
+
+
+void ValveWorkbench::on_compareButton_clicked()
+{
+    if (currentProject == nullptr) {
+        QMessageBox message;
+        message.setText("No project selected");
+        message.exec();
+
+        return;
+    }
+
+    CompareDialog dialog;
+
+    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+    Model *model;
+    if (project->getDeviceType() == TRIODE) {
+        model = findModel(COHEN_HELIE_TRIODE);
+    } else {
+        model = findModel(GARDINER_PENTODE);
+    }
+
+    if (model == nullptr) {
+        QMessageBox message;
+        message.setText("No model found");
+        message.exec();
+
+        return;
+    }
+
+    dialog.setModel(model);
+
+    dialog.exec();
 }
 

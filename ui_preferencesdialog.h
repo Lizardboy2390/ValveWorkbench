@@ -12,6 +12,7 @@
 #include <QtCore/QVariant>
 #include <QtWidgets/QAbstractButton>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
@@ -41,6 +42,8 @@ public:
     QLabel *label_3;
     QComboBox *sampling;
     QSpacerItem *horizontalSpacer_3;
+    QCheckBox *checkRemodel;
+    QCheckBox *checkSecodary;
     QSpacerItem *verticalSpacer;
 
     void setupUi(QDialog *PreferencesDialog)
@@ -140,6 +143,18 @@ public:
 
         verticalLayout->addLayout(horizontalLayout_3);
 
+        checkRemodel = new QCheckBox(verticalLayoutWidget);
+        checkRemodel->setObjectName("checkRemodel");
+        checkRemodel->setChecked(true);
+
+        verticalLayout->addWidget(checkRemodel);
+
+        checkSecodary = new QCheckBox(verticalLayoutWidget);
+        checkSecodary->setObjectName("checkSecodary");
+        checkSecodary->setChecked(true);
+
+        verticalLayout->addWidget(checkSecodary);
+
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
         verticalLayout->addItem(verticalSpacer);
@@ -158,6 +173,8 @@ public:
         label->setText(QCoreApplication::translate("PreferencesDialog", "Analyser Port:", nullptr));
         label_2->setText(QCoreApplication::translate("PreferencesDialog", "Pentode Fit:", nullptr));
         label_3->setText(QCoreApplication::translate("PreferencesDialog", "Anode sampling:", nullptr));
+        checkRemodel->setText(QCoreApplication::translate("PreferencesDialog", "Use Pentode remodelling step", nullptr));
+        checkSecodary->setText(QCoreApplication::translate("PreferencesDialog", "Model secondary emission", nullptr));
     } // retranslateUi
 
 };
