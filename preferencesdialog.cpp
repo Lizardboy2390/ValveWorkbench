@@ -1,6 +1,7 @@
 #include "preferencesdialog.h"
 #include "ui_preferencesdialog.h"
 #include "valvemodel/model/model.h"
+#include "analyser/analyser.h"
 
 PreferencesDialog::PreferencesDialog(QWidget *parent) :
     QDialog(parent),
@@ -20,8 +21,8 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
     ui->pentodeFit->addItem("Reefman (Derk)", REEFMAN_DERK_PENTODE);
     ui->pentodeFit->addItem("Reefman (DerkE)", REEFMAN_DERK_E_PENTODE);
 
-    ui->sampling->addItem("Linear", 0);
-    ui->sampling->addItem("Logarithmic", 1);
+    ui->sampling->addItem("Simple", SMP_LINEAR);
+    ui->sampling->addItem("Optimised", SMP_LOGARITHMIC);
 }
 
 PreferencesDialog::~PreferencesDialog()
@@ -60,5 +61,20 @@ bool PreferencesDialog::useRemodelling()
 
 bool PreferencesDialog::useSecondaryEmission()
 {
-    return ui->checkSecodary->isChecked();
+    return ui->checkSecondary->isChecked();
+}
+
+bool PreferencesDialog::fixSecondaryEmission()
+{
+    return ui->checkFixSecondary->isChecked();
+}
+
+bool PreferencesDialog::fixTriodeParameters()
+{
+    return ui->checkFixTriode->isChecked();
+}
+
+bool PreferencesDialog::showScreenCurrent()
+{
+    return ui->checkScreenCurrent->isChecked();
 }

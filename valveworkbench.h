@@ -240,6 +240,7 @@ private:
     void updateParameterDisplay();
     void doPlot();
     QTreeWidgetItem *getProject(QTreeWidgetItem *current);
+    QTreeWidgetItem *getParent(QTreeWidgetItem *current, int type);
     Model *findModel(int type);
     Measurement *findMeasurement(int deviceType, int measurementType);
     void setSelectedTreeItem(QTreeWidgetItem *item, bool selected);

@@ -70,6 +70,9 @@ public:
     Sweep *at(int i);
     int count();
 
+    bool getShowScreen() const;
+    void setShowScreen(bool newShowScreen);
+
 protected:
     int deviceType = TRIODE;
     int testType = ANODE_CHARACTERISTICS;
@@ -94,6 +97,8 @@ protected:
     QList<Sweep *> sweeps;
 
     Sweep *currentSweep;
+
+    bool showScreen = true;
 
     void anodeAxes(Plot *plot);
     QList<QGraphicsItem *> *plotTriodeAnode(Plot *plot, Sweep *sweep = nullptr);

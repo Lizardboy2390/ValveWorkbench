@@ -428,7 +428,7 @@
           <rect>
            <x>10</x>
            <y>10</y>
-           <width>263</width>
+           <width>275</width>
            <height>634</height>
           </rect>
          </property>
@@ -538,6 +538,19 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
+             <spacer name="horizontalSpacer_10">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
              <widget class="QPushButton" name="fitTriodeButton">
               <property name="enabled">
                <bool>true</bool>
@@ -563,6 +576,19 @@
                <string>Compare Device</string>
               </property>
              </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_12">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </item>

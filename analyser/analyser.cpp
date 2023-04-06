@@ -568,6 +568,11 @@ void Analyser::handleHeaterTimeout()
     heaterTimer->start(500); // Do it again in 500ms...
 }
 
+void Analyser::setPreferences(PreferencesDialog *newPreferences)
+{
+    preferences = newPreferences;
+}
+
 void Analyser::handleError(QSerialPort::SerialPortError error)
 {
     if (error == QSerialPort::ReadError) {
@@ -599,8 +604,12 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
 
         double sweep = 0.0;
         while (sweep <= 1.01) {
-            //double sweepVoltage = sweepStart + (sweepStop - sweepStart) * sampleFunction(sweep);
-            double sweepVoltage = sweepStart + (sweepStop - sweepStart) * sweep;
+            double sweepVoltage;
+            if (preferences->getSamplingType() == SMP_LOGARITHMIC) {
+                sweepVoltage = sweepStart + (sweepStop - sweepStart) * sampleFunction(sweep);
+            } else {
+                sweepVoltage = sweepStart + (sweepStop - sweepStart) * sweep;
+            }
             thisSweep.append(convertTargetVoltage(sweepType, sweepVoltage));
             sweep += increment;
         }

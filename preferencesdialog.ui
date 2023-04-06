@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>300</height>
+    <height>508</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>240</y>
+     <y>450</y>
      <width>341</width>
      <height>32</height>
     </rect>
@@ -35,7 +35,7 @@
      <x>20</x>
      <y>19</y>
      <width>361</width>
-     <height>181</height>
+     <height>401</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -196,6 +196,16 @@
      </layout>
     </item>
     <item>
+     <widget class="QCheckBox" name="checkScreenCurrent">
+      <property name="text">
+       <string>Show screen current on anode plots</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QCheckBox" name="checkRemodel">
       <property name="text">
        <string>Use Pentode remodelling step</string>
@@ -206,12 +216,29 @@
      </widget>
     </item>
     <item>
-     <widget class="QCheckBox" name="checkSecodary">
+     <widget class="QCheckBox" name="checkSecondary">
       <property name="text">
        <string>Model secondary emission</string>
       </property>
       <property name="checked">
        <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="checkFixTriode">
+      <property name="text">
+       <string>Fix triode parameters for pentode modelling</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="checkFixSecondary">
+      <property name="text">
+       <string>Fix secondary emission parameters for screen modelling</string>
       </property>
      </widget>
     </item>

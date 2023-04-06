@@ -42,23 +42,26 @@ public:
     QLabel *label_3;
     QComboBox *sampling;
     QSpacerItem *horizontalSpacer_3;
+    QCheckBox *checkScreenCurrent;
     QCheckBox *checkRemodel;
-    QCheckBox *checkSecodary;
+    QCheckBox *checkSecondary;
+    QCheckBox *checkFixTriode;
+    QCheckBox *checkFixSecondary;
     QSpacerItem *verticalSpacer;
 
     void setupUi(QDialog *PreferencesDialog)
     {
         if (PreferencesDialog->objectName().isEmpty())
             PreferencesDialog->setObjectName("PreferencesDialog");
-        PreferencesDialog->resize(400, 300);
+        PreferencesDialog->resize(400, 508);
         buttonBox = new QDialogButtonBox(PreferencesDialog);
         buttonBox->setObjectName("buttonBox");
-        buttonBox->setGeometry(QRect(30, 240, 341, 32));
+        buttonBox->setGeometry(QRect(30, 450, 341, 32));
         buttonBox->setOrientation(Qt::Horizontal);
         buttonBox->setStandardButtons(QDialogButtonBox::Cancel|QDialogButtonBox::Ok);
         verticalLayoutWidget = new QWidget(PreferencesDialog);
         verticalLayoutWidget->setObjectName("verticalLayoutWidget");
-        verticalLayoutWidget->setGeometry(QRect(20, 19, 361, 181));
+        verticalLayoutWidget->setGeometry(QRect(20, 19, 361, 401));
         verticalLayout = new QVBoxLayout(verticalLayoutWidget);
         verticalLayout->setObjectName("verticalLayout");
         verticalLayout->setContentsMargins(0, 0, 0, 0);
@@ -143,17 +146,34 @@ public:
 
         verticalLayout->addLayout(horizontalLayout_3);
 
+        checkScreenCurrent = new QCheckBox(verticalLayoutWidget);
+        checkScreenCurrent->setObjectName("checkScreenCurrent");
+        checkScreenCurrent->setChecked(true);
+
+        verticalLayout->addWidget(checkScreenCurrent);
+
         checkRemodel = new QCheckBox(verticalLayoutWidget);
         checkRemodel->setObjectName("checkRemodel");
         checkRemodel->setChecked(true);
 
         verticalLayout->addWidget(checkRemodel);
 
-        checkSecodary = new QCheckBox(verticalLayoutWidget);
-        checkSecodary->setObjectName("checkSecodary");
-        checkSecodary->setChecked(true);
+        checkSecondary = new QCheckBox(verticalLayoutWidget);
+        checkSecondary->setObjectName("checkSecondary");
+        checkSecondary->setChecked(true);
 
-        verticalLayout->addWidget(checkSecodary);
+        verticalLayout->addWidget(checkSecondary);
+
+        checkFixTriode = new QCheckBox(verticalLayoutWidget);
+        checkFixTriode->setObjectName("checkFixTriode");
+        checkFixTriode->setChecked(true);
+
+        verticalLayout->addWidget(checkFixTriode);
+
+        checkFixSecondary = new QCheckBox(verticalLayoutWidget);
+        checkFixSecondary->setObjectName("checkFixSecondary");
+
+        verticalLayout->addWidget(checkFixSecondary);
 
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
@@ -173,8 +193,11 @@ public:
         label->setText(QCoreApplication::translate("PreferencesDialog", "Analyser Port:", nullptr));
         label_2->setText(QCoreApplication::translate("PreferencesDialog", "Pentode Fit:", nullptr));
         label_3->setText(QCoreApplication::translate("PreferencesDialog", "Anode sampling:", nullptr));
+        checkScreenCurrent->setText(QCoreApplication::translate("PreferencesDialog", "Show screen current on anode plots", nullptr));
         checkRemodel->setText(QCoreApplication::translate("PreferencesDialog", "Use Pentode remodelling step", nullptr));
-        checkSecodary->setText(QCoreApplication::translate("PreferencesDialog", "Model secondary emission", nullptr));
+        checkSecondary->setText(QCoreApplication::translate("PreferencesDialog", "Model secondary emission", nullptr));
+        checkFixTriode->setText(QCoreApplication::translate("PreferencesDialog", "Fix triode parameters for pentode modelling", nullptr));
+        checkFixSecondary->setText(QCoreApplication::translate("PreferencesDialog", "Fix secondary emission parameters for screen modelling", nullptr));
     } // retranslateUi
 
 };

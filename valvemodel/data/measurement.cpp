@@ -224,18 +224,18 @@ QGraphicsItemGroup *Measurement::updatePlot(Plot *plot, Sweep *sweep)
             return createGroup(plotTriodeAnode(plot, sweep));
         } else if (testType == TRANSFER_CHARACTERISTICS) {
             transferAxes(plot);
-            return createGroup(plotTriodeTransfer(plot));
+            return createGroup(plotTriodeTransfer(plot, sweep));
         }
     } else if (deviceType == PENTODE) {
         if (testType == ANODE_CHARACTERISTICS) {
             anodeAxes(plot);
-            return createGroup(plotPentodeAnode(plot));
+            return createGroup(plotPentodeAnode(plot, sweep));
         } else if (testType == TRANSFER_CHARACTERISTICS) {
             transferAxes(plot);
-            return createGroup(plotPentodeTransfer(plot));
+            return createGroup(plotPentodeTransfer(plot, sweep));
         } else if (testType == SCREEN_CHARACTERISTICS) {
             screenAxes(plot);
-            return createGroup(plotPentodeScreen(plot));
+            return createGroup(plotPentodeScreen(plot, sweep));
         }
     }
 
@@ -397,6 +397,16 @@ int Measurement::count()
     return sweeps.count();
 }
 
+bool Measurement::getShowScreen() const
+{
+    return showScreen;
+}
+
+void Measurement::setShowScreen(bool newShowScreen)
+{
+    showScreen = newShowScreen;
+}
+
 QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot, Sweep *sweep)
 {
     QPen samplePen;
@@ -454,11 +464,15 @@ QList<QGraphicsItem *> *Measurement::plotPentodeAnode(Plot *plot, Sweep *sweep)
             Sweep *thisSweep = sweeps.at(i);
 
             thisSweep->plotPentodeAnode(plot, &samplePen, segments);
-            thisSweep->plotPentodeScreen(plot, &samplePenS, segments);
+            if (showScreen) {
+                thisSweep->plotPentodeScreen(plot, &samplePenS, segments);
+            }
         }
     } else {
         sweep->plotPentodeAnode(plot, &samplePen, segments);
-        sweep->plotPentodeScreen(plot, &samplePenS, segments);
+        if (showScreen) {
+            sweep->plotPentodeScreen(plot, &samplePenS, segments);
+        }
     }
 
     return segments;

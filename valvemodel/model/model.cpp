@@ -28,6 +28,7 @@ Model::Model()
     parameter[PAR_ALPHA] = new Parameter("Alpha:", 0.0);
     parameter[PAR_BETA] = new Parameter("Beta:", 0.0);
     parameter[PAR_GAMMA] = new Parameter("Gamma:", 1.0);
+    parameter[PAR_OS] = new Parameter("Os:", 0.01);
 
     parameter[PAR_TAU] = new Parameter("Tau:", 0.1);
     parameter[PAR_RHO] = new Parameter("Rho:", 0.1);
@@ -38,6 +39,7 @@ Model::Model()
     parameter[PAR_LAMBDA] = new Parameter("Lambda:", 30.0);
     parameter[PAR_NU] = new Parameter("Nu:", 0.0);
     parameter[PAR_S] = new Parameter("S:", 0.0);
+    parameter[PAR_PHI] = new Parameter("Phi:", 1.0);
     parameter[PAR_AP] = new Parameter("Ap:", 0.0);
 }
 
@@ -115,6 +117,7 @@ void Model::setEstimate(Estimate *estimate)
     parameter[PAR_ALPHA]->setValue(estimate->getAlpha());
     parameter[PAR_BETA]->setValue(estimate->getBeta());
     parameter[PAR_GAMMA]->setValue(estimate->getGamma());
+    //parameter[PAR_OS]->setValue(estimate->getOs());
     //parameter[PAR_TAU]->setValue(estimate->getPsi());
     //parameter[PAR_RHO]->setValue(estimate->getPsi());
     //parameter[PAR_THETA]->setValue(estimate->getPsi());
@@ -231,18 +234,20 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
                     va += vaInc;
                 }
 
-                vaPrev = vaStart;
-                double ig2Prev = screenCurrent(vaStart, -vg1, vg2);
+                if (showScreen) {
+                    vaPrev = vaStart;
+                    double ig2Prev = screenCurrent(vaStart, -vg1, vg2);
 
-                va = vaStart + vaInc;
-                while (va < vaStop) {
-                    double ig2 = screenCurrent(va, -vg1, vg2);
-                    group->addToGroup(plot->createSegment(vaPrev, ig2Prev, va, ig2, screenPen));
+                    va = vaStart + vaInc;
+                    while (va < vaStop) {
+                        double ig2 = screenCurrent(va, -vg1, vg2);
+                        group->addToGroup(plot->createSegment(vaPrev, ig2Prev, va, ig2, screenPen));
 
-                    vaPrev = va;
-                    ig2Prev = ig2;
+                        vaPrev = va;
+                        ig2Prev = ig2;
 
-                    va += vaInc;
+                        va += vaInc;
+                    }
                 }
 
                 vg1 += vgStep;
@@ -281,6 +286,21 @@ bool Model::withSecondaryEmission() const
 void Model::setSecondaryEmission(bool newSecondaryEmission)
 {
     secondaryEmission = newSecondaryEmission;
+}
+
+bool Model::getShowScreen() const
+{
+    return showScreen;
+}
+
+void Model::setShowScreen(bool newShowScreen)
+{
+    showScreen = newShowScreen;
+}
+
+void Model::setPreferences(PreferencesDialog *newPreferences)
+{
+    preferences = newPreferences;
 }
 
 void Model::setLowerBound(Parameter* parameter, double lowerBound)

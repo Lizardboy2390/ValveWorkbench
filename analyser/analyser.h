@@ -6,6 +6,7 @@
 #include <QSerialPortInfo>
 #include <QTextStream>
 #include <QTimer>
+#include <preferencesdialog.h>
 
 #include "../valvemodel/data/measurement.h"
 #include "../valvemodel/constants.h"
@@ -23,6 +24,11 @@
 #define IA_LO_2  9   //Anode current lo 2
 #define IA_XHI_1 10  //Anode current extra hi 1
 #define IA_XHI_2 11  //Anode current extra hi 2
+
+enum eSamplingType {
+    SMP_LINEAR,
+    SMP_LOGARITHMIC
+};
 
 class Analyser
 {
@@ -71,6 +77,8 @@ public:
     void handleCommandTimeout();
     void handleHeaterTimeout();
 
+    void setPreferences(PreferencesDialog *newPreferences);
+
 private:
     double vRefMaster = 4.096;
     double vRefSlave = 2.048;
@@ -118,6 +126,8 @@ private:
 
     int deviceType = TRIODE;
     int testType = ANODE_CHARACTERISTICS;
+
+    PreferencesDialog *preferences;
 
     QList<double> stepValue;
     QList<int> stepParameter;

@@ -77,16 +77,16 @@ protected:
 
     double kg2 = 2.0;
     double a = 0.0;
-    double alpha = 0.0;
-    double beta = 0.15;
-    double gamma = 1.0;
+    double alpha = 0.1;
+    double beta = 0.05;
+    double gamma = 0.01;
     double psi = 3.5;
 
     double omega = 0.0;
-    double lambda = 0.0;
-    double nu = 0.0;
-    double s = 0.0;
-    double ap = 0.0;
+    double lambda = 10.0;
+    double nu = 1.0;
+    double s = 0.01;
+    double ap = 0.03;
 
     double findVa(Sweep * sweep, double ia);
     double findIa(Sweep * sweep, double va);

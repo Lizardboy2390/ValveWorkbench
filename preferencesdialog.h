@@ -23,6 +23,9 @@ public:
     int getSamplingType();
     bool useRemodelling();
     bool useSecondaryEmission();
+    bool fixSecondaryEmission();
+    bool fixTriodeParameters();
+    bool showScreenCurrent();
 
 private slots:
 

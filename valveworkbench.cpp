@@ -69,6 +69,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     checkComPorts();
 
     analyser = new Analyser(this, &serialPort, &timeoutTimer, &heaterTimer);
+    analyser->setPreferences(&preferencesDialog);
 
     ui->graphicsView->setScene(plot.getScene());
 
@@ -563,8 +564,8 @@ double ValveWorkbench::updateIaMax()
 {
     double value = checkDoubleValue(ui->iaMax, iaMax);
 
-    if (value > 200.0) {
-        value = 200.0;
+    if (value > 500.0) {
+        value = 500.0;
     }
 
     updateDoubleValue(ui->iaMax, value);
@@ -815,6 +816,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             setFitButtons();
 
             currentMeasurement->updateProperties(ui->properties);
+            currentMeasurement->setShowScreen(preferencesDialog.showScreenCurrent());
             measuredCurves = currentMeasurement->updatePlot(&plot);
             plot.add(measuredCurves);
             modelledCurves = nullptr;
@@ -832,18 +834,23 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             QFont font = currentMeasurementItem->font(0);
             font.setBold(true);
             currentMeasurementItem->setFont(0, font);
-            currentMeasurement = (Measurement *) currentMeasurementItem->data(0, Qt::UserRole).value<void *>();
 
-            setSelectedTreeItem(currentProject, false);
-            currentProject = getProject(current);
-            setSelectedTreeItem(currentProject, true);
-            setFitButtons();
+            QTreeWidgetItem *m = getParent(currentMeasurementItem, TYP_MEASUREMENT);
 
-            Sweep *sweep = (Sweep *) data;
-            sweep->updateProperties(ui->properties);
-            measuredCurves = sweep->updatePlot(&plot);
-            plot.add(measuredCurves);
-            ui->measureCheck->setChecked(true);
+            if (m != nullptr) {
+                currentMeasurement = (Measurement *) m->data(0, Qt::UserRole).value<void *>();
+
+                setSelectedTreeItem(currentProject, false);
+                currentProject = getProject(current);
+                setSelectedTreeItem(currentProject, true);
+                setFitButtons();
+
+                Sweep *sweep = (Sweep *) data;
+                sweep->updateProperties(ui->properties);
+                measuredCurves = currentMeasurement->updatePlot(&plot, sweep);
+                plot.add(measuredCurves);
+                ui->measureCheck->setChecked(true);
+            }
             break;
         }
     case TYP_ESTIMATE: {
@@ -878,6 +885,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             if (currentMeasurement != nullptr) {
                 if ((currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE) || (currentMeasurement->getDeviceType() == PENTODE && model->getType() == GARDINER_PENTODE)) {
                     plot.remove(modelledCurves);
+                    model->setShowScreen(preferencesDialog.showScreenCurrent());
                     modelledCurves = model->plotModel(&plot, currentMeasurement);
                     plot.add(modelledCurves);
                 }
@@ -920,6 +928,24 @@ QTreeWidgetItem *ValveWorkbench::getProject(QTreeWidgetItem *current)
     if (parent != nullptr) {
         if (parent->type() == TYP_PROJECT) {
             //return (Project *) parent->data(0, Qt::UserRole).value<void *>();
+            return parent;
+        } else {
+            return getProject(parent);
+        }
+    }
+
+    return nullptr;
+}
+
+QTreeWidgetItem *ValveWorkbench::getParent(QTreeWidgetItem *current, int type)
+{
+    if (current == nullptr) {
+        return nullptr;
+    }
+
+    QTreeWidgetItem *parent = current->parent();
+    if (parent != nullptr) {
+        if (parent->type() == type) {
             return parent;
         } else {
             return getProject(parent);
@@ -1247,7 +1273,7 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
     Model *model = ModelFactory::createModel(pentodeModel);
     model->setEstimate(&estimate);
     model->setMode(NORMAL_MODE);
-    model->setSecondaryEmission(preferencesDialog.useSecondaryEmission());
+    model->setPreferences(&preferencesDialog);
 
     int children = currentProject->childCount();
     for (int i = 0; i < children; i++) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <PreferencesDialog.h>
 #include <QJsonObject>
 #include <QString>
 
@@ -37,6 +38,7 @@ enum eTriodeParameter {
     PAR_ALPHA,
     PAR_BETA,
     PAR_GAMMA,
+    PAR_OS,
     PAR_TAU,
     PAR_RHO,
     PAR_THETA,
@@ -45,6 +47,7 @@ enum eTriodeParameter {
     PAR_LAMBDA,
     PAR_NU,
     PAR_S,
+    PAR_PHI,
     PAR_AP
 };
 
@@ -140,6 +143,11 @@ public:
     bool withSecondaryEmission() const;
     void setSecondaryEmission(bool newSecondaryEmission);
 
+    bool getShowScreen() const;
+    void setShowScreen(bool newShowScreen);
+
+    void setPreferences(PreferencesDialog *newPreferences);
+
 protected:
     /**
      * @brief problem The Ceres Problem used for model fitting
@@ -169,6 +177,9 @@ protected:
     int mode = NORMAL_MODE;
 
     bool secondaryEmission;
+    bool showScreen = true;
+
+    PreferencesDialog *preferences;
 
     void setLowerBound(Parameter* parameter, double lowerBound);
     void setUpperBound(Parameter* parameter, double upperBound);

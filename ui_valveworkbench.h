@@ -93,9 +93,11 @@ public:
     QTableWidget *properties;
     QSpacerItem *verticalSpacer_2;
     QHBoxLayout *horizontalLayout_3;
+    QSpacerItem *horizontalSpacer_10;
     QPushButton *fitTriodeButton;
     QPushButton *fitPentodeButton;
     QPushButton *compareButton;
+    QSpacerItem *horizontalSpacer_12;
     QWidget *tab_3;
     QWidget *layoutWidget_2;
     QVBoxLayout *verticalLayout_6;
@@ -440,7 +442,7 @@ public:
         tab_2->setObjectName("tab_2");
         layoutWidget1 = new QWidget(tab_2);
         layoutWidget1->setObjectName("layoutWidget1");
-        layoutWidget1->setGeometry(QRect(10, 10, 263, 634));
+        layoutWidget1->setGeometry(QRect(10, 10, 275, 634));
         verticalLayout_4 = new QVBoxLayout(layoutWidget1);
         verticalLayout_4->setObjectName("verticalLayout_4");
         verticalLayout_4->setContentsMargins(0, 0, 0, 0);
@@ -490,6 +492,10 @@ public:
 
         horizontalLayout_3 = new QHBoxLayout();
         horizontalLayout_3->setObjectName("horizontalLayout_3");
+        horizontalSpacer_10 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_3->addItem(horizontalSpacer_10);
+
         fitTriodeButton = new QPushButton(layoutWidget1);
         fitTriodeButton->setObjectName("fitTriodeButton");
         fitTriodeButton->setEnabled(true);
@@ -506,6 +512,10 @@ public:
         compareButton->setObjectName("compareButton");
 
         horizontalLayout_3->addWidget(compareButton);
+
+        horizontalSpacer_12 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_3->addItem(horizontalSpacer_12);
 
 
         verticalLayout_4->addLayout(horizontalLayout_3);
