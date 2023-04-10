@@ -796,6 +796,8 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
     void *data = current->data(0, Qt::UserRole).value<void *>();
 
+    bool showScreen = preferencesDialog.showScreenCurrent();
+
     switch(current->type()) {
     case TYP_PROJECT:
         setSelectedTreeItem(currentProject, false);
@@ -816,7 +818,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             setFitButtons();
 
             currentMeasurement->updateProperties(ui->properties);
-            currentMeasurement->setShowScreen(preferencesDialog.showScreenCurrent());
+            currentMeasurement->setShowScreen(showScreen);
             measuredCurves = currentMeasurement->updatePlot(&plot);
             plot.add(measuredCurves);
             modelledCurves = nullptr;
@@ -849,6 +851,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 sweep->updateProperties(ui->properties);
                 measuredCurves = currentMeasurement->updatePlot(&plot, sweep);
                 plot.add(measuredCurves);
+                modelledCurves = nullptr;
                 ui->measureCheck->setChecked(true);
             }
             break;
@@ -880,16 +883,25 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             setSelectedTreeItem(currentProject, true);
             setFitButtons();
 
+            Sweep *sweep = nullptr;
+
+            if (currentMeasurementItem != nullptr) {
+                if (currentMeasurementItem->type() == TYP_SWEEP) {
+                    sweep = (Sweep *) currentMeasurementItem->data(0, Qt::UserRole).value<void *>();
+                }
+            }
+
             Model *model = (Model *) data;
             model->updateProperties(ui->properties);
             if (currentMeasurement != nullptr) {
                 if ((currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE) || (currentMeasurement->getDeviceType() == PENTODE && model->getType() == GARDINER_PENTODE)) {
                     plot.remove(modelledCurves);
-                    model->setShowScreen(preferencesDialog.showScreenCurrent());
-                    modelledCurves = model->plotModel(&plot, currentMeasurement);
+                    model->setShowScreen(showScreen);
+                    modelledCurves = model->plotModel(&plot, currentMeasurement, sweep);
                     plot.add(modelledCurves);
                 }
             }
+            ui->modelCheck->setChecked(true);
             break;
         }       
     case TYP_SAMPLE: {
@@ -1377,7 +1389,9 @@ void ValveWorkbench::on_estCheck_stateChanged(int arg1)
 
 void ValveWorkbench::on_modelCheck_stateChanged(int arg1)
 {
-
+    if (modelledCurves != nullptr) {
+        modelledCurves->setVisible(ui->modelCheck->isChecked());
+    }
 }
 
 

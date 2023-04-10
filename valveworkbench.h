@@ -191,6 +191,7 @@ private:
     QGraphicsItemGroup *modelledCurves = nullptr;
 
     Measurement *currentMeasurement = nullptr;
+    Sweep *currentSweep = nullptr;
     QTreeWidgetItem *currentMeasurementItem = nullptr;
     QTreeWidgetItem *currentEstimateItem = nullptr;
     QTreeWidgetItem *currentModelItem = nullptr;

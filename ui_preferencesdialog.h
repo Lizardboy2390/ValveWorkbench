@@ -154,7 +154,7 @@ public:
 
         checkRemodel = new QCheckBox(verticalLayoutWidget);
         checkRemodel->setObjectName("checkRemodel");
-        checkRemodel->setChecked(true);
+        checkRemodel->setChecked(false);
 
         verticalLayout->addWidget(checkRemodel);
 
@@ -172,6 +172,7 @@ public:
 
         checkFixSecondary = new QCheckBox(verticalLayoutWidget);
         checkFixSecondary->setObjectName("checkFixSecondary");
+        checkFixSecondary->setChecked(true);
 
         verticalLayout->addWidget(checkFixSecondary);
 

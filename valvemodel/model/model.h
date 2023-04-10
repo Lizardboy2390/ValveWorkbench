@@ -34,6 +34,7 @@ enum eTriodeParameter {
     PAR_KVB1,
     PAR_VCT,
     PAR_KG2,
+    PAR_KG3,
     PAR_A,
     PAR_ALPHA,
     PAR_BETA,
@@ -47,7 +48,6 @@ enum eTriodeParameter {
     PAR_LAMBDA,
     PAR_NU,
     PAR_S,
-    PAR_PHI,
     PAR_AP
 };
 
@@ -131,7 +131,7 @@ public:
 
     virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
 
-    QGraphicsItemGroup *plotModel(Plot *plot, Measurement *measurement);
+    QGraphicsItemGroup *plotModel(Plot *plot, Measurement *measurement, Sweep *sweep = nullptr);
 
     double getParameter(int parameterIndex);
 

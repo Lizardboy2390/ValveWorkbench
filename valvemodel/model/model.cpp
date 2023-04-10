@@ -24,6 +24,7 @@ Model::Model()
     parameter[PAR_KVB1] = new Parameter("Kvb2:", 30.0);
 
     parameter[PAR_KG2] = new Parameter("Kg2:", 0.15);
+    parameter[PAR_KG3] = new Parameter("Kg3:", 0.15);
     parameter[PAR_A] = new Parameter("A:", 0.0);
     parameter[PAR_ALPHA] = new Parameter("Alpha:", 0.0);
     parameter[PAR_BETA] = new Parameter("Beta:", 0.0);
@@ -39,7 +40,6 @@ Model::Model()
     parameter[PAR_LAMBDA] = new Parameter("Lambda:", 30.0);
     parameter[PAR_NU] = new Parameter("Nu:", 0.0);
     parameter[PAR_S] = new Parameter("S:", 0.0);
-    parameter[PAR_PHI] = new Parameter("Phi:", 1.0);
     parameter[PAR_AP] = new Parameter("Ap:", 0.0);
 }
 
@@ -165,7 +165,7 @@ QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)
     return item;
 }
 
-QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
+QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep *sweep)
 {
     QGraphicsItemGroup *group = new QGraphicsItemGroup();
     QPen anodePen;
@@ -180,6 +180,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
             double vgStart = measurement->getGridStart();
             double vgStop = measurement->getGridStop();
             double vgStep = measurement->getGridStep();
+
+            if (sweep != nullptr) {
+                vgStart = -sweep->getVg1Nominal();
+                vgStop = -sweep->getVg1Nominal();
+            }
 
             double vg2 = measurement->getScreenStart();
 
@@ -211,6 +216,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement)
             double vgStart = measurement->getGridStart();
             double vgStop = measurement->getGridStop();
             double vgStep = measurement->getGridStep();
+
+            if (sweep != nullptr) {
+                vgStart = -sweep->getVg1Nominal();
+                vgStop = -sweep->getVg1Nominal();
+            }
 
             double vg2 = measurement->getScreenStart();
 

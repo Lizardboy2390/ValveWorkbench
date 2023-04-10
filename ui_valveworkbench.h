@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'valveworkbench.ui'
 **
-** Created by: Qt User Interface Compiler version 6.4.0
+** Created by: Qt User Interface Compiler version 6.4.3
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -1083,7 +1083,7 @@ public:
 
         retranslateUi(ValveWorkbench);
 
-        tabWidget->setCurrentIndex(1);
+        tabWidget->setCurrentIndex(0);
 
 
         QMetaObject::connectSlotsByName(ValveWorkbench);
