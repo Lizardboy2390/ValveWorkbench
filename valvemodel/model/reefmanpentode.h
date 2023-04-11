@@ -10,6 +10,7 @@ enum eReefmanModelType {
 
 class ReefmanPentode : public CohenHelieTriode
 {
+    Q_OBJECT
 public:
     ReefmanPentode(int newType = DERK);
 

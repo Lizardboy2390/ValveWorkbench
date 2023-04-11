@@ -7,8 +7,9 @@
 
 #include "parameter.h"
 
-class UIBridge
+class UIBridge : public QObject
 {
+    Q_OBJECT
 public:
     UIBridge();
 

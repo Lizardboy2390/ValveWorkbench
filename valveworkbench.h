@@ -8,6 +8,7 @@
 #include <QTreeWidget>
 #include <QSerialPortInfo>
 #include <QTimer>
+#include <QThread>
 
 #include "valvemodel/data/project.h"
 #include "valvemodel/model/estimate.h"
@@ -40,6 +41,11 @@ public:
     virtual void testProgress(int progress);
     virtual void testFinished();
     virtual void testAborted();
+
+public slots:
+    void loadModel();
+    void modelScreen();
+    void remodelAnode();
 
 private slots:
     void on_actionExit_triggered();
@@ -160,7 +166,7 @@ private:
 
     int deviceType = TRIODE;
     int testType = ANODE_CHARACTERISTICS;
-    int pentodeModel = GARDINER_PENTODE;
+    int pentodeModelType = GARDINER_PENTODE;
     int samplingType = 0;
 
     double heaterVoltage;
@@ -195,6 +201,11 @@ private:
     QTreeWidgetItem *currentMeasurementItem = nullptr;
     QTreeWidgetItem *currentEstimateItem = nullptr;
     QTreeWidgetItem *currentModelItem = nullptr;
+
+    Model *model;
+    QThread *thread;
+    QTreeWidgetItem *modelProject = nullptr;
+    bool doPentodeModel = false;
 
     Analyser *analyser;
     QString port;
@@ -246,4 +257,6 @@ private:
     Measurement *findMeasurement(int deviceType, int measurementType);
     void setSelectedTreeItem(QTreeWidgetItem *item, bool selected);
     void setFitButtons();
+    void modelTriode();
+    void modelPentode();
 };

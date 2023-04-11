@@ -1,11 +1,13 @@
-#pragma once
 /********************************************************************************
-** Form generated from reading UI file ''
+** Form generated from reading UI file 'comparedialog.ui'
 **
-** Created by: Qt User Interface Compiler version 6.4.0
+** Created by: Qt User Interface Compiler version 6.5.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
+
+#ifndef UI_COMPAREDIALOG_H
+#define UI_COMPAREDIALOG_H
 
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
@@ -334,7 +336,7 @@ public:
         verticalLayout_4->addWidget(modGm);
 
         modRa = new QLabel(widget3);
-        modRa->setObjectName("modeRa");
+        modRa->setObjectName("modRa");
 
         verticalLayout_4->addWidget(modRa);
 
@@ -473,3 +475,4 @@ namespace Ui {
 
 QT_END_NAMESPACE
 
+#endif // UI_COMPAREDIALOG_H

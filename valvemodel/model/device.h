@@ -36,6 +36,7 @@ enum ePlotType {
 
 class Device : UIBridge
 {
+    Q_OBJECT
 public:
     Device(int _modelDeviceType);
     Device(QJsonDocument model);

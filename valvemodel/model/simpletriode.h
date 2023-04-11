@@ -4,6 +4,7 @@
 
 class SimpleTriode : public Model
 {
+    Q_OBJECT
 public:
     SimpleTriode();
 

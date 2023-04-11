@@ -149,6 +149,29 @@ void Model::solve()
     converged = summary.termination_type == ceres::CONVERGENCE;
 
     qInfo(summary.FullReport().c_str());
+    }
+
+void Model::solveThreaded()
+{
+    converged = false;
+
+    setOptions();
+
+    Solver::Summary summary;
+
+    if (mode == NORMAL_MODE) {
+        Solve(options, &anodeProblem, &summary);
+    } else if (mode == SCREEN_MODE) {
+        Solve(options, &screenProblem, &summary);
+    } else if (mode == ANODE_REMODEL_MODE) {
+        Solve(options, &anodeRemodelProblem, &summary);
+    }
+
+    converged = summary.termination_type == ceres::CONVERGENCE;
+
+    qInfo(summary.FullReport().c_str());
+
+    emit modelReady();
 }
 
 QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)

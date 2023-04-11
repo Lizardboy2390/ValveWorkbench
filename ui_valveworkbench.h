@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'valveworkbench.ui'
 **
-** Created by: Qt User Interface Compiler version 6.4.3
+** Created by: Qt User Interface Compiler version 6.5.0
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -46,6 +46,8 @@ public:
     QAction *actionSave_Project;
     QAction *actionClose_Project;
     QAction *actionOptions;
+    QAction *actionExport_Model;
+    QAction *actionExport_to_Spice;
     QWidget *centralwidget;
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
@@ -180,6 +182,8 @@ public:
     QCheckBox *measureCheck;
     QSpacerItem *horizontalSpacer_7;
     QCheckBox *modelCheck;
+    QSpacerItem *horizontalSpacer_15;
+    QCheckBox *screenCheck;
     QSpacerItem *horizontalSpacer_6;
     QSpacerItem *verticalSpacer_5;
     QSpacerItem *horizontalSpacer_2;
@@ -209,6 +213,10 @@ public:
         actionClose_Project->setObjectName("actionClose_Project");
         actionOptions = new QAction(ValveWorkbench);
         actionOptions->setObjectName("actionOptions");
+        actionExport_Model = new QAction(ValveWorkbench);
+        actionExport_Model->setObjectName("actionExport_Model");
+        actionExport_to_Spice = new QAction(ValveWorkbench);
+        actionExport_to_Spice->setObjectName("actionExport_to_Spice");
         centralwidget = new QWidget(ValveWorkbench);
         centralwidget->setObjectName("centralwidget");
         horizontalLayoutWidget = new QWidget(centralwidget);
@@ -1020,7 +1028,7 @@ public:
 
         horizontalLayout_9 = new QHBoxLayout();
         horizontalLayout_9->setObjectName("horizontalLayout_9");
-        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer_3 = new QSpacerItem(20, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout_9->addItem(horizontalSpacer_3);
 
@@ -1029,7 +1037,7 @@ public:
 
         horizontalLayout_9->addWidget(measureCheck);
 
-        horizontalSpacer_7 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer_7 = new QSpacerItem(20, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout_9->addItem(horizontalSpacer_7);
 
@@ -1038,7 +1046,16 @@ public:
 
         horizontalLayout_9->addWidget(modelCheck);
 
-        horizontalSpacer_6 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer_15 = new QSpacerItem(20, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout_9->addItem(horizontalSpacer_15);
+
+        screenCheck = new QCheckBox(horizontalLayoutWidget);
+        screenCheck->setObjectName("screenCheck");
+
+        horizontalLayout_9->addWidget(screenCheck);
+
+        horizontalSpacer_6 = new QSpacerItem(20, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
         horizontalLayout_9->addItem(horizontalSpacer_6);
 
@@ -1080,6 +1097,8 @@ public:
         menuFile->addAction(actionExit);
         menuFile->addSeparator();
         menuFile->addAction(actionOptions);
+        menuFile->addAction(actionExport_Model);
+        menuFile->addAction(actionExport_to_Spice);
 
         retranslateUi(ValveWorkbench);
 
@@ -1105,11 +1124,11 @@ public:
 #if QT_CONFIG(shortcut)
         actionNew_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+N", nullptr));
 #endif // QT_CONFIG(shortcut)
-        actionOpen_Project->setText(QCoreApplication::translate("ValveWorkbench", "Open Project", nullptr));
+        actionOpen_Project->setText(QCoreApplication::translate("ValveWorkbench", "Open Project...", nullptr));
 #if QT_CONFIG(shortcut)
         actionOpen_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+O", nullptr));
 #endif // QT_CONFIG(shortcut)
-        actionSave_Project->setText(QCoreApplication::translate("ValveWorkbench", "Save Project", nullptr));
+        actionSave_Project->setText(QCoreApplication::translate("ValveWorkbench", "Save Project...", nullptr));
 #if QT_CONFIG(shortcut)
         actionSave_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+S", nullptr));
 #endif // QT_CONFIG(shortcut)
@@ -1117,7 +1136,9 @@ public:
 #if QT_CONFIG(shortcut)
         actionClose_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+W", nullptr));
 #endif // QT_CONFIG(shortcut)
-        actionOptions->setText(QCoreApplication::translate("ValveWorkbench", "Options", nullptr));
+        actionOptions->setText(QCoreApplication::translate("ValveWorkbench", "Edit Preferences...", nullptr));
+        actionExport_Model->setText(QCoreApplication::translate("ValveWorkbench", "Export Model...", nullptr));
+        actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export to Spice...", nullptr));
         label_4->setText(QCoreApplication::translate("ValveWorkbench", "Device:", nullptr));
         label_5->setText(QCoreApplication::translate("ValveWorkbench", "Model:", nullptr));
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
@@ -1158,6 +1179,7 @@ public:
         plotTitle->setText(QString());
         measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));
         modelCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Fitted Model", nullptr));
+        screenCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Screen Current", nullptr));
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));
     } // retranslateUi

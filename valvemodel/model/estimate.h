@@ -12,6 +12,7 @@ class CohenHelieTriode;
 
 class Estimate : UIBridge
 {
+    Q_OBJECT
 public:
     Estimate();
 

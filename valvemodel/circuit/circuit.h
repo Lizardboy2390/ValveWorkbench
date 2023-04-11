@@ -12,6 +12,7 @@ enum eCircuitType {
 
 class Circuit : public UIBridge
 {
+    Q_OBJECT
 public:
     Circuit();
 

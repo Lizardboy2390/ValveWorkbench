@@ -4,6 +4,7 @@
 
 class TriodeACCathodeFollower : public Circuit
 {
+    Q_OBJECT
 public:
     TriodeACCathodeFollower();
 };

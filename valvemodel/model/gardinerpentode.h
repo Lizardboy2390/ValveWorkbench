@@ -5,6 +5,7 @@
 
 class GardinerPentode : public CohenHelieTriode
 {
+    Q_OBJECT
 public:
     GardinerPentode();
 

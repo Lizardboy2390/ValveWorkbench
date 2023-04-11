@@ -4,6 +4,7 @@
 
 class KorenTriode : public SimpleTriode
 {
+    Q_OBJECT
 public:
     KorenTriode();
 

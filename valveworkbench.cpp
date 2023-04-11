@@ -55,6 +55,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     ui->measureCheck->setVisible(false);
     ui->modelCheck->setVisible(false);
+    ui->screenCheck->setVisible(false);
 
     ui->fitPentodeButton->setVisible(false);
     ui->fitTriodeButton->setVisible(false);
@@ -665,7 +666,7 @@ void ValveWorkbench::on_actionOptions_triggered()
     if (preferencesDialog.exec() == 1) {
         setSerialPort(preferencesDialog.getPort());
 
-        pentodeModel = preferencesDialog.getPentodeModelType();
+        pentodeModelType = preferencesDialog.getPentodeModelType();
 
         samplingType = preferencesDialog.getSamplingType();
 
@@ -1215,6 +1216,18 @@ void ValveWorkbench::on_btnAddToProject_clicked()
 
 void ValveWorkbench::on_fitTriodeButton_clicked()
 {
+    modelProject = currentProject;
+    ui->fitPentodeButton->setEnabled(false); // Prevent any further modelling invocations
+    ui->fitTriodeButton->setEnabled(false);
+    doPentodeModel = false;
+
+    modelTriode();
+}
+
+void ValveWorkbench::modelTriode()
+{
+    QList<Measurement *> measurements;
+
     Measurement *measurement = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
 
     if (measurement == nullptr) {
@@ -1222,13 +1235,16 @@ void ValveWorkbench::on_fitTriodeButton_clicked()
         message.setText("There is no Triode Anode Characteristic measurement in the project - this is required for model fitting");
         message.exec();
 
+        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+        ui->fitTriodeButton->setEnabled(true);
+
         return;
     }
 
     Estimate estimate;
     estimate.estimateTriode(measurement);
 
-    Model *model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
+    model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
     model->setEstimate(&estimate);
 
     int children = currentProject->childCount();
@@ -1242,31 +1258,73 @@ void ValveWorkbench::on_fitTriodeButton_clicked()
         }
     }
 
-    model->solve();
+    thread = new QThread;
+
+    model->moveToThread(thread);
+    connect(thread, &QThread::started, model, &Model::solveThreaded);
+    connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+
+    thread->start();
+}
+
+void ValveWorkbench::loadModel()
+{
+    thread->quit();
 
     if (!model->isConverged()) {
         QMessageBox message;
         message.setText("The model fitting did not converge - please check that your measurements are valid");
         message.exec();
 
+        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+        ui->fitTriodeButton->setEnabled(true);
+
         return;
     }
 
-    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+    Project *project = (Project *) modelProject->data(0, Qt::UserRole).value<void *>();
     project->addModel(model);
-    model->buildTree(currentProject);
+    model->buildTree(modelProject);
+
+    if (doPentodeModel) {
+        modelPentode(); // Will be done in a new thread
+    } else {
+        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+        ui->fitTriodeButton->setEnabled(true);
+
+        modelProject = nullptr;
+    }
 }
 
 void ValveWorkbench::on_fitPentodeButton_clicked()
 {
+    modelProject = currentProject;
+    ui->fitPentodeButton->setEnabled(false); // Prevent any further modelling invocations
+    ui->fitTriodeButton->setEnabled(false);
+    doPentodeModel = true;
+
     CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
 
     if (triodeModel == nullptr) {
-        on_fitTriodeButton_clicked();
-        triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
-        if (triodeModel == nullptr) {
-            return;
-        }
+        modelTriode();
+    } else {
+        modelPentode();
+    }
+
+}
+
+void ValveWorkbench::modelPentode()
+{
+    doPentodeModel = false; // We're doing it now so don't want to do it again!
+
+    CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
+
+    if (triodeModel == nullptr) { // Any error message will have already been displayed
+        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+        ui->fitTriodeButton->setEnabled(true);
+
+        return;
     }
 
     Measurement *measurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
@@ -1276,13 +1334,16 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
         message.setText("There is no Pentode Anode Characteristic measurement in the project - this is required for model fitting");
         message.exec();
 
+        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+        ui->fitTriodeButton->setEnabled(true);
+
         return;
     }
 
     Estimate estimate;
-    estimate.estimatePentode(measurement, triodeModel, pentodeModel, false);
+    estimate.estimatePentode(measurement, triodeModel, pentodeModelType, false);
 
-    Model *model = ModelFactory::createModel(pentodeModel);
+    model = ModelFactory::createModel(pentodeModelType);
     model->setEstimate(&estimate);
     model->setMode(NORMAL_MODE);
     model->setPreferences(&preferencesDialog);
@@ -1298,45 +1359,53 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
         }
     }
 
-    model->solve();
+    thread = new QThread;
 
+    model->moveToThread(thread);
+    connect(model, &Model::modelReady, this, &ValveWorkbench::modelScreen);
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+
+    thread->start();
+
+    QMetaObject::invokeMethod(model, "solveThreaded");
+}
+
+void ValveWorkbench::modelScreen()
+{
     if (!model->isConverged()) {
         QMessageBox message;
         message.setText("The anode current fitting did not converge - please check that your measurements are valid");
         message.exec();
+
+        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+        ui->fitTriodeButton->setEnabled(true);
+
+        thread->quit();
 
         return;
     }
 
     model->setMode(SCREEN_MODE);
 
-    model->solve();
-
-    if (!model->isConverged()) {
-        QMessageBox message;
-        message.setText("The screen current fitting did not converge - please check that your measurements are valid");
-        message.exec();
-
-        return;
-    }
+    disconnect(model, &Model::modelReady, this, &ValveWorkbench::modelScreen); // We don't want to go round the loop again!
 
     if (preferencesDialog.useRemodelling()) {
-        model->setMode(ANODE_REMODEL_MODE);
-
-        model->solve();
-
-        if (!model->isConverged()) {
-            QMessageBox message;
-            message.setText("The anode current fitting (remodelling) did not converge - please check that your measurements are valid");
-            message.exec();
-
-            return;
-        }
+        connect(model, &Model::modelReady, this, &ValveWorkbench::remodelAnode);
+    } else {
+        connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
     }
 
-    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-    project->addModel(model);
-    model->buildTree(currentProject);
+    QMetaObject::invokeMethod(model, "solveThreaded");
+}
+
+void ValveWorkbench::remodelAnode()
+{
+    model->setMode(ANODE_REMODEL_MODE);
+
+    disconnect(model, &Model::modelReady, this, &ValveWorkbench::remodelAnode);
+    connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
+
+    QMetaObject::invokeMethod(model, "solveThreaded");
 }
 
 void ValveWorkbench::on_tabWidget_currentChanged(int index)

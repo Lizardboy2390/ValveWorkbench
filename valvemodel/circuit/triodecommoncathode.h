@@ -12,6 +12,7 @@ enum eTriodeCommonCathodeParameter {
 
 class TriodeCommonCathode : public Circuit
 {
+    Q_OBJECT
 public:
     TriodeCommonCathode();
 

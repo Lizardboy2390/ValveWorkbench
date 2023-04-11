@@ -3,6 +3,7 @@
 #include <PreferencesDialog.h>
 #include <QJsonObject>
 #include <QString>
+#include <QObject>
 
 #include "ceres/ceres.h"
 #include "glog/logging.h"
@@ -88,6 +89,7 @@ class Estimate;
  */
 class Model : public UIBridge
 {
+    Q_OBJECT
 public:
     Model();
 
@@ -147,6 +149,12 @@ public:
     void setShowScreen(bool newShowScreen);
 
     void setPreferences(PreferencesDialog *newPreferences);
+
+public slots:
+    void solveThreaded();
+
+signals:
+    void modelReady();
 
 protected:
     /**

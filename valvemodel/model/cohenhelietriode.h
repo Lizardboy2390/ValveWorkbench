@@ -4,6 +4,7 @@
 
 class CohenHelieTriode : public KorenTriode
 {
+    Q_OBJECT
 public:
     CohenHelieTriode();
 
