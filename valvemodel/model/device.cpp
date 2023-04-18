@@ -16,65 +16,71 @@ Device::Device(QJsonDocument modelDocument)
     paMax = 1.25;
 
     if (modelDocument.isObject()) {
-        QJsonObject modelObject = modelDocument.object();
+        QJsonObject deviceObject = modelDocument.object();
 
-        if (modelObject.contains("name") && modelObject["name"].isString()) {
-            name = modelObject["name"].toString();
+        if (deviceObject.contains("name") && deviceObject["name"].isString()) {
+            name = deviceObject["name"].toString();
         }
 
-        if (modelObject.contains("vaMax") && modelObject["vaMax"].isDouble()) {
-            vaMax = modelObject["vaMax"].toDouble();
+        if (deviceObject.contains("vaMax") && deviceObject["vaMax"].isDouble()) {
+            vaMax = deviceObject["vaMax"].toDouble();
         }
 
-        if (modelObject.contains("iaMax") && modelObject["iaMax"].isDouble()) {
-            iaMax = modelObject["iaMax"].toDouble();
+        if (deviceObject.contains("vg1Max") && deviceObject["vg1Max"].isDouble()) {
+            vg1Max = deviceObject["vg1Max"].toDouble();
         }
 
-        if (modelObject.contains("paMax") && modelObject["paMax"].isDouble()) {
-            paMax = modelObject["paMax"].toDouble();
+        if (deviceObject.contains("vg2Max") && deviceObject["vg2Max"].isDouble()) {
+            vg2Max = deviceObject["vg2Max"].toDouble();
         }
 
-        if (modelObject.contains("triode") && modelObject["triode"].isObject()) {
-            QJsonObject triode = modelObject["triode"].toObject();
+        if (deviceObject.contains("iaMax") && deviceObject["iaMax"].isDouble()) {
+            iaMax = deviceObject["iaMax"].toDouble();
+        }
+
+        if (deviceObject.contains("paMax") && deviceObject["paMax"].isDouble()) {
+            paMax = deviceObject["paMax"].toDouble();
+        }
+
+        if (deviceObject.contains("model") && deviceObject["model"].isObject()) {
+            QJsonObject modelObject = deviceObject["model"].toObject();
 
             deviceType = MODEL_TRIODE;
 
-            if (triode.contains("vg1Max") && triode["vg1Max"].isDouble()) {
-                vg1Max = triode["vg1Max"].toDouble();
+            if (modelObject.contains("device") && modelObject["device"].isString()) {
+                if (modelObject["device"].toString() == "pentode") {
+                    deviceType = MODEL_PENTODE;
+                }
             }
 
-            if (triode.contains("cohenHelie") && triode["cohenHelie"].isObject()) {
-                Model *newModel = new CohenHelieTriode();
-                newModel->fromJson(triode["cohenHelie"].toObject());
-                models.append(newModel);
-            }
+            if (modelObject.contains("type") && modelObject["type"].isString()) {
+                QString modelType = modelObject["type"].toString();
+                model = nullptr;
 
-            if (triode.contains("koren") && triode["koren"].isObject()) {
-                Model *newModel = new KorenTriode();
-                newModel->fromJson(triode["koren"].toObject());
-                models.append(newModel);
-            }
+                if (modelType == "simple") {
+                    model = new SimpleTriode();
+                } else if (modelType == "koren") {
+                    model = new KorenTriode();
+                } else if (modelType == "cohenHelie") {
+                    model = new CohenHelieTriode();
+                } else if (modelType == "reefman") {
+                    model = new ReefmanPentode();
+                } else if (modelType == "gardiner") {
+                    model = new GardinerPentode();
+                }
 
-            if (triode.contains("simple") && triode["simple"].isObject()) {
-                Model *newModel = new SimpleTriode();
-                newModel->fromJson(triode["simple"].toObject());
-                models.append(newModel);
+                if (model != nullptr) {
+                    model->fromJson(modelObject);
+                }
             }
         }
-    }
-}
-
-void Device::solve()
-{
-    if (currentModel != nullptr) {
-        currentModel->solve();
     }
 }
 
 double Device::anodeCurrent(double va, double vg1, double vg2)
 {
-    if (currentModel != nullptr) {
-        return currentModel->anodeCurrent(va, vg1, vg2);
+    if (model != nullptr) {
+        return model->anodeCurrent(va, vg1, vg2);
     }
 
     return 0.0;
@@ -82,8 +88,8 @@ double Device::anodeCurrent(double va, double vg1, double vg2)
 
 double Device::anodeVoltage(double ia, double vg1, double vg2)
 {
-    if (currentModel != nullptr) {
-        return currentModel->anodeVoltage(ia, vg1, vg2);
+    if (model != nullptr) {
+        return model->anodeVoltage(ia, vg1, vg2);
     }
 
     return 0.0;
@@ -95,25 +101,9 @@ void Device::updateUI(QLabel *labels[], QLineEdit *values[])
         values[i]->setVisible(false);
         labels[i]->setVisible(false);
     }
-    if (currentModel != nullptr) {
-        currentModel->updateUI(labels, values);
+    if (model != nullptr) {
+        model->updateUI(labels, values);
     }
-}
-
-void Device::updateModelSelect(QComboBox *select)
-{
-    select->clear();
-
-    for (int i=0; i < models.size(); i++) {
-        select->addItem(models.at(i)->getName());
-    }
-
-    selectModel(select->currentIndex());
-}
-
-void Device::selectModel(int index)
-{
-    currentModel = models.at(index);
 }
 
 void Device::anodeAxes(Plot *plot)
@@ -144,11 +134,11 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
 
     while (vg1 < vg1Max) { // vg1 will be made -ve in order to calculate ia
         double va = 0.0;
-        double ia = currentModel->anodeCurrent(va, -vg1);
+        double ia = model->anodeCurrent(va, -vg1);
 
         for (int j=1; j < 101; j++) {
             double vaNext = (vaMax * j) / 100.0;
-            double iaNext = currentModel->anodeCurrent(vaNext, -vg1);
+            double iaNext = model->anodeCurrent(vaNext, -vg1);
             segments.append(plot->createSegment(va, ia, vaNext, iaNext, modelPen));
 
             va = vaNext;
@@ -229,7 +219,7 @@ void Device::setModelType(int newModelType)
 
 double Device::getParameter(int index) const
 {
-    return 0.0;
+    return model->getParameter(index);
 }
 
 double Device::getVaMax() const

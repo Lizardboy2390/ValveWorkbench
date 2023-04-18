@@ -35,7 +35,7 @@ enum eTriodeParameter {
     PAR_KVB1,
     PAR_VCT,
     PAR_KG2,
-    PAR_KG3,
+    PAR_KG2A,
     PAR_A,
     PAR_ALPHA,
     PAR_BETA,
@@ -110,7 +110,7 @@ public:
      * @brief toJson writes the current model parameters to a Json object
      * @param destination The Json object to write to
      */
-    virtual void toJson(QJsonObject &destination, double vg1Max, double vg2Max = 0) = 0;
+    virtual void toJson(QJsonObject &destination) = 0;
     /**
      * @brief anodeCurrent calculates the modelled anode current
      * @param va The anode voltage
@@ -119,9 +119,9 @@ public:
      * @return The anode current in mA
      */
     virtual double triodeAnodeCurrent(double va, double vg1) = 0;
-    virtual double anodeCurrent(double va, double vg1, double vg2 = 0.0) = 0;
-    virtual double anodeVoltage(double ia, double vg1, double vg2 = 0.0);
-    virtual double screenCurrent(double va, double vg1, double vg2 = 0.0);
+    virtual double anodeCurrent(double va, double vg1, double vg2 = 0.0, bool secondaryEmission = true) = 0;
+    virtual double anodeVoltage(double ia, double vg1, double vg2 = 0.0, bool secondaryEmission = true);
+    virtual double screenCurrent(double va, double vg1, double vg2, bool secondaryEmission = true);
     virtual QString getName() = 0;
     virtual int getType() = 0;
 

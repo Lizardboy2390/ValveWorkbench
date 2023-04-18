@@ -16,6 +16,7 @@ SOURCES += \
     main.cpp \
     preferencesdialog.cpp \
     projectdialog.cpp \
+    valvemodel/circuit/pentodecommoncathode.cpp \
     valvemodel/data/dataset.cpp \
     valvemodel/data/measurement.cpp \
     valvemodel/data/project.cpp \
@@ -47,8 +48,10 @@ HEADERS += \
     analyser/client.h \
     comparedialog.h \
     ledindicator/ledindicator.h \
+    ngspice/sharedspice.h \
     preferencesdialog.h \
     projectdialog.h \
+    valvemodel/circuit/pentodecommoncathode.h \
     valvemodel/constants.h \
     valvemodel/data/dataset.h \
     valvemodel/data/measurement.h \
@@ -117,6 +120,11 @@ DEPENDPATH += $$(CMAKE_PREFIX_PATH)/gflags/include
 
 INCLUDEPATH += $$(CMAKE_PREFIX_PATH)/eigen3/include/eigen3
 DEPENDPATH += $$(CMAKE_PREFIX_PATH)/eigen3/include/eigen3
+
+win32: LIBS += -L$$PWD/ngspice/ -lngspice
+
+INCLUDEPATH += $$PWD/ngspice
+DEPENDPATH += $$PWD/ngspice
 
 RESOURCES += \
     icons.qrc

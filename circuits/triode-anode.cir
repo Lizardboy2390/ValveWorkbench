@@ -1,0 +1,21 @@
+Test harness for biasing triodes
+
+.include triode.cir
+
+VA 1 0 dc 300
+VM 1 4 dc 0
+
+VG 0 2 dc 0
+
+XV1 4 2 0 triode
+
+.dc VA 0 300 1 VG 0 5 0.5
+
+.control
+
+run
+plot {I(VM)}
+
+.endc
+
+.end

@@ -20,6 +20,7 @@
 #include "korentriode.h"
 #include "cohenhelietriode.h"
 #include "reefmanpentode.h"
+#include "gardinerpentode.h"
 
 enum eModelDeviceType {
     MODEL_TRIODE,
@@ -43,14 +44,10 @@ public:
 
     double getParameter(int index) const;
 
-    void solve();
-
     double anodeCurrent(double va, double vg1, double vg2 = 0);
     double anodeVoltage(double ia, double vg1, double vg2 = 0);
 
     void updateUI(QLabel *labels[], QLineEdit *values[]);
-    void updateModelSelect(QComboBox *select);
-    void selectModel(int index);
     void anodeAxes(Plot *plot);
     void transferAxes(Plot *plot);
     QGraphicsItemGroup *anodePlot(Plot *plot);
@@ -78,8 +75,7 @@ private:
     int deviceType = MODEL_TRIODE;
     int modelType = COHEN_HELIE_TRIODE;
 
-    QList<Model *> models;
-    Model *currentModel = nullptr;
+    Model *model = nullptr;
 
     QString name;
 

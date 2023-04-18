@@ -55,36 +55,63 @@ public:
     QWidget *tab;
     QWidget *layoutWidget;
     QVBoxLayout *verticalLayout;
+    QHBoxLayout *horizontalLayout_4;
+    QLabel *label_3;
+    QComboBox *circuitSelection;
     QHBoxLayout *horizontalLayout_16;
     QLabel *label_4;
     QComboBox *stdDeviceSelection;
     QHBoxLayout *horizontalLayout_17;
     QLabel *label_5;
-    QComboBox *stdModelSelection;
-    QHBoxLayout *horizontalLayout_4;
-    QLabel *label_3;
-    QComboBox *circuitSelection;
+    QComboBox *stdDeviceSelection2;
     QHBoxLayout *horizontalLayout_5;
     QLabel *cir1Label;
     QLineEdit *cir1Value;
-    QHBoxLayout *horizontalLayout_7;
-    QLabel *cir3Label;
-    QLineEdit *cir3Value;
     QHBoxLayout *horizontalLayout_6;
     QLabel *cir2Label;
     QLineEdit *cir2Value;
-    QHBoxLayout *horizontalLayout_13;
-    QLabel *cir7Label;
-    QLineEdit *cir7Value;
+    QHBoxLayout *horizontalLayout_7;
+    QLabel *cir3Label;
+    QLineEdit *cir3Value;
+    QHBoxLayout *horizontalLayout_8;
+    QLabel *cir4Label;
+    QLineEdit *cir4Value;
     QHBoxLayout *horizontalLayout_10;
     QLabel *cir5Label;
     QLineEdit *cir5Value;
     QHBoxLayout *horizontalLayout_12;
     QLabel *cir6Label;
     QLineEdit *cir6Value;
-    QHBoxLayout *horizontalLayout_8;
-    QLabel *cir4Label;
-    QLineEdit *cir4Value;
+    QHBoxLayout *horizontalLayout_13;
+    QLabel *cir7Label;
+    QLineEdit *cir7Value;
+    QHBoxLayout *horizontalLayout_11;
+    QLabel *cir8Label;
+    QLineEdit *cir8Value;
+    QHBoxLayout *horizontalLayout_14;
+    QLabel *cir9Label;
+    QLineEdit *cir9Value;
+    QHBoxLayout *horizontalLayout_15;
+    QLabel *cir10Label;
+    QLineEdit *cir10Value;
+    QHBoxLayout *horizontalLayout_18;
+    QLabel *cir11Label;
+    QLineEdit *cir11Value;
+    QHBoxLayout *horizontalLayout_19;
+    QLabel *cir12Label;
+    QLineEdit *cir12Value;
+    QHBoxLayout *horizontalLayout_20;
+    QLabel *cir13Label;
+    QLineEdit *cir13Value;
+    QHBoxLayout *horizontalLayout_21;
+    QLabel *cir14Label;
+    QLineEdit *cir14Value;
+    QHBoxLayout *horizontalLayout_22;
+    QLabel *cir15Label;
+    QLineEdit *cir15Value;
+    QHBoxLayout *horizontalLayout_23;
+    QLabel *cir16Label;
+    QLineEdit *cir16Value;
     QSpacerItem *verticalSpacer;
     QWidget *tab_2;
     QWidget *layoutWidget1;
@@ -237,10 +264,39 @@ public:
         tab->setObjectName("tab");
         layoutWidget = new QWidget(tab);
         layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(10, 10, 250, 461));
+        layoutWidget->setGeometry(QRect(10, 10, 250, 631));
         verticalLayout = new QVBoxLayout(layoutWidget);
         verticalLayout->setObjectName("verticalLayout");
         verticalLayout->setContentsMargins(0, 0, 0, 0);
+        horizontalLayout_4 = new QHBoxLayout();
+        horizontalLayout_4->setObjectName("horizontalLayout_4");
+        label_3 = new QLabel(layoutWidget);
+        label_3->setObjectName("label_3");
+        QSizePolicy sizePolicy1(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(label_3->sizePolicy().hasHeightForWidth());
+        label_3->setSizePolicy(sizePolicy1);
+        label_3->setMinimumSize(QSize(0, 0));
+        label_3->setMaximumSize(QSize(16777215, 16777215));
+
+        horizontalLayout_4->addWidget(label_3);
+
+        circuitSelection = new QComboBox(layoutWidget);
+        circuitSelection->setObjectName("circuitSelection");
+        QSizePolicy sizePolicy2(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        sizePolicy2.setHorizontalStretch(0);
+        sizePolicy2.setVerticalStretch(0);
+        sizePolicy2.setHeightForWidth(circuitSelection->sizePolicy().hasHeightForWidth());
+        circuitSelection->setSizePolicy(sizePolicy2);
+        circuitSelection->setMinimumSize(QSize(160, 0));
+        circuitSelection->setMaximumSize(QSize(160, 16777215));
+
+        horizontalLayout_4->addWidget(circuitSelection);
+
+
+        verticalLayout->addLayout(horizontalLayout_4);
+
         horizontalLayout_16 = new QHBoxLayout();
         horizontalLayout_16->setObjectName("horizontalLayout_16");
         label_4 = new QLabel(layoutWidget);
@@ -250,11 +306,8 @@ public:
 
         stdDeviceSelection = new QComboBox(layoutWidget);
         stdDeviceSelection->setObjectName("stdDeviceSelection");
-        QSizePolicy sizePolicy1(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        sizePolicy1.setHorizontalStretch(0);
-        sizePolicy1.setVerticalStretch(0);
-        sizePolicy1.setHeightForWidth(stdDeviceSelection->sizePolicy().hasHeightForWidth());
-        stdDeviceSelection->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(stdDeviceSelection->sizePolicy().hasHeightForWidth());
+        stdDeviceSelection->setSizePolicy(sizePolicy2);
         stdDeviceSelection->setMinimumSize(QSize(160, 0));
         stdDeviceSelection->setMaximumSize(QSize(160, 16777215));
 
@@ -270,43 +323,14 @@ public:
 
         horizontalLayout_17->addWidget(label_5);
 
-        stdModelSelection = new QComboBox(layoutWidget);
-        stdModelSelection->setObjectName("stdModelSelection");
-        sizePolicy1.setHeightForWidth(stdModelSelection->sizePolicy().hasHeightForWidth());
-        stdModelSelection->setSizePolicy(sizePolicy1);
-        stdModelSelection->setMinimumSize(QSize(160, 0));
-        stdModelSelection->setMaximumSize(QSize(160, 16777215));
+        stdDeviceSelection2 = new QComboBox(layoutWidget);
+        stdDeviceSelection2->setObjectName("stdDeviceSelection2");
+        stdDeviceSelection2->setMinimumSize(QSize(160, 0));
 
-        horizontalLayout_17->addWidget(stdModelSelection);
+        horizontalLayout_17->addWidget(stdDeviceSelection2);
 
 
         verticalLayout->addLayout(horizontalLayout_17);
-
-        horizontalLayout_4 = new QHBoxLayout();
-        horizontalLayout_4->setObjectName("horizontalLayout_4");
-        label_3 = new QLabel(layoutWidget);
-        label_3->setObjectName("label_3");
-        QSizePolicy sizePolicy2(QSizePolicy::Preferred, QSizePolicy::Preferred);
-        sizePolicy2.setHorizontalStretch(0);
-        sizePolicy2.setVerticalStretch(0);
-        sizePolicy2.setHeightForWidth(label_3->sizePolicy().hasHeightForWidth());
-        label_3->setSizePolicy(sizePolicy2);
-        label_3->setMinimumSize(QSize(0, 0));
-        label_3->setMaximumSize(QSize(16777215, 16777215));
-
-        horizontalLayout_4->addWidget(label_3);
-
-        circuitSelection = new QComboBox(layoutWidget);
-        circuitSelection->setObjectName("circuitSelection");
-        sizePolicy1.setHeightForWidth(circuitSelection->sizePolicy().hasHeightForWidth());
-        circuitSelection->setSizePolicy(sizePolicy1);
-        circuitSelection->setMinimumSize(QSize(160, 0));
-        circuitSelection->setMaximumSize(QSize(160, 16777215));
-
-        horizontalLayout_4->addWidget(circuitSelection);
-
-
-        verticalLayout->addLayout(horizontalLayout_4);
 
         horizontalLayout_5 = new QHBoxLayout();
         horizontalLayout_5->setObjectName("horizontalLayout_5");
@@ -317,8 +341,8 @@ public:
 
         cir1Value = new QLineEdit(layoutWidget);
         cir1Value->setObjectName("cir1Value");
-        sizePolicy1.setHeightForWidth(cir1Value->sizePolicy().hasHeightForWidth());
-        cir1Value->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(cir1Value->sizePolicy().hasHeightForWidth());
+        cir1Value->setSizePolicy(sizePolicy2);
         cir1Value->setMinimumSize(QSize(60, 0));
         cir1Value->setMaximumSize(QSize(60, 16777215));
 
@@ -326,25 +350,6 @@ public:
 
 
         verticalLayout->addLayout(horizontalLayout_5);
-
-        horizontalLayout_7 = new QHBoxLayout();
-        horizontalLayout_7->setObjectName("horizontalLayout_7");
-        cir3Label = new QLabel(layoutWidget);
-        cir3Label->setObjectName("cir3Label");
-
-        horizontalLayout_7->addWidget(cir3Label);
-
-        cir3Value = new QLineEdit(layoutWidget);
-        cir3Value->setObjectName("cir3Value");
-        sizePolicy1.setHeightForWidth(cir3Value->sizePolicy().hasHeightForWidth());
-        cir3Value->setSizePolicy(sizePolicy1);
-        cir3Value->setMinimumSize(QSize(60, 0));
-        cir3Value->setMaximumSize(QSize(60, 16777215));
-
-        horizontalLayout_7->addWidget(cir3Value);
-
-
-        verticalLayout->addLayout(horizontalLayout_7);
 
         horizontalLayout_6 = new QHBoxLayout();
         horizontalLayout_6->setObjectName("horizontalLayout_6");
@@ -355,8 +360,8 @@ public:
 
         cir2Value = new QLineEdit(layoutWidget);
         cir2Value->setObjectName("cir2Value");
-        sizePolicy1.setHeightForWidth(cir2Value->sizePolicy().hasHeightForWidth());
-        cir2Value->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(cir2Value->sizePolicy().hasHeightForWidth());
+        cir2Value->setSizePolicy(sizePolicy2);
         cir2Value->setMinimumSize(QSize(60, 0));
         cir2Value->setMaximumSize(QSize(60, 16777215));
 
@@ -365,24 +370,43 @@ public:
 
         verticalLayout->addLayout(horizontalLayout_6);
 
-        horizontalLayout_13 = new QHBoxLayout();
-        horizontalLayout_13->setObjectName("horizontalLayout_13");
-        cir7Label = new QLabel(layoutWidget);
-        cir7Label->setObjectName("cir7Label");
+        horizontalLayout_7 = new QHBoxLayout();
+        horizontalLayout_7->setObjectName("horizontalLayout_7");
+        cir3Label = new QLabel(layoutWidget);
+        cir3Label->setObjectName("cir3Label");
 
-        horizontalLayout_13->addWidget(cir7Label);
+        horizontalLayout_7->addWidget(cir3Label);
 
-        cir7Value = new QLineEdit(layoutWidget);
-        cir7Value->setObjectName("cir7Value");
-        sizePolicy1.setHeightForWidth(cir7Value->sizePolicy().hasHeightForWidth());
-        cir7Value->setSizePolicy(sizePolicy1);
-        cir7Value->setMinimumSize(QSize(60, 0));
-        cir7Value->setMaximumSize(QSize(60, 16777215));
+        cir3Value = new QLineEdit(layoutWidget);
+        cir3Value->setObjectName("cir3Value");
+        sizePolicy2.setHeightForWidth(cir3Value->sizePolicy().hasHeightForWidth());
+        cir3Value->setSizePolicy(sizePolicy2);
+        cir3Value->setMinimumSize(QSize(60, 0));
+        cir3Value->setMaximumSize(QSize(60, 16777215));
 
-        horizontalLayout_13->addWidget(cir7Value);
+        horizontalLayout_7->addWidget(cir3Value);
 
 
-        verticalLayout->addLayout(horizontalLayout_13);
+        verticalLayout->addLayout(horizontalLayout_7);
+
+        horizontalLayout_8 = new QHBoxLayout();
+        horizontalLayout_8->setObjectName("horizontalLayout_8");
+        cir4Label = new QLabel(layoutWidget);
+        cir4Label->setObjectName("cir4Label");
+
+        horizontalLayout_8->addWidget(cir4Label);
+
+        cir4Value = new QLineEdit(layoutWidget);
+        cir4Value->setObjectName("cir4Value");
+        sizePolicy2.setHeightForWidth(cir4Value->sizePolicy().hasHeightForWidth());
+        cir4Value->setSizePolicy(sizePolicy2);
+        cir4Value->setMinimumSize(QSize(60, 0));
+        cir4Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_8->addWidget(cir4Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_8);
 
         horizontalLayout_10 = new QHBoxLayout();
         horizontalLayout_10->setObjectName("horizontalLayout_10");
@@ -393,8 +417,8 @@ public:
 
         cir5Value = new QLineEdit(layoutWidget);
         cir5Value->setObjectName("cir5Value");
-        sizePolicy1.setHeightForWidth(cir5Value->sizePolicy().hasHeightForWidth());
-        cir5Value->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(cir5Value->sizePolicy().hasHeightForWidth());
+        cir5Value->setSizePolicy(sizePolicy2);
         cir5Value->setMinimumSize(QSize(60, 0));
         cir5Value->setMaximumSize(QSize(60, 16777215));
 
@@ -412,8 +436,8 @@ public:
 
         cir6Value = new QLineEdit(layoutWidget);
         cir6Value->setObjectName("cir6Value");
-        sizePolicy1.setHeightForWidth(cir6Value->sizePolicy().hasHeightForWidth());
-        cir6Value->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(cir6Value->sizePolicy().hasHeightForWidth());
+        cir6Value->setSizePolicy(sizePolicy2);
         cir6Value->setMinimumSize(QSize(60, 0));
         cir6Value->setMaximumSize(QSize(60, 16777215));
 
@@ -422,24 +446,184 @@ public:
 
         verticalLayout->addLayout(horizontalLayout_12);
 
-        horizontalLayout_8 = new QHBoxLayout();
-        horizontalLayout_8->setObjectName("horizontalLayout_8");
-        cir4Label = new QLabel(layoutWidget);
-        cir4Label->setObjectName("cir4Label");
+        horizontalLayout_13 = new QHBoxLayout();
+        horizontalLayout_13->setObjectName("horizontalLayout_13");
+        cir7Label = new QLabel(layoutWidget);
+        cir7Label->setObjectName("cir7Label");
 
-        horizontalLayout_8->addWidget(cir4Label);
+        horizontalLayout_13->addWidget(cir7Label);
 
-        cir4Value = new QLineEdit(layoutWidget);
-        cir4Value->setObjectName("cir4Value");
-        sizePolicy1.setHeightForWidth(cir4Value->sizePolicy().hasHeightForWidth());
-        cir4Value->setSizePolicy(sizePolicy1);
-        cir4Value->setMinimumSize(QSize(60, 0));
-        cir4Value->setMaximumSize(QSize(60, 16777215));
+        cir7Value = new QLineEdit(layoutWidget);
+        cir7Value->setObjectName("cir7Value");
+        sizePolicy2.setHeightForWidth(cir7Value->sizePolicy().hasHeightForWidth());
+        cir7Value->setSizePolicy(sizePolicy2);
+        cir7Value->setMinimumSize(QSize(60, 0));
+        cir7Value->setMaximumSize(QSize(60, 16777215));
 
-        horizontalLayout_8->addWidget(cir4Value);
+        horizontalLayout_13->addWidget(cir7Value);
 
 
-        verticalLayout->addLayout(horizontalLayout_8);
+        verticalLayout->addLayout(horizontalLayout_13);
+
+        horizontalLayout_11 = new QHBoxLayout();
+        horizontalLayout_11->setObjectName("horizontalLayout_11");
+        cir8Label = new QLabel(layoutWidget);
+        cir8Label->setObjectName("cir8Label");
+        QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        sizePolicy3.setHorizontalStretch(0);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(cir8Label->sizePolicy().hasHeightForWidth());
+        cir8Label->setSizePolicy(sizePolicy3);
+
+        horizontalLayout_11->addWidget(cir8Label);
+
+        cir8Value = new QLineEdit(layoutWidget);
+        cir8Value->setObjectName("cir8Value");
+        sizePolicy2.setHeightForWidth(cir8Value->sizePolicy().hasHeightForWidth());
+        cir8Value->setSizePolicy(sizePolicy2);
+        cir8Value->setMinimumSize(QSize(60, 0));
+        cir8Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_11->addWidget(cir8Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_11);
+
+        horizontalLayout_14 = new QHBoxLayout();
+        horizontalLayout_14->setObjectName("horizontalLayout_14");
+        cir9Label = new QLabel(layoutWidget);
+        cir9Label->setObjectName("cir9Label");
+        sizePolicy3.setHeightForWidth(cir9Label->sizePolicy().hasHeightForWidth());
+        cir9Label->setSizePolicy(sizePolicy3);
+
+        horizontalLayout_14->addWidget(cir9Label);
+
+        cir9Value = new QLineEdit(layoutWidget);
+        cir9Value->setObjectName("cir9Value");
+        cir9Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_14->addWidget(cir9Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_14);
+
+        horizontalLayout_15 = new QHBoxLayout();
+        horizontalLayout_15->setObjectName("horizontalLayout_15");
+        cir10Label = new QLabel(layoutWidget);
+        cir10Label->setObjectName("cir10Label");
+        sizePolicy3.setHeightForWidth(cir10Label->sizePolicy().hasHeightForWidth());
+        cir10Label->setSizePolicy(sizePolicy3);
+
+        horizontalLayout_15->addWidget(cir10Label);
+
+        cir10Value = new QLineEdit(layoutWidget);
+        cir10Value->setObjectName("cir10Value");
+        cir10Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_15->addWidget(cir10Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_15);
+
+        horizontalLayout_18 = new QHBoxLayout();
+        horizontalLayout_18->setObjectName("horizontalLayout_18");
+        cir11Label = new QLabel(layoutWidget);
+        cir11Label->setObjectName("cir11Label");
+        sizePolicy3.setHeightForWidth(cir11Label->sizePolicy().hasHeightForWidth());
+        cir11Label->setSizePolicy(sizePolicy3);
+
+        horizontalLayout_18->addWidget(cir11Label);
+
+        cir11Value = new QLineEdit(layoutWidget);
+        cir11Value->setObjectName("cir11Value");
+        cir11Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_18->addWidget(cir11Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_18);
+
+        horizontalLayout_19 = new QHBoxLayout();
+        horizontalLayout_19->setObjectName("horizontalLayout_19");
+        cir12Label = new QLabel(layoutWidget);
+        cir12Label->setObjectName("cir12Label");
+        sizePolicy3.setHeightForWidth(cir12Label->sizePolicy().hasHeightForWidth());
+        cir12Label->setSizePolicy(sizePolicy3);
+
+        horizontalLayout_19->addWidget(cir12Label);
+
+        cir12Value = new QLineEdit(layoutWidget);
+        cir12Value->setObjectName("cir12Value");
+        cir12Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_19->addWidget(cir12Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_19);
+
+        horizontalLayout_20 = new QHBoxLayout();
+        horizontalLayout_20->setObjectName("horizontalLayout_20");
+        cir13Label = new QLabel(layoutWidget);
+        cir13Label->setObjectName("cir13Label");
+
+        horizontalLayout_20->addWidget(cir13Label);
+
+        cir13Value = new QLineEdit(layoutWidget);
+        cir13Value->setObjectName("cir13Value");
+        cir13Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_20->addWidget(cir13Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_20);
+
+        horizontalLayout_21 = new QHBoxLayout();
+        horizontalLayout_21->setObjectName("horizontalLayout_21");
+        cir14Label = new QLabel(layoutWidget);
+        cir14Label->setObjectName("cir14Label");
+
+        horizontalLayout_21->addWidget(cir14Label);
+
+        cir14Value = new QLineEdit(layoutWidget);
+        cir14Value->setObjectName("cir14Value");
+        cir14Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_21->addWidget(cir14Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_21);
+
+        horizontalLayout_22 = new QHBoxLayout();
+        horizontalLayout_22->setObjectName("horizontalLayout_22");
+        cir15Label = new QLabel(layoutWidget);
+        cir15Label->setObjectName("cir15Label");
+
+        horizontalLayout_22->addWidget(cir15Label);
+
+        cir15Value = new QLineEdit(layoutWidget);
+        cir15Value->setObjectName("cir15Value");
+        cir15Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_22->addWidget(cir15Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_22);
+
+        horizontalLayout_23 = new QHBoxLayout();
+        horizontalLayout_23->setObjectName("horizontalLayout_23");
+        cir16Label = new QLabel(layoutWidget);
+        cir16Label->setObjectName("cir16Label");
+
+        horizontalLayout_23->addWidget(cir16Label);
+
+        cir16Value = new QLineEdit(layoutWidget);
+        cir16Value->setObjectName("cir16Value");
+        cir16Value->setMaximumSize(QSize(60, 16777215));
+
+        horizontalLayout_23->addWidget(cir16Value);
+
+
+        verticalLayout->addLayout(horizontalLayout_23);
 
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
@@ -573,9 +757,6 @@ public:
         horizontalLayout_26->setObjectName("horizontalLayout_26");
         deviceTypeLabel_2 = new QLabel(layoutWidget_2);
         deviceTypeLabel_2->setObjectName("deviceTypeLabel_2");
-        QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Preferred);
-        sizePolicy3.setHorizontalStretch(0);
-        sizePolicy3.setVerticalStretch(0);
         sizePolicy3.setHeightForWidth(deviceTypeLabel_2->sizePolicy().hasHeightForWidth());
         deviceTypeLabel_2->setSizePolicy(sizePolicy3);
         deviceTypeLabel_2->setMinimumSize(QSize(100, 0));
@@ -584,8 +765,8 @@ public:
 
         deviceType = new QComboBox(layoutWidget_2);
         deviceType->setObjectName("deviceType");
-        sizePolicy1.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
-        deviceType->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
+        deviceType->setSizePolicy(sizePolicy2);
         deviceType->setMinimumSize(QSize(160, 0));
         deviceType->setMaximumSize(QSize(160, 16777215));
 
@@ -603,8 +784,8 @@ public:
 
         testType = new QComboBox(layoutWidget_2);
         testType->setObjectName("testType");
-        sizePolicy1.setHeightForWidth(testType->sizePolicy().hasHeightForWidth());
-        testType->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(testType->sizePolicy().hasHeightForWidth());
+        testType->setSizePolicy(sizePolicy2);
         testType->setMinimumSize(QSize(160, 0));
         testType->setMaximumSize(QSize(160, 16777215));
 
@@ -629,8 +810,8 @@ public:
 
         heaterVoltage = new QLineEdit(layoutWidget_2);
         heaterVoltage->setObjectName("heaterVoltage");
-        sizePolicy1.setHeightForWidth(heaterVoltage->sizePolicy().hasHeightForWidth());
-        heaterVoltage->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(heaterVoltage->sizePolicy().hasHeightForWidth());
+        heaterVoltage->setSizePolicy(sizePolicy2);
         heaterVoltage->setMinimumSize(QSize(50, 0));
         heaterVoltage->setMaximumSize(QSize(50, 16777215));
 
@@ -651,8 +832,8 @@ public:
 
         label_15 = new QLabel(layoutWidget_2);
         label_15->setObjectName("label_15");
-        sizePolicy1.setHeightForWidth(label_15->sizePolicy().hasHeightForWidth());
-        label_15->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(label_15->sizePolicy().hasHeightForWidth());
+        label_15->setSizePolicy(sizePolicy2);
         label_15->setMinimumSize(QSize(50, 20));
         label_15->setMaximumSize(QSize(50, 20));
         label_15->setAlignment(Qt::AlignCenter);
@@ -700,8 +881,8 @@ public:
 
         anodeStart = new QLineEdit(layoutWidget_2);
         anodeStart->setObjectName("anodeStart");
-        sizePolicy1.setHeightForWidth(anodeStart->sizePolicy().hasHeightForWidth());
-        anodeStart->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(anodeStart->sizePolicy().hasHeightForWidth());
+        anodeStart->setSizePolicy(sizePolicy2);
         anodeStart->setMinimumSize(QSize(50, 0));
         anodeStart->setMaximumSize(QSize(50, 16777215));
 
@@ -709,16 +890,16 @@ public:
 
         anodeStop = new QLineEdit(layoutWidget_2);
         anodeStop->setObjectName("anodeStop");
-        sizePolicy1.setHeightForWidth(anodeStop->sizePolicy().hasHeightForWidth());
-        anodeStop->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(anodeStop->sizePolicy().hasHeightForWidth());
+        anodeStop->setSizePolicy(sizePolicy2);
         anodeStop->setMaximumSize(QSize(50, 16777215));
 
         horizontalLayout_30->addWidget(anodeStop);
 
         anodeStep = new QLineEdit(layoutWidget_2);
         anodeStep->setObjectName("anodeStep");
-        sizePolicy1.setHeightForWidth(anodeStep->sizePolicy().hasHeightForWidth());
-        anodeStep->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(anodeStep->sizePolicy().hasHeightForWidth());
+        anodeStep->setSizePolicy(sizePolicy2);
         anodeStep->setMaximumSize(QSize(50, 16777215));
 
         horizontalLayout_30->addWidget(anodeStep);
@@ -738,8 +919,8 @@ public:
 
         gridStart = new QLineEdit(layoutWidget_2);
         gridStart->setObjectName("gridStart");
-        sizePolicy1.setHeightForWidth(gridStart->sizePolicy().hasHeightForWidth());
-        gridStart->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(gridStart->sizePolicy().hasHeightForWidth());
+        gridStart->setSizePolicy(sizePolicy2);
         gridStart->setMinimumSize(QSize(50, 0));
         gridStart->setMaximumSize(QSize(50, 16777215));
 
@@ -747,8 +928,8 @@ public:
 
         gridStop = new QLineEdit(layoutWidget_2);
         gridStop->setObjectName("gridStop");
-        sizePolicy1.setHeightForWidth(gridStop->sizePolicy().hasHeightForWidth());
-        gridStop->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(gridStop->sizePolicy().hasHeightForWidth());
+        gridStop->setSizePolicy(sizePolicy2);
         gridStop->setMinimumSize(QSize(50, 0));
         gridStop->setMaximumSize(QSize(50, 16777215));
 
@@ -756,8 +937,8 @@ public:
 
         gridStep = new QLineEdit(layoutWidget_2);
         gridStep->setObjectName("gridStep");
-        sizePolicy1.setHeightForWidth(gridStep->sizePolicy().hasHeightForWidth());
-        gridStep->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(gridStep->sizePolicy().hasHeightForWidth());
+        gridStep->setSizePolicy(sizePolicy2);
         gridStep->setMinimumSize(QSize(50, 0));
         gridStep->setMaximumSize(QSize(50, 16777215));
 
@@ -778,8 +959,8 @@ public:
 
         screenStart = new QLineEdit(layoutWidget_2);
         screenStart->setObjectName("screenStart");
-        sizePolicy1.setHeightForWidth(screenStart->sizePolicy().hasHeightForWidth());
-        screenStart->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(screenStart->sizePolicy().hasHeightForWidth());
+        screenStart->setSizePolicy(sizePolicy2);
         screenStart->setMinimumSize(QSize(50, 0));
         screenStart->setMaximumSize(QSize(50, 16777215));
 
@@ -787,8 +968,8 @@ public:
 
         screenStop = new QLineEdit(layoutWidget_2);
         screenStop->setObjectName("screenStop");
-        sizePolicy1.setHeightForWidth(screenStop->sizePolicy().hasHeightForWidth());
-        screenStop->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(screenStop->sizePolicy().hasHeightForWidth());
+        screenStop->setSizePolicy(sizePolicy2);
         screenStop->setMinimumSize(QSize(50, 0));
         screenStop->setMaximumSize(QSize(50, 16777215));
 
@@ -796,8 +977,8 @@ public:
 
         screenStep = new QLineEdit(layoutWidget_2);
         screenStep->setObjectName("screenStep");
-        sizePolicy1.setHeightForWidth(screenStep->sizePolicy().hasHeightForWidth());
-        screenStep->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(screenStep->sizePolicy().hasHeightForWidth());
+        screenStep->setSizePolicy(sizePolicy2);
         screenStep->setMinimumSize(QSize(50, 0));
         screenStep->setMaximumSize(QSize(50, 16777215));
 
@@ -821,8 +1002,8 @@ public:
 
         iaMax = new QLineEdit(layoutWidget_2);
         iaMax->setObjectName("iaMax");
-        sizePolicy1.setHeightForWidth(iaMax->sizePolicy().hasHeightForWidth());
-        iaMax->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(iaMax->sizePolicy().hasHeightForWidth());
+        iaMax->setSizePolicy(sizePolicy2);
         iaMax->setMinimumSize(QSize(50, 0));
         iaMax->setMaximumSize(QSize(50, 16777215));
 
@@ -848,8 +1029,8 @@ public:
 
         pMax = new QLineEdit(layoutWidget_2);
         pMax->setObjectName("pMax");
-        sizePolicy1.setHeightForWidth(pMax->sizePolicy().hasHeightForWidth());
-        pMax->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(pMax->sizePolicy().hasHeightForWidth());
+        pMax->setSizePolicy(sizePolicy2);
         pMax->setMinimumSize(QSize(50, 0));
         pMax->setMaximumSize(QSize(50, 16777215));
 
@@ -873,8 +1054,8 @@ public:
         heaterLayout->setObjectName("heaterLayout");
         heaterButton = new QPushButton(layoutWidget_2);
         heaterButton->setObjectName("heaterButton");
-        sizePolicy1.setHeightForWidth(heaterButton->sizePolicy().hasHeightForWidth());
-        heaterButton->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(heaterButton->sizePolicy().hasHeightForWidth());
+        heaterButton->setSizePolicy(sizePolicy2);
         heaterButton->setMinimumSize(QSize(80, 0));
         heaterButton->setCheckable(false);
 
@@ -1015,8 +1196,8 @@ public:
 
         graphicsView = new QGraphicsView(horizontalLayoutWidget);
         graphicsView->setObjectName("graphicsView");
-        sizePolicy1.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
-        graphicsView->setSizePolicy(sizePolicy1);
+        sizePolicy2.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
+        graphicsView->setSizePolicy(sizePolicy2);
         graphicsView->setMinimumSize(QSize(550, 500));
         graphicsView->setMaximumSize(QSize(550, 500));
 
@@ -1138,17 +1319,29 @@ public:
 #endif // QT_CONFIG(shortcut)
         actionOptions->setText(QCoreApplication::translate("ValveWorkbench", "Edit Preferences...", nullptr));
         actionExport_Model->setText(QCoreApplication::translate("ValveWorkbench", "Export Model...", nullptr));
+#if QT_CONFIG(shortcut)
+        actionExport_Model->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+E", nullptr));
+#endif // QT_CONFIG(shortcut)
         actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export to Spice...", nullptr));
-        label_4->setText(QCoreApplication::translate("ValveWorkbench", "Device:", nullptr));
-        label_5->setText(QCoreApplication::translate("ValveWorkbench", "Model:", nullptr));
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
-        cir1Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel", nullptr));
-        cir3Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel", nullptr));
-        cir2Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel", nullptr));
-        cir7Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel", nullptr));
-        cir5Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel", nullptr));
-        cir6Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel", nullptr));
-        cir4Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel", nullptr));
+        label_4->setText(QCoreApplication::translate("ValveWorkbench", "Device 1:", nullptr));
+        label_5->setText(QCoreApplication::translate("ValveWorkbench", "Device 2:", nullptr));
+        cir1Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel1", nullptr));
+        cir2Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel2", nullptr));
+        cir3Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel3", nullptr));
+        cir4Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel4", nullptr));
+        cir5Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel5", nullptr));
+        cir6Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel6", nullptr));
+        cir7Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel7", nullptr));
+        cir8Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel8", nullptr));
+        cir9Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel9", nullptr));
+        cir10Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel10", nullptr));
+        cir11Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel11", nullptr));
+        cir12Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel12", nullptr));
+        cir13Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel13", nullptr));
+        cir14Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel14", nullptr));
+        cir15Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel15", nullptr));
+        cir16Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel16", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab), QCoreApplication::translate("ValveWorkbench", "Designer", nullptr));
         label_2->setText(QCoreApplication::translate("ValveWorkbench", "Project Browser", nullptr));
         label->setText(QCoreApplication::translate("ValveWorkbench", "Properties", nullptr));

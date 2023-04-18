@@ -41,7 +41,7 @@ double SimpleTriode::triodeAnodeCurrent(double va, double vg1)
     return anodeCurrent(va, vg1);
 }
 
-double SimpleTriode::anodeCurrent(double va, double vg1, double vg2)
+double SimpleTriode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     double ia = 0.0;
 
@@ -56,7 +56,7 @@ double SimpleTriode::anodeCurrent(double va, double vg1, double vg2)
 void SimpleTriode::fromJson(QJsonObject source)
 {
     if (source.contains("kg1") && source["kg1"].isDouble()) {
-        parameter[PAR_KG1]->setValue(source["kg1"].toDouble());
+        parameter[PAR_KG1]->setValue(source["kg1"].toDouble() / 1000.0);
     }
 
     if (source.contains("mu") && source["mu"].isDouble()) {
@@ -72,19 +72,15 @@ void SimpleTriode::fromJson(QJsonObject source)
     }
 }
 
-void SimpleTriode::toJson(QJsonObject &destination, double vg1Max, double vg2Max)
+void SimpleTriode::toJson(QJsonObject &model)
 {
-    QJsonObject model;
-    model["kg1"] = parameter[PAR_KG1]->getValue();
+    model["kg1"] = parameter[PAR_KG1]->getValue() * 1000.0;
     model["mu"] = parameter[PAR_MU]->getValue();
     model["x"] = parameter[PAR_X]->getValue();
     model["vct"] = parameter[PAR_VCT]->getValue();
 
-    QJsonObject triode;
-    triode["vg1Max"] = vg1Max;
-    triode["simple"] = model;
-
-    destination["triode"] = triode;
+    model["device"] = "triode";
+    model["type"] = "simple";
 }
 
 void SimpleTriode::updateUI(QLabel *labels[], QLineEdit *values[])

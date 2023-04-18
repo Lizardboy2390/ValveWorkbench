@@ -105,7 +105,7 @@ void ReefmanPentode::fromJson(QJsonObject source)
 
 }
 
-void ReefmanPentode::toJson(QJsonObject &destination, double vg1Max, double vg2Max)
+void ReefmanPentode::toJson(QJsonObject &destination)
 {
 
 }

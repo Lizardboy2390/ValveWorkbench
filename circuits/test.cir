@@ -1,0 +1,10 @@
+Test harness 
+
+.op
+
+VB 1 0 dc 100
+
+R1 1 2 100K
+R2 2 0 200k
+
+.end

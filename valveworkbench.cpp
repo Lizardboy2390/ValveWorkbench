@@ -2,6 +2,7 @@
 #include "ui_valveworkbench.h"
 
 #include "valvemodel/circuit/triodecommoncathode.h"
+#include "valvemodel/circuit/pentodecommoncathode.h"
 #include "valvemodel/data/sweep.h"
 
 #include "preferencesdialog.h"
@@ -20,6 +21,8 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         logFile = nullptr;
     }
 
+    ngSpice_Init(ng_getchar, ng_getstat, ng_exit, ng_data, ng_initdata, ng_thread_runs, NULL);
+
     anodeStart = 0.0;
     anodeStep = 0.0;
     anodeStop = 0.0;
@@ -31,6 +34,8 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     screenStop = 0.0;
 
     readConfig(tr("analyser.json"));
+
+    loadDevices();
 
     ui->setupUi(this);
 
@@ -80,43 +85,15 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     }
 
     buildCircuitParameters();
-    buildStdDeviceSelection();
+    buildCircuitSelection();
 
     circuits.append(new TriodeCommonCathode());
+    circuits.append(new PentodeCommonCathode());
 }
 
 ValveWorkbench::~ValveWorkbench()
 {
     delete ui;
-}
-
-void ValveWorkbench::buildStdDeviceSelection()
-{
-    ui->stdDeviceSelection->addItem("Select...", -1);
-    QString modelPath = tr("../models");
-    QDir modelDir(modelPath);
-
-    QStringList filters;
-    filters << "*.json";
-    modelDir.setNameFilters(filters);
-
-    QStringList models = modelDir.entryList();
-
-    for (int i = 0; i < models.size(); i++) {
-        QString modelFileName = modelPath + "/" + models.at(i);
-        QFile modelFile(modelFileName);
-        if (!modelFile.open(QIODevice::ReadOnly)) {
-            qWarning("Couldn't open model file: ", modelFile.fileName().toStdString().c_str());
-        }
-        else {
-            QByteArray modelData = modelFile.readAll();
-            QJsonDocument modelDoc(QJsonDocument::fromJson(modelData));
-
-            Device* model = new Device(modelDoc);
-            this->devices.append(model);
-            ui->stdDeviceSelection->addItem(model->getName(), i);
-        }
-    }
 }
 
 void ValveWorkbench::buildCircuitParameters()
@@ -128,6 +105,15 @@ void ValveWorkbench::buildCircuitParameters()
     circuitLabels[4] = ui->cir5Label;
     circuitLabels[5] = ui->cir6Label;
     circuitLabels[6] = ui->cir7Label;
+    circuitLabels[7] = ui->cir8Label;
+    circuitLabels[8] = ui->cir9Label;
+    circuitLabels[9] = ui->cir10Label;
+    circuitLabels[10] = ui->cir11Label;
+    circuitLabels[11] = ui->cir12Label;
+    circuitLabels[12] = ui->cir13Label;
+    circuitLabels[13] = ui->cir14Label;
+    circuitLabels[14] = ui->cir15Label;
+    circuitLabels[15] = ui->cir16Label;
 
     circuitValues[0] = ui->cir1Value;
     circuitValues[1] = ui->cir2Value;
@@ -136,8 +122,17 @@ void ValveWorkbench::buildCircuitParameters()
     circuitValues[4] = ui->cir5Value;
     circuitValues[5] = ui->cir6Value;
     circuitValues[6] = ui->cir7Value;
+    circuitValues[7] = ui->cir8Value;
+    circuitValues[8] = ui->cir9Value;
+    circuitValues[9] = ui->cir10Value;
+    circuitValues[10] = ui->cir11Value;
+    circuitValues[11] = ui->cir12Value;
+    circuitValues[12] = ui->cir13Value;
+    circuitValues[13] = ui->cir14Value;
+    circuitValues[14] = ui->cir15Value;
+    circuitValues[15] = ui->cir16Value;
 
-    for (int i=0; i < 7; i++) { // Parameters all initially hidden
+    for (int i=0; i < 16; i++) { // Parameters all initially hidden
         circuitValues[i]->setVisible(false);
         circuitLabels[i]->setVisible(false);
     }
@@ -147,39 +142,38 @@ void ValveWorkbench::buildCircuitSelection()
 {
     ui->circuitSelection->clear();
 
-    if (currentDevice != nullptr) {
+    ui->circuitSelection->addItem("Select...", -1);
+    ui->circuitSelection->addItem("Triode Common Cathode", TRIODE_COMMON_CATHODE);
+    ui->circuitSelection->addItem("Pentode Common Cathode", PENTODE_COMMON_CATHODE);
+
+    /*if (currentDevice != nullptr) {
         if (currentDevice->getDeviceType() == MODEL_TRIODE) {
             ui->circuitSelection->addItem("Common Cathode", TRIODE_COMMON_CATHODE);
         } else if (currentDevice->getDeviceType() == MODEL_PENTODE) {
             ui->circuitSelection->addItem("Common Cathode", PENTODE_COMMON_CATHODE);
         }
-    }
+    }*/
 }
 
-void ValveWorkbench::selectStdDevice(int device)
+void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
 {
-    if (device < 0) {
-        currentDevice = customDevice;
-        //setCustomModelEnabled(true);
+    if (deviceNumber < 0 || ui->circuitSelection->currentData().toInt() < 0) {
+        return;
     }
-    else {
-        if (device < devices.size()) {
-            currentDevice = devices.at(device);
-            //setCustomModelEnabled(false);
-            currentDevice->anodeAxes(&plot);
-            modelPlot = nullptr;
-            currentDevice->updateModelSelect(ui->stdModelSelection);
-            buildCircuitSelection();
-            selectCircuit(ui->circuitSelection->currentData().toInt());
-        }
-    }
-}
 
-void ValveWorkbench::selectStdModel(int model)
-{
-    currentDevice->selectModel(model);
-    //currentDevice->updateUI(parameterLabels, parameterValues);
-    plotModel();
+    Device *device = devices.at(deviceNumber);
+    device->anodeAxes(&plot);
+    modelPlot = device->anodePlot(&plot);
+
+    Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
+    if (index == 1) {
+        circuit->setDevice1(device);
+    } else {
+        circuit->setDevice2(device);
+    }
+    circuit->updateUI(circuitLabels, circuitValues);
+    circuit->plot(&plot);
+    circuit->updateUI(circuitLabels, circuitValues);
 }
 
 void ValveWorkbench::selectModel(int modelType)
@@ -190,11 +184,48 @@ void ValveWorkbench::selectModel(int modelType)
 
 void ValveWorkbench::selectCircuit(int circuitType)
 {
-    Circuit *circuit = circuits.at(circuitType);
-    if (circuitType < circuits.size()) {
-        circuit->updateUI(circuitLabels, circuitValues);
-        circuit->plot(&plot, currentDevice);
-        circuit->updateUI(circuitLabels, circuitValues);
+    for (int i = 0; i < 16; i++) {
+        circuitLabels[i]->setVisible(false);
+        circuitValues[i]->setVisible(false);
+    }
+
+    if (circuitType < 0) {
+        ui->stdDeviceSelection->setCurrentIndex(0);
+        ui->stdDeviceSelection2->setCurrentIndex(0);
+
+        buildStdDeviceSelection(ui->stdDeviceSelection, -1);
+        buildStdDeviceSelection(ui->stdDeviceSelection2, -1);
+        return;
+    }
+
+    Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
+    circuit->setDevice1(nullptr);
+    circuit->setDevice2(nullptr);
+
+    ui->stdDeviceSelection->setCurrentIndex(0);
+    ui->stdDeviceSelection2->setCurrentIndex(0);
+
+    buildStdDeviceSelection(ui->stdDeviceSelection, circuit->getDeviceType(1));
+    buildStdDeviceSelection(ui->stdDeviceSelection2, circuit->getDeviceType(2));
+}
+
+void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)
+{
+    selection->clear();
+
+    if (type < 0) {
+        selection->setEnabled(false);
+        return;
+    }
+
+    selection->setEnabled(true);
+    selection->addItem("Select...", -1);
+
+    for (int i = 0; i < devices.size(); i++) {
+        Device *device = devices.at(i);
+        if (device->getDeviceType() == type) {
+            selection->addItem(device->getName(), i);
+        }
     }
 }
 
@@ -262,7 +293,7 @@ void ValveWorkbench::updateCircuitParameter(int index)
     updateDoubleValue(circuitValues[index], value);
     circuit->setParameter(index, value);
     circuit->updateUI(circuitLabels, circuitValues);
-    circuit->plot(&plot, currentDevice);
+    circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
 }
 
@@ -400,6 +431,33 @@ void ValveWorkbench::readConfig(QString filename)
                     templates.append(*tpl);
                 }
             }
+        }
+    }
+}
+
+void ValveWorkbench::loadDevices()
+{
+    QString modelPath = tr("../models");
+    QDir modelDir(modelPath);
+
+    QStringList filters;
+    filters << "*.vwm";
+    modelDir.setNameFilters(filters);
+
+    QStringList models = modelDir.entryList();
+
+    for (int i = 0; i < models.size(); i++) {
+        QString modelFileName = modelPath + "/" + models.at(i);
+        QFile modelFile(modelFileName);
+        if (!modelFile.open(QIODevice::ReadOnly)) {
+            qWarning("Couldn't open model file: ", modelFile.fileName().toStdString().c_str());
+        }
+        else {
+            QByteArray modelData = modelFile.readAll();
+            QJsonDocument modelDoc(QJsonDocument::fromJson(modelData));
+
+            Device *model = new Device(modelDoc);
+            this->devices.append(model);
         }
     }
 }
@@ -601,12 +659,7 @@ void ValveWorkbench::handleHeaterTimeout()
 
 void ValveWorkbench::on_stdDeviceSelection_currentIndexChanged(int index)
 {
-    selectStdDevice(ui->stdDeviceSelection->currentData().toInt());
-}
-
-void ValveWorkbench::on_stdModelSelection_currentIndexChanged(int index)
-{
-    selectStdModel(ui->stdModelSelection->currentIndex());
+    selectStdDevice(1, ui->stdDeviceSelection->itemData(index).toInt());
 }
 
 void ValveWorkbench::on_circuitSelection_currentIndexChanged(int index)
@@ -647,6 +700,35 @@ void ValveWorkbench::on_cir6Value_editingFinished()
 void ValveWorkbench::on_cir7Value_editingFinished()
 {
     updateCircuitParameter(6);
+}
+
+void ValveWorkbench::on_cir8Value_editingFinished()
+{
+    updateCircuitParameter(7);
+}
+
+
+void ValveWorkbench::on_cir9Value_editingFinished()
+{
+    updateCircuitParameter(8);
+}
+
+
+void ValveWorkbench::on_cir10Value_editingFinished()
+{
+    updateCircuitParameter(9);
+}
+
+
+void ValveWorkbench::on_cir11Value_editingFinished()
+{
+    updateCircuitParameter(10);
+}
+
+
+void ValveWorkbench::on_cir12Value_editingFinished()
+{
+    updateCircuitParameter(11);
 }
 
 void ValveWorkbench::on_actionExit_triggered()
@@ -787,6 +869,34 @@ void ValveWorkbench::on_actionClose_Project_triggered()
         }
         delete currentProject;
         currentProject = nullptr;
+    }
+}
+
+void ValveWorkbench::on_actionExport_Model_triggered()
+{
+    if (currentModelItem != nullptr) {
+        Model *model = (Model *) currentModelItem->data(0, Qt::UserRole).value<void *>();
+
+        QString modelName = QFileDialog::getSaveFileName(this, "Save Project", "", "*.vwm");
+
+        if (modelName.isNull()) {
+            return;
+        }
+
+        QFile modelFile(modelName);
+
+        if (!modelFile.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text)) {
+            qWarning("Couldn't open model file for Save.");
+        } else {
+            QJsonObject modelDocument;
+
+            QJsonObject modelObject;
+            model->toJson(modelObject);
+
+            modelDocument["model"] = modelObject;
+
+            modelFile.write(QJsonDocument(modelDocument).toJson());
+        }
     }
 }
 
@@ -1447,12 +1557,6 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
     if (measuredCurves != nullptr) {
         measuredCurves->setVisible(ui->measureCheck->isChecked());
     }
-}
-
-
-void ValveWorkbench::on_estCheck_stateChanged(int arg1)
-{
-
 }
 
 

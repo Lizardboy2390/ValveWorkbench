@@ -1,0 +1,25 @@
+Test harness for biasing triodes
+
+.include triode.cir
+
+.param MU=20
+.param KG1=500
+.param X=1.5
+.param KP=1000
+.param KVB=0
+.param KVB1=0
+.param VCT=0
+
+.op
+
+VB 1 0 dc 300
+
+RG 2 0 1meg
+RK 3 0 1.6k
+RA 1 4 100k
+
+VM 4 5 DC 0
+
+XV1 5 2 3 triode MU={MU} KG1={KG1} X={X} KP={KP} KVB={KVB} KVB1={KVB1} VCT={VCT}
+
+.end

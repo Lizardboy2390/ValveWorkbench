@@ -24,7 +24,7 @@ Model::Model()
     parameter[PAR_KVB1] = new Parameter("Kvb2:", 30.0);
 
     parameter[PAR_KG2] = new Parameter("Kg2:", 0.15);
-    parameter[PAR_KG3] = new Parameter("Kg3:", 0.15);
+    parameter[PAR_KG2A] = new Parameter("Kg3:", 0.15);
     parameter[PAR_A] = new Parameter("A:", 0.0);
     parameter[PAR_ALPHA] = new Parameter("Alpha:", 0.0);
     parameter[PAR_BETA] = new Parameter("Beta:", 0.0);
@@ -43,37 +43,40 @@ Model::Model()
     parameter[PAR_AP] = new Parameter("Ap:", 0.0);
 }
 
-double Model::anodeVoltage(double ia, double vg1, double vg2)
+double Model::anodeVoltage(double ia, double vg1, double vg2, bool secondaryEmission)
 {
     double va = 100.0;
     double tolerance = 1.2;
 
-    double iaTest = anodeCurrent(va, vg1, vg2);
-    double gradient = iaTest - anodeCurrent(va - 1.0, vg1, vg2);
+    double iaTest = anodeCurrent(va, vg1, vg2, secondaryEmission);
+    double gradient = 100.0 * (iaTest - anodeCurrent(va - 0.01, vg1, vg2, secondaryEmission));
     double iaErr = ia - iaTest;
 
-    while ((abs(iaErr) / ia) > 0.01) {
+    while (abs(iaErr) > 0.005) {
         if (gradient != 0.0) {
             double vaNext = va + iaErr / gradient;
-            if (vaNext < va / tolerance) { // use the gradient but limit step to 20%
+            if (vaNext < 0.0) {
+                vaNext = 0.0;
+            }
+            if (vaNext < va / tolerance) { // use the gradient but limit step to tolerance
                 vaNext = va / tolerance;
             }
-            if (vaNext > tolerance * va) { // use the gradient but limit step to 20%
+            if (vaNext > tolerance * va) { // use the gradient but limit step to tolerance
                 vaNext = tolerance * va;
             }
             va = vaNext;
         } else {
-            va = 2 * va;
+            break;
         }
-        iaTest = anodeCurrent(va, vg1, vg2);
-        gradient = iaTest - anodeCurrent(va - 1.0, vg1, vg2);
+        iaTest = anodeCurrent(va, vg1, vg2, secondaryEmission);
+        gradient = 100.0 * (iaTest - anodeCurrent(va - 0.01, vg1, vg2, secondaryEmission));
         iaErr = ia - iaTest;
     }
 
     return va;
 }
 
-double Model::screenCurrent(double va, double vg1, double vg2)
+double Model::screenCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     return 0.0;
 }

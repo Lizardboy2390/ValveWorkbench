@@ -49,7 +49,7 @@ double CohenHelieTriode::triodeAnodeCurrent(double va, double vg1)
                              parameter[PAR_MU]->getValue());
 }
 
-double CohenHelieTriode::anodeCurrent(double va, double vg1, double vg2)
+double CohenHelieTriode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     return triodeAnodeCurrent(va, vg1);
 }
@@ -63,22 +63,14 @@ void CohenHelieTriode::fromJson(QJsonObject source)
     }
 }
 
-void CohenHelieTriode::toJson(QJsonObject &destination, double vg1Max, double vg2Max)
+void CohenHelieTriode::toJson(QJsonObject &model)
 {
-    QJsonObject model;
-    model["kg"] = parameter[PAR_KG1]->getValue();
-    model["mu"] = parameter[PAR_MU]->getValue();
-    model["x"] = parameter[PAR_X]->getValue();
-    model["vct"] = parameter[PAR_VCT]->getValue();
-    model["kp"] = parameter[PAR_KP]->getValue();
-    model["kvb"] = parameter[PAR_KVB]->getValue();
+    KorenTriode::toJson(model);
+
     model["kvb1"] = parameter[PAR_KVB1]->getValue();
 
-    QJsonObject triode;
-    triode["vg1Max"] = vg1Max;
-    triode["cohenHelie"] = model;
-
-    destination["triode"] = triode;
+    model["device"] = "triode";
+    model["type"] = "cohenHelie";
 }
 
 void CohenHelieTriode::updateUI(QLabel *labels[], QLineEdit *values[])
@@ -109,7 +101,7 @@ void CohenHelieTriode::updateProperties(QTableWidget *properties)
     clearProperties(properties);
 
     addProperty(properties, "Mu", QString("%1").arg(parameter[PAR_MU]->getValue()));
-    addProperty(properties, "Kg1", QString("%1").arg(parameter[PAR_KG1]->getValue()));
+    addProperty(properties, "Kg1", QString("%1").arg(parameter[PAR_KG1]->getValue() * 1000.0));
     addProperty(properties, "X", QString("%1").arg(parameter[PAR_X]->getValue()));
     addProperty(properties, "Kp", QString("%1").arg(parameter[PAR_KP]->getValue()));
     addProperty(properties, "Kvb", QString("%1").arg(parameter[PAR_KVB]->getValue()));

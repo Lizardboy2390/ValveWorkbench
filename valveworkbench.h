@@ -58,8 +58,6 @@ private slots:
 
     void on_stdDeviceSelection_currentIndexChanged(int index);
 
-    void on_stdModelSelection_currentIndexChanged(int index);
-
     void on_circuitSelection_currentIndexChanged(int index);
 
     void on_cir1Value_editingFinished();
@@ -130,8 +128,6 @@ private slots:
 
     void on_measureCheck_stateChanged(int arg1);
 
-    void on_estCheck_stateChanged(int arg1);
-
     void on_modelCheck_stateChanged(int arg1);
 
     void on_properties_itemChanged(QTableWidgetItem *item);
@@ -144,12 +140,24 @@ private slots:
 
     void on_compareButton_clicked();
 
+    void on_cir8Value_editingFinished();
+
+    void on_cir9Value_editingFinished();
+
+    void on_cir10Value_editingFinished();
+
+    void on_cir11Value_editingFinished();
+
+    void on_cir12Value_editingFinished();
+
+    void on_actionExport_Model_triggered();
+
 private:
     Ui::ValveWorkbench *ui;
 
     // UI related member variables
-    QLineEdit *circuitValues[8];
-    QLabel *circuitLabels[8];
+    QLineEdit *circuitValues[16];
+    QLabel *circuitLabels[16];
 
     Plot plot;
     QGraphicsItemGroup *modelPlot = nullptr;
@@ -226,11 +234,13 @@ private:
 
     void readConfig(QString filename);
 
+    void loadDevices();
+
     //void buildModelSelection();
     void buildCircuitParameters();
     void buildCircuitSelection();
-    void buildStdDeviceSelection();
-    void selectStdDevice(int device);
+    void buildStdDeviceSelection(QComboBox *selection, int type);
+    void selectStdDevice(int index, int device);
     void selectStdModel(int model);
     void selectDevice(int deviceType);
     void selectModel(int modelType);

@@ -144,7 +144,7 @@ private:
     const double ig2_;
 };
 
-double GardinerPentode::anodeCurrent(double va, double vg1, double vg2)
+double GardinerPentode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     double epk = cohenHelieEpk(vg2, vg1);
     double k = 1.0 / parameter[PAR_KG1]->getValue() - 1.0 / parameter[PAR_KG2]->getValue();
@@ -156,25 +156,25 @@ double GardinerPentode::anodeCurrent(double va, double vg1, double vg2)
     double psec = parameter[PAR_S]->getValue() * va * (1.0 + tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
     double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG2]->getValue()) + parameter[PAR_OS]->getValue() * vg2;
 
-    if(preferences->useSecondaryEmission()) {
+    if(secondaryEmission) {
         ia = ia - epk * psec / parameter[PAR_KG2]->getValue();
     }
 
     return ia;
 }
 
-double GardinerPentode::screenCurrent(double va, double vg1, double vg2)
+double GardinerPentode::screenCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     double epk = cohenHelieEpk(vg2, vg1);
     double shift = parameter[PAR_RHO]->getValue() * (1.0 - parameter[PAR_TAU]->getValue() * vg1);
     double h = exp(-pow(shift * va, parameter[PAR_THETA]->getValue() * 0.9));
     double vco = vg2 / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
     double psec = parameter[PAR_S]->getValue() * va * (1.0 + tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
-    double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG3]->getValue() - epk * parameter[PAR_A]->getValue() * va / parameter[PAR_KG3]->getValue();
+    double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG2A]->getValue() - epk * parameter[PAR_A]->getValue() * va / parameter[PAR_KG2A]->getValue();
     //double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG3]->getValue();
 
-    if(preferences->useSecondaryEmission()) {
-        ig2 = ig2 + epk * psec / parameter[PAR_KG3]->getValue();
+    if(secondaryEmission) {
+        ig2 = ig2 + epk * psec / parameter[PAR_KG2A]->getValue();
     }
 
     return ig2;
@@ -234,7 +234,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
             parameter[PAR_VCT]->getPointer(),
             parameter[PAR_X]->getPointer(),
             parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG3]->getPointer(),
+            parameter[PAR_KG2A]->getPointer(),
             parameter[PAR_A]->getPointer(),
             parameter[PAR_TAU]->getPointer(),
             parameter[PAR_RHO]->getPointer(),
@@ -297,7 +297,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
             parameter[PAR_VCT]->getPointer(),
             parameter[PAR_X]->getPointer(),
             parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG3]->getPointer(),
+            parameter[PAR_KG2A]->getPointer(),
             parameter[PAR_A]->getPointer(),
             parameter[PAR_TAU]->getPointer(),
             parameter[PAR_RHO]->getPointer(),
@@ -313,12 +313,99 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
 
 void GardinerPentode::fromJson(QJsonObject source)
 {
+    CohenHelieTriode::fromJson(source);
+    
+    if (source.contains("kg2") && source["kg2"].isDouble()) {
+        parameter[PAR_KG2]->setValue(source["kg2"].toDouble() / 1000.0);
+    }
+    
+    if (source.contains("a") && source["a"].isDouble()) {
+        parameter[PAR_A]->setValue(source["a"].toDouble());
+    }
+    
+    if (source.contains("alpha") && source["alpha"].isDouble()) {
+        parameter[PAR_ALPHA]->setValue(source["alpha"].toDouble());
+    }
+    
+    if (source.contains("beta") && source["beta"].isDouble()) {
+        parameter[PAR_BETA]->setValue(source["beta"].toDouble());
+    }
+    
+    if (source.contains("gamma") && source["gamma"].isDouble()) {
+        parameter[PAR_GAMMA]->setValue(source["gamma"].toDouble());
+    }
+    
+    if (source.contains("kg2a") && source["kg2a"].isDouble()) {
+        parameter[PAR_KG2A]->setValue(source["kg2a"].toDouble() / 1000.0);
+    }
+    
+    if (source.contains("tau") && source["tau"].isDouble()) {
+        parameter[PAR_TAU]->setValue(source["tau"].toDouble());
+    }
+    
+    if (source.contains("rho") && source["rho"].isDouble()) {
+        parameter[PAR_RHO]->setValue(source["rho"].toDouble());
+    }
+    
+    if (source.contains("theta") && source["theta"].isDouble()) {
+        parameter[PAR_THETA]->setValue(source["theta"].toDouble());
+    }
+    
+    if (source.contains("psi") && source["psi"].isDouble()) {
+        parameter[PAR_PSI]->setValue(source["psi"].toDouble());
+    }
+    
+    if (source.contains("omega") && source["omega"].isDouble()) {
+        parameter[PAR_OMEGA]->setValue(source["omega"].toDouble());
+    }
+    
+    if (source.contains("lambda") && source["lambda"].isDouble()) {
+        parameter[PAR_LAMBDA]->setValue(source["lambda"].toDouble());
+    }
+    
+    if (source.contains("nu") && source["nu"].isDouble()) {
+        parameter[PAR_NU]->setValue(source["nu"].toDouble());
+    }
+    
+    if (source.contains("s") && source["s"].isDouble()) {
+        parameter[PAR_S]->setValue(source["s"].toDouble());
+    }
 
+    if (source.contains("ap") && source["ap"].isDouble()) {
+        parameter[PAR_AP]->setValue(source["ap"].toDouble());
+    }
+
+    if (source.contains("os") && source["os"].isDouble()) {
+        parameter[PAR_OS]->setValue(source["os"].toDouble());
+    }
 }
 
-void GardinerPentode::toJson(QJsonObject &destination, double vg1Max, double vg2Max)
+void GardinerPentode::toJson(QJsonObject &model)
 {
+    CohenHelieTriode::toJson(model);
 
+    model["kg2"] = parameter[PAR_KG2]->getValue() * 1000.0;
+    model["a"] = parameter[PAR_A]->getValue();
+    model["alpha"] = parameter[PAR_ALPHA]->getValue();
+    model["beta"] = parameter[PAR_BETA]->getValue();
+    model["gamma"] = parameter[PAR_GAMMA]->getValue();
+
+    model["kg2a"] = parameter[PAR_KG2A]->getValue() * 1000.0;
+    model["tau"] = parameter[PAR_TAU]->getValue();
+    model["rho"] = parameter[PAR_RHO]->getValue();
+    model["theta"] = parameter[PAR_THETA]->getValue();
+    model["psi"] = parameter[PAR_PSI]->getValue();
+
+    model["omega"] = parameter[PAR_OMEGA]->getValue();
+    model["lambda"] = parameter[PAR_LAMBDA]->getValue();
+    model["nu"] = parameter[PAR_NU]->getValue();
+    model["s"] = parameter[PAR_S]->getValue();
+    model["ap"] = parameter[PAR_AP]->getValue();
+
+    model["os"] = parameter[PAR_OS]->getValue();
+
+    model["device"] = "pentode";
+    model["type"] = "gardiner";
 }
 
 void GardinerPentode::updateUI(QLabel *labels[], QLineEdit *values[])
@@ -334,7 +421,7 @@ void GardinerPentode::updateUI(QLabel *labels[], QLineEdit *values[])
     updateParameter(labels[i], values[i], parameter[PAR_VCT]); i++;
 
     updateParameter(labels[i], values[i], parameter[PAR_KG2]); i++;
-    updateParameter(labels[i], values[i], parameter[PAR_KG3]); i++;
+    updateParameter(labels[i], values[i], parameter[PAR_KG2A]); i++;
     updateParameter(labels[i], values[i], parameter[PAR_A]); i++;
     updateParameter(labels[i], values[i], parameter[PAR_ALPHA]); i++;
     updateParameter(labels[i], values[i], parameter[PAR_BETA]); i++;
@@ -370,21 +457,20 @@ void GardinerPentode::updateProperties(QTableWidget *properties)
     clearProperties(properties);
 
     addProperty(properties, "Mu", QString("%1").arg(parameter[PAR_MU]->getValue()));
-    addProperty(properties, "Kg1", QString("%1").arg(parameter[PAR_KG1]->getValue()));
+    addProperty(properties, "Kg1", QString("%1").arg(parameter[PAR_KG1]->getValue() * 1000.0));
     addProperty(properties, "X", QString("%1").arg(parameter[PAR_X]->getValue()));
     addProperty(properties, "Kp", QString("%1").arg(parameter[PAR_KP]->getValue()));
     addProperty(properties, "Kvb", QString("%1").arg(parameter[PAR_KVB]->getValue()));
     addProperty(properties, "Kvb1", QString("%1").arg(parameter[PAR_KVB1]->getValue()));
     addProperty(properties, "vct", QString("%1").arg(parameter[PAR_VCT]->getValue()));
 
-    addProperty(properties, "Kg2", QString("%1").arg(parameter[PAR_KG2]->getValue()));
-    addProperty(properties, "Kg3", QString("%1").arg(parameter[PAR_KG3]->getValue()));
+    addProperty(properties, "Kg2", QString("%1").arg(parameter[PAR_KG2]->getValue() * 1000.0));
     addProperty(properties, "A", QString("%1").arg(parameter[PAR_A]->getValue()));
     addProperty(properties, "alpha", QString("%1").arg(parameter[PAR_ALPHA]->getValue()));
     addProperty(properties, "beta", QString("%1").arg(parameter[PAR_BETA]->getValue()));
     addProperty(properties, "gamma", QString("%1").arg(parameter[PAR_GAMMA]->getValue()));
-    addProperty(properties, "os", QString("%1").arg(parameter[PAR_OS]->getValue()));
 
+    addProperty(properties, "Kg2a", QString("%1").arg(parameter[PAR_KG2A]->getValue() * 1000.0));
     addProperty(properties, "tau", QString("%1").arg(parameter[PAR_TAU]->getValue()));
     addProperty(properties, "rho", QString("%1").arg(parameter[PAR_RHO]->getValue()));
     addProperty(properties, "theta", QString("%1").arg(parameter[PAR_THETA]->getValue()));
@@ -397,6 +483,8 @@ void GardinerPentode::updateProperties(QTableWidget *properties)
         addProperty(properties, "S", QString("%1").arg(parameter[PAR_S]->getValue()));
         addProperty(properties, "Ap", QString("%1").arg(parameter[PAR_AP]->getValue()));
     }
+
+    addProperty(properties, "os", QString("%1").arg(parameter[PAR_OS]->getValue()));
 }
 
 void GardinerPentode::setOptions()
@@ -427,7 +515,7 @@ void GardinerPentode::setOptions()
         anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.00001);
         anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.0);
         anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.0);
-        //anodeProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
 
         if (preferences->useSecondaryEmission()) {
             anodeProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 2.0 * parameter[PAR_MU]->getValue());
@@ -461,7 +549,7 @@ void GardinerPentode::setOptions()
         parameter[PAR_TAU]->setValue(parameter[PAR_ALPHA]->getValue());
         parameter[PAR_RHO]->setValue(parameter[PAR_BETA]->getValue());
         parameter[PAR_THETA]->setValue(parameter[PAR_GAMMA]->getValue());
-        parameter[PAR_KG3]->setValue(parameter[PAR_KG2]->getValue());
+        parameter[PAR_KG2A]->setValue(parameter[PAR_KG2]->getValue());
 
         //screenProblem.SetParameterBlockConstant(parameter[PAR_KG2]->getPointer());
         screenProblem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());

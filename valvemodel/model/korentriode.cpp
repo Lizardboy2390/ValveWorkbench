@@ -40,7 +40,7 @@ double KorenTriode::triodeAnodeCurrent(double va, double vg1)
     return anodeCurrent(va, vg1);
 }
 
-double KorenTriode::anodeCurrent(double va, double vg1, double vg2)
+double KorenTriode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     return korenCurrent(va, vg1,
         parameter[PAR_KP]->getValue(),
@@ -63,21 +63,15 @@ void KorenTriode::fromJson(QJsonObject source)
     }
 }
 
-void KorenTriode::toJson(QJsonObject &destination, double vg1Max, double vg2Max)
+void KorenTriode::toJson(QJsonObject &model)
 {
-    QJsonObject model;
-    model["kg"] = parameter[PAR_KG1]->getValue();
-    model["mu"] = parameter[PAR_MU]->getValue();
-    model["alpha"] = parameter[PAR_X]->getValue();
-    model["vct"] = parameter[PAR_VCT]->getValue();
+    SimpleTriode::toJson(model);
+
     model["kp"] = parameter[PAR_KP]->getValue();
     model["kvb"] = parameter[PAR_KVB]->getValue();
 
-    QJsonObject triode;
-    triode["vg1Max"] = vg1Max;
-    triode["koren"] = model;
-
-    destination["triode"] = triode;
+    model["device"] = "triode";
+    model["type"] = "koren";
 }
 
 void KorenTriode::updateUI(QLabel *labels[], QLineEdit *values[])
