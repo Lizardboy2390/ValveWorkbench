@@ -5,9 +5,20 @@ QRegularExpression *Analyser::sampleMatcher = new QRegularExpression(R"(^OK: Mod
 QRegularExpression *Analyser::sampleMatcher2 = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
 QRegularExpression *Analyser::getMatcher = new QRegularExpression(R"(^OK: Get\((\d+)\) = (\d+))");
 QRegularExpression *Analyser::infoMatcher = new QRegularExpression(R"(^OK: Info\((\d+)\) = (.*)\r)");
+QRegularExpression *Analyser::arduinoMatcher = new QRegularExpression(R"(^(-?\d+\.?\d*),\s*(\d+\.?\d*),\s*(\d+\.?\d*),\s*(-?\d+\.?\d*),\s*(\d+\.?\d*),\s*(\d+\.?\d*))");
 
 Analyser::Analyser(Client *client_, QSerialPort *port, QTimer *timeout, QTimer *heater) : client(client_), serialPort(port), timeoutTimer(timeout), heaterTimer(heater)
 {
+    // Initialize calibration values to 1.0 (unity gain)
+    heaterVoltageCalibration = 1.0;
+    anodeVoltageCalibration = 1.0;
+    screenVoltageCalibration = 1.0;
+    gridVoltageCalibration = 1.0;
+    
+    heaterCurrentCalibration = 1.0;
+    anodeCurrentCalibration = 1.0;
+    screenCurrentCalibration = 1.0;
+    
     heaterTimer->start(2000); // waits for 2s before starting to poll the measured heater values
 
     //sendCommand("I0"); // Get the hardware version of the board
@@ -49,6 +60,35 @@ Sample *Analyser::createSample(QString response)
     return new Sample(vg1, va, ia, vg2, ig2, vh, ih);
 }
 
+Sample *Analyser::createArduinoSample(QString response)
+{
+    QRegularExpressionMatch match = arduinoMatcher->match(response);
+    
+    if (!match.hasMatch()) {
+        qInfo("Failed to parse Arduino response: %s", response.toStdString().c_str());
+        return nullptr;
+    }
+    
+    // Arduino format: -vg1, va, ia, -vg2, ig2, vh
+    double vg1 = match.captured(1).toDouble(); // Grid voltage (negative)
+    double va = match.captured(2).toDouble();  // Anode voltage
+    double ia = match.captured(3).toDouble();  // Anode current in mA
+    double vg2 = match.captured(4).toDouble(); // Screen grid voltage (negative)
+    double ig2 = match.captured(5).toDouble(); // Screen grid current in mA
+    double vh = match.captured(6).toDouble();  // Heater voltage
+    double ih = 0.0; // Arduino doesn't provide heater current
+    
+    if (ia > measuredIaMax) {
+        measuredIaMax = ia;
+    }
+    
+    if (ig2 > measuredIg2Max) {
+        measuredIg2Max = ig2;
+    }
+    
+    return new Sample(vg1, va, ia, vg2, ig2, vh, ih);
+}
+
 int Analyser::convertTargetVoltage(int electrode, double voltage)
 {
     int value = 0;
@@ -78,13 +118,19 @@ double Analyser::convertMeasuredVoltage(int electrode, int voltage)
     switch (electrode) {
     case HEATER:
         value = (((double) voltage) / 1023 / 470 * 3770 * vRefSlave);
+        value *= heaterVoltageCalibration;
         break;
     case ANODE:
+        value = (((double) voltage) / 1023 / 9400 * 1419400 * vRefMaster);
+        value *= anodeVoltageCalibration;
+        break;
     case SCREEN:
         value = (((double) voltage) / 1023 / 9400 * 1419400 * vRefMaster);
+        value *= screenVoltageCalibration;
         break;
     case GRID:
         value = -(((double) voltage) / 4095 * 16.5 * vRefMaster);
+        value *= gridVoltageCalibration;
         break;
     default:
         break;
@@ -101,8 +147,20 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
     case HEATER:
         value = (((double) current) / 1023 / 0.22 * vRefSlave);
         value += 0.045; // apparent 45mA offset (i.e. 0.011v across R sense)
+        value *= heaterCurrentCalibration;
         break;
     case ANODE:
+        if (isMega && currentHi < 1023) { // We haven't saturated the ADC
+            value = ((double) currentHi) * vRefMaster / 1023 / 8.0 / 33.333333;
+        } else if (current < 1000) { // We haven't saturated the ADC
+                                     // (slight safety factor as the voltage at saturation is 2.048v
+                                     // and this could be close to onset of diode conduction)
+            value = ((double) current) * vRefMaster / 1023 / 2.0 / 33.333333;
+        } else {
+            value = ((double) currentLo) * vRefMaster / 1023 / 2.0 / 3.333333;
+        }
+        value *= anodeCurrentCalibration;
+        break;
     case SCREEN:
         if (isMega && currentHi < 1023) { // We haven't saturated the ADC
             value = ((double) currentHi) * vRefMaster / 1023 / 8.0 / 33.333333;
@@ -113,12 +171,7 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
         } else {
             value = ((double) currentLo) * vRefMaster / 1023 / 2.0 / 3.333333;
         }
-        /*voltageHi = ((double) current) / 1023 / 2.0 * vRefMaster;
-        if (voltageHi < 1.9) {
-            value = voltageHi / 33.333333;
-        } else {
-            value = (((double) currentLo) / 1023 / 2.0 * vRefMaster / 3.333333);
-        }*/
+        value *= screenCurrentCalibration;
         break;
     case GRID:
         break;
@@ -269,6 +322,14 @@ void Analyser::startTest()
         } else { // Anode swept, Grid stepped
             sendCommand("S7 0");
         }
+        
+        // Check if stepParameter has elements before accessing
+        if (stepParameter.isEmpty()) {
+            qInfo("Error: stepParameter list is empty. Cannot start test.");
+            isTestRunning = false;
+            return;
+        }
+        
         sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
 
         nextSample();
@@ -308,6 +369,14 @@ void Analyser::startTest()
 
             sendCommand("S7 0");
         }
+        
+        // Check if stepParameter has elements before accessing
+        if (stepParameter.isEmpty()) {
+            qInfo("Error: stepParameter list is empty. Cannot start test.");
+            isTestRunning = false;
+            return;
+        }
+        
         sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
 
         nextSample();
@@ -332,6 +401,13 @@ void Analyser::startTest()
 
         sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
 
+        // Check if stepParameter has elements before accessing
+        if (stepParameter.isEmpty()) {
+            qInfo("Error: stepParameter list is empty. Cannot start test.");
+            isTestRunning = false;
+            return;
+        }
+        
         nextSample();
         break;
     default:
@@ -345,6 +421,32 @@ void Analyser::stopTest()
 }
 
 void Analyser::nextSample() {
+    // Safety check for stepIndex
+    if (stepParameter.isEmpty()) {
+        qInfo("Error: stepParameter list is empty in nextSample");
+        abortTest();
+        return;
+    }
+    
+    if (stepIndex >= stepParameter.size()) {
+        qInfo("Error: stepIndex (%d) out of range for stepParameter (size %d)", stepIndex, stepParameter.size());
+        abortTest();
+        return;
+    }
+    
+    // Safety check for sweepParameter
+    if (sweepParameter.isEmpty()) {
+        qInfo("Error: sweepParameter list is empty in nextSample");
+        abortTest();
+        return;
+    }
+    
+    if (stepIndex >= sweepParameter.size()) {
+        qInfo("Error: stepIndex (%d) out of range for sweepParameter (size %d)", stepIndex, sweepParameter.size());
+        abortTest();
+        return;
+    }
+    
     if (!isEndSweep && sweepIndex < sweepParameter.at(stepIndex).length()) {
         // Run the next value in the sweep
         sendCommand(buildSetCommand(sweepCommandPrefix, sweepParameter.at(stepIndex).at(sweepIndex)));
@@ -356,6 +458,13 @@ void Analyser::nextSample() {
         isEndSweep = false;
 
         if (stepIndex < stepParameter.length()) { // There is another sweep to measure
+            // Safety check for stepValue
+            if (stepIndex >= stepValue.size()) {
+                qInfo("Error: stepIndex (%d) out of range for stepValue (size %d)", stepIndex, stepValue.size());
+                abortTest();
+                return;
+            }
+            
             double v1Nominal = stepValue.at(stepIndex);
             double v2Nominal = 0.0;
             if (deviceType == PENTODE) {
@@ -408,17 +517,48 @@ void Analyser::sendCommand(QString command)
 {
     if (awaitingResponse) { // Need to wait for previous command to complete (or timeout) before sending next command
         commandBuffer.append(command);
-
         return;
     }
 
-    qInfo(command.toStdString().c_str());
-
-    QByteArray c = command.toLatin1();
-
+    qInfo("Original command: %s", command.toStdString().c_str());
+    
+    // Translate ValveWorkbench commands to Arduino-compatible commands
+    QString arduinoCommand = command;
+    
+    // Example translations based on common ValveWorkbench commands
+    // S0 - Heater voltage
+    if (command.startsWith("S0")) {
+        int value = command.mid(3).toInt();
+        arduinoCommand = QString("H%1").arg(value);
+    }
+    // S2 - Grid voltage
+    else if (command.startsWith("S2")) {
+        int value = command.mid(3).toInt();
+        arduinoCommand = QString("G%1").arg(value);
+    }
+    // S3 - Anode voltage
+    else if (command.startsWith("S3")) {
+        int value = command.mid(3).toInt();
+        arduinoCommand = QString("A%1").arg(value);
+    }
+    // S7 - Screen voltage
+    else if (command.startsWith("S7")) {
+        int value = command.mid(3).toInt();
+        arduinoCommand = QString("S%1").arg(value);
+    }
+    // M2 - Measure
+    else if (command == "M2") {
+        arduinoCommand = "M";
+    }
+    // Add more command translations as needed
+    
+    qInfo("Translated to Arduino command: %s", arduinoCommand.toStdString().c_str());
+    
+    QByteArray c = arduinoCommand.toLatin1();
+    
     serialPort->write(c);
     serialPort->write("\r\n");
-
+    
     timeoutTimer->start(15000);
     awaitingResponse = true;
 }
@@ -448,8 +588,36 @@ void Analyser::checkResponse(QString response)
         isTestRunning = false;
         return;
     }
-
-    if (response.startsWith("OK: Get")) {
+    
+    // Check for Arduino format (comma-separated values)
+    QRegularExpressionMatch arduinoMatch = arduinoMatcher->match(response);
+    if (arduinoMatch.hasMatch() && isTestRunning) {
+        // Store the measurement using Arduino format
+        Sample *sample = createArduinoSample(response);
+        if (sample) {
+            result->addSample(sample);
+            double va = sample->getVa();
+            double ia = sample->getIa();
+            
+            message = QString {"Anode voltage: %1v"}.arg(va, 6, 'f', 1, '0' );
+            qInfo(message.toStdString().c_str());
+            message = QString {"Anode current: %1mA"}.arg(ia, 6, 'f', 4, '0' );
+            qInfo(message.toStdString().c_str());
+            
+            if (ia > iaMax || (ia * va / 1000.0) > pMax) {
+                isEndSweep = true;
+                qInfo("Ending sweep due to exceeding power threshold");
+            }
+            
+            // Update heater display periodically
+            if (sampleCount++ > 29) {
+                client->updateHeater(sample->getVh(), sample->getIh());
+                sampleCount = 0;
+            }
+            
+            nextSample();
+        }
+    } else if (response.startsWith("OK: Get")) {
         QRegularExpressionMatch match = getMatcher->match(response);
         if (match.lastCapturedIndex() == 2) {
             int variable = match.captured(1).toInt();
@@ -458,12 +626,10 @@ void Analyser::checkResponse(QString response)
             if (variable == VH) {
                 double measuredHeaterVoltage = convertMeasuredVoltage(HEATER, value);
                 aveHeaterVoltage = aveHeaterVoltage * 0.75 + measuredHeaterVoltage;
-                //client->updateHeater(measuredHeaterVoltage, -1.0);
                 client->updateHeater(aveHeaterVoltage / 4.0, -1.0);
             } else if (variable == IH) {
                 double measuredHeaterCurrent = convertMeasuredCurrent(HEATER, value);
                 aveHeaterCurrent = aveHeaterCurrent * 0.75 + measuredHeaterCurrent;
-                //client->updateHeater(-1.0, measuredHeaterCurrent);
                 client->updateHeater(-1.0, aveHeaterCurrent / 4.0);
             }
         }
@@ -483,35 +649,9 @@ void Analyser::checkResponse(QString response)
                 swVersion = value;
             }
         }
-    } else if (response.startsWith("OK: Mode(2)")) {
-        if (isTestRunning) {
-            // Store the measurement
-            Sample *sample = createSample(response);
-            result->addSample(sample);
-            double va = sample->getVa();
-            double ia = sample->getIa();
-
-            message = QString {"Anode voltage: %1v"}.arg(va, 6, 'f', 1, '0' );
-            qInfo(message.toStdString().c_str());
-            message = QString {"Anode current: %1mA"}.arg(ia, 6, 'f', 4, '0' );
-            qInfo(message.toStdString().c_str());
-
-            if (ia > iaMax || (ia * va / 1000.0) > pMax) {
-                isEndSweep = true;
-                qInfo("Ending sweep due to exceeding power threshold");
-            }
-
-            // (Ideally) Only update the heater display periodically (i.e. not every sample)
-            // Was previously done at the beginning of a sweep but could do it on a sample counter instead
-            if (sampleCount++ > 29) {
-                client->updateHeater(sample->getVh(), sample->getIh());
-                sampleCount = 0;
-            }
-
-            nextSample();
-        }
-    } else if (!response.startsWith("OK:")) {
-        abortTest();
+    } else {
+        // For any other response, just log it but don't abort
+        qInfo("Unrecognized response format: %s", response.toStdString().c_str());
     }
 
     // At this point, the response has been fully processed, any additional test commands have been queued, so

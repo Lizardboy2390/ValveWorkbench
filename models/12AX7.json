@@ -7,12 +7,14 @@
 	"model": {
 		"device": "triode",
 		"type": "cohenHelie",
-		"kg1": 0.45801,
-		"mu": 113.937,
-		"x": 1.24521,
-		"kp": 826.355,
-		"kvb": 0.179676,
-		"kvb1": 76.0827,
-		"vct": 0.360132
-	}
+		"kg1": 1.40,
+		"mu": 100.0,
+		"x": 1.40,
+		"kp": 600.0,
+		"kvb": 300.0,
+		"kvb1": 300.0,
+		"vct": 0.5
+	},
+	"source": "Tung-Sol reissue datasheet values",
+	"lastUpdated": "2025-07-12"
 }

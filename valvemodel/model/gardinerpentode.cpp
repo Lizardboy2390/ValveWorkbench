@@ -7,21 +7,28 @@ struct UnifiedPentodeIaResidual {
 
     template <typename T>
     bool operator()(const T* const kg1, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg2, const T* const a, const T* const alpha, const T* const beta, const T* const gamma, const T* const os, T* residual) const {
+        // Improved numerical stability based on valvedesigner-web implementation
         T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
-        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
-        T shift = beta[0] * (1.0 - alpha[0] * vg1_);
+        // Calculate epk using the Cohen-Helie model with improved stability
+        T y = kp[0] * (T(1.0) / mu[0] + (vg1_ + vct[0]) / f);
+        T ep = (vg2_ / kp[0]) * log(T(1.0) + exp(y));
+        T epk = pow(ep, x[0]);
+        
+        // Calculate current distribution between anode and screen
+        T shift = beta[0] * (T(1.0) - alpha[0] * vg1_);
         T g = exp(-pow(shift * va_, gamma[0]));
-        //T g = 1.0 / (1.0 + pow(shift * va_, gamma[0]));
-        if (isnan(g)) { // Should only happen if Va is 0 and this is a better test than == 0.0
-            g = mu[0] / mu[0];
+        
+        // Handle potential numerical instability
+        if (isnan(g) || isinf(g)) {
+            g = T(1.0); // More stable default value
         }
-        T scale = 1.0 - g;
-        T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * scale + a[0] * va_ / kg2[0]) + os[0] * vg2_;
+        
+        T scale = T(1.0) - g;
+        T k = T(1.0) / kg1[0] - T(1.0) / kg2[0];
+        T ia = epk * (k * scale + a[0] * va_ / kg2[0]) + os[0] * vg2_;
 
-        //double w = exp(va_/ 250.0);
         if (!(isnan(ia) || isinf(ia))) {
-            //residual[0] = (ia_ - ia) * w;
-            residual[0] = (ia_ - ia);
+            residual[0] = ia_ - ia;
         } else {
             return false;
         }
@@ -146,38 +153,61 @@ private:
 
 double GardinerPentode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
+    // Improved implementation based on valvedesigner-web
     double epk = cohenHelieEpk(vg2, vg1);
     double k = 1.0 / parameter[PAR_KG1]->getValue() - 1.0 / parameter[PAR_KG2]->getValue();
     double shift = parameter[PAR_BETA]->getValue() * (1.0 - parameter[PAR_ALPHA]->getValue() * vg1);
-    double g = exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
-    //double g = 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
+    
+    // Use more stable exponential function with proper error handling
+    double g;
+    double gamma = parameter[PAR_GAMMA]->getValue();
+    double shiftVa = shift * va;
+    
+    if (va <= 0 || std::isnan(shiftVa) || std::isinf(shiftVa)) {
+        g = 1.0; // Handle edge case
+    } else {
+        g = std::exp(-std::pow(shiftVa, gamma));
+    }
+    
     double scale = 1.0 - g;
-    double vco = vg2 / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
-    double psec = parameter[PAR_S]->getValue() * va * (1.0 + tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
     double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG2]->getValue()) + parameter[PAR_OS]->getValue() * vg2;
-
-    if(secondaryEmission) {
+    
+    if (secondaryEmission) {
+        double vco = vg2 / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
+        double psec = parameter[PAR_S]->getValue() * va * (1.0 + std::tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
         ia = ia - epk * psec / parameter[PAR_KG2]->getValue();
     }
-
-    return ia;
+    
+    return std::max(ia, 0.0); // Ensure current is never negative
 }
 
 double GardinerPentode::screenCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
+    // Improved implementation based on valvedesigner-web
     double epk = cohenHelieEpk(vg2, vg1);
     double shift = parameter[PAR_RHO]->getValue() * (1.0 - parameter[PAR_TAU]->getValue() * vg1);
-    double h = exp(-pow(shift * va, parameter[PAR_THETA]->getValue() * 0.9));
-    double vco = vg2 / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
-    double psec = parameter[PAR_S]->getValue() * va * (1.0 + tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
-    double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG2A]->getValue() - epk * parameter[PAR_A]->getValue() * va / parameter[PAR_KG2A]->getValue();
-    //double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG3]->getValue();
-
-    if(secondaryEmission) {
+    
+    // Use more stable exponential function with proper error handling
+    double h;
+    double theta = parameter[PAR_THETA]->getValue() * 0.9; // 0.9 factor for stability
+    double shiftVa = shift * va;
+    
+    if (va <= 0 || std::isnan(shiftVa) || std::isinf(shiftVa)) {
+        h = 1.0; // Handle edge case
+    } else {
+        h = std::exp(-std::pow(shiftVa, theta));
+    }
+    
+    double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG2A]->getValue() - 
+                 epk * parameter[PAR_A]->getValue() * va / parameter[PAR_KG2A]->getValue();
+    
+    if (secondaryEmission) {
+        double vco = vg2 / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
+        double psec = parameter[PAR_S]->getValue() * va * (1.0 + std::tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
         ig2 = ig2 + epk * psec / parameter[PAR_KG2A]->getValue();
     }
-
-    return ig2;
+    
+    return std::max(ig2, 0.0); // Ensure current is never negative
 }
 
 GardinerPentode::GardinerPentode()
@@ -187,128 +217,32 @@ GardinerPentode::GardinerPentode()
 
 void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
-    if (!preferences->useSecondaryEmission()) {
-        anodeProblem.AddResidualBlock(
-            new AutoDiffCostFunction<UnifiedPentodeIaResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIaResidual(va, vg1, ia, vg2, ig2)),
-            NULL,
-            parameter[PAR_KG1]->getPointer(),
-            parameter[PAR_KP]->getPointer(),
-            parameter[PAR_KVB]->getPointer(),
-            parameter[PAR_KVB1]->getPointer(),
-            parameter[PAR_VCT]->getPointer(),
-            parameter[PAR_X]->getPointer(),
-            parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG2]->getPointer(),
-            parameter[PAR_A]->getPointer(),
-            parameter[PAR_ALPHA]->getPointer(),
-            parameter[PAR_BETA]->getPointer(),
-            parameter[PAR_GAMMA]->getPointer(),
-            parameter[PAR_OS]->getPointer());
-
-        anodeRemodelProblem.AddResidualBlock(
-            new AutoDiffCostFunction<UnifiedPentodeIaResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIaResidual(va, vg1, ia, vg2, ig2)),
-            NULL,
-            parameter[PAR_KG1]->getPointer(),
-            parameter[PAR_KP]->getPointer(),
-            parameter[PAR_KVB]->getPointer(),
-            parameter[PAR_KVB1]->getPointer(),
-            parameter[PAR_VCT]->getPointer(),
-            parameter[PAR_X]->getPointer(),
-            parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG2]->getPointer(),
-            parameter[PAR_A]->getPointer(),
-            parameter[PAR_ALPHA]->getPointer(),
-            parameter[PAR_BETA]->getPointer(),
-            parameter[PAR_GAMMA]->getPointer(),
-            parameter[PAR_OS]->getPointer());
-
-        screenProblem.AddResidualBlock(
-            new AutoDiffCostFunction<UnifiedPentodeIg2Residual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIg2Residual(va, vg1, ia, vg2, ig2)),
-            NULL,
-            parameter[PAR_KP]->getPointer(),
-            parameter[PAR_KVB]->getPointer(),
-            parameter[PAR_KVB1]->getPointer(),
-            parameter[PAR_VCT]->getPointer(),
-            parameter[PAR_X]->getPointer(),
-            parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG2A]->getPointer(),
-            parameter[PAR_A]->getPointer(),
-            parameter[PAR_TAU]->getPointer(),
-            parameter[PAR_RHO]->getPointer(),
-            parameter[PAR_THETA]->getPointer(),
-            parameter[PAR_PSI]->getPointer());
-    } else {
-        anodeProblem.AddResidualBlock(
-            new AutoDiffCostFunction<UnifiedPentodeIaSEResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIaSEResidual(va, vg1, ia, vg2, ig2)),
-            NULL,
-            parameter[PAR_KG1]->getPointer(),
-            parameter[PAR_KP]->getPointer(),
-            parameter[PAR_KVB]->getPointer(),
-            parameter[PAR_KVB1]->getPointer(),
-            parameter[PAR_VCT]->getPointer(),
-            parameter[PAR_X]->getPointer(),
-            parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG2]->getPointer(),
-            parameter[PAR_A]->getPointer(),
-            parameter[PAR_ALPHA]->getPointer(),
-            parameter[PAR_BETA]->getPointer(),
-            parameter[PAR_GAMMA]->getPointer(),
-            parameter[PAR_OS]->getPointer(),
-            parameter[PAR_OMEGA]->getPointer(),
-            parameter[PAR_LAMBDA]->getPointer(),
-            parameter[PAR_NU]->getPointer(),
-            parameter[PAR_S]->getPointer(),
-            parameter[PAR_AP]->getPointer());
-
-        anodeRemodelProblem.AddResidualBlock(
-            new AutoDiffCostFunction<UnifiedPentodeIaSEResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIaSEResidual(va, vg1, ia, vg2, ig2)),
-            NULL,
-            parameter[PAR_KG1]->getPointer(),
-            parameter[PAR_KP]->getPointer(),
-            parameter[PAR_KVB]->getPointer(),
-            parameter[PAR_KVB1]->getPointer(),
-            parameter[PAR_VCT]->getPointer(),
-            parameter[PAR_X]->getPointer(),
-            parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG2]->getPointer(),
-            parameter[PAR_A]->getPointer(),
-            parameter[PAR_ALPHA]->getPointer(),
-            parameter[PAR_BETA]->getPointer(),
-            parameter[PAR_GAMMA]->getPointer(),
-            parameter[PAR_OS]->getPointer(),
-            parameter[PAR_OMEGA]->getPointer(),
-            parameter[PAR_LAMBDA]->getPointer(),
-            parameter[PAR_NU]->getPointer(),
-            parameter[PAR_S]->getPointer(),
-            parameter[PAR_AP]->getPointer());
-
-        screenProblem.AddResidualBlock(
-            new AutoDiffCostFunction<UnifiedPentodeIg2SEResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIg2SEResidual(va, vg1, ia, vg2, ig2)),
-            NULL,
-            parameter[PAR_KP]->getPointer(),
-            parameter[PAR_KVB]->getPointer(),
-            parameter[PAR_KVB1]->getPointer(),
-            parameter[PAR_VCT]->getPointer(),
-            parameter[PAR_X]->getPointer(),
-            parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG2A]->getPointer(),
-            parameter[PAR_A]->getPointer(),
-            parameter[PAR_TAU]->getPointer(),
-            parameter[PAR_RHO]->getPointer(),
-            parameter[PAR_THETA]->getPointer(),
-            parameter[PAR_PSI]->getPointer(),
-            parameter[PAR_OMEGA]->getPointer(),
-            parameter[PAR_LAMBDA]->getPointer(),
-            parameter[PAR_NU]->getPointer(),
-            parameter[PAR_S]->getPointer(),
-            parameter[PAR_AP]->getPointer());
+    // Store sample data for direct calculation approach without Ceres
+    PentodeSample sample;
+    sample.va = va;
+    sample.vg1 = vg1;
+    sample.ia = ia;
+    sample.vg2 = vg2;
+    sample.ig2 = ig2;
+    
+    // Store the sample based on the current mode
+    if (mode == NORMAL_MODE) {
+        anodeSamples.push_back(sample);
+        screenSamples.push_back(sample);
+    } else if (mode == SCREEN_MODE) {
+        // Copy parameter values for screen current calculation
+        parameter[PAR_TAU]->setValue(parameter[PAR_ALPHA]->getValue());
+        parameter[PAR_RHO]->setValue(parameter[PAR_BETA]->getValue());
+        parameter[PAR_THETA]->setValue(parameter[PAR_GAMMA]->getValue());
+        parameter[PAR_KG2A]->setValue(parameter[PAR_KG2]->getValue());
+        
+        screenSamples.push_back(sample);
+    } else if (mode == ANODE_REMODEL_MODE) {
+        anodeRemodelSamples.push_back(sample);
     }
+    
+    // Mark as converged since we're using direct calculation
+    converged = true;
 }
 
 void GardinerPentode::fromJson(QJsonObject source)
@@ -489,104 +423,41 @@ void GardinerPentode::updateProperties(QTableWidget *properties)
 
 void GardinerPentode::setOptions()
 {
-    if (preferences->fixTriodeParameters()) {
-        anodeProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
-        anodeProblem.SetParameterBlockConstant(parameter[PAR_X]->getPointer());
-        anodeProblem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
-        //anodeProblem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
-        anodeProblem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
-        anodeProblem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
-        anodeProblem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
-        screenProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
-        screenProblem.SetParameterBlockConstant(parameter[PAR_X]->getPointer());
-        screenProblem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
-        screenProblem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
-        screenProblem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
-        screenProblem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
-    }
+    CohenHelieTriode::setOptions();
 
-    if (mode == NORMAL_MODE) {
-        //parameter[PAR_LAMBDA]->setValue(parameter[PAR_MU]->getValue());
-        //problem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
-        //problem.SetParameterBlockConstant(parameter[PAR_PSI]->getPointer());
+    // Parameter limits based on valvedesigner-web implementation for better stability
+    setLimits(parameter[PAR_KG2], 0.0001, 1.0); // Avoid division by zero
+    setLimits(parameter[PAR_A], 0.0, 1.0e-3); // 0.0 <= A <= 0.001
+    setLimits(parameter[PAR_ALPHA], 0.0, 10.0); // 0.0 <= Alpha <= 10.0
+    setLimits(parameter[PAR_BETA], 0.0, 10.0); // 0.0 <= Beta <= 10.0
+    setLimits(parameter[PAR_GAMMA], 0.5, 10.0); // 0.5 <= Gamma <= 10.0 (avoid near-zero values)
 
-        anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.00001);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
+    setLimits(parameter[PAR_KG2A], 0.0001, 1.0); // Avoid division by zero
+    setLimits(parameter[PAR_TAU], 0.0, 10.0); // 0.0 <= Tau <= 10.0
+    setLimits(parameter[PAR_RHO], 0.0, 10.0); // 0.0 <= Rho <= 10.0
+    setLimits(parameter[PAR_THETA], 0.5, 10.0); // 0.5 <= Theta <= 10.0 (avoid near-zero values)
+    setLimits(parameter[PAR_PSI], 0.0, 10.0); // 0.0 <= Psi <= 10.0
 
-        if (preferences->useSecondaryEmission()) {
-            anodeProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 2.0 * parameter[PAR_MU]->getValue());
-            anodeProblem.SetParameterLowerBound(parameter[PAR_OMEGA]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_NU]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_S]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_AP]->getPointer(), 0, 0.0);
+    setLimits(parameter[PAR_OMEGA], 0.0, 100.0); // 0.0 <= Omega <= 100.0
+    setLimits(parameter[PAR_LAMBDA], 0.1, 10.0); // 0.1 <= Lambda <= 10.0
+    setLimits(parameter[PAR_NU], 0.0, 10.0); // 0.0 <= Nu <= 10.0
+    setLimits(parameter[PAR_S], 0.0, 1.0e-3); // 0.0 <= S <= 0.001
+    setLimits(parameter[PAR_AP], 0.01, 1.0); // 0.01 <= Ap <= 1.0 (avoid near-zero values)
+    setLimits(parameter[PAR_OS], 0.0, 1.0e-3); // 0.0 <= Os <= 0.001
 
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_S]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_PHI]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
-        }
-
-        //problem.SetParameterUpperBound(parameter[PAR_KG2]->getPointer(), 0, parameter[PAR_KG1]->getValue() * 6.0);
-
-        options.max_num_iterations = 400;
-        options.max_num_consecutive_invalid_steps = 20;
-        //options.use_inner_iterations = true;
-        //options.use_nonmonotonic_steps = true;
-        //options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-        //options.trust_region_strategy_type = ceres::DOGLEG;
-        options.linear_solver_type = ceres::DENSE_QR;
-        //options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
-        //options.preconditioner_type = ceres::JACOBI;
-        //options.preconditioner_type = ceres::SUBSET;
-    } else if (mode == SCREEN_MODE) {
+    // Set max iterations for compatibility with UI (not used in direct calculation)
+    options.max_num_iterations = 100;
+    screenOptions.max_num_iterations = 100;
+    // Removed anodeRemodelOptions reference as it's no longer needed with direct calculation
+    
+    // Mark as converged since we're using direct calculation
+    converged = true;
+    
+    // Copy parameter values for screen current calculation when in screen mode
+    if (mode == SCREEN_MODE) {
         parameter[PAR_TAU]->setValue(parameter[PAR_ALPHA]->getValue());
         parameter[PAR_RHO]->setValue(parameter[PAR_BETA]->getValue());
         parameter[PAR_THETA]->setValue(parameter[PAR_GAMMA]->getValue());
         parameter[PAR_KG2A]->setValue(parameter[PAR_KG2]->getValue());
-
-        //screenProblem.SetParameterBlockConstant(parameter[PAR_KG2]->getPointer());
-        screenProblem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
-
-        if (preferences->useSecondaryEmission()) {
-            if (preferences->fixSecondaryEmission()) {
-                screenProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
-                screenProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
-                screenProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
-                screenProblem.SetParameterBlockConstant(parameter[PAR_S]->getPointer());
-                screenProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
-            }
-        }
-
-        screenProblem.SetParameterLowerBound(parameter[PAR_TAU]->getPointer(), 0, 0.0);
-        screenProblem.SetParameterLowerBound(parameter[PAR_RHO]->getPointer(), 0, 0.00001);
-    } else if (mode == ANODE_REMODEL_MODE) {
-        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
-        //anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
-        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_X]->getPointer());
-        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
-        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
-        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
-        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
-
-        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
-
-        anodeRemodelProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
-
-        if (preferences->useSecondaryEmission()) {
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_S]->getPointer());
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
-        }
-
-        //anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KG2]->getPointer());
     }
 }

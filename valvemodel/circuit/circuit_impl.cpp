@@ -11,7 +11,6 @@ extern bool errorflag;
 
 Circuit::Circuit()
 {
-
 }
 
 void Circuit::setParameter(int index, double value)
@@ -53,5 +52,5 @@ bool Circuit::waitSimulationEnd()
         }
     }
 
-    return (completed);
+    return completed;
 }

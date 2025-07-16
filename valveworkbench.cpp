@@ -7,9 +7,10 @@
 
 #include "preferencesdialog.h"
 #include "projectdialog.h"
-#include "comparedialog.h"
+// #include "comparedialog.h" // Temporarily disabled
 
 #include <QMessageBox>
+#include <QCoreApplication>
 
 ValveWorkbench::ValveWorkbench(QWidget *parent)
     : QMainWindow(parent)
@@ -33,7 +34,8 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     screenStep = 0.0;
     screenStop = 0.0;
 
-    readConfig(tr("analyser.json"));
+    // Use absolute path to ensure the config file is found
+    readConfig(QCoreApplication::applicationDirPath() + "/analyser.json");
 
     loadDevices();
 
@@ -46,7 +48,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     loadTemplate(0);
 
-    //buildModelSelection();
+    buildModelSelection();
 
     ui->runButton->setEnabled(false);
 
@@ -157,7 +159,21 @@ void ValveWorkbench::buildCircuitSelection()
 
 void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
 {
-    if (deviceNumber < 0 || ui->circuitSelection->currentData().toInt() < 0) {
+    // Check if device number and circuit selection are valid
+    int circuitIndex = ui->circuitSelection->currentData().toInt();
+    if (deviceNumber < 0 || circuitIndex < 0) {
+        return;
+    }
+    
+    // Check if device index is valid
+    if (deviceNumber >= devices.size()) {
+        qWarning("Invalid device number: %d", deviceNumber);
+        return;
+    }
+    
+    // Check if circuit index is valid
+    if (circuitIndex >= circuits.size()) {
+        qWarning("Invalid circuit index: %d", circuitIndex);
         return;
     }
 
@@ -165,7 +181,7 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     device->anodeAxes(&plot);
     modelPlot = device->anodePlot(&plot);
 
-    Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
+    Circuit *circuit = circuits.at(circuitIndex);
     if (index == 1) {
         circuit->setDevice1(device);
     } else {
@@ -197,8 +213,15 @@ void ValveWorkbench::selectCircuit(int circuitType)
         buildStdDeviceSelection(ui->stdDeviceSelection2, -1);
         return;
     }
+    
+    // Get the circuit index and check if it's valid
+    int circuitIndex = ui->circuitSelection->currentData().toInt();
+    if (circuitIndex < 0 || circuitIndex >= circuits.size()) {
+        qWarning("Invalid circuit index: %d", circuitIndex);
+        return;
+    }
 
-    Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
+    Circuit *circuit = circuits.at(circuitIndex);
     circuit->setDevice1(nullptr);
     circuit->setDevice2(nullptr);
 
@@ -229,8 +252,100 @@ void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)
     }
 }
 
+void ValveWorkbench::buildModelSelection()
+{
+    qDebug("========== Building Model Selection ==========");
+    
+    // Clear both device selection combo boxes
+    ui->stdDeviceSelection->clear();
+    ui->stdDeviceSelection2->clear();
+    
+    // Add default options
+    ui->stdDeviceSelection->addItem("Select...", -1);
+    ui->stdDeviceSelection2->addItem("Select...", -1);
+    
+    // Get the current device type from the UI
+    int uiDeviceType = ui->deviceType->currentData().toInt();
+    qDebug("Current UI device type: %d", uiDeviceType);
+    
+    // Enable/disable combo boxes based on device type
+    bool showDevice1 = true;
+    bool showDevice2 = false;
+    
+    if (uiDeviceType == TRIODE) {
+        // For triodes, we only need Device 1
+        showDevice1 = true;
+        showDevice2 = false;
+    } else if (uiDeviceType == PENTODE) {
+        // For pentodes, we only need Device 1
+        showDevice1 = true;
+        showDevice2 = false;
+    } else if (uiDeviceType == DOUBLE_TRIODE) {
+        // For double triodes, we need both Device 1 and Device 2
+        showDevice1 = true;
+        showDevice2 = true;
+    }
+    
+    ui->stdDeviceSelection->setEnabled(showDevice1);
+    ui->label_4->setEnabled(showDevice1); // Device 1 label
+    
+    ui->stdDeviceSelection2->setEnabled(showDevice2);
+    ui->label_5->setEnabled(showDevice2); // Device 2 label
+    
+    // Debug output to show loaded devices
+    qDebug("Loaded %lld devices", devices.size());
+    
+    int triodeCount = 0;
+    int pentodeCount = 0;
+    
+    // Add devices to the appropriate combo boxes based on their model type
+    for (int i = 0; i < devices.size(); i++) {
+        Device *device = devices.at(i);
+        int modelType = device->getDeviceType();
+        QString name = device->getName();
+        qDebug("Device %d: %s (Model Type: %d)", i, name.toStdString().c_str(), modelType);
+        
+        // Map model types to UI device types
+        if (modelType == MODEL_TRIODE && (uiDeviceType == TRIODE || uiDeviceType == DOUBLE_TRIODE)) {
+            // Add triodes when Triode or Double Triode is selected
+            ui->stdDeviceSelection->addItem(name, i);
+            triodeCount++;
+            qDebug("  Added triode '%s' to Device 1", name.toStdString().c_str());
+            
+            // For double triodes, also add to Device 2
+            if (uiDeviceType == DOUBLE_TRIODE) {
+                ui->stdDeviceSelection2->addItem(name, i);
+                qDebug("  Added triode '%s' to Device 2", name.toStdString().c_str());
+            }
+        } else if (modelType == MODEL_PENTODE && uiDeviceType == PENTODE) {
+            // Add pentodes when Pentode is selected
+            ui->stdDeviceSelection->addItem(name, i);
+            pentodeCount++;
+            qDebug("  Added pentode '%s' to Device 1", name.toStdString().c_str());
+        }
+    }
+    
+    qDebug("Added %d triodes and %d pentodes to combo boxes", triodeCount, pentodeCount);
+    
+    // If no matching devices were loaded, disable the combo boxes
+    if (ui->stdDeviceSelection->count() <= 1) { // Only the "Select..." item
+        ui->stdDeviceSelection->setEnabled(false);
+        qDebug("No matching devices for Device 1, disabled combo box");
+    }
+    if (ui->stdDeviceSelection2->count() <= 1) { // Only the "Select..." item
+        ui->stdDeviceSelection2->setEnabled(false);
+        qDebug("No matching devices for Device 2, disabled combo box");
+    }
+    
+    // Check final state of combo boxes
+    qDebug("stdDeviceSelection has %d items", ui->stdDeviceSelection->count());
+    qDebug("stdDeviceSelection2 has %d items", ui->stdDeviceSelection2->count());
+    qDebug("========== Model Selection Built ==========");
+}
+
 void ValveWorkbench::selectPlot(int plotType)
 {
+    (void)plotType; // Parameter currently unused
     plotModel();
 }
 
@@ -287,7 +402,14 @@ void ValveWorkbench::updateDoubleValue(QLineEdit *input, double value)
 
 void ValveWorkbench::updateCircuitParameter(int index)
 {
-    Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
+    // Get the circuit index and check if it's valid
+    int circuitIndex = ui->circuitSelection->currentData().toInt();
+    if (circuitIndex < 0 || circuitIndex >= circuits.size()) {
+        qWarning("Invalid circuit index: %d", circuitIndex);
+        return;
+    }
+    
+    Circuit *circuit = circuits.at(circuitIndex);
     double value = checkDoubleValue(circuitValues[index], circuit->getParameter(index));
 
     updateDoubleValue(circuitValues[index], value);
@@ -336,38 +458,60 @@ void ValveWorkbench::testAborted()
 
 void ValveWorkbench::checkComPorts() {
     serialPorts = QSerialPortInfo::availablePorts();
+    qInfo("Checking for available serial ports...");
 
     for (const QSerialPortInfo &serialPortInfo : serialPorts) {
+        qInfo("Found port: %s, Vendor ID: 0x%04x, Product ID: 0x%04x", 
+              serialPortInfo.portName().toStdString().c_str(),
+              serialPortInfo.vendorIdentifier(),
+              serialPortInfo.productIdentifier());
+              
         if (serialPortInfo.vendorIdentifier() == 0x1a86 && serialPortInfo.productIdentifier() == 0x7523) {
             port = serialPortInfo.portName();
+            qInfo("Found CH340 USB-Serial adapter on port %s", port.toStdString().c_str());
 
             setSerialPort(port);
             return;
         }
     }
-
+    
+    qInfo("No CH340 USB-Serial adapter found");
     ui->tab_3->setEnabled(false);
 }
 
 void ValveWorkbench::setSerialPort(QString portName)
 {
     if (serialPort.isOpen()) {
+        qInfo("Closing existing serial port connection");
         serialPort.close();
     }
 
     if (portName == "") {
+        qInfo("No port name provided, disabling analyzer tab");
         ui->tab_3->setEnabled(false);
         return;
     }
 
+    qInfo("Setting up serial port %s with baud rate 9600", portName.toStdString().c_str());
     serialPort.setPortName(portName);
     serialPort.setDataBits(QSerialPort::Data8);
     serialPort.setParity(QSerialPort::NoParity);
     serialPort.setStopBits(QSerialPort::OneStop);
-    serialPort.setBaudRate(QSerialPort::Baud115200);
-    serialPort.open(QSerialPort::ReadWrite);
-
-    ui->tab_3->setEnabled(true);
+    serialPort.setBaudRate(QSerialPort::Baud9600);
+    
+    bool opened = serialPort.open(QSerialPort::ReadWrite);
+    if (opened) {
+        qInfo("Serial port %s opened successfully", portName.toStdString().c_str());
+        ui->tab_3->setEnabled(true);
+        ui->runButton->setEnabled(true);
+        qInfo("Analyzer tab and run button enabled");
+    } else {
+        qInfo("Failed to open serial port %s: %s", 
+              portName.toStdString().c_str(), 
+              serialPort.errorString().toStdString().c_str());
+        ui->tab_3->setEnabled(false);
+        ui->runButton->setEnabled(false);
+    }
 }
 
 void ValveWorkbench::saveSamples(QString filename)
@@ -432,43 +576,229 @@ void ValveWorkbench::readConfig(QString filename)
                 }
             }
         }
+        
+        // Load calibration values if they exist
+        if (config.contains("calibration") && config["calibration"].isObject()) {
+            QJsonObject calibration = config["calibration"].toObject();
+            
+            // Load voltage calibration values
+            if (calibration.contains("heaterVoltage"))
+                analyser->setHeaterVoltageCalibration(calibration["heaterVoltage"].toDouble());
+            if (calibration.contains("anodeVoltage"))
+                analyser->setAnodeVoltageCalibration(calibration["anodeVoltage"].toDouble());
+            if (calibration.contains("screenVoltage"))
+                analyser->setScreenVoltageCalibration(calibration["screenVoltage"].toDouble());
+            if (calibration.contains("gridVoltage"))
+                analyser->setGridVoltageCalibration(calibration["gridVoltage"].toDouble());
+            
+            // Load current calibration values
+            if (calibration.contains("heaterCurrent"))
+                analyser->setHeaterCurrentCalibration(calibration["heaterCurrent"].toDouble());
+            if (calibration.contains("anodeCurrent"))
+                analyser->setAnodeCurrentCalibration(calibration["anodeCurrent"].toDouble());
+            if (calibration.contains("screenCurrent"))
+                analyser->setScreenCurrentCalibration(calibration["screenCurrent"].toDouble());
+        }
     }
+}
+
+void ValveWorkbench::saveConfig(QString filename)
+{
+    // Create or update the calibration section in the config
+    QJsonObject calibration;
+    
+    // Store voltage calibration values
+    calibration["heaterVoltage"] = analyser->getHeaterVoltageCalibration();
+    calibration["anodeVoltage"] = analyser->getAnodeVoltageCalibration();
+    calibration["screenVoltage"] = analyser->getScreenVoltageCalibration();
+    calibration["gridVoltage"] = analyser->getGridVoltageCalibration();
+    
+    // Store current calibration values
+    calibration["heaterCurrent"] = analyser->getHeaterCurrentCalibration();
+    calibration["anodeCurrent"] = analyser->getAnodeCurrentCalibration();
+    calibration["screenCurrent"] = analyser->getScreenCurrentCalibration();
+    
+    // Add calibration to the main config
+    config["calibration"] = calibration;
+    
+    // Save the updated config to file
+    QFile configFile(filename);
+    if (!configFile.open(QIODevice::WriteOnly)) {
+        qWarning("Couldn't open config file for writing.");
+        return;
+    }
+    
+    QJsonDocument configDoc(config);
+    configFile.write(configDoc.toJson());
+    configFile.close();
 }
 
 void ValveWorkbench::loadDevices()
 {
-    QString modelPath = tr("../models");
-    QDir modelDir(modelPath);
+    // Try several possible locations for the models directory
+    QString modelPath;
+    QDir modelDir;
+    bool found = false;
+    
+    // Option 1: Direct hardcoded path
+    modelPath = "C:\\Users\\lizar\\Documents\\ValveWorkbench\\models";
+    modelDir.setPath(modelPath);
+    if (modelDir.exists()) {
+        found = true;
+        qDebug("Found models directory at hardcoded path");
+    }
+    
+    // Option 2: Build directory
+    if (!found) {
+        modelPath = QCoreApplication::applicationDirPath() + QDir::separator() + "models";
+        modelDir.setPath(modelPath);
+        if (modelDir.exists()) {
+            found = true;
+            qDebug("Found models directory in build directory");
+        }
+    }
+    
+    // Option 3: Source directory (assuming build is in a subdirectory)
+    if (!found) {
+        modelPath = QCoreApplication::applicationDirPath();
+        QDir appDir(modelPath);
+        appDir.cdUp(); // Go up to build directory
+        appDir.cdUp(); // Go up to source directory
+        modelPath = appDir.absolutePath() + QDir::separator() + "models";
+        modelDir.setPath(modelPath);
+        if (modelDir.exists()) {
+            found = true;
+            qDebug("Found models directory in source directory");
+            
+            // Copy model files from source to build directory for easier access in the future
+            QString buildModelPath = QCoreApplication::applicationDirPath() + QDir::separator() + "models";
+            QDir buildModelDir(buildModelPath);
+            
+            // Create the models directory in the build directory if it doesn't exist
+            if (!buildModelDir.exists()) {
+                QDir buildDir(QCoreApplication::applicationDirPath());
+                if (buildDir.mkdir("models")) {
+                    qDebug("Created models directory in build directory");
+                } else {
+                    qDebug("Failed to create models directory in build directory");
+                }
+            }
+            
+            // Copy all model files from source to build directory
+            QStringList filters;
+            filters << "*.vwm" << "*.json";
+            modelDir.setNameFilters(filters);
+            QStringList modelFiles = modelDir.entryList();
+            
+            for (const QString& file : modelFiles) {
+                QString sourceFile = modelPath + QDir::separator() + file;
+                QString destFile = buildModelPath + QDir::separator() + file;
+                
+                // Only copy if the file doesn't exist or is older than the source
+                QFileInfo sourceInfo(sourceFile);
+                QFileInfo destInfo(destFile);
+                
+                if (!destInfo.exists() || sourceInfo.lastModified() > destInfo.lastModified()) {
+                    if (QFile::copy(sourceFile, destFile)) {
+                        qDebug("Copied model file: %s", file.toStdString().c_str());
+                    } else {
+                        qDebug("Failed to copy model file: %s", file.toStdString().c_str());
+                    }
+                }
+            }
+            
+            // Use the build directory for loading models
+            modelPath = buildModelPath;
+            modelDir.setPath(modelPath);
+        }
+    }
+    
+    qDebug("Looking for model files in: %s", modelPath.toStdString().c_str());
+    qDebug("Directory exists: %s", modelDir.exists() ? "Yes" : "No");
+    
+    // Check if the directory exists
+    if (!modelDir.exists()) {
+        qDebug("ERROR: Models directory does not exist: %s", modelPath.toStdString().c_str());
+        return;
+    }
 
     QStringList filters;
-    filters << "*.vwm";
+    filters << "*.vwm" << "*.json";
     modelDir.setNameFilters(filters);
 
     QStringList models = modelDir.entryList();
+    qDebug("Found %lld model files", models.size());
+    for (int i = 0; i < models.size(); i++) {
+        qDebug("Model file: %s", models.at(i).toStdString().c_str());
+    }
+
+    devices.clear();
 
     for (int i = 0; i < models.size(); i++) {
-        QString modelFileName = modelPath + "/" + models.at(i);
-        QFile modelFile(modelFileName);
-        if (!modelFile.open(QIODevice::ReadOnly)) {
-            qWarning("Couldn't open model file: ", modelFile.fileName().toStdString().c_str());
-        }
-        else {
-            QByteArray modelData = modelFile.readAll();
-            QJsonDocument modelDoc(QJsonDocument::fromJson(modelData));
+        QString modelFile = modelPath + QDir::separator() + models.at(i);
+        qDebug("Loading model file: %s", modelFile.toStdString().c_str());
+        QFile file(modelFile);
 
-            Device *model = new Device(modelDoc);
-            this->devices.append(model);
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray modelData = file.readAll();
+            QJsonDocument modelDoc = QJsonDocument::fromJson(modelData);
+            
+            if (modelDoc.isNull() || !modelDoc.isObject()) {
+                qDebug("ERROR: Invalid JSON in model file: %s", modelFile.toStdString().c_str());
+                continue;
+            }
+            
+            Device *device = new Device(modelDoc);
+            int type = device->getDeviceType();
+            qDebug("Created device: %s (Type: %d)", device->getName().toStdString().c_str(), type);
+            
+            // Check if the device type is valid
+            if (type != MODEL_TRIODE && type != MODEL_PENTODE) {
+                qDebug("WARNING: Invalid device type %d for %s", type, device->getName().toStdString().c_str());
+            }
+            
+            devices.append(device);
+        } else {
+            qDebug("ERROR: Could not open model file: %s", modelFile.toStdString().c_str());
         }
     }
+    
+    qDebug("Total devices loaded: %lld", devices.size());
 }
 
 void ValveWorkbench::loadTemplate(int index)
 {
+    // Check if templates list is empty or index is out of range
+    if (templates.isEmpty() || index >= templates.size()) {
+        // Use default values if no template is available
+        ui->deviceName->setText("Default");
+        heaterVoltage = 6.3;
+        anodeStart = 0.0;
+        anodeStop = 300.0;
+        anodeStep = 10.0;
+        gridStart = 0.0;
+        gridStop = -4.0;
+        gridStep = -0.5;
+        screenStart = 0.0;
+        screenStop = 300.0;
+        screenStep = 50.0;
+        pMax = 1.0;
+        iaMax = 5.0;
+        
+        updateParameterDisplay();
+        
+        // Set device type to Triode by default
+        ui->deviceType->setCurrentIndex(0);
+        on_deviceType_currentIndexChanged(0);
+        
+        // Set test type to Plate Characteristics by default
+        ui->testType->setCurrentIndex(0);
+        on_testType_currentIndexChanged(0);
+        
+        return;
+    }
+    
     Template tpl = templates.at(index);
-
-    ui->deviceName->setText(tpl.getName());
-    heaterVoltage = tpl.getVHeater();
-    anodeStart = tpl.getVaStart();
     anodeStop = tpl.getVaStop();
     anodeStep = tpl.getVaStep();
     gridStart = tpl.getVgStart();
@@ -530,6 +860,7 @@ void ValveWorkbench::pentodeMode()
 
 void ValveWorkbench::triodeMode(bool doubleTriode)
 {
+    (void)doubleTriode; // Parameter currently unused
     updateParameterDisplay();
 
     deviceType = TRIODE;
@@ -664,6 +995,7 @@ void ValveWorkbench::on_stdDeviceSelection_currentIndexChanged(int index)
 
 void ValveWorkbench::on_circuitSelection_currentIndexChanged(int index)
 {
+    (void)index; // Parameter currently unused
     selectCircuit(ui->circuitSelection->currentData().toInt());
 }
 
@@ -744,6 +1076,16 @@ void ValveWorkbench::on_actionPrint_triggered()
 void ValveWorkbench::on_actionOptions_triggered()
 {
     preferencesDialog.setPort(port);
+    
+    // Set current calibration values in the dialog
+    preferencesDialog.setHeaterVoltageCalibration(analyser->getHeaterVoltageCalibration());
+    preferencesDialog.setAnodeVoltageCalibration(analyser->getAnodeVoltageCalibration());
+    preferencesDialog.setScreenVoltageCalibration(analyser->getScreenVoltageCalibration());
+    preferencesDialog.setGridVoltageCalibration(analyser->getGridVoltageCalibration());
+    
+    preferencesDialog.setHeaterCurrentCalibration(analyser->getHeaterCurrentCalibration());
+    preferencesDialog.setAnodeCurrentCalibration(analyser->getAnodeCurrentCalibration());
+    preferencesDialog.setScreenCurrentCalibration(analyser->getScreenCurrentCalibration());
 
     if (preferencesDialog.exec() == 1) {
         setSerialPort(preferencesDialog.getPort());
@@ -751,6 +1093,19 @@ void ValveWorkbench::on_actionOptions_triggered()
         pentodeModelType = preferencesDialog.getPentodeModelType();
 
         samplingType = preferencesDialog.getSamplingType();
+        
+        // Get updated calibration values from the dialog
+        analyser->setHeaterVoltageCalibration(preferencesDialog.getHeaterVoltageCalibration());
+        analyser->setAnodeVoltageCalibration(preferencesDialog.getAnodeVoltageCalibration());
+        analyser->setScreenVoltageCalibration(preferencesDialog.getScreenVoltageCalibration());
+        analyser->setGridVoltageCalibration(preferencesDialog.getGridVoltageCalibration());
+        
+        analyser->setHeaterCurrentCalibration(preferencesDialog.getHeaterCurrentCalibration());
+        analyser->setAnodeCurrentCalibration(preferencesDialog.getAnodeCurrentCalibration());
+        analyser->setScreenCurrentCalibration(preferencesDialog.getScreenCurrentCalibration());
+
+        // Save the updated configuration
+        saveConfig(QCoreApplication::applicationDirPath() + "/analyser.json");
 
         analyser->reset();
     }
@@ -902,8 +1257,7 @@ void ValveWorkbench::on_actionExport_Model_triggered()
 
 void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
-    //ui->estimateButton->setEnabled(false);
-    //ui->fitButton->setEnabled(false);
+    (void)previous; // Parameter currently unused
 
     void *data = current->data(0, Qt::UserRole).value<void *>();
 
@@ -1282,15 +1636,34 @@ void ValveWorkbench::on_heaterButton_clicked()
 {
     heaters = !heaters;
 
+    qInfo("Heater state changed to: %s", heaters ? "ON" : "OFF");
     heaterIndicator->setState(heaters);
     ui->runButton->setEnabled(heaters);
+    
+    // Update heater voltage from the UI
+    heaterVoltage = ui->heaterVoltage->text().toDouble();
+    qInfo("Setting heater voltage to: %f V", heaterVoltage);
+    
     analyser->setHeaterVoltage(heaterVoltage);
     analyser->setIsHeatersOn(heaters);
+    
+    // Log the run button state
+    qInfo("Run button is now %s", ui->runButton->isEnabled() ? "enabled" : "disabled");
 }
 
 void ValveWorkbench::on_runButton_clicked()
 {
+    qInfo("Run button clicked, heaters state: %s", heaters ? "ON" : "OFF");
+    
     if (heaters) {
+        qInfo("Starting test with parameters:");
+        qInfo("  Device type: %d", deviceType);
+        qInfo("  Test type: %d", testType);
+        qInfo("  Anode: start=%f, stop=%f, step=%f", anodeStart, anodeStop, anodeStep);
+        qInfo("  Grid: start=%f, stop=%f, step=%f", gridStart, gridStop, gridStep);
+        qInfo("  Screen: start=%f, stop=%f, step=%f", screenStart, screenStop, screenStep);
+        qInfo("  Max power: %f W, Max anode current: %f mA", pMax, iaMax);
+        
         ui->runButton->setChecked(true);
         ui->progressBar->reset();
         ui->progressBar->setVisible(true);
@@ -1302,8 +1675,11 @@ void ValveWorkbench::on_runButton_clicked()
         analyser->setIaMax(iaMax);
         analyser->setSweepParameters(anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep);
 
+        qInfo("Calling analyser->startTest()");
         analyser->startTest();
+        qInfo("Test started");
     } else {
+        qInfo("Cannot start test - heaters are OFF");
         ui->runButton->setChecked(false);
     }
 }
@@ -1554,6 +1930,9 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
 
 void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
 {
+    (void)arg1; // Parameter currently unused
+    (void)arg1; // Parameter currently unused
+    (void)arg1; // Parameter currently unused
     if (measuredCurves != nullptr) {
         measuredCurves->setVisible(ui->measureCheck->isChecked());
     }
@@ -1562,6 +1941,9 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
 
 void ValveWorkbench::on_modelCheck_stateChanged(int arg1)
 {
+    (void)arg1; // Parameter currently unused
+    (void)arg1; // Parameter currently unused
+    (void)arg1; // Parameter currently unused
     if (modelledCurves != nullptr) {
         modelledCurves->setVisible(ui->modelCheck->isChecked());
     }
@@ -1587,8 +1969,13 @@ void ValveWorkbench::on_compareButton_clicked()
         return;
     }
 
-    CompareDialog dialog;
+    // Temporarily disabled CompareDialog functionality
+    QMessageBox message;
+    message.setText("Compare functionality temporarily disabled");
+    message.exec();
 
+    // Original code commented out until CompareDialog is implemented
+    /*
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
     Model *model;
     if (project->getDeviceType() == TRIODE) {
@@ -1604,9 +1991,6 @@ void ValveWorkbench::on_compareButton_clicked()
 
         return;
     }
-
-    dialog.setModel(model);
-
-    dialog.exec();
+    */
 }
 

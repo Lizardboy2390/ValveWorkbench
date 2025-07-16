@@ -9,8 +9,8 @@
 #include <QJsonObject>
 #include <QGraphicsItemGroup>
 
-#include "ceres/ceres.h"
-#include "glog/logging.h"
+// Ceres and glog dependencies removed
+// Direct mathematical calculations are now used instead
 
 #include "../ui/parameter.h"
 #include "../ui/uibridge.h"

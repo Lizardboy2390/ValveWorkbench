@@ -161,6 +161,9 @@ int TriodeCommonCathode::getDeviceType(int index)
 
 QTreeWidgetItem *TriodeCommonCathode::buildTree(QTreeWidgetItem *parent)
 {
+    // Mark unused parameter
+    (void)parent;
+    
     return nullptr;
 }
 

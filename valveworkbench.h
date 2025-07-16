@@ -233,10 +233,11 @@ private:
     void setSerialPort(QString portName);
 
     void readConfig(QString filename);
+    void saveConfig(QString filename);
 
     void loadDevices();
 
-    //void buildModelSelection();
+    void buildModelSelection();
     void buildCircuitParameters();
     void buildCircuitSelection();
     void buildStdDeviceSelection(QComboBox *selection, int type);

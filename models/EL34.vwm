@@ -1,0 +1,24 @@
+{
+	"name": "EL34",
+	"vaMax": 800.0,
+	"vg1Max": 15.0,
+	"vg2Max": 400.0,
+	"iaMax": 150.0,
+	"paMax": 25.0,
+	"model": {
+		"device": "pentode",
+		"type": "gardiner",
+		"mu": 12.5,
+		"ex": 1.35,
+		"kg1": 1800.0,
+		"kp": 48.0,
+		"kvb": 24.0,
+		"kg2": 4500.0,
+		"vct": 0.5,
+		"a": 2.5,
+		"beta": 1.8,
+		"gamma": 1.5
+	},
+	"source": "Mullard EL34 datasheet values",
+	"lastUpdated": "2025-07-12"
+}

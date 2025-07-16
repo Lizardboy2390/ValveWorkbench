@@ -5,14 +5,10 @@
 #include <QString>
 #include <QFile>
 
-#include "ceres/ceres.h"
-#include "glog/logging.h"
-
-using ceres::AutoDiffCostFunction;
-using ceres::CostFunction;
-using ceres::Problem;
-using ceres::Solve;
-using ceres::Solver;
+// Ceres and glog dependencies removed
+// Direct mathematical calculations are now used instead
+#include <vector>
+#include <cmath>
 
 // Solves the data set for y = ax + b
 
@@ -36,14 +32,6 @@ protected:
     double b;
 
     bool converged = false;
-    /**
-     * @brief problem The Ceres Problem used for model fitting
-     */
-    Problem problem;
-    /**
-     * @brief options The options to be used by Ceres for solving the model approximation
-     */
-    Solver::Options options;
 };
 
 #endif // LINEARSOLVER_H

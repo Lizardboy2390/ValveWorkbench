@@ -1,6 +1,9 @@
 #pragma once
 
 #include "korentriode.h"
+#include <vector>
+
+// Using ValveSample structure defined in simpletriode.h
 
 class CohenHelieTriode : public KorenTriode
 {
@@ -26,4 +29,6 @@ public:
 
 protected:
 	void setOptions();
+	// Store measurement samples for direct calculation approach
+	std::vector<ValveSample> samples;
 };

@@ -1,6 +1,14 @@
 #pragma once
 
 #include "model.h"
+#include <vector>
+
+// Sample structure for storing measurement data
+struct ValveSample {
+    double va;  // Anode voltage
+    double ia;  // Anode current
+    double vg1; // Grid voltage
+};
 
 class SimpleTriode : public Model
 {
@@ -26,4 +34,7 @@ public:
 
 protected:
 	void setOptions();
+	
+	// Store measurement samples for direct calculation approach
+	std::vector<ValveSample> samples;
 };

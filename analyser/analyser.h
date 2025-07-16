@@ -78,12 +78,43 @@ public:
     void handleHeaterTimeout();
 
     void setPreferences(PreferencesDialog *newPreferences);
+    
+    // Calibration getters and setters
+    double getHeaterVoltageCalibration() const { return heaterVoltageCalibration; }
+    double getAnodeVoltageCalibration() const { return anodeVoltageCalibration; }
+    double getScreenVoltageCalibration() const { return screenVoltageCalibration; }
+    double getGridVoltageCalibration() const { return gridVoltageCalibration; }
+    
+    double getHeaterCurrentCalibration() const { return heaterCurrentCalibration; }
+    double getAnodeCurrentCalibration() const { return anodeCurrentCalibration; }
+    double getScreenCurrentCalibration() const { return screenCurrentCalibration; }
+    
+    void setHeaterVoltageCalibration(double value) { heaterVoltageCalibration = value; }
+    void setAnodeVoltageCalibration(double value) { anodeVoltageCalibration = value; }
+    void setScreenVoltageCalibration(double value) { screenVoltageCalibration = value; }
+    void setGridVoltageCalibration(double value) { gridVoltageCalibration = value; }
+    
+    void setHeaterCurrentCalibration(double value) { heaterCurrentCalibration = value; }
+    void setAnodeCurrentCalibration(double value) { anodeCurrentCalibration = value; }
+    void setScreenCurrentCalibration(double value) { screenCurrentCalibration = value; }
 
 private:
+    // Reference voltages
     double vRefMaster = 4.096;
     double vRefSlave = 2.048;
+    
+    // Calibration factors for voltage measurements
+    double heaterVoltageCalibration = 1.0;
+    double anodeVoltageCalibration = 1.0;
+    double screenVoltageCalibration = 1.0;
+    double gridVoltageCalibration = 1.0;
+    
+    // Calibration factors for current measurements
+    double heaterCurrentCalibration = 1.0;
+    double anodeCurrentCalibration = 1.0;
+    double screenCurrentCalibration = 1.0;
 
-    double heaterVoltage;
+    double heaterVoltage = 6.3; // Default common heater voltage
     double aveHeaterVoltage = 0;
     double aveHeaterCurrent = 0;
 
@@ -104,6 +135,8 @@ private:
 
     double measuredIaMax = 0.0;
     double measuredIg2Max = 0.0;
+    
+    // Removed duplicate heaterVoltage declaration
 
     QString hwVersion;
     QString swVersion;
@@ -153,8 +186,10 @@ private:
     static QRegularExpression *sampleMatcher2;
     static QRegularExpression *getMatcher;
     static QRegularExpression *infoMatcher;
+    static QRegularExpression *arduinoMatcher;
 
     Sample *createSample(QString response);
+    Sample *createArduinoSample(QString response);
     int convertTargetVoltage(int electrode, double voltage);
     double convertMeasuredVoltage(int electrode, int voltage);
     double convertMeasuredCurrent(int electrode, int current, int currentLo = 0, int currentHi = 0);

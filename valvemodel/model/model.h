@@ -5,19 +5,36 @@
 #include <QString>
 #include <QObject>
 
-#include "ceres/ceres.h"
-#include "glog/logging.h"
+// Remove Ceres dependency
+// #include "ceres/ceres.h"
+// #include "glog/logging.h"
 
 #include "../ui/parameter.h"
 #include "../ui/uibridge.h"
 
 #include "../data/measurement.h"
 
-using ceres::AutoDiffCostFunction;
-using ceres::CostFunction;
-using ceres::Problem;
-using ceres::Solve;
-using ceres::Solver;
+// Define a simple solver options structure to replace Ceres
+struct SolverOptions {
+    bool use_inner_iterations = false;
+    bool use_nonmonotonic_steps = false;
+    int trust_region_strategy_type = 0;
+    int linear_solver_type = 0;
+    int preconditioner_type = 0;
+    int max_num_iterations = 100;
+    double function_tolerance = 1e-6;
+    double gradient_tolerance = 1e-10;
+    double parameter_tolerance = 1e-8;
+};
+
+// Define a simple solver summary structure to replace Ceres
+struct SolverSummary {
+    int termination_type = 0;
+    std::string FullReport() { return "Direct calculation used instead of Ceres solver"; }
+};
+
+// Constants to replace Ceres enums
+const int CONVERGENCE = 1;
 
 /**
  * @brief The eTriodeParameter enum
@@ -84,8 +101,8 @@ class Estimate;
  * @brief The Model class
  *
  * Model is the abstract base class for all of the device models and defines the public API as
- * well as providing some core methods that are common. The model uses the Ceres Solver library
- * to do a least squares fit of the underlying model.
+ * well as providing some core methods that are common. The model uses direct calculation
+ * instead of the Ceres Solver library to compute valve characteristics.
  */
 class Model : public UIBridge
 {
@@ -136,7 +153,7 @@ public:
     QGraphicsItemGroup *plotModel(Plot *plot, Measurement *measurement, Sweep *sweep = nullptr);
 
     double getParameter(int parameterIndex);
-
+    int getParameterCount() const;
     bool isConverged() const;
 
     int getMode() const;
@@ -158,26 +175,17 @@ signals:
 
 protected:
     /**
-     * @brief problem The Ceres Problem used for model fitting
-     */
-    Problem anodeProblem;
-    Problem anodeRemodelProblem;
-    /**
-     * @brief problem The Ceres Problem used for model fitting (screen current)
-     */
-    Problem screenProblem;
-    /**
-     * @brief parameter The array of 16 model Parameters linked to the UI
+     * @brief parameter The array of model Parameters linked to the UI
      */
     Parameter *parameter[24];
     /**
-     * @brief options The options to be used by Ceres for solving the model approximation
+     * @brief options The options to be used for solving the model approximation
      */
-    Solver::Options options;
+    SolverOptions options;
     /**
-     * @brief options The options to be used by Ceres for solving the model approximation (sceen current)
+     * @brief options The options to be used for solving the model approximation (screen current)
      */
-    Solver::Options screenOptions;
+    SolverOptions screenOptions;
 
     Estimate *estimate;
 

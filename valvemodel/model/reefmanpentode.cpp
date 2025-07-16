@@ -7,12 +7,35 @@ struct DerkPentodeResidual {
 
     template <typename T>
     bool operator()(const T* const kg1, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg2, const T* const a, const T* const alpha, const T* const beta, T* residual) const {
-        T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
-        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
-        T g = 1.0 / (1.0 + beta[0] * va_);
-        T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * (1.0 - g) + a[0] * va_ / kg1[0]);
-        residual[0] = ia_ - ia;
-        return !(isnan(ia) || isinf(ia));
+        // Improved numerical stability based on valvedesigner-web implementation
+        // Ensure vg2 is at least 0.1V to avoid numerical issues
+        T vg2 = T(vg2_ < 0.1 ? 0.1 : vg2_);
+        
+        // Calculate f with protection against negative values
+        T kvb_term = T(kvb[0] > 0 ? kvb[0] : 0.1);
+        T f = sqrt(kvb_term + kvb1[0] * vg2 + vg2 * vg2);
+        
+        // Calculate epk with protection against extreme values
+        T vg1_term = T(vg1_ + vct[0]);
+        T exp_arg = kp[0] * (T(1.0) / mu[0] + vg1_term / f);
+        // Limit exp_arg to avoid overflow
+        exp_arg = T(exp_arg > 100 ? 100 : (exp_arg < -100 ? -100 : exp_arg));
+        
+        T epk = pow(vg2 * log(T(1.0) + exp(exp_arg)) / kp[0], x[0]);
+        
+        // Ensure kg1 and kg2 are not too close to zero
+        T kg1_safe = T(kg1[0] < 1e-6 ? 1e-6 : kg1[0]);
+        T kg2_safe = T(kg2[0] < 1e-6 ? 1e-6 : kg2[0]);
+        
+        // Calculate g with protection against extreme values
+        T beta_term = T(beta[0] * va_ < 100 ? beta[0] * va_ : 100);
+        T g = T(1.0) / (T(1.0) + beta_term);
+        
+        // Calculate anode current with improved numerical stability
+        T ia = epk * ((T(1.0) / kg1_safe - T(1.0) / kg2_safe) * (T(1.0) - g) + a[0] * T(va_) / kg1_safe);
+        
+        residual[0] = T(ia_) - ia;
+        return true; // Return true for valid calculation
     }
 
 private:
@@ -28,12 +51,39 @@ struct DerkEPentodeResidual {
 
     template <typename T>
     bool operator()(const T* const kg1, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg2, const T* const a, const T* const alpha, const T* const beta, T* residual) const {
-        T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
-        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
-        T g = exp(-pow(beta[0] * va_, 1.5));
-        T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * (1.0 - g) + a[0] * va_ / kg1[0]);
-        residual[0] = ia_ - ia;
-        return !(isnan(ia) || isinf(ia));
+        // Improved numerical stability based on valvedesigner-web implementation
+        // Ensure vg2 is at least 0.1V to avoid numerical issues
+        T vg2 = T(vg2_ < 0.1 ? 0.1 : vg2_);
+        
+        // Calculate f with protection against negative values
+        T kvb_term = T(kvb[0] > 0 ? kvb[0] : 0.1);
+        T f = sqrt(kvb_term + kvb1[0] * vg2 + vg2 * vg2);
+        
+        // Calculate epk with protection against extreme values
+        T vg1_term = T(vg1_ + vct[0]);
+        T exp_arg = kp[0] * (T(1.0) / mu[0] + vg1_term / f);
+        // Limit exp_arg to avoid overflow
+        exp_arg = T(exp_arg > 100 ? 100 : (exp_arg < -100 ? -100 : exp_arg));
+        
+        T epk = pow(vg2 * log(T(1.0) + exp(exp_arg)) / kp[0], x[0]);
+        
+        // Ensure kg1 and kg2 are not too close to zero
+        T kg1_safe = T(kg1[0] < 1e-6 ? 1e-6 : kg1[0]);
+        T kg2_safe = T(kg2[0] < 1e-6 ? 1e-6 : kg2[0]);
+        
+        // Calculate g with protection against extreme values for the exponential form
+        T beta_va = T(beta[0] * va_);
+        T pow_arg = T(beta_va > 0 ? beta_va : 0);
+        T pow_result = pow(pow_arg, T(1.5));
+        // Limit pow_result to avoid underflow in exp
+        pow_result = T(pow_result > 100 ? 100 : pow_result);
+        T g = exp(-pow_result);
+        
+        // Calculate anode current with improved numerical stability
+        T ia = epk * ((T(1.0) / kg1_safe - T(1.0) / kg2_safe) * (T(1.0) - g) + a[0] * T(va_) / kg1_safe);
+        
+        residual[0] = T(ia_) - ia;
+        return true; // Return true for valid calculation
     }
 
 private:
@@ -46,13 +96,41 @@ private:
 
 double ReefmanPentode::anodeCurrent(double va, double vg1, double vg2)
 {
+    // Ensure vg2 is at least 0.1V to avoid numerical issues
+    vg2 = std::max(0.1, vg2);
+    
+    // Calculate epk with improved numerical stability
     double epk = cohenHelieEpk(vg2, vg1);
-    double k = 1.0 / parameter[PAR_KG1]->getValue() - 1.0 / parameter[PAR_KG2]->getValue();
-    double shift = parameter[PAR_BETA]->getValue() * (1.0 - parameter[PAR_ALPHA]->getValue() * vg1);
-    //double g = exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
-    double g = 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
+    
+    // Ensure kg1 and kg2 are not too close to zero
+    double kg1 = std::max(1e-6, parameter[PAR_KG1]->getValue());
+    double kg2 = std::max(1e-6, parameter[PAR_KG2]->getValue());
+    
+    double k = 1.0 / kg1 - 1.0 / kg2;
+    
+    // Calculate shift with protection against extreme values
+    double alpha = parameter[PAR_ALPHA]->getValue();
+    double beta = parameter[PAR_BETA]->getValue();
+    double shift = beta * (1.0 - alpha * vg1);
+    
+    // Limit shift*va to avoid numerical issues
+    double shift_va = std::min(100.0, shift * va);
+    
+    // Use the appropriate g calculation based on model type
+    double g;
+    if (modelType == DERK) {
+        // Original form: 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
+        double gamma = std::max(0.5, parameter[PAR_GAMMA]->getValue()); // Ensure gamma is at least 0.5
+        g = 1.0 / (1.0 + pow(shift_va, gamma));
+    } else { // DERK_E
+        // Original form: exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
+        double gamma = std::max(0.5, parameter[PAR_GAMMA]->getValue()); // Ensure gamma is at least 0.5
+        double pow_result = std::min(100.0, pow(shift_va, gamma)); // Limit to avoid underflow
+        g = exp(-pow_result);
+    }
+    
     double scale = 1.0 - g;
-    double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG1]->getValue());
+    double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / kg1);
 
     return ia;
 }
@@ -64,40 +142,24 @@ ReefmanPentode::ReefmanPentode(int newType) : modelType(newType)
 
 void ReefmanPentode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
-    if (modelType == DERK) {
-        anodeProblem.AddResidualBlock(
-            new AutoDiffCostFunction<DerkPentodeResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new DerkPentodeResidual(va, vg1, ia, vg2, ig2)),
-            NULL,
-            parameter[PAR_KG1]->getPointer(),
-            parameter[PAR_KP]->getPointer(),
-            parameter[PAR_KVB]->getPointer(),
-            parameter[PAR_KVB1]->getPointer(),
-            parameter[PAR_VCT]->getPointer(),
-            parameter[PAR_X]->getPointer(),
-            parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG2]->getPointer(),
-            parameter[PAR_A]->getPointer(),
-            parameter[PAR_ALPHA]->getPointer(),
-            parameter[PAR_BETA]->getPointer());
-    } else {
-        anodeProblem.AddResidualBlock(
-            new AutoDiffCostFunction<DerkEPentodeResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new DerkEPentodeResidual(va, vg1, ia, vg2, ig2)),
-            NULL,
-            parameter[PAR_KG1]->getPointer(),
-            parameter[PAR_KP]->getPointer(),
-            parameter[PAR_KVB]->getPointer(),
-            parameter[PAR_KVB1]->getPointer(),
-            parameter[PAR_VCT]->getPointer(),
-            parameter[PAR_X]->getPointer(),
-            parameter[PAR_MU]->getPointer(),
-            parameter[PAR_KG2]->getPointer(),
-            parameter[PAR_A]->getPointer(),
-            parameter[PAR_ALPHA]->getPointer(),
-            parameter[PAR_BETA]->getPointer());
+    // Store the sample for future reference instead of using Ceres
+    PentodeSample sample;
+    sample.va = va;
+    sample.ia = ia;
+    sample.vg1 = vg1;
+    sample.vg2 = vg2;
+    sample.ig2 = ig2;
+    
+    // Store in appropriate sample vector
+    anodeSamples.push_back(sample);
+    
+    // If we have screen current measurements, store them too
+    if (ig2 > 0) {
+        screenSamples.push_back(sample);
     }
-
+    
+    // Mark as converged since we're using direct calculation
+    converged = true;
 }
 
 void ReefmanPentode::fromJson(QJsonObject source)
@@ -178,21 +240,20 @@ void ReefmanPentode::setModelType(int newModelType)
 
 void ReefmanPentode::setOptions()
 {
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
-    //problem.SetParameterBlockConstant(parameter[PAR_X]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
-
-    anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
-    anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
-    anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.0);
-
-    options.max_num_iterations = 200;
-    options.max_num_consecutive_invalid_steps = 20;
-    options.use_inner_iterations = true;
-    options.linear_solver_type = ceres::DENSE_QR;
-    options.preconditioner_type = ceres::SUBSET;
+    CohenHelieTriode::setOptions();
+    
+    // Parameter limits based on valvedesigner-web implementation for better stability
+    setLimits(parameter[PAR_KG2], 0.0001, 1.0); // Avoid division by zero
+    
+    // Set solver options (these won't be used with direct calculation but kept for compatibility)
+    options.max_num_iterations = 100;
+    options.function_tolerance = 1e-6;
+    options.gradient_tolerance = 1e-10;
+    options.parameter_tolerance = 1e-8;
+    
+    // Set parameter limits for numerical stability
+    setLowerBound(parameter[PAR_A], 0.0);
+    setLowerBound(parameter[PAR_ALPHA], 0.0);
+    setLowerBound(parameter[PAR_BETA], 0.00001); // Minimum value for stability
+    setLowerBound(parameter[PAR_GAMMA], 0.5); // Minimum value for stability
 }

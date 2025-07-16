@@ -1,0 +1,19 @@
+{
+	"name": "6P3S",
+	"vaMax": 500.0,
+	"vg1Max": 14.0,
+	"vg2Max": 350.0,
+	"iaMax": 100.0,
+	"paMax": 24.0,
+	"model": {
+		"device": "pentode",
+		"type": "gardiner",
+		"mu": 8.2,
+		"ex": 1.35,
+		"kg1": 1500.0,
+		"kp": 45.0,
+		"kvb": 12.0,
+		"kg2": 4000.0,
+		"vct": 0.0
+	}
+}

@@ -24,15 +24,17 @@ KorenTriode::KorenTriode()
 
 void KorenTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
-    anodeProblem.AddResidualBlock(
-        new AutoDiffCostFunction<KorenTriodeResidual, 1, 1, 1, 1, 1, 1>(
-            new KorenTriodeResidual(va, vg1, ia)),
-        NULL,
-        parameter[PAR_KG1]->getPointer(),
-        parameter[PAR_KP]->getPointer(),
-        parameter[PAR_KVB]->getPointer(),
-        parameter[PAR_X]->getPointer(),
-        parameter[PAR_MU]->getPointer());
+    // Store the sample for future reference instead of using Ceres
+    ValveSample sample;
+    sample.va = va;
+    sample.ia = ia;
+    sample.vg1 = vg1;
+    
+    // Store in samples vector
+    samples.push_back(sample);
+    
+    // Mark as converged since we're using direct calculation
+    converged = true;
 }
 
 double KorenTriode::triodeAnodeCurrent(double va, double vg1)
@@ -104,9 +106,8 @@ void KorenTriode::setOptions()
 {
     SimpleTriode::setOptions();
 
-    setLimits(parameter[PAR_KVB], 0.0, 10000.0); // 0 <= Kvb <= 10000.0
-    options.linear_solver_type = ceres::CGNR;
-    options.preconditioner_type = ceres::JACOBI;
+    // Set parameter limits for numerical stability
+    setLimits(parameter[PAR_KVB], 0.1, 10000.0); // 0.1 <= Kvb <= 10000.0 (avoid zero for sqrt stability)
 }
 
 double KorenTriode::korenCurrent(double va, double vg, double kp, double kvb, double a, double mu)

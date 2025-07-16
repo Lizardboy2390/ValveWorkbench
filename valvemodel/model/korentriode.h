@@ -1,6 +1,7 @@
 #pragma once
 
 #include "simpletriode.h"
+#include <vector>
 
 class KorenTriode : public SimpleTriode
 {
@@ -22,4 +23,7 @@ public:
 protected:
 	void setOptions();
     double korenCurrent(double va, double vg, double kp, double kvb, double a, double mu);
+    
+    // Store measurement samples for direct calculation approach
+    std::vector<ValveSample> samples;
 };

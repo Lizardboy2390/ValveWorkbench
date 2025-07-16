@@ -1,0 +1,18 @@
+{
+	"name": "6N2P",
+	"vaMax": 300.0,
+	"vg1Max": 4.0,
+	"iaMax": 10.0,
+	"paMax": 1.8,
+	"model": {
+		"device": "triode",
+		"type": "cohenHelie",
+		"kg1": 0.5,
+		"mu": 100.0,
+		"x": 1.4,
+		"kp": 600.0,
+		"kvb": 300.0,
+		"kvb1": 300.0,
+		"vct": 0.0
+	}
+}

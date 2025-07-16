@@ -26,6 +26,26 @@ public:
     bool fixSecondaryEmission();
     bool fixTriodeParameters();
     bool showScreenCurrent();
+    
+    // Calibration getters
+    double getHeaterVoltageCalibration() const;
+    double getAnodeVoltageCalibration() const;
+    double getScreenVoltageCalibration() const;
+    double getGridVoltageCalibration() const;
+    
+    double getHeaterCurrentCalibration() const;
+    double getAnodeCurrentCalibration() const;
+    double getScreenCurrentCalibration() const;
+    
+    // Calibration setters
+    void setHeaterVoltageCalibration(double value);
+    void setAnodeVoltageCalibration(double value);
+    void setScreenVoltageCalibration(double value);
+    void setGridVoltageCalibration(double value);
+    
+    void setHeaterCurrentCalibration(double value);
+    void setAnodeCurrentCalibration(double value);
+    void setScreenCurrentCalibration(double value);
 
 private slots:
 

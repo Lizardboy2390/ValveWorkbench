@@ -78,3 +78,75 @@ bool PreferencesDialog::showScreenCurrent()
 {
     return ui->checkScreenCurrent->isChecked();
 }
+
+// Calibration getters
+double PreferencesDialog::getHeaterVoltageCalibration() const
+{
+    return ui->heaterVoltageCalibration->value();
+}
+
+double PreferencesDialog::getAnodeVoltageCalibration() const
+{
+    return ui->anodeVoltageCalibration->value();
+}
+
+double PreferencesDialog::getScreenVoltageCalibration() const
+{
+    return ui->screenVoltageCalibration->value();
+}
+
+double PreferencesDialog::getGridVoltageCalibration() const
+{
+    return ui->gridVoltageCalibration->value();
+}
+
+double PreferencesDialog::getHeaterCurrentCalibration() const
+{
+    return ui->heaterCurrentCalibration->value();
+}
+
+double PreferencesDialog::getAnodeCurrentCalibration() const
+{
+    return ui->anodeCurrentCalibration->value();
+}
+
+double PreferencesDialog::getScreenCurrentCalibration() const
+{
+    return ui->screenCurrentCalibration->value();
+}
+
+// Calibration setters
+void PreferencesDialog::setHeaterVoltageCalibration(double value)
+{
+    ui->heaterVoltageCalibration->setValue(value);
+}
+
+void PreferencesDialog::setAnodeVoltageCalibration(double value)
+{
+    ui->anodeVoltageCalibration->setValue(value);
+}
+
+void PreferencesDialog::setScreenVoltageCalibration(double value)
+{
+    ui->screenVoltageCalibration->setValue(value);
+}
+
+void PreferencesDialog::setGridVoltageCalibration(double value)
+{
+    ui->gridVoltageCalibration->setValue(value);
+}
+
+void PreferencesDialog::setHeaterCurrentCalibration(double value)
+{
+    ui->heaterCurrentCalibration->setValue(value);
+}
+
+void PreferencesDialog::setAnodeCurrentCalibration(double value)
+{
+    ui->anodeCurrentCalibration->setValue(value);
+}
+
+void PreferencesDialog::setScreenCurrentCalibration(double value)
+{
+    ui->screenCurrentCalibration->setValue(value);
+}

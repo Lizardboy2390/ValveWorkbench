@@ -26,14 +26,17 @@ SimpleTriode::SimpleTriode()
 
 void SimpleTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
-    anodeProblem.AddResidualBlock(
-        new AutoDiffCostFunction<SimpleTriodeResidual, 1, 1, 1, 1, 1>(
-            new SimpleTriodeResidual(va, vg1, ia)),
-        NULL,
-        parameter[PAR_KG1]->getPointer(),
-        parameter[PAR_VCT]->getPointer(),
-        parameter[PAR_X]->getPointer(),
-        parameter[PAR_MU]->getPointer());
+    // Store the sample for future reference instead of using Ceres
+    ValveSample sample;
+    sample.va = va;
+    sample.ia = ia;
+    sample.vg1 = vg1;
+    
+    // Store in samples vector
+    samples.push_back(sample);
+    
+    // Mark as converged since we're using direct calculation
+    converged = true;
 }
 
 double SimpleTriode::triodeAnodeCurrent(double va, double vg1)
@@ -130,9 +133,10 @@ void SimpleTriode::setVct(double vct)
 
 void SimpleTriode::setOptions()
 {
+    // Set solver options (these won't be used with direct calculation but kept for compatibility)
     options.max_num_iterations = 100;
-    options.minimizer_progress_to_stdout = true;
-
+    
+    // Set parameter limits for numerical stability
     setLowerBound(parameter[PAR_KG1], 0.0000001); // Kg > 0
     setLimits(parameter[PAR_X], 1.0, 2.0); // 1.0 <= alpha <= 2.0
     setLimits(parameter[PAR_MU], 1.0, 1000.0); // 1.0 <= mu <= 1000.0

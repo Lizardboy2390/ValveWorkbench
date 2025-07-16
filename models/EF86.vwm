@@ -1,0 +1,19 @@
+{
+	"name": "EF86",
+	"vaMax": 300.0,
+	"vg1Max": 5.0,
+	"vg2Max": 300.0,
+	"iaMax": 12.0,
+	"paMax": 3.0,
+	"model": {
+		"device": "pentode",
+		"type": "gardiner",
+		"mu": 35.0,
+		"ex": 1.35,
+		"kg1": 2200.0,
+		"kp": 250.0,
+		"kvb": 300.0,
+		"kg2": 4500.0,
+		"vct": 0.0
+	}
+}
