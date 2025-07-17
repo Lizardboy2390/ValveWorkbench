@@ -44,6 +44,10 @@ ValveWorkbench is a C++ application for modeling and analyzing vacuum tube (valv
    - ✅ Added safety checks for list access
    - ✅ Fixed config file loading issues
    - ✅ Re-enabled PentodeCommonCathode functionality
+7. 🔄 Implement calibration functionality in the UI
+   - ✅ Added calibration controls to preferences dialog
+   - ⬜ Test calibration values saving/loading
+   - ⬜ Verify calibration values are applied correctly to measurements
 
 ## Code Style & Conventions
 

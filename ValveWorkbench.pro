@@ -41,7 +41,6 @@ SOURCES += \
     valvemodel/ui/uibridge.cpp \
     valvemodel/ui/plot.cpp \
     valvemodel/ui/parameter.cpp \
-    comparedialog.cpp \
     valveworkbench.cpp
 
 HEADERS += \
@@ -76,7 +75,6 @@ HEADERS += \
     valvemodel/ui/uibridge.h \
     valvemodel/ui/plot.h \
     valvemodel/ui/parameter.h \
-    comparedialog.h \
     valvemodeller.h \
     valveworkbench.h
 

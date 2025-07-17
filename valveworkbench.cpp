@@ -73,6 +73,11 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     connect(&serialPort, &QSerialPort::errorOccurred, this, &ValveWorkbench::handleError);
     connect(&timeoutTimer, &QTimer::timeout, this, &ValveWorkbench::handleTimeout);
     connect(&heaterTimer, &QTimer::timeout, this, &ValveWorkbench::handleHeaterTimeout);
+    
+    // Explicitly connect the editingFinished signals for the input fields that aren't working
+    connect(ui->anodeStep, &QLineEdit::editingFinished, this, &ValveWorkbench::on_anodeStep_editingFinished);
+    connect(ui->screenStep, &QLineEdit::editingFinished, this, &ValveWorkbench::on_screenStep_editingFinished);
+    connect(ui->screenStop, &QLineEdit::editingFinished, this, &ValveWorkbench::on_screenStop_editingFinished);
 
     checkComPorts();
 
@@ -366,7 +371,7 @@ double ValveWorkbench::checkDoubleValue(QLineEdit *input, double oldValue)
 
     const char *value = _strdup(input->text().toStdString().c_str());
 
-    int n = sscanf_s(value, "%f.3", &parsedValue);
+    int n = sscanf_s(value, "%f", &parsedValue);
 
     if (n < 1) {
         return oldValue;
