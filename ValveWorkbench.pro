@@ -11,6 +11,7 @@ CONFIG += c++11
 SOURCES += \
     analyser/analyser.cpp \
     analyser/client.cpp \
+    comparedialog.cpp \
     ledindicator/ledindicator.cpp \
     main.cpp \
     preferencesdialog.cpp \
@@ -46,6 +47,7 @@ SOURCES += \
 HEADERS += \
     analyser/analyser.h \
     analyser/client.h \
+    comparedialog.h \
     ledindicator/ledindicator.h \
     preferencesdialog.h \
     projectdialog.h \
@@ -79,6 +81,7 @@ HEADERS += \
     valveworkbench.h
 
 FORMS += \
+    comparedialog.ui \
     preferencesdialog.ui \
     projectdialog.ui \
     valveworkbench.ui

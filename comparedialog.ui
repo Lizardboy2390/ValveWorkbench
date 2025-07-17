@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CompareDialog</class>
+ <widget class="QDialog" name="CompareDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>500</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Compare Model</string>
+  </property>
+  <widget class="QWidget" name="verticalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>20</y>
+     <width>560</width>
+     <height>460</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <!-- Triode Section -->
+    <item>
+     <widget class="QGroupBox" name="triodeGroup">
+      <property name="title">
+       <string>Triode Parameters</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Test Conditions:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Anode Voltage (V):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="anode"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Grid Voltage (V):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="grid"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Parameters:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>μ:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLabel" name="refMu">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="2">
+        <widget class="QLabel" name="modelMu">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>gm (A/V):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLabel" name="refGm">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="2">
+        <widget class="QLabel" name="modelGm">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_11">
+         <property name="text">
+          <string>ra (Ω):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="refRa">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
+        <widget class="QLabel" name="modelRa">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_14">
+         <property name="text">
+          <string>Ia (A):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLabel" name="refIa">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="2">
+        <widget class="QLabel" name="modelIa">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="label_17">
+         <property name="text">
+          <string>Reference</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="label_18">
+         <property name="text">
+          <string>Model</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    
+    <!-- Pentode Section -->
+    <item>
+     <widget class="QGroupBox" name="pentodeGroup">
+      <property name="title">
+       <string>Pentode Parameters</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_19">
+         <property name="text">
+          <string>Test Conditions:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_20">
+         <property name="text">
+          <string>Anode Voltage (V):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="anodeP"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_21">
+         <property name="text">
+          <string>Screen Voltage (V):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="screen"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_22">
+         <property name="text">
+          <string>Grid Voltage (V):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="gridP"/>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_23">
+         <property name="text">
+          <string>Parameters:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_24">
+         <property name="text">
+          <string>gm (A/V):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLabel" name="pentodeRefGm">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="2">
+        <widget class="QLabel" name="pentodeModelGm">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_27">
+         <property name="text">
+          <string>ra (Ω):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="pentodeRefRa">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
+        <widget class="QLabel" name="pentodeModelRa">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_30">
+         <property name="text">
+          <string>Ia (A):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLabel" name="pentodeRefIa">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="2">
+        <widget class="QLabel" name="pentodeModelIa">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="label_33">
+         <property name="text">
+          <string>Is (A):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QLabel" name="pentodeRefIs">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="2">
+        <widget class="QLabel" name="pentodeModelIs">
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="label_36">
+         <property name="text">
+          <string>Reference</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="label_37">
+         <property name="text">
+          <string>Model</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    
+    <!-- Close Button -->
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton">
+        <property name="text">
+         <string>Close</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

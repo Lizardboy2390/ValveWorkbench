@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include "valvemodel/model/model.h"
+#include "valvemodel/constants.h"
 
 namespace Ui {
 class CompareDialog;
@@ -17,9 +18,17 @@ public:
     ~CompareDialog();
 
     void setModel(Model *model);
+    void setReferenceValues(double mu, double gm, double ra); // For triodes
+    void setReferenceValues(double gm, double ra); // For pentodes
+    void setReferenceCurrents(double ia); // For triodes
+    void setReferenceCurrents(double ia, double screenCurrent); // For pentodes
+    
+private slots:
+    void updateCalculations();
 
 private:
     Ui::CompareDialog *ui;
+    Model *m_model = nullptr; // Store the model for calculations
 };
 
 #endif // COMPAREDIALOG_H

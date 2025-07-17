@@ -7,7 +7,7 @@
 
 #include "preferencesdialog.h"
 #include "projectdialog.h"
-// #include "comparedialog.h" // Temporarily disabled
+#include "comparedialog.h"
 
 #include <QMessageBox>
 #include <QCoreApplication>
@@ -1974,13 +1974,6 @@ void ValveWorkbench::on_compareButton_clicked()
         return;
     }
 
-    // Temporarily disabled CompareDialog functionality
-    QMessageBox message;
-    message.setText("Compare functionality temporarily disabled");
-    message.exec();
-
-    // Original code commented out until CompareDialog is implemented
-    /*
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
     Model *model;
     if (project->getDeviceType() == TRIODE) {
@@ -1996,6 +1989,22 @@ void ValveWorkbench::on_compareButton_clicked()
 
         return;
     }
-    */
+    
+    // Create and show the compare dialog
+    CompareDialog dialog(this);
+    dialog.setModel(model);
+    
+    // Set default test conditions based on device type
+    if (project->getDeviceType() == TRIODE) {
+        // Set default triode test conditions
+        dialog.setReferenceValues(25.0, 0.004, 10000.0); // Example values: mu, gm, ra
+        dialog.setReferenceCurrents(0.010); // Example value: 10mA anode current
+    } else if (project->getDeviceType() == PENTODE) {
+        // Set default pentode test conditions
+        dialog.setReferenceValues(0.008, 50000.0); // Example values: gm, ra
+        dialog.setReferenceCurrents(0.015, 0.004); // Example values: anode current, screen current
+    }
+    
+    dialog.exec();
 }
 

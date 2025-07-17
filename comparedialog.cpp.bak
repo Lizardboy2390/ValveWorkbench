@@ -43,8 +43,8 @@ void CompareDialog::setModel(Model *model)
     // For triode models
     if (deviceType == TRIODE) {
         // Show triode section, hide pentode section
-        ui->groupBox->setVisible(true);
-        ui->groupBox_2->setVisible(false);
+        ui->triodeGroup->setVisible(true);
+        ui->pentodeGroup->setVisible(false);
         
         // Set default test conditions
         ui->anode->setText("250");
@@ -78,8 +78,8 @@ void CompareDialog::setModel(Model *model)
         ui->modRa->setText(QString::number(ra, 'f', 0));
         
         // Enable triode fields, disable pentode fields
-        ui->groupBox->setEnabled(true);
-        ui->groupBox_2->setEnabled(false);
+        ui->triodeGroup->setEnabled(true);
+        ui->pentodeGroup->setEnabled(false);
         
         // Calculate anode current at specified operating point
         updateCalculations();
@@ -106,18 +106,18 @@ void CompareDialog::setModel(Model *model)
         
         // Format the values with appropriate units
         // Clear triode section values since we're showing pentode
-        ui->modMu->setText("");  // Pentodes don't have mu in the same way
-        ui->modGm->setText("");
-        ui->modRa->setText("");
-        ui->modIa->setText("");
+        ui->modelMu->setText("");  // Pentodes don't have mu in the same way
+        ui->modelGm->setText("");
+        ui->modelRa->setText("");
+        ui->modelIa->setText("");
         
         // Use correct UI element names for pentode parameters
-        ui->modGmP->setText(QString::number(gm * 1000.0, 'f', 1) + " mA/V");
-        ui->modRaP->setText(QString::number(ra / 1000.0, 'f', 1) + " kΩ");
+        ui->pentodeModelGm->setText(QString::number(gm * 1000.0, 'f', 1) + " mA/V");
+        ui->pentodeModelRa->setText(QString::number(ra / 1000.0, 'f', 1) + " kΩ");
         
         // Enable pentode fields, disable triode fields
-        ui->groupBox->setEnabled(false);
-        ui->groupBox_2->setEnabled(true);
+        ui->triodeGroup->setEnabled(false);
+        ui->pentodeGroup->setEnabled(true);
         
         // Calculate anode current at specified operating point
         updateCalculations();
@@ -133,9 +133,9 @@ void CompareDialog::setReferenceValues(double mu, double gm, double ra)
     ui->refRa->setText(QString::number(ra / 1000.0, 'f', 1) + " kΩ");
     
     // Clear pentode reference values
-    ui->refIaP->setText("");
-    ui->refGmP->setText("");
-    ui->refRaP->setText("");
+    ui->pentodeRefIa->setText("");
+    ui->pentodeRefGm->setText("");
+    ui->pentodeRefRa->setText("");
 }
 
 // Set reference values for pentodes
@@ -165,7 +165,7 @@ void CompareDialog::setReferenceCurrents(double ia, double screenCurrent)
     // Note: screenCurrent is only used for pentodes
     Q_UNUSED(screenCurrent); // Suppress unused parameter warning
     
-    ui->refIaP->setText(QString::number(ia * 1000.0, 'f', 1) + " mA");
+    ui->pentodeRefIa->setText(QString::number(ia * 1000.0, 'f', 1) + " mA");
     // Note: Screen current isn't displayed in the current UI design
 }
 
@@ -233,8 +233,8 @@ void CompareDialog::updateCalculations()
             double ia = m_model->anodeCurrent(anodeVoltage, gridVoltage, screenVoltage);
             double is = m_model->screenCurrent(anodeVoltage, gridVoltage, screenVoltage);
             
-            // Display both anode and screen current in the same label
-            ui->modIaP->setText(QString::number(ia, 'f', 2) + " / " + QString::number(is, 'f', 2));
+            ui->pentodeModelIa->setText(QString::number(ia, 'f', 2));
+            ui->pentodeModelIs->setText(QString::number(is, 'f', 2));
             
             // Calculate gm, ra from the model
             double delta = 1.0; // 1V change for calculations
@@ -250,12 +250,13 @@ void CompareDialog::updateCalculations()
             double ra = va_effect != 0 ? 1.0 / va_effect : 0;
             
             // Display the parameters
-            ui->modGmP->setText(QString::number(gm, 'f', 2));
-            ui->modRaP->setText(QString::number(ra, 'f', 0));
+            ui->pentodeModelGm->setText(QString::number(gm, 'f', 2));
+            ui->pentodeModelRa->setText(QString::number(ra, 'f', 0));
         } else {
-            ui->modIaP->setText("N/A");
-            ui->modGmP->setText("N/A");
-            ui->modRaP->setText("N/A");
+            ui->pentodeModelIa->setText("N/A");
+            ui->pentodeModelIs->setText("N/A");
+            ui->pentodeModelGm->setText("N/A");
+            ui->pentodeModelRa->setText("N/A");
         }
     }
 }
