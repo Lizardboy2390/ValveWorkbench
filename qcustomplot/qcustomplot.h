@@ -129,6 +129,7 @@ class QCPItemLine : public QObject
   Q_OBJECT
 public:
   QCPItemLine(QCustomPlot *parentPlot) {
+    Q_UNUSED(parentPlot);
     start = new QCPItemPosition();
     end = new QCPItemPosition();
   }
@@ -153,6 +154,7 @@ class QCPItemText : public QObject
   Q_OBJECT
 public:
   QCPItemText(QCustomPlot *parentPlot) {
+    Q_UNUSED(parentPlot);
     position = new QCPItemPosition();
   }
   
@@ -178,6 +180,7 @@ public:
   enum TracerStyle { tsNone, tsPlus, tsCrosshair, tsCircle, tsSquare };
   
   QCPItemTracer(QCustomPlot *parentPlot) : mStyle(tsCircle), mSize(6.0) {
+    Q_UNUSED(parentPlot);
     position = new QCPItemPosition();
   }
   
