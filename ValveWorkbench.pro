@@ -16,6 +16,7 @@ SOURCES += \
     main.cpp \
     preferencesdialog.cpp \
     projectdialog.cpp \
+    qcustomplot/qcustomplot.cpp \
     valvemodel/circuit/ngspice_stubs.cpp \
     valvemodel/data/dataset.cpp \
     valvemodel/data/measurement.cpp \
@@ -41,6 +42,7 @@ SOURCES += \
     valvemodel/model/template.cpp \
     valvemodel/ui/uibridge.cpp \
     valvemodel/ui/plot.cpp \
+    valvemodel/ui/plotqcp.cpp \
     valvemodel/ui/parameter.cpp \
     valveworkbench.cpp
 
@@ -51,6 +53,7 @@ HEADERS += \
     ledindicator/ledindicator.h \
     preferencesdialog.h \
     projectdialog.h \
+    qcustomplot/qcustomplot.h \
     valvemodel/constants.h \
     valvemodel/data/dataset.h \
     valvemodel/data/measurement.h \
@@ -76,6 +79,7 @@ HEADERS += \
     valvemodel/model/template.h \
     valvemodel/ui/uibridge.h \
     valvemodel/ui/plot.h \
+    valvemodel/ui/plotqcp.h \
     valvemodel/ui/parameter.h \
     valvemodeller.h \
     valveworkbench.h

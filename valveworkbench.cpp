@@ -68,6 +68,22 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->fitTriodeButton->setVisible(false);
 
     ui->graphicsView->setScene(plot.getScene());
+    
+    // Initialize QCustomPlot-based plotting widget
+    plotQCP = new PlotQCP();
+    plotQCP->setMinimumSize(550, 500);
+    plotQCP->setMaximumSize(550, 500);
+    plotQCP->hide(); // Hide initially, we'll show it when we switch to QCustomPlot
+    
+    // Add the PlotQCP widget to the layout next to the graphicsView
+    QVBoxLayout* plotLayout = qobject_cast<QVBoxLayout*>(ui->graphicsView->parentWidget()->layout());
+    if (plotLayout) {
+        // Insert the PlotQCP widget at the same position as the graphicsView
+        int index = plotLayout->indexOf(ui->graphicsView);
+        if (index >= 0) {
+            plotLayout->insertWidget(index, plotQCP);
+        }
+    }
 
     connect(&serialPort, &QSerialPort::readyRead, this, &ValveWorkbench::handleReadyRead);
     connect(&serialPort, &QSerialPort::errorOccurred, this, &ValveWorkbench::handleError);
@@ -100,6 +116,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
 ValveWorkbench::~ValveWorkbench()
 {
+    delete plotQCP;
     delete ui;
 }
 

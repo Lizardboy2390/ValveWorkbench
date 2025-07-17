@@ -16,6 +16,7 @@
 #include "valvemodel/model/modelfactory.h"
 #include "valvemodel/circuit/circuit.h"
 #include "valvemodel/ui/plot.h"
+#include "valvemodel/ui/plotqcp.h"
 #include "valvemodel/model/template.h"
 
 #include "analyser/analyser.h"
@@ -160,6 +161,7 @@ private:
     QLabel *circuitLabels[16];
 
     Plot plot;
+    PlotQCP *plotQCP = nullptr;
     QGraphicsItemGroup *modelPlot = nullptr;
 
     // Non-UI related member variables

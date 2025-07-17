@@ -4,6 +4,9 @@
 #include <QGraphicsScene>
 #include <QGraphicsLineItem>
 #include <QGraphicsTextItem>
+#include <QVBoxLayout>
+#include <QColor>
+#include <QVector>
 
 // Forward declarations
 class QCustomPlot;
@@ -15,6 +18,11 @@ class QCPGraph;
 class PlotQCP : public QWidget
 {
     Q_OBJECT
+
+private:
+    QCustomPlot* customPlot;
+    double xStart, xStop, yStart, yStop;
+    double xScale, yScale;
 
 public:
     explicit PlotQCP(QWidget *parent = nullptr);
@@ -121,12 +129,4 @@ public:
      */
     void replot();
 
-private:
-    QCustomPlot* customPlot;
-    double xStart;
-    double xStop;
-    double yStart;
-    double yStop;
-    double xScale;
-    double yScale;
 };
