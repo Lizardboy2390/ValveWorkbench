@@ -103,6 +103,8 @@ QGraphicsLineItem* PlotQCP::createSegment(double x1, double y1, double x2, doubl
     line->start->setCoords(x1, y1);
     line->end->setCoords(x2, y2);
     line->setPen(pen);
+    // Register with parent plot
+    line->registerWithParentPlot();
     
     // Replot
     customPlot->replot();
@@ -118,6 +120,8 @@ QGraphicsTextItem* PlotQCP::createLabel(double x, double y, double value)
     textItem->position->setCoords(x, y);
     textItem->setText(QString::number(value));
     textItem->setFont(QFont("Arial", 9));
+    // Register with parent plot
+    textItem->registerWithParentPlot();
     
     // Replot
     customPlot->replot();
@@ -207,12 +211,16 @@ void PlotQCP::markOperatingPoint(double x, double y, const QString& name)
     tracer->setPen(QPen(Qt::red));
     tracer->setBrush(QBrush(Qt::red));
     tracer->position->setCoords(x, y);
+    // Register with parent plot
+    tracer->registerWithParentPlot();
     
     // Add a text label
     QCPItemText* textItem = new QCPItemText(customPlot);
     textItem->position->setCoords(x + 5, y + 5);
     textItem->setText(name);
     textItem->setFont(QFont("Arial", 9));
+    // Register with parent plot
+    textItem->registerWithParentPlot();
     
     // Replot
     customPlot->replot();

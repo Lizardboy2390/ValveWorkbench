@@ -58,6 +58,7 @@ private slots:
     void on_actionLoad_Model_triggered();
 
     void on_stdDeviceSelection_currentIndexChanged(int index);
+    void on_stdDeviceSelection2_currentIndexChanged(int index);
 
     void on_circuitSelection_currentIndexChanged(int index);
 
@@ -159,19 +160,17 @@ private:
     // UI related member variables
     QLineEdit *circuitValues[16];
     QLabel *circuitLabels[16];
-
     Plot plot;
-    PlotQCP *plotQCP = nullptr;
+    PlotQCP* plotQCP;
     QGraphicsItemGroup *modelPlot = nullptr;
 
-    // Non-UI related member variables
-    QList<Device *> devices;
+    QList<Device*> devices;
     Device *currentDevice = nullptr;
     Device *customDevice = nullptr;
 
     QTreeWidgetItem *currentProject = nullptr;
 
-    QList<Circuit *> circuits;
+    QList<Circuit*> circuits;
     QTreeWidgetItem *projectTree;
 
     int deviceType = TRIODE;

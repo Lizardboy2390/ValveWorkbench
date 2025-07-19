@@ -4,5 +4,26 @@
 // In a real implementation, this file would contain all the drawing code
 // For our purposes, this stub implementation is sufficient to compile the project
 
-// We don't need to implement anything here since we've defined everything as inline in the header
-// This file exists mainly to provide a proper compilation target for the .pro file
+// Implementation of the registerWithParentPlot methods
+// These methods are called after QCustomPlot is fully defined
+
+void QCPItemLine::registerWithParentPlot()
+{
+    if (mParentPlot) {
+        mParentPlot->mItems.append(this);
+    }
+}
+
+void QCPItemText::registerWithParentPlot()
+{
+    if (mParentPlot) {
+        mParentPlot->mItems.append(this);
+    }
+}
+
+void QCPItemTracer::registerWithParentPlot()
+{
+    if (mParentPlot) {
+        mParentPlot->mItems.append(this);
+    }
+}

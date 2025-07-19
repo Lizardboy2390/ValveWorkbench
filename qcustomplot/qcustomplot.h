@@ -52,17 +52,15 @@ class QCPAxis : public QObject
 {
   Q_OBJECT
 public:
-  QCPAxis() : mLabel(""), mRange(0, 10) {}
+  QCPAxis() : mLabel(""), mRange{0, 10} {}
   
   void setLabel(const QString &label) { mLabel = label; }
-  void setRange(double lower, double upper) { mRange = qMakePair(lower, upper); }
-  
-  QSharedPointer<QCPAxisTickerFixed> ticker() const { return mTicker; }
+  void setRange(double lower, double upper) { mRange.lower = lower; mRange.upper = upper; }
   void setTicker(QSharedPointer<QCPAxisTickerFixed> ticker) { mTicker = ticker; }
   
 private:
   QString mLabel;
-  QPair<double, double> mRange;
+  struct Range { double lower, upper; } mRange;
   QSharedPointer<QCPAxisTickerFixed> mTicker;
 };
 
@@ -129,9 +127,10 @@ class QCPItemLine : public QObject
   Q_OBJECT
 public:
   QCPItemLine(QCustomPlot *parentPlot) {
-    Q_UNUSED(parentPlot);
     start = new QCPItemPosition();
     end = new QCPItemPosition();
+    // Store parent plot for later registration
+    mParentPlot = parentPlot;
   }
   
   ~QCPItemLine() {
@@ -139,12 +138,16 @@ public:
     delete end;
   }
   
+  // Called after QCustomPlot is fully defined
+  void registerWithParentPlot();
+  
   void setPen(const QPen &pen) { mPen = pen; }
   
   QCPItemPosition *start;
   QCPItemPosition *end;
   
 private:
+  QCustomPlot *mParentPlot;
   QPen mPen;
 };
 
@@ -154,13 +157,17 @@ class QCPItemText : public QObject
   Q_OBJECT
 public:
   QCPItemText(QCustomPlot *parentPlot) {
-    Q_UNUSED(parentPlot);
     position = new QCPItemPosition();
+    // Store parent plot for later registration
+    mParentPlot = parentPlot;
   }
   
   ~QCPItemText() {
     delete position;
   }
+  
+  // Called after QCustomPlot is fully defined
+  void registerWithParentPlot();
   
   void setText(const QString &text) { mText = text; }
   void setFont(const QFont &font) { mFont = font; }
@@ -168,6 +175,7 @@ public:
   QCPItemPosition *position;
   
 private:
+  QCustomPlot *mParentPlot;
   QString mText;
   QFont mFont;
 };
@@ -180,13 +188,17 @@ public:
   enum TracerStyle { tsNone, tsPlus, tsCrosshair, tsCircle, tsSquare };
   
   QCPItemTracer(QCustomPlot *parentPlot) : mStyle(tsCircle), mSize(6.0) {
-    Q_UNUSED(parentPlot);
     position = new QCPItemPosition();
+    // Store parent plot for later registration
+    mParentPlot = parentPlot;
   }
   
   ~QCPItemTracer() {
     delete position;
   }
+  
+  // Called after QCustomPlot is fully defined
+  void registerWithParentPlot();
   
   void setStyle(TracerStyle style) { mStyle = style; }
   void setSize(double size) { mSize = size; }
@@ -196,6 +208,7 @@ public:
   QCPItemPosition *position;
   
 private:
+  QCustomPlot *mParentPlot;
   TracerStyle mStyle;
   double mSize;
   QPen mPen;
@@ -208,20 +221,32 @@ class QCustomPlot : public QWidget
   Q_OBJECT
   
 public:
-  explicit QCustomPlot(QWidget *parent = nullptr) : QWidget(parent) {
+  explicit QCustomPlot(QWidget *parent = nullptr) : QWidget(parent), 
+    legend(new QCPLegend()), 
+    xAxis(new QCPAxis()), 
+    yAxis(new QCPAxis()) {
     mAxisRect = new QCPAxisRect();
-    mLegend = new QCPLegend();
-    mXAxis = new QCPAxis();
-    mYAxis = new QCPAxis();
+    mGraphs.clear();
+    mItems.clear();
   }
   
   ~QCustomPlot() {
-    clearGraphs();
-    clearItems();
     delete mAxisRect;
-    delete mLegend;
-    delete mXAxis;
-    delete mYAxis;
+    delete legend;
+    delete xAxis;
+    delete yAxis;
+    
+    // Clean up graphs
+    for (int i = 0; i < mGraphs.size(); ++i) {
+      delete mGraphs[i];
+    }
+    mGraphs.clear();
+    
+    // Clean up items
+    for (int i = 0; i < mItems.size(); ++i) {
+      delete mItems[i];
+    }
+    mItems.clear();
   }
   
   void setInteractions(QCP::Interactions interactions) { mInteractions = interactions; }
@@ -232,18 +257,23 @@ public:
   QCPAxis *yAxis;
   
   void clearGraphs() {
-    qDeleteAll(mGraphs);
+    for (int i = 0; i < mGraphs.size(); ++i) {
+      delete mGraphs[i];
+    }
     mGraphs.clear();
   }
   
   void clearItems() {
-    qDeleteAll(mItems);
+    for (int i = 0; i < mItems.size(); ++i) {
+      delete mItems[i];
+    }
     mItems.clear();
   }
   
-  void addGraph() {
-    QCPGraph *newGraph = new QCPGraph();
-    mGraphs.append(newGraph);
+  QCPGraph* addGraph() {
+    QCPGraph *graph = new QCPGraph();
+    mGraphs.append(graph);
+    return graph;
   }
   
   QCPGraph *graph(int index) const {
@@ -255,15 +285,13 @@ public:
   int graphCount() const { return mGraphs.size(); }
   
   void replot() {
-    // In a real implementation, this would trigger a repaint
+    // In a real implementation, this would redraw the plot
+    // For our stub, just update the widget
     update();
   }
   
 private:
   QCPAxisRect *mAxisRect;
-  QCPLegend *mLegend;
-  QCPAxis *mXAxis;
-  QCPAxis *mYAxis;
   QCP::Interactions mInteractions;
   QList<QCPGraph*> mGraphs;
   QList<QObject*> mItems;

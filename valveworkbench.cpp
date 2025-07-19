@@ -345,6 +345,9 @@ void ValveWorkbench::buildModelSelection()
             pentodeCount++;
             qDebug("  Added pentode '%s' to Device 1", name.toStdString().c_str());
         }
+        
+        // Debug device type information
+        qDebug("  Device %s has modelType=%d, uiDeviceType=%d", name.toStdString().c_str(), modelType, uiDeviceType);
     }
     
     qDebug("Added %d triodes and %d pentodes to combo boxes", triodeCount, pentodeCount);
@@ -878,14 +881,21 @@ void ValveWorkbench::pentodeMode()
     ui->screenStart->setEnabled(true);
     ui->screenStop->setEnabled(true);
     ui->screenStep->setEnabled(true);
+    
+    // Explicitly hide and disable the second device selection for pentode mode
+    ui->stdDeviceSelection2->setVisible(false);
+    ui->stdDeviceSelection2->setEnabled(false);
+    ui->label_5->setVisible(false);
+    
+    // Rebuild the model selection to show only pentode devices
+    buildModelSelection();
 }
 
 void ValveWorkbench::triodeMode(bool doubleTriode)
 {
-    (void)doubleTriode; // Parameter currently unused
     updateParameterDisplay();
 
-    deviceType = TRIODE;
+    deviceType = doubleTriode ? DOUBLE_TRIODE : TRIODE;
 
     ui->testType->clear();
     ui->testType->addItem("Anode Characteristics", ANODE_CHARACTERISTICS);
@@ -900,32 +910,44 @@ void ValveWorkbench::triodeMode(bool doubleTriode)
     ui->screenStart->setEnabled(false);
     ui->screenStop->setEnabled(false);
     ui->screenStep->setEnabled(false);
+    
+    // Configure second device selection based on double triode mode
+    ui->stdDeviceSelection2->setVisible(doubleTriode);
+    ui->stdDeviceSelection2->setEnabled(doubleTriode);
+    ui->label_5->setVisible(doubleTriode);
+    
+    // Rebuild the model selection to show only triode devices
+    buildModelSelection();
 }
 
 void ValveWorkbench::diodeMode()
 {
+    updateParameterDisplay();
+
     deviceType = DIODE;
 
     ui->testType->clear();
-    ui->testType->addItem("Anode Charcteristics", ANODE_CHARACTERISTICS);
+    ui->testType->addItem("Anode Characteristics", ANODE_CHARACTERISTICS);
 
+    // Disable grid controls for diode mode
     ui->gridLabel->setEnabled(false);
     ui->gridStart->setEnabled(false);
     ui->gridStop->setEnabled(false);
     ui->gridStep->setEnabled(false);
 
+    // Disable screen controls for diode mode
     ui->screenLabel->setEnabled(false);
     ui->screenStart->setEnabled(false);
     ui->screenStop->setEnabled(false);
     ui->screenStep->setEnabled(false);
-}
-
-void ValveWorkbench::log(QString message)
-{
-    if (logFile != nullptr) {
-        logFile->write(message.toLatin1());
-        logFile->write("\n");
-    }
+    
+    // Hide and disable the second device selection for diode mode
+    ui->stdDeviceSelection2->setVisible(false);
+    ui->stdDeviceSelection2->setEnabled(false);
+    ui->label_5->setVisible(false);
+    
+    // Rebuild the model selection to show only diode devices
+    buildModelSelection();
 }
 
 double ValveWorkbench::updateVoltage(QLineEdit *input, double oldValue, int electrode)
@@ -1013,6 +1035,11 @@ void ValveWorkbench::handleHeaterTimeout()
 void ValveWorkbench::on_stdDeviceSelection_currentIndexChanged(int index)
 {
     selectStdDevice(1, ui->stdDeviceSelection->itemData(index).toInt());
+}
+
+void ValveWorkbench::on_stdDeviceSelection2_currentIndexChanged(int index)
+{
+    selectStdDevice(2, ui->stdDeviceSelection2->itemData(index).toInt());
 }
 
 void ValveWorkbench::on_circuitSelection_currentIndexChanged(int index)
