@@ -41,9 +41,9 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     ui->setupUi(this);
 
-    ui->deviceType->addItem("Triode", TRIODE);
+    ui->deviceType->addItem("Triode A", TRIODE);
+    ui->deviceType->addItem("Triode B", DOUBLE_TRIODE);
     ui->deviceType->addItem("Pentode", PENTODE);
-    //ui->deviceType->addItem("Double Triode", TRIODE);
     //ui->deviceType->addItem("Diode", DIODE);
 
     loadTemplate(0);
@@ -295,17 +295,20 @@ void ValveWorkbench::buildModelSelection()
     bool showDevice2 = false;
     
     if (uiDeviceType == TRIODE) {
-        // For triodes, we only need Device 1
+        // For single triodes, we only need Device 1
         showDevice1 = true;
         showDevice2 = false;
+        // Note: Label text is set in triodeMode(false)
     } else if (uiDeviceType == PENTODE) {
         // For pentodes, we only need Device 1
         showDevice1 = true;
         showDevice2 = false;
+        // Note: Label text is set in pentodeMode()
     } else if (uiDeviceType == DOUBLE_TRIODE) {
         // For double triodes, we need both Device 1 and Device 2
         showDevice1 = true;
         showDevice2 = true;
+        // Note: Label texts are set in triodeMode(true)
     }
     
     ui->stdDeviceSelection->setEnabled(showDevice1);
@@ -313,6 +316,8 @@ void ValveWorkbench::buildModelSelection()
     
     ui->stdDeviceSelection2->setEnabled(showDevice2);
     ui->label_5->setEnabled(showDevice2); // Device 2 label
+    ui->stdDeviceSelection2->setVisible(showDevice2);
+    ui->label_5->setVisible(showDevice2); // Make sure visibility is also set
     
     // Debug output to show loaded devices
     qDebug("Loaded %lld devices", devices.size());
@@ -327,23 +332,29 @@ void ValveWorkbench::buildModelSelection()
         QString name = device->getName();
         qDebug("Device %d: %s (Model Type: %d)", i, name.toStdString().c_str(), modelType);
         
-        // Map model types to UI device types
-        if (modelType == MODEL_TRIODE && (uiDeviceType == TRIODE || uiDeviceType == DOUBLE_TRIODE)) {
-            // Add triodes when Triode or Double Triode is selected
-            ui->stdDeviceSelection->addItem(name, i);
-            triodeCount++;
-            qDebug("  Added triode '%s' to Device 1", name.toStdString().c_str());
-            
-            // For double triodes, also add to Device 2
-            if (uiDeviceType == DOUBLE_TRIODE) {
-                ui->stdDeviceSelection2->addItem(name, i);
-                qDebug("  Added triode '%s' to Device 2", name.toStdString().c_str());
+        // Only add devices that match the current UI device type
+        if (uiDeviceType == TRIODE) {
+            // Only add triodes when in single triode mode
+            if (modelType == MODEL_TRIODE) {
+                ui->stdDeviceSelection->addItem(name, i);
+                triodeCount++;
+                qDebug("  Added triode '%s' to Device 1", name.toStdString().c_str());
             }
-        } else if (modelType == MODEL_PENTODE && uiDeviceType == PENTODE) {
-            // Add pentodes when Pentode is selected
-            ui->stdDeviceSelection->addItem(name, i);
-            pentodeCount++;
-            qDebug("  Added pentode '%s' to Device 1", name.toStdString().c_str());
+        } else if (uiDeviceType == DOUBLE_TRIODE) {
+            // Only add triodes when in double triode mode
+            if (modelType == MODEL_TRIODE) {
+                ui->stdDeviceSelection->addItem(name, i);
+                ui->stdDeviceSelection2->addItem(name, i);
+                triodeCount++;
+                qDebug("  Added triode '%s' to Device 1 and Device 2", name.toStdString().c_str());
+            }
+        } else if (uiDeviceType == PENTODE) {
+            // Only add pentodes when in pentode mode
+            if (modelType == MODEL_PENTODE) {
+                ui->stdDeviceSelection->addItem(name, i);
+                pentodeCount++;
+                qDebug("  Added pentode '%s' to Device 1", name.toStdString().c_str());
+            }
         }
         
         // Debug device type information
@@ -887,6 +898,9 @@ void ValveWorkbench::pentodeMode()
     ui->stdDeviceSelection2->setEnabled(false);
     ui->label_5->setVisible(false);
     
+    // Update device label for pentode mode
+    ui->label_4->setText("Pentode:");
+    
     // Rebuild the model selection to show only pentode devices
     buildModelSelection();
 }
@@ -916,6 +930,14 @@ void ValveWorkbench::triodeMode(bool doubleTriode)
     ui->stdDeviceSelection2->setEnabled(doubleTriode);
     ui->label_5->setVisible(doubleTriode);
     
+    // Update device labels based on mode
+    if (doubleTriode) {
+        ui->label_4->setText("Triode A:");
+        ui->label_5->setText("Triode B:");
+    } else {
+        ui->label_4->setText("Single Triode:");
+    }
+    
     // Rebuild the model selection to show only triode devices
     buildModelSelection();
 }
@@ -941,7 +963,10 @@ void ValveWorkbench::diodeMode()
     ui->screenStop->setEnabled(false);
     ui->screenStep->setEnabled(false);
     
-    // Hide and disable the second device selection for diode mode
+    // Update device label for diode mode
+    ui->label_4->setText("Diode:");
+    
+    // Explicitly hide and disable the second device selection for diode mode
     ui->stdDeviceSelection2->setVisible(false);
     ui->stdDeviceSelection2->setEnabled(false);
     ui->label_5->setVisible(false);
@@ -1533,7 +1558,7 @@ void ValveWorkbench::setFitButtons()
         ui->fitPentodeButton->setVisible(false);
     } else {
         Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-        if (project->getDeviceType() == TRIODE) {
+        if (project->getDeviceType() == TRIODE || project->getDeviceType() == DOUBLE_TRIODE) {
             ui->fitTriodeButton->setVisible(true);
             ui->fitPentodeButton->setVisible(false);
         } else {
@@ -1545,29 +1570,34 @@ void ValveWorkbench::setFitButtons()
 
 void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
 {
-    switch (ui->deviceType->itemData(index).toInt()) {
+    int deviceTypeValue = ui->deviceType->itemData(index).toInt();
+    qDebug("Device type changed to index %d, value %d", index, deviceTypeValue);
+    
+    switch (deviceTypeValue) {
     case PENTODE:
         pentodeMode();
         break;
     case TRIODE:
-        triodeMode(index == DOUBLE_TRIODE);
+        triodeMode(false);
+        break;
+    case DOUBLE_TRIODE:
+        triodeMode(true);
         break;
     case DIODE:
         diodeMode();
         break;
     default:
+        qDebug("Unknown device type: %d", deviceTypeValue);
         break;
     }
-
+    
     ui->testType->setCurrentIndex(0);
     on_testType_currentIndexChanged(0);
 }
 
 void ValveWorkbench::on_testType_currentIndexChanged(int index)
 {
-    updateParameterDisplay();
-
-    if (deviceType == TRIODE) {
+    if (deviceType == TRIODE || deviceType == DOUBLE_TRIODE) {
         ui->screenStart->setText("");
         ui->screenStop->setText("");
         ui->screenStep->setText("");
