@@ -15,6 +15,7 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGraphicsView>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLCDNumber>
@@ -142,6 +143,14 @@ public:
     QHBoxLayout *horizontalLayout_27;
     QLabel *label_14;
     QComboBox *testType;
+    QHBoxLayout *horizontalLayout_modelSelection;
+    QLabel *modelSelectionLabel;
+    QComboBox *modelSelectionCombo;
+    QGridLayout *gridLayout_parameters;
+    QLabel *muLabel;
+    QLabel *muValue;
+    QLabel *gmLabel;
+    QLabel *gmValue;
     QSpacerItem *verticalSpacer_8;
     QHBoxLayout *horizontalLayout_28;
     QLabel *heaterLabel_2;
@@ -794,6 +803,52 @@ public:
 
         verticalLayout_6->addLayout(horizontalLayout_27);
 
+        horizontalLayout_modelSelection = new QHBoxLayout();
+        horizontalLayout_modelSelection->setObjectName("horizontalLayout_modelSelection");
+        modelSelectionLabel = new QLabel(layoutWidget_2);
+        modelSelectionLabel->setObjectName("modelSelectionLabel");
+
+        horizontalLayout_modelSelection->addWidget(modelSelectionLabel);
+
+        modelSelectionCombo = new QComboBox(layoutWidget_2);
+        modelSelectionCombo->setObjectName("modelSelectionCombo");
+        sizePolicy2.setHeightForWidth(modelSelectionCombo->sizePolicy().hasHeightForWidth());
+        modelSelectionCombo->setSizePolicy(sizePolicy2);
+        modelSelectionCombo->setMinimumSize(QSize(160, 0));
+        modelSelectionCombo->setMaximumSize(QSize(160, 16777215));
+
+        horizontalLayout_modelSelection->addWidget(modelSelectionCombo);
+
+
+        verticalLayout_6->addLayout(horizontalLayout_modelSelection);
+
+        gridLayout_parameters = new QGridLayout();
+        gridLayout_parameters->setObjectName("gridLayout_parameters");
+        muLabel = new QLabel(layoutWidget_2);
+        muLabel->setObjectName("muLabel");
+
+        gridLayout_parameters->addWidget(muLabel, 0, 0, 1, 1);
+
+        muValue = new QLabel(layoutWidget_2);
+        muValue->setObjectName("muValue");
+        muValue->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
+
+        gridLayout_parameters->addWidget(muValue, 0, 1, 1, 1);
+
+        gmLabel = new QLabel(layoutWidget_2);
+        gmLabel->setObjectName("gmLabel");
+
+        gridLayout_parameters->addWidget(gmLabel, 1, 0, 1, 1);
+
+        gmValue = new QLabel(layoutWidget_2);
+        gmValue->setObjectName("gmValue");
+        gmValue->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
+
+        gridLayout_parameters->addWidget(gmValue, 1, 1, 1, 1);
+
+
+        verticalLayout_6->addLayout(gridLayout_parameters);
+
         verticalSpacer_8 = new QSpacerItem(20, 20, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
 
         verticalLayout_6->addItem(verticalSpacer_8);
@@ -1354,6 +1409,11 @@ public:
         label_13->setText(QCoreApplication::translate("ValveWorkbench", "Device Name:", nullptr));
         deviceTypeLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Device Type: ", nullptr));
         label_14->setText(QCoreApplication::translate("ValveWorkbench", "Test Type:", nullptr));
+        modelSelectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Model Selection:", nullptr));
+        muLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274 (Amplification):", nullptr));
+        muValue->setText(QCoreApplication::translate("ValveWorkbench", "--", nullptr));
+        gmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (Transconductance):", nullptr));
+        gmValue->setText(QCoreApplication::translate("ValveWorkbench", "--", nullptr));
         heaterLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage:", nullptr));
         label_15->setText(QCoreApplication::translate("ValveWorkbench", "Start", nullptr));
         label_16->setText(QCoreApplication::translate("ValveWorkbench", "Stop", nullptr));

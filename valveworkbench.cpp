@@ -109,6 +109,9 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     buildCircuitParameters();
     buildCircuitSelection();
+    
+    // Initialize the model selection dropdown in the Analyser tab
+    buildAnalyserModelSelection();
 
     circuits.append(new TriodeCommonCathode());
     circuits.append(new PentodeCommonCathode());
@@ -272,6 +275,58 @@ void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)
             selection->addItem(device->getName(), i);
         }
     }
+}
+
+void ValveWorkbench::buildAnalyserModelSelection()
+{
+    qDebug("========== Building Analyser Model Selection ==========");
+    
+    // Clear the model selection combo box
+    ui->modelSelectionCombo->clear();
+    
+    // Add default option
+    ui->modelSelectionCombo->addItem("Select Model...", -1);
+    
+    // Get the current device type from the UI
+    int uiDeviceType = ui->deviceType->currentData().toInt();
+    qDebug("Current UI device type: %d", uiDeviceType);
+    
+    int modelCount = 0;
+    
+    // Add devices to the model selection combo box based on their model type
+    for (int i = 0; i < devices.size(); i++) {
+        Device *device = devices.at(i);
+        int modelType = device->getDeviceType();
+        QString name = device->getName();
+        
+        // Only add devices that match the current UI device type
+        if ((uiDeviceType == TRIODE || uiDeviceType == DOUBLE_TRIODE) && modelType == MODEL_TRIODE) {
+            ui->modelSelectionCombo->addItem(name, i);
+            modelCount++;
+            qDebug("  Added triode model '%s' to model selection", name.toStdString().c_str());
+        } else if (uiDeviceType == PENTODE && modelType == MODEL_PENTODE) {
+            ui->modelSelectionCombo->addItem(name, i);
+            modelCount++;
+            qDebug("  Added pentode model '%s' to model selection", name.toStdString().c_str());
+        }
+    }
+    
+    qDebug("Added %d models to model selection combo box", modelCount);
+    
+    // If no matching models were loaded, disable the combo box
+    if (ui->modelSelectionCombo->count() <= 1) { // Only the "Select Model..." item
+        ui->modelSelectionCombo->setEnabled(false);
+        qDebug("No matching models for selection, disabled combo box");
+    } else {
+        ui->modelSelectionCombo->setEnabled(true);
+    }
+    
+    // Reset mu and gm display
+    ui->muValue->setText("--");
+    ui->gmValue->setText("--");
+    
+    qDebug("modelSelectionCombo has %d items", ui->modelSelectionCombo->count());
+    qDebug("========== Analyser Model Selection Built ==========");
 }
 
 void ValveWorkbench::buildModelSelection()
@@ -1565,30 +1620,25 @@ void ValveWorkbench::setFitButtons()
             ui->fitTriodeButton->setVisible(false);
             ui->fitPentodeButton->setVisible(true);
         }
-    }
 }
 
 void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
 {
-    int deviceTypeValue = ui->deviceType->itemData(index).toInt();
-    qDebug("Device type changed to index %d, value %d", index, deviceTypeValue);
+    deviceType = ui->deviceType->currentData().toInt();
+    qDebug("Device type changed to %d", deviceType);
     
-    switch (deviceTypeValue) {
-    case PENTODE:
-        pentodeMode();
-        break;
-    case TRIODE:
+    if (deviceType == TRIODE) {
         triodeMode(false);
-        break;
-    case DOUBLE_TRIODE:
+    } else if (deviceType == DOUBLE_TRIODE) {
         triodeMode(true);
-        break;
-    case DIODE:
-        diodeMode();
-        break;
-    default:
-        qDebug("Unknown device type: %d", deviceTypeValue);
-        break;
+    } else if (deviceType == PENTODE) {
+        pentodeMode();
+    } else {
+        qDebug("Unknown device type: %d", deviceType);
+    }
+    
+    buildModelSelection();
+    buildAnalyserModelSelection(); // Update the model selection dropdown in the Analyser tab
     }
     
     ui->testType->setCurrentIndex(0);
@@ -2000,6 +2050,8 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
     case 2:
         ui->measureCheck->setVisible(false);
         ui->modelCheck->setVisible(false);
+        // Update the model selection dropdown when switching to the Analyser tab
+        buildAnalyserModelSelection();
         break;
     default:
         break;

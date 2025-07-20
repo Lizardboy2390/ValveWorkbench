@@ -142,6 +142,8 @@ private slots:
 
     void on_compareButton_clicked();
 
+    void on_modelSelectionCombo_currentIndexChanged(int index);
+
     void on_cir8Value_editingFinished();
 
     void on_cir9Value_editingFinished();
@@ -239,6 +241,7 @@ private:
     void loadDevices();
 
     void buildModelSelection();
+    void buildAnalyserModelSelection();
     void buildCircuitParameters();
     void buildCircuitSelection();
     void buildStdDeviceSelection(QComboBox *selection, int type);
@@ -262,6 +265,7 @@ private:
     double updatePMax();
     double updateIaMax();
     void updateParameterDisplay();
+    void updateMuGmDisplay(int modelIndex);
     void doPlot();
     QTreeWidgetItem *getProject(QTreeWidgetItem *current);
     QTreeWidgetItem *getParent(QTreeWidgetItem *current, int type);
