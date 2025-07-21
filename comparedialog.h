@@ -24,11 +24,22 @@ public:
     void setReferenceCurrents(double ia, double screenCurrent); // For pentodes
     
 private slots:
+<<<<<<< Updated upstream
     void updateCalculations();
+=======
+    void updateComparison();
+    void on_pushButton_clicked();
+>>>>>>> Stashed changes
 
 private:
     Ui::CompareDialog *ui;
     Model *m_model = nullptr; // Store the model for calculations
+<<<<<<< Updated upstream
+=======
+    
+    void updateTriodeComparison();
+    void updatePentodeComparison();
+>>>>>>> Stashed changes
 };
 
 #endif // COMPAREDIALOG_H

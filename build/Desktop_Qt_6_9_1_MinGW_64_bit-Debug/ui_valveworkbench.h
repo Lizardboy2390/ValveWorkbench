@@ -15,7 +15,10 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGraphicsView>
+<<<<<<< Updated upstream
 #include <QtWidgets/QGridLayout>
+=======
+>>>>>>> Stashed changes
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLCDNumber>
@@ -143,6 +146,7 @@ public:
     QHBoxLayout *horizontalLayout_27;
     QLabel *label_14;
     QComboBox *testType;
+<<<<<<< Updated upstream
     QHBoxLayout *horizontalLayout_modelSelection;
     QLabel *modelSelectionLabel;
     QComboBox *modelSelectionCombo;
@@ -151,6 +155,8 @@ public:
     QLabel *muValue;
     QLabel *gmLabel;
     QLabel *gmValue;
+=======
+>>>>>>> Stashed changes
     QSpacerItem *verticalSpacer_8;
     QHBoxLayout *horizontalLayout_28;
     QLabel *heaterLabel_2;
@@ -803,6 +809,7 @@ public:
 
         verticalLayout_6->addLayout(horizontalLayout_27);
 
+<<<<<<< Updated upstream
         horizontalLayout_modelSelection = new QHBoxLayout();
         horizontalLayout_modelSelection->setObjectName("horizontalLayout_modelSelection");
         modelSelectionLabel = new QLabel(layoutWidget_2);
@@ -849,6 +856,8 @@ public:
 
         verticalLayout_6->addLayout(gridLayout_parameters);
 
+=======
+>>>>>>> Stashed changes
         verticalSpacer_8 = new QSpacerItem(20, 20, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
 
         verticalLayout_6->addItem(verticalSpacer_8);
@@ -1409,11 +1418,14 @@ public:
         label_13->setText(QCoreApplication::translate("ValveWorkbench", "Device Name:", nullptr));
         deviceTypeLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Device Type: ", nullptr));
         label_14->setText(QCoreApplication::translate("ValveWorkbench", "Test Type:", nullptr));
+<<<<<<< Updated upstream
         modelSelectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Model Selection:", nullptr));
         muLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274 (Amplification):", nullptr));
         muValue->setText(QCoreApplication::translate("ValveWorkbench", "--", nullptr));
         gmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (Transconductance):", nullptr));
         gmValue->setText(QCoreApplication::translate("ValveWorkbench", "--", nullptr));
+=======
+>>>>>>> Stashed changes
         heaterLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage:", nullptr));
         label_15->setText(QCoreApplication::translate("ValveWorkbench", "Start", nullptr));
         label_16->setText(QCoreApplication::translate("ValveWorkbench", "Stop", nullptr));

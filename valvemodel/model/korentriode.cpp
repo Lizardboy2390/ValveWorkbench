@@ -1,4 +1,5 @@
 #include "korentriode.h"
+#include <ceres/jet.h>
 
 struct KorenTriodeResidual {
     KorenTriodeResidual(double va, double vg, double ia) : va_(va), vg_(vg), ia_(ia) {}
@@ -8,7 +9,7 @@ struct KorenTriodeResidual {
         T e1t = log(1.0 + exp(kp[0] * (1.0 / mu[0] + vg_ / sqrt(kvb[0] + va_ * va_))));
         T ia = pow((va_ / kp[0]) * e1t, x[0]) / kg[0];
         residual[0] = ia_ - ia;
-        return !(isnan(ia) || isinf(ia));
+        return !(ceres::isnan(ia) || ceres::isinf(ia));
     }
 
 private:

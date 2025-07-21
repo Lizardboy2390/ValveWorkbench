@@ -1,8 +1,29 @@
 #include "cohenhelietriode.h"
+<<<<<<< Updated upstream
 #include <cmath>
 #include <algorithm>
 
 // Direct implementation without Ceres, based on valvedesigner-web
+=======
+#include <ceres/jet.h>
+
+struct CohenHelieTriodeResidual {
+    CohenHelieTriodeResidual(double va, double vg, double ia) : va_(va), vg_(vg), ia_(ia) {}
+
+    template <typename T>
+    bool operator()(const T* const kg, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, T* residual) const {
+        T epk = log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg_ + vct[0]) / sqrt(kvb[0] + va_ * va_ + kvb1[0] * va_))));
+        T ia = pow((va_ / kp[0]) * epk, x[0]) / kg[0];
+        residual[0] = ia_ - ia;
+        return !(ceres::isnan(ia) || ceres::isinf(ia));
+    }
+
+private:
+    const double va_;
+    const double vg_;
+    const double ia_;
+};
+>>>>>>> Stashed changes
 
 CohenHelieTriode::CohenHelieTriode()
 {

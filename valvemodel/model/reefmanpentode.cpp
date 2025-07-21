@@ -1,4 +1,5 @@
 #include "reefmanpentode.h"
+#include <ceres/jet.h>
 
 #include <cmath>
 
@@ -7,6 +8,7 @@ struct DerkPentodeResidual {
 
     template <typename T>
     bool operator()(const T* const kg1, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg2, const T* const a, const T* const alpha, const T* const beta, T* residual) const {
+<<<<<<< Updated upstream
         // Improved numerical stability based on valvedesigner-web implementation
         // Ensure vg2 is at least 0.1V to avoid numerical issues
         T vg2 = T(vg2_ < 0.1 ? 0.1 : vg2_);
@@ -36,6 +38,14 @@ struct DerkPentodeResidual {
         
         residual[0] = T(ia_) - ia;
         return true; // Return true for valid calculation
+=======
+        T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
+        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
+        T g = 1.0 / (1.0 + beta[0] * va_);
+        T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * (1.0 - g) + a[0] * va_ / kg1[0]);
+        residual[0] = ia_ - ia;
+        return !(ceres::isnan(ia) || ceres::isinf(ia));
+>>>>>>> Stashed changes
     }
 
 private:
@@ -51,6 +61,7 @@ struct DerkEPentodeResidual {
 
     template <typename T>
     bool operator()(const T* const kg1, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg2, const T* const a, const T* const alpha, const T* const beta, T* residual) const {
+<<<<<<< Updated upstream
         // Improved numerical stability based on valvedesigner-web implementation
         // Ensure vg2 is at least 0.1V to avoid numerical issues
         T vg2 = T(vg2_ < 0.1 ? 0.1 : vg2_);
@@ -84,6 +95,14 @@ struct DerkEPentodeResidual {
         
         residual[0] = T(ia_) - ia;
         return true; // Return true for valid calculation
+=======
+        T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
+        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
+        T g = exp(-pow(beta[0] * va_, 1.5));
+        T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * (1.0 - g) + a[0] * va_ / kg1[0]);
+        residual[0] = ia_ - ia;
+        return !(ceres::isnan(ia) || ceres::isinf(ia));
+>>>>>>> Stashed changes
     }
 
 private:

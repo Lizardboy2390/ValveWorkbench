@@ -1,4 +1,5 @@
 #include "simpletriode.h"
+#include <ceres/jet.h>
 
 struct SimpleTriodeResidual {
     SimpleTriodeResidual(double va, double vg, double ia) : va_(va), vg_(vg), ia_(ia) {}
@@ -11,7 +12,7 @@ struct SimpleTriodeResidual {
         }
         T ia = pow(e1t, x[0]) / kg[0];
         residual[0] = ia_ - ia;
-        return !(isnan(ia) || isinf(ia));
+        return !(ceres::isnan(ia) || ceres::isinf(ia));
     }
 
 private:

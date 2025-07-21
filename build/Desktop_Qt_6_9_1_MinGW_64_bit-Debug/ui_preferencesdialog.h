@@ -16,7 +16,10 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QDialogButtonBox>
+<<<<<<< Updated upstream
 #include <QtWidgets/QDoubleSpinBox>
+=======
+>>>>>>> Stashed changes
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QSpacerItem>
@@ -48,6 +51,7 @@ public:
     QCheckBox *checkSecondary;
     QCheckBox *checkFixTriode;
     QCheckBox *checkFixSecondary;
+<<<<<<< Updated upstream
     QLabel *labelCalibration;
     QHBoxLayout *horizontalLayoutHeaterV;
     QLabel *labelHeaterV;
@@ -93,6 +97,8 @@ public:
     QLabel *labelGridV1;
     QDoubleSpinBox *gridVoltageCalibration1;
     QSpacerItem *verticalSpacer;
+=======
+>>>>>>> Stashed changes
 
     void setupUi(QDialog *PreferencesDialog)
     {
@@ -217,6 +223,7 @@ public:
 
         checkFixSecondary = new QCheckBox(verticalLayoutWidget);
         checkFixSecondary->setObjectName("checkFixSecondary");
+<<<<<<< Updated upstream
         checkFixSecondary->setChecked(true);
 
         verticalLayout->addWidget(checkFixSecondary);
@@ -603,6 +610,11 @@ public:
 
         verticalLayout->addItem(verticalSpacer);
 
+=======
+
+        verticalLayout->addWidget(checkFixSecondary);
+
+>>>>>>> Stashed changes
 
         retranslateUi(PreferencesDialog);
         QObject::connect(buttonBox, &QDialogButtonBox::accepted, PreferencesDialog, qOverload<>(&QDialog::accept));
@@ -622,6 +634,7 @@ public:
         checkSecondary->setText(QCoreApplication::translate("PreferencesDialog", "Model secondary emission", nullptr));
         checkFixTriode->setText(QCoreApplication::translate("PreferencesDialog", "Fix triode parameters for pentode modelling", nullptr));
         checkFixSecondary->setText(QCoreApplication::translate("PreferencesDialog", "Fix secondary emission parameters for screen modelling", nullptr));
+<<<<<<< Updated upstream
         labelCalibration->setText(QCoreApplication::translate("PreferencesDialog", "Calibration", nullptr));
         labelHeaterV->setText(QCoreApplication::translate("PreferencesDialog", "Heater Voltage:", nullptr));
         labelHeaterI->setText(QCoreApplication::translate("PreferencesDialog", "Heater Current:", nullptr));
@@ -638,6 +651,8 @@ public:
         labelScreenV1->setText(QCoreApplication::translate("PreferencesDialog", "Screen Voltage:", nullptr));
         labelScreenI1->setText(QCoreApplication::translate("PreferencesDialog", "Screen Current:", nullptr));
         labelGridV1->setText(QCoreApplication::translate("PreferencesDialog", "Grid Voltage:", nullptr));
+=======
+>>>>>>> Stashed changes
     } // retranslateUi
 
 };

@@ -48,6 +48,7 @@ public:
     QCheckBox *checkSecondary;
     QCheckBox *checkFixTriode;
     QCheckBox *checkFixSecondary;
+<<<<<<< Updated upstream
     QLabel *labelCalibration;
     QHBoxLayout *horizontalLayoutHeaterV;
     QLabel *labelHeaterV;
@@ -93,6 +94,8 @@ public:
     QLabel *labelGridV1;
     QDoubleSpinBox *gridVoltageCalibration1;
     QSpacerItem *verticalSpacer;
+=======
+>>>>>>> Stashed changes
 
     void setupUi(QDialog *PreferencesDialog)
     {
@@ -217,10 +220,10 @@ public:
 
         checkFixSecondary = new QCheckBox(verticalLayoutWidget);
         checkFixSecondary->setObjectName("checkFixSecondary");
-        checkFixSecondary->setChecked(true);
 
         verticalLayout->addWidget(checkFixSecondary);
 
+<<<<<<< Updated upstream
         labelCalibration = new QLabel(verticalLayoutWidget);
         labelCalibration->setObjectName("labelCalibration");
         QFont font;
@@ -603,6 +606,8 @@ public:
 
         verticalLayout->addItem(verticalSpacer);
 
+=======
+>>>>>>> Stashed changes
 
         retranslateUi(PreferencesDialog);
         QObject::connect(buttonBox, &QDialogButtonBox::accepted, PreferencesDialog, qOverload<>(&QDialog::accept));

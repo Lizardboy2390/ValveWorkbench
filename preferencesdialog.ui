@@ -240,11 +240,9 @@
       <property name="text">
        <string>Fix secondary emission parameters for screen modelling</string>
       </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
      </widget>
     </item>
+<<<<<<< Updated upstream
     <!-- Calibration Controls Section -->
     <item>
      <widget class="QLabel" name="labelCalibration">
@@ -1056,12 +1054,14 @@
       </property>
      </spacer>
     </item>
+=======
+>>>>>>> Stashed changes
    </layout>
   </widget>
  </widget>
- <resources/>
- <connections>
-  <connection>
+<resources/>
+<connections>
+ <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
    <receiver>PreferencesDialog</receiver>
@@ -1094,4 +1094,5 @@
    </hints>
   </connection>
  </connections>
+ <resources/>
 </ui>

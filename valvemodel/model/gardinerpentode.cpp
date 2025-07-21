@@ -1,4 +1,5 @@
 #include "gardinerpentode.h"
+#include <ceres/jet.h>
 
 //#include <cmath>
 
@@ -17,18 +18,31 @@ struct UnifiedPentodeIaResidual {
         // Calculate current distribution between anode and screen
         T shift = beta[0] * (T(1.0) - alpha[0] * vg1_);
         T g = exp(-pow(shift * va_, gamma[0]));
+<<<<<<< Updated upstream
         
         // Handle potential numerical instability
         if (isnan(g) || isinf(g)) {
             g = T(1.0); // More stable default value
+=======
+        //T g = 1.0 / (1.0 + pow(shift * va_, gamma[0]));
+        if (ceres::isnan(g)) { // Should only happen if Va is 0 and this is a better test than == 0.0
+            g = mu[0] / mu[0];
+>>>>>>> Stashed changes
         }
         
         T scale = T(1.0) - g;
         T k = T(1.0) / kg1[0] - T(1.0) / kg2[0];
         T ia = epk * (k * scale + a[0] * va_ / kg2[0]) + os[0] * vg2_;
 
+<<<<<<< Updated upstream
         if (!(isnan(ia) || isinf(ia))) {
             residual[0] = ia_ - ia;
+=======
+        //double w = exp(va_/ 250.0);
+        if (!(ceres::isnan(ia) || ceres::isinf(ia))) {
+            //residual[0] = (ia_ - ia) * w;
+            residual[0] = (ia_ - ia);
+>>>>>>> Stashed changes
         } else {
             return false;
         }
@@ -53,7 +67,7 @@ struct UnifiedPentodeIaSEResidual {
         T shift = beta[0] * (1.0 - alpha[0] * vg1_);
         T g = exp(-pow(shift * va_, gamma[0]));
         //T g = 1.0 / (1.0 + pow(shift * va_, gamma[0]));
-        if (isnan(g)) { // Should only happen if Va is 0 and this is a better test than == 0.0
+        if (ceres::isnan(g)) { // Should only happen if Va is 0 and this is a better test than == 0.0
             g = mu[0] / mu[0];
         }
         T scale = 1.0 - g;
@@ -62,7 +76,7 @@ struct UnifiedPentodeIaSEResidual {
         T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * scale + a[0] * va_ / kg2[0] - psec / kg2[0]) + os[0] * vg2_;
 
         //double w = exp(va_/ 250.0);
-        if (!(isnan(ia) || isinf(ia))) {
+        if (!(ceres::isnan(ia) || ceres::isinf(ia))) {
             //residual[0] = (ia_ - ia) * w;
             residual[0] = (ia_ - ia);
         } else {
@@ -89,14 +103,14 @@ struct UnifiedPentodeIg2Residual {
         T shift = rho[0] * (1.0 - tau[0] * vg1_);
         T h = exp(-pow(shift * va_, theta[0]));
         //T h = 1.0 / (1.0 + pow(shift * va_, theta[0]));
-        if (isnan(h)) { // Should only happen if Va is 0 and this is a better test than == 0.0
+        if (ceres::isnan(h)) { // Should only happen if Va is 0 and this is a better test than == 0.0
             h = mu[0] / mu[0];
         }
         T ig2 = epk * (1.0 + psi[0] * h) / kg3[0] - epk * a[0] * va_ / kg3[0];
         //T ig2 = epk * (1.0 + psi[0] * h) / kg3[0];
 
         //double w = exp(va_/ 250.0);
-        if (!(isnan(ig2) || isinf(ig2))) {
+        if (!(ceres::isnan(ig2) || ceres::isinf(ig2))) {
             //residual[0] = (ig2_ - ig2) * w;
             residual[0] = (ig2_ - ig2);
         } else {
@@ -124,7 +138,7 @@ struct UnifiedPentodeIg2SEResidual {
         T shift = rho[0] * (1.0 - tau[0] * vg1_);
         T h = exp(-pow(shift * va_, theta[0]));
         //T h = 1.0 / (1.0 + pow(shift * va_, theta[0]));
-        if (isnan(h)) { // Should only happen if Va is 0 and this is a better test than == 0.0
+        if (ceres::isnan(h)) { // Should only happen if Va is 0 and this is a better test than == 0.0
             h = mu[0] / mu[0];
         }
         T vco = vg2_ / lambda[0] - vg1_ * nu[0] - omega[0];
@@ -134,7 +148,7 @@ struct UnifiedPentodeIg2SEResidual {
         //T ig2 = epk * (1.0 + psi[0] * h + psec) / kg3[0];
 
         //double w = exp(va_/ 250.0);
-        if (!(isnan(ig2) || isinf(ig2))) {
+        if (!(ceres::isnan(ig2) || ceres::isinf(ig2))) {
             //residual[0] = (ig2_ - ig2) * w;
             residual[0] = (ig2_ - ig2);
         } else {

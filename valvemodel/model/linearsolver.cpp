@@ -1,6 +1,25 @@
 #include "linearsolver.h"
+#include <cmath>
 
+<<<<<<< Updated upstream
 LinearSolver::LinearSolver(double a_, double b_) : a(a_), b(b_), converged(false)
+=======
+struct LinearResidual {
+    LinearResidual(double x, double y) : y_(y), x_(x) {}
+
+    template <typename T>
+    bool operator()(const T* const a, const T* const b, T* residual) const {
+        residual[0] = y_ - (a[0] * x_ + b[0]);
+        return !(std::isnan(y_) || std::isnan(x_) || std::isinf(y_) || std::isinf(x_));
+    }
+
+private:
+    const double y_;
+    const double x_;
+};
+
+LinearSolver::LinearSolver(double a_, double b_) : a(a_), b(b_)
+>>>>>>> Stashed changes
 {
     // Initialize with provided values
 }
