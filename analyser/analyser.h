@@ -1,6 +1,7 @@
 #ifndef ANALYSER_H
 #define ANALYSER_H
 
+#include <glog/logging.h>
 #include <QRegularExpression>
 #include <QSerialPort>
 #include <QSerialPortInfo>

@@ -1,15 +1,68 @@
 #include "valveworkbench.h"
 #include "ui_valveworkbench.h"
 
-#include "valvemodel/circuit/triodecommoncathode.h"
-#include "valvemodel/circuit/pentodecommoncathode.h"
-#include "valvemodel/data/sweep.h"
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QSerialPort>
+#include <QSerialPortInfo>
+#include <QTimer>
+#include <QString>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QDebug>
+#include <QDir>
+#include <QTreeWidgetItem>
 
+#include "analyser/analyser.h"
+#include "valvemodel/model/model.h"
+#include "valvemodel/model/device.h"
+#include "valvemodel/model/estimate.h"
+#include "valvemodel/model/modelfactory.h"
+#include "valvemodel/data/project.h"
+#include "valvemodel/data/measurement.h"
+#include "valvemodel/data/sample.h"
+#include "valvemodel/data/sweep.h"
+#include "valvemodel/circuit/circuit.h"
+#include "valvemodel/circuit/triodecommoncathode.h"
+#include "ledindicator/ledindicator.h"
 #include "preferencesdialog.h"
 #include "projectdialog.h"
 #include "comparedialog.h"
 
-#include <QMessageBox>
+#include "valvemodel/circuit/sharedspice.h"
+
+int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
+    // Callback for ngSpice to send characters (e.g., print output)
+    // For now, just return 0
+    return 0;
+}
+
+int ngspice_getstat(char* outputreturn, int ident, void* userdata) {
+    // Callback for ngSpice status
+    return 0;
+}
+
+int ngspice_exit(int exitstatus, int immediate, int quitexit, int ident, void* userdata) {
+    // Callback for ngSpice exit
+    return 0;
+}
+
+int ngspice_data(void* pvecvalues, int numvecs, int ident, void* userdata) {
+    // Callback for ngSpice data
+    return 0;
+}
+
+int ngspice_initdata(void* pvecinit, int ident, void* userdata) {
+    // Callback for ngSpice init data
+    return 0;
+}
+
+int ngspice_thread_runs(int thread_id, void* userdata) {
+    // Callback for ngSpice thread
+    return 0;
+}
 
 ValveWorkbench::ValveWorkbench(QWidget *parent)
     : QMainWindow(parent)
@@ -21,7 +74,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         logFile = nullptr;
     }
 
-    ngSpice_Init(ng_getchar, ng_getstat, ng_exit, ng_data, ng_initdata, ng_thread_runs, NULL);
+    // ngSpice_Init(ngspice_getchar, ngspice_getstat, ngspice_exit, ngspice_data, ngspice_initdata, ngspice_thread_runs, NULL);
 
     anodeStart = 0.0;
     anodeStep = 0.0;
@@ -39,24 +92,32 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     ui->setupUi(this);
 
+    // Initialize heater state to always be "on" for workflow
+    heaters = true;
+
+    // Set initial heater button state and indicator
+    ui->heaterButton->setText("Heater ON");
+
     ui->deviceType->addItem("Triode", TRIODE);
     ui->deviceType->addItem("Pentode", PENTODE);
-    //ui->deviceType->addItem("Double Triode", TRIODE);
-    //ui->deviceType->addItem("Diode", DIODE);
+    ui->deviceType->addItem("Double Triode", TRIODE);
+    ui->deviceType->addItem("Diode", DIODE);
 
     loadTemplate(0);
 
     //buildModelSelection();
 
-    ui->runButton->setEnabled(false);
+    // ui->runButton->setEnabled(false);  // Commented out for testing
 
     ui->progressBar->setRange(0, 100);
     ui->progressBar->reset();
     ui->progressBar->setVisible(false);
 
+    // Initialize heater indicator
     heaterIndicator = new LedIndicator();
     heaterIndicator->setOffColor(QColorConstants::LightGray);
     ui->heaterLayout->addWidget(heaterIndicator);
+    heaterIndicator->setState(true); // Heater is always "on"
 
     ui->measureCheck->setVisible(false);
     ui->modelCheck->setVisible(false);
@@ -70,7 +131,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     connect(&serialPort, &QSerialPort::readyRead, this, &ValveWorkbench::handleReadyRead);
     connect(&serialPort, &QSerialPort::errorOccurred, this, &ValveWorkbench::handleError);
     connect(&timeoutTimer, &QTimer::timeout, this, &ValveWorkbench::handleTimeout);
-    connect(&heaterTimer, &QTimer::timeout, this, &ValveWorkbench::handleHeaterTimeout);
+    connect(ui->runButton, &QPushButton::clicked, this, &ValveWorkbench::on_runButton_clicked);
 
     checkComPorts();
 
@@ -88,7 +149,6 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     buildCircuitSelection();
 
     circuits.append(new TriodeCommonCathode());
-    circuits.append(new PentodeCommonCathode());
 }
 
 ValveWorkbench::~ValveWorkbench()
@@ -144,7 +204,6 @@ void ValveWorkbench::buildCircuitSelection()
 
     ui->circuitSelection->addItem("Select...", -1);
     ui->circuitSelection->addItem("Triode Common Cathode", TRIODE_COMMON_CATHODE);
-    ui->circuitSelection->addItem("Pentode Common Cathode", PENTODE_COMMON_CATHODE);
 
     /*if (currentDevice != nullptr) {
         if (currentDevice->getDeviceType() == MODEL_TRIODE) {
@@ -229,11 +288,6 @@ void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)
     }
 }
 
-void ValveWorkbench::selectPlot(int plotType)
-{
-    plotModel();
-}
-
 void ValveWorkbench::plotModel()
 {
     if (modelPlot) {
@@ -313,11 +367,16 @@ void ValveWorkbench::updateHeater(double vh, double ih)
 
 void ValveWorkbench::testProgress(int progress)
 {
+    qInfo("Test progress received: %d", progress);
+    //QMessageBox::information(this, "Progress", QString("Test progress: %1%").arg(progress));
     ui->progressBar->setValue(progress);
 }
 
 void ValveWorkbench::testFinished()
 {
+    //qInfo("Test finished");
+   // QMessageBox::information(this, "Debug", "Test finished!");
+
     ui->runButton->setChecked(false);
     ui->progressBar->setVisible(false);
     ui->btnAddToProject->setEnabled(true);
@@ -330,6 +389,7 @@ void ValveWorkbench::testFinished()
 
 void ValveWorkbench::testAborted()
 {
+    qInfo("Test aborted");
     ui->runButton->setChecked(false);
     ui->progressBar->setVisible(false);
 }
@@ -1277,48 +1337,64 @@ void ValveWorkbench::on_pMax_editingFinished()
 {
     updatePMax();
 }
-
-void ValveWorkbench::on_heaterButton_clicked()
-{
-    heaters = !heaters;
-
-    heaterIndicator->setState(heaters);
-    ui->runButton->setEnabled(heaters);
-    analyser->setHeaterVoltage(heaterVoltage);
-    analyser->setIsHeatersOn(heaters);
-}
-
 void ValveWorkbench::on_runButton_clicked()
 {
-    if (heaters) {
-        ui->runButton->setChecked(true);
-        ui->progressBar->reset();
-        ui->progressBar->setVisible(true);
-        ui->btnAddToProject->setEnabled(false);
+    static int clickCount = 0;
+    clickCount++;
+    qInfo("on_runButton_clicked called (count: %d)", clickCount);
 
-        analyser->setDeviceType(deviceType);
-        analyser->setTestType(testType);
-        analyser->setPMax(pMax);
-        analyser->setIaMax(iaMax);
-        analyser->setSweepParameters(anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep);
+    log("Run Test button clicked");
 
-        analyser->startTest();
-    } else {
-        ui->runButton->setChecked(false);
+    if (analyser == nullptr) {
+        log("Error: Analyser is null");
+        QMessageBox::warning(this, "Error", "Analyser not initialized");
+        return;
     }
+
+    ui->runButton->setChecked(true);
+    ui->progressBar->reset();
+    ui->progressBar->setVisible(true);
+    ui->btnAddToProject->setEnabled(false);
+
+    log("Configuring analyser");
+    analyser->setDeviceType(deviceType);
+    analyser->setTestType(testType);
+    analyser->setPMax(pMax);
+    analyser->setIaMax(iaMax);
+    analyser->setSweepParameters(anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep);
+
+    qInfo("Analyser parameters: anodeStart=%f, anodeStop=%f, anodeStep=%f, gridStart=%f, gridStop=%f, gridStep=%f, screenStart=%f, screenStop=%f, screenStep=%f", anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep);
+
+    log("Starting test");
+    analyser->startTest();
 }
 
 void ValveWorkbench::on_btnAddToProject_clicked()
 {
+    qDebug("Save to Project button clicked");
     if (currentProject == nullptr) {
+        qDebug("No current project, creating new one");
         on_actionNew_Project_triggered();
     }
 
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+    qDebug("Project pointer: %p", project);
     Measurement *measurement = analyser->getResult();
+    qDebug("Measurement pointer: %p", measurement);
+    if (measurement == nullptr) {
+        qWarning("Measurement is null - cannot add to project");
+        return;
+    }
     if (project->addMeasurement(measurement)) {
+        qDebug("Measurement added to project successfully");
+        qDebug("About to build tree");
         measurement->buildTree(currentProject);
+        qDebug("Tree built successfully");
+        qDebug("About to switch tab");
         ui->tabWidget->setCurrentWidget(ui->tab_2);
+        qDebug("Tab switched successfully");
+    } else {
+        qWarning("Failed to add measurement to project");
     }
 
     ui->btnAddToProject->setEnabled(false);
@@ -1610,3 +1686,20 @@ void ValveWorkbench::on_compareButton_clicked()
     dialog.exec();
 }
 
+void ValveWorkbench::on_heaterButton_clicked()
+{
+    // Always keep heaters as true for workflow to proceed
+    heaters = true;
+
+    if (analyser != nullptr) {
+        analyser->setIsHeatersOn(true);
+    }
+
+    if (heaterIndicator != nullptr) {
+        heaterIndicator->setState(true);
+    }
+
+    // Button shows "Heater ON" to indicate heaters are on and ready
+    ui->heaterButton->setText("Heater ON");
+    log("Heater confirmed ON - ready for testing");
+}

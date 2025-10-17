@@ -1,5 +1,6 @@
 #include "measurement.h"
 #include "sweep.h"
+#include <QDebug>
 
 Measurement::Measurement()
 {
@@ -158,6 +159,7 @@ void Measurement::toJson(QJsonObject &destination)
 
 QTreeWidgetItem *Measurement::buildTree(QTreeWidgetItem *parent)
 {
+    qDebug("Measurement::buildTree called for %s %s", deviceName().toStdString().c_str(), testName().toStdString().c_str());
     QTreeWidgetItem *item = new QTreeWidgetItem(parent, TYP_MEASUREMENT);
 
     item->setText(0, measurementName());
@@ -165,11 +167,18 @@ QTreeWidgetItem *Measurement::buildTree(QTreeWidgetItem *parent)
     item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
     item->setData(0, Qt::UserRole, QVariant::fromValue((void *) this));
 
+    qDebug("Measurement has %d sweeps", sweeps.size());
     for (int i = 0; i < sweeps.size(); i++) {
+        qDebug("Building tree for sweep %d", i);
+        if (sweeps.at(i) == nullptr) {
+            qWarning("Sweep %d is null", i);
+            continue;
+        }
         sweeps.at(i)->buildTree(item);
     }
 
     parent->setExpanded(true);
+    qDebug("Measurement::buildTree completed");
 
     return item;
 }
@@ -235,7 +244,7 @@ QGraphicsItemGroup *Measurement::updatePlot(Plot *plot, Sweep *sweep)
             return createGroup(plotPentodeTransfer(plot, sweep));
         } else if (testType == SCREEN_CHARACTERISTICS) {
             screenAxes(plot);
-            return createGroup(plotPentodeScreen(plot, sweep));
+            return createGroup(plotPentodeScreen(sweep));
         }
     }
 
@@ -499,7 +508,7 @@ QList<QGraphicsItem *> *Measurement::plotPentodeTransfer(Plot *plot, Sweep *swee
     return segments;
 }
 
-QList<QGraphicsItem *> *Measurement::plotPentodeScreen(Plot *plot, Sweep *sweep)
+QList<QGraphicsItem *> *Measurement::plotPentodeScreen(Sweep *sweep)
 {
     QPen samplePen;
     samplePen.setColor(QColor::fromRgb(0, 0, 0));

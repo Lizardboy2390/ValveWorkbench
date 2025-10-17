@@ -1,5 +1,11 @@
 #include "analyser.h"
-#include "valvemodel/data/sample.h"
+#include "client.h"
+#include <QSerialPort>
+#include <QTimer>
+
+#include "../valvemodel/data/sample.h"
+
+#include <QDebug>
 
 QRegularExpression *Analyser::sampleMatcher = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
 QRegularExpression *Analyser::sampleMatcher2 = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
@@ -8,7 +14,7 @@ QRegularExpression *Analyser::infoMatcher = new QRegularExpression(R"(^OK: Info\
 
 Analyser::Analyser(Client *client_, QSerialPort *port, QTimer *timeout, QTimer *heater) : client(client_), serialPort(port), timeoutTimer(timeout), heaterTimer(heater)
 {
-    heaterTimer->start(2000); // waits for 2s before starting to poll the measured heater values
+   // heaterTimer->start(2000); // waits for 2s before starting to poll the measured heater values
 
     //sendCommand("I0"); // Get the hardware version of the board
     //sendCommand("I1"); // Get the software version of the board
@@ -30,6 +36,13 @@ Sample *Analyser::createSample(QString response)
     double vh = convertMeasuredVoltage(HEATER, match.captured(1).toInt());
     double ih = convertMeasuredCurrent(HEATER, match.captured(2).toInt());
 
+    // Debug raw ADC values
+    int rawCurrent = match.captured(5).toInt();
+    int rawCurrentLo = match.captured(6).toInt();
+    int rawCurrentHi = match.captured(11).toInt();
+
+    qInfo("Raw ADC values - Current: %d, CurrentLo: %d, CurrentHi: %d", rawCurrent, rawCurrentLo, rawCurrentHi);
+
     // This line adjusts the anode current measurement to account for the current that always flows through the voltage sense network
     // The resistance of the voltage sense network (3 x 470k + 2 * 4k7) is 1.4194M and the current needs to be adjusted for mA
     ia = ia - va / 1419.4;
@@ -46,7 +59,11 @@ Sample *Analyser::createSample(QString response)
         measuredIg2Max = ig2;
     }
 
-    return new Sample(vg1, va, ia, vg2, ig2, vh, ih);
+    Sample *sample = new Sample(vg1, va, ia, vg2, ig2, vh, ih);
+
+    qInfo("Converted values - Va: %.3fV, Ia: %.3fmA, Vg1: %.3fV, Vg2: %.3fV", va, ia, vg1, vg2);
+
+    return sample;
 }
 
 int Analyser::convertTargetVoltage(int electrode, double voltage)
@@ -104,21 +121,20 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
         break;
     case ANODE:
     case SCREEN:
+        qInfo("Converting current - isMega: %d, current: %d, currentHi: %d", isMega, current, currentHi);
+
         if (isMega && currentHi < 1023) { // We haven't saturated the ADC
             value = ((double) currentHi) * vRefMaster / 1023 / 8.0 / 33.333333;
+            qInfo("Using high range: %f mA", value * 1000);
         } else if (current < 1000) { // We haven't saturated the ADC
                                      // (slight safety factor as the voltage at saturation is 2.048v
                                      // and this could be close to onset of diode conduction)
             value = ((double) current) * vRefMaster / 1023 / 2.0 / 33.333333;
+            qInfo("Using normal range: %f mA", value * 1000);
         } else {
             value = ((double) currentLo) * vRefMaster / 1023 / 2.0 / 3.333333;
+            qInfo("Using low range: %f mA", value * 1000);
         }
-        /*voltageHi = ((double) current) / 1023 / 2.0 * vRefMaster;
-        if (voltageHi < 1.9) {
-            value = voltageHi / 33.333333;
-        } else {
-            value = (((double) currentLo) / 1023 / 2.0 * vRefMaster / 3.333333);
-        }*/
         break;
     case GRID:
         break;
@@ -345,17 +361,22 @@ void Analyser::stopTest()
 }
 
 void Analyser::nextSample() {
+    qInfo("Analyser: nextSample called, stepIndex=%d, sweepIndex=%d", stepIndex, sweepIndex);
+         // Run the next value in the sweep
     if (!isEndSweep && sweepIndex < sweepParameter.at(stepIndex).length()) {
-        // Run the next value in the sweep
+       
+        qInfo("Sending sweep command: S%d %d", sweepType, sweepParameter.at(stepIndex).at(sweepIndex));
+      
         sendCommand(buildSetCommand(sweepCommandPrefix, sweepParameter.at(stepIndex).at(sweepIndex)));
         sendCommand("M2");
         sweepIndex++;
-    } else { // We've reached the end of this sweep so onto the next step
+    } else {
+        qInfo("End of sweep reached, moving to next step");
         stepIndex++;
         sweepIndex = 0;
         isEndSweep = false;
 
-        if (stepIndex < stepParameter.length()) { // There is another sweep to measure
+        if (stepIndex < stepParameter.length()) {// There is another sweep to measure
             double v1Nominal = stepValue.at(stepIndex);
             double v2Nominal = 0.0;
             if (deviceType == PENTODE) {
@@ -366,27 +387,34 @@ void Analyser::nextSample() {
                 }
             }
             result->nextSweep(v1Nominal, v2Nominal);
-
-            //setupCommands.append("M1"); // Discharge the capacitor banks at the end of a sweep (or it may take a while)
+            sendCommand("M1"); // Discharge the capacitor banks at the end of a sweep
+            qInfo("Sending step command: %s %d", stepCommandPrefix.toStdString().c_str(), stepParameter.at(stepIndex));
             sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(stepIndex)));
-            sendCommand(buildSetCommand(sweepCommandPrefix, sweepParameter.at(stepIndex).at(sweepIndex)));
+            qInfo("Sending step command: %s %d", sweepCommandPrefix.toStdString().c_str(), sweepParameter.at(sweepIndex));
+            int dac = sweepParameter.at(stepIndex).at(sweepIndex);
+            double estimatedVoltage = (dac / vRefMaster) * 1023.0 * 9400.0 / 1419400.0;
+            qInfo("Sending sweep DAC: %d, estimated voltage: %f V", dac, estimatedVoltage);
+            sendCommand(buildSetCommand(sweepCommandPrefix, dac));
             sendCommand("M2");
         } else {
-            // We've reached the end of the test!
+            qInfo("Test completed, sending M1");
             sendCommand("M1");
             isDataSetValid = true;
             isTestRunning = false;
 
+            qInfo("Calling client->testFinished()");
             client->testFinished();
         }
     }
 
     int progress = ((stepIndex * sweepPoints) + sweepIndex) * 100 / (sweepPoints * stepParameter.length());
+    qInfo("Sending progress: %d", progress);
     client->testProgress(progress);
 }
 
 void Analyser::abortTest()
 {
+    qInfo("Analyser: abortTest called, isTestRunning=%d", isTestRunning);
     isTestRunning = false;
     isTestAborted = true;
     isDataSetValid = false;
@@ -412,14 +440,14 @@ void Analyser::sendCommand(QString command)
         return;
     }
 
-    qInfo(command.toStdString().c_str());
+    qInfo("Sending command: %s", command.toStdString().c_str());
 
     QByteArray c = command.toLatin1();
 
     serialPort->write(c);
     serialPort->write("\r\n");
 
-    timeoutTimer->start(15000);
+    timeoutTimer->start(30000);
     awaitingResponse = true;
 }
 
@@ -434,6 +462,8 @@ void Analyser::nextCommand()
 void Analyser::checkResponse(QString response)
 {
     timeoutTimer->stop();
+
+    qInfo("Received response: %s", response.toStdString().c_str());
 
     QString message = " Response received: ";
     message += response;
@@ -459,12 +489,12 @@ void Analyser::checkResponse(QString response)
                 double measuredHeaterVoltage = convertMeasuredVoltage(HEATER, value);
                 aveHeaterVoltage = aveHeaterVoltage * 0.75 + measuredHeaterVoltage;
                 //client->updateHeater(measuredHeaterVoltage, -1.0);
-                client->updateHeater(aveHeaterVoltage / 4.0, -1.0);
+               // client->updateHeater(aveHeaterVoltage / 4.0, -1.0);
             } else if (variable == IH) {
                 double measuredHeaterCurrent = convertMeasuredCurrent(HEATER, value);
                 aveHeaterCurrent = aveHeaterCurrent * 0.75 + measuredHeaterCurrent;
                 //client->updateHeater(-1.0, measuredHeaterCurrent);
-                client->updateHeater(-1.0, aveHeaterCurrent / 4.0);
+               // client->updateHeater(-1.0, aveHeaterCurrent / 4.0);
             }
         }
     } else if (response.startsWith("OK: Info")) {
@@ -475,9 +505,9 @@ void Analyser::checkResponse(QString response)
 
             if (info == 0) {
                 hwVersion = value;
-                isMega = (hwVersion == "Rev 2 (Mega Pro)");
+                isMega = (hwVersion == "Rev 2 (Nano3)");
                 if (isMega) {
-                    vRefSlave = 4.096;
+                    vRefSlave = 4.1;
                 }
             } else if (info == 1) {
                 swVersion = value;
@@ -501,10 +531,9 @@ void Analyser::checkResponse(QString response)
                 qInfo("Ending sweep due to exceeding power threshold");
             }
 
-            // (Ideally) Only update the heater display periodically (i.e. not every sample)
-            // Was previously done at the beginning of a sweep but could do it on a sample counter instead
+            
             if (sampleCount++ > 29) {
-                client->updateHeater(sample->getVh(), sample->getIh());
+                
                 sampleCount = 0;
             }
 
@@ -555,7 +584,7 @@ void Analyser::handleHeaterTimeout()
             sendCommand("G1");
         }
     } else {
-        client->updateHeater(0.0, 0.0);
+       // client->updateHeater(0.0, 0.0);
     }
 
     if (!isVersionRead) {
@@ -598,6 +627,7 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
         } else {
             stepValue.append(stepVoltage);
         }
+
         stepParameter.append(convertTargetVoltage(stepType, stepVoltage));
 
         QList<int> thisSweep;
@@ -610,6 +640,7 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
             } else {
                 sweepVoltage = sweepStart + (sweepStop - sweepStart) * sweep;
             }
+            qInfo("sweepStop: %f, sweep: %f, sweepVoltage: %f", sweepStop, sweep, sweepVoltage);
             thisSweep.append(convertTargetVoltage(sweepType, sweepVoltage));
             sweep += increment;
         }
@@ -618,6 +649,8 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
 
         stepVoltage += step;
     }
+
+    qInfo("Generated sweep parameters: %d steps, each with %d points", stepParameter.length(), sweepParameter.at(0).length());
 }
 
 double Analyser::sampleFunction(double linearValue)

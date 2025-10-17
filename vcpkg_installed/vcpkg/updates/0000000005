@@ -1,0 +1,9 @@
+Package: gflags
+Version: 2.2.2
+Port-Version: 9
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: c70fd45992d0015b3c1e6e08fb5d6e51343f110def9ab6b85c89ff638790376f
+Description: A C++ library that implements commandline flags processing
+Status: install ok installed

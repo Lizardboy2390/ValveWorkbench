@@ -105,7 +105,7 @@ protected:
     QList<QGraphicsItem *> *plotTriodeTransfer(Plot *plot, Sweep *sweep = nullptr);
     QList<QGraphicsItem *> *plotPentodeAnode(Plot *plot, Sweep *sweep = nullptr);
     QList<QGraphicsItem *> *plotPentodeTransfer(Plot *plot, Sweep *sweep = nullptr);
-    QList<QGraphicsItem *> *plotPentodeScreen(Plot *plot, Sweep *sweep = nullptr);
+    QList<QGraphicsItem *> *plotPentodeScreen(Sweep *sweep = nullptr);
     double interval(double maxValue);
     void transferAxes(Plot *plot);
     void screenAxes(Plot *plot);

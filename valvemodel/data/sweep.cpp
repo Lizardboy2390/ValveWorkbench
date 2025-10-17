@@ -266,11 +266,15 @@ Measurement *Sweep::getMeasurement() const
 
 void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
+    qInfo("Plotting triode anode sweep with %d samples", samples.count());
+
     Sample *firstSample = samples.at(0);
 
     double vg = firstSample->getVg1();
     double va = firstSample->getVa();
     double ia = firstSample->getIa();
+
+    qInfo("First sample: vg1=%f, va=%f, ia=%f", vg, va, ia);
 
     int nSamples = samples.count();
     for (int j = 1; j < nSamples; j++) {
@@ -279,13 +283,21 @@ void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> 
          double vaNext = sample->getVa();
          double iaNext = sample->getIa();
 
-         segments->append(plot->createSegment(va, ia, vaNext, iaNext, *samplePen));
+         qInfo("Sample %d: va=%f->%f, ia=%f->%f", j, va, vaNext, ia, iaNext);
+
+         QGraphicsLineItem *segment = plot->createSegment(va, ia, vaNext, iaNext, *samplePen);
+         if (segment != nullptr) {
+             segments->append(segment);
+         } else {
+             qWarning("Failed to create segment for sample %d", j);
+         }
 
          va = vaNext;
          ia = iaNext;
      }
 
     segments->append(plot->createLabel(va, ia, vg1Nominal));
+    qInfo("Finished plotting triode anode sweep");
 }
 
 void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)

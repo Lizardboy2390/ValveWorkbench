@@ -1,22 +1,37 @@
+# Qt include paths for MSVC
+win32:INCLUDEPATH += "C:/Qt/6.9.3/msvc2022_64/include"
+win32:INCLUDEPATH += "C:/Qt/6.9.3/msvc2022_64/include/QtCore"
+win32:INCLUDEPATH += "C:/Qt/6.9.3/msvc2022_64/include/QtWidgets"
+win32:INCLUDEPATH += "C:/Qt/6.9.3/msvc2022_64/include/QtSerialPort"
+
 QT       += core gui printsupport serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++11
+DEFINES += GLOG_NO_ABBREVIATED_SEVERITIES
+DEFINES += NOMINMAX
+DEFINES += WIN32_LEAN_AND_MEAN
+DEFINES += GLOG_USE_GLOG_EXPORT
 
-# You can make your code fail to compile if it uses deprecated APIs.
-# In order to do so, uncomment the following line.
-#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+# Force Release runtime to match Ceres
+win32: QMAKE_CXXFLAGS += /MD
+win32: QMAKE_CXXFLAGS_DEBUG += /MD
 
 SOURCES += \
     analyser/analyser.cpp \
     analyser/client.cpp \
-    comparedialog.cpp \
     ledindicator/ledindicator.cpp \
     main.cpp \
     preferencesdialog.cpp \
     projectdialog.cpp \
-    valvemodel/circuit/pentodecommoncathode.cpp \
+    comparedialog.cpp \
+    project.cpp \
+    triodecommoncathode.cpp \
+    valveworkbench.cpp \
+    valvemodel/circuit/circuit.cpp \
+    valvemodel/circuit/triodeaccathodefollower.cpp \
+    valvemodel/circuit/triodecommoncathode.cpp \
+    valvemodel/circuit/triodedccathodefollower.cpp \
     valvemodel/data/dataset.cpp \
     valvemodel/data/measurement.cpp \
     valvemodel/data/project.cpp \
@@ -30,101 +45,61 @@ SOURCES += \
     valvemodel/model/model.cpp \
     valvemodel/model/modelfactory.cpp \
     valvemodel/model/korentriode.cpp \
-    valvemodel/model/quadraticsolver.cpp \
     valvemodel/model/reefmanpentode.cpp \
     valvemodel/model/simpletriode.cpp \
-    valvemodel/circuit/circuit.cpp \
-    valvemodel/circuit/triodeaccathodefollower.cpp \
-    valvemodel/circuit/triodecommoncathode.cpp \
-    valvemodel/circuit/triodedccathodefollower.cpp \
     valvemodel/model/template.cpp \
+    valvemodel/model/quadraticsolver.cpp \
+    valvemodel/model/moc_device.cpp \
+    valvemodel/model/moc_model.cpp \
+    valvemodel/model/moc_cohenhelietriode.cpp \
+    valvemodel/model/moc_estimate.cpp \
+    valvemodel/model/moc_gardinerpentode.cpp \
+    valvemodel/model/moc_korentriode.cpp \
+    valvemodel/model/moc_reefmanpentode.cpp \
+    valvemodel/model/moc_simpletriode.cpp \
     valvemodel/ui/uibridge.cpp \
     valvemodel/ui/plot.cpp \
     valvemodel/ui/parameter.cpp \
-    valveworkbench.cpp
+    valvemodel/ui/moc_uibridge.cpp \
 
 HEADERS += \
-    analyser/analyser.h \
     analyser/client.h \
-    comparedialog.h \
     ledindicator/ledindicator.h \
-    ngspice/sharedspice.h \
     preferencesdialog.h \
     projectdialog.h \
-    valvemodel/circuit/pentodecommoncathode.h \
-    valvemodel/constants.h \
-    valvemodel/data/dataset.h \
-    valvemodel/data/measurement.h \
-    valvemodel/data/project.h \
-    valvemodel/data/sample.h \
-    valvemodel/data/sweep.h \
-    valvemodel/model/cohenhelietriode.h \
-    valvemodel/model/device.h \
-    valvemodel/model/estimate.h \
-    valvemodel/model/gardinerpentode.h \
-    valvemodel/model/korentriode.h \
-    valvemodel/model/linearsolver.h \
-    valvemodel/model/model.h \
-    valvemodel/model/modelfactory.h \
-    valvemodel/model/quadraticsolver.h \
-    valvemodel/model/reefmanpentode.h \
-    valvemodel/model/simpletriode.h \
+    comparedialog.h \
+    project.h \
+    triodecommoncathode.h \
+    valveworkbench.h \
     valvemodel/circuit/circuit.h \
     valvemodel/circuit/triodeaccathodefollower.h \
     valvemodel/circuit/triodecommoncathode.h \
     valvemodel/circuit/triodedccathodefollower.h \
-    valvemodel/model/template.h \
-    valvemodel/ui/uibridge.h \
-    valvemodel/ui/plot.h \
     valvemodel/ui/parameter.h \
-    valvemodeller.h \
-    valveworkbench.h
+    valvemodel/model/quadraticsolver.h
 
-FORMS += \
-    comparedialog.ui \
-    preferencesdialog.ui \
-    projectdialog.ui \
-    valveworkbench.ui
+# Using Ceres installed in C:/Ceres_Install/ceres-solver
+win32:INCLUDEPATH += "C:/Ceres_Install/ceres-solver/include" \
+                     "C:/Ceres_Install/gflags/include" \
+                     "C:/Ceres_Install/Eigen3/include/eigen3" \
+                     "C:/Ceres_Install/glog/include"
 
-# Default rules for deployment.
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
-!isEmpty(target.path): INSTALLS += target
+win32:CONFIG(release, debug|release): LIBS += -LC:/Ceres_Install/ceres-solver/lib/ -lceres
+else:win32:CONFIG(debug, debug|release): LIBS += -LC:/Ceres_Install/ceres-solver/lib/ -lceres
 
-win32:CONFIG(release, debug|release): LIBS += -L$$(CMAKE_PREFIX_PATH)/ceres-solver/lib/ -lceres
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$(CMAKE_PREFIX_PATH)/ceres-solver/lib/ -lceres-debug
-else:unix: LIBS += -L$$(CMAKE_PREFIX_PATH)/ceres-solver/lib/ -lceres
+win32:CONFIG(release, debug|release): LIBS += -LC:/Ceres_Install/gflags/lib/ -lgflags_static
+else:win32:CONFIG(debug, debug|release): LIBS += -LC:/Ceres_Install/gflags/lib/ -lgflags_static
 
-INCLUDEPATH += $$(CMAKE_PREFIX_PATH)/ceres-solver/include
-DEPENDPATH += $$(CMAKE_PREFIX_PATH)/ceres-solver/include
+win32:CONFIG(release, debug|release): LIBS += -LC:/Ceres_Install/glog/lib/ -lglog
+else:win32:CONFIG(debug, debug|release): LIBS += -LC:/Ceres_Install/glog/lib/ -lglog
 
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$(CMAKE_PREFIX_PATH)/ceres-solver/lib/libceres.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$(CMAKE_PREFIX_PATH)/ceres-solver/lib/libceresd.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$(CMAKE_PREFIX_PATH)/CMake/ceres-solver/lib/ceres.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$(CMAKE_PREFIX_PATH)/ceres-solver/lib/ceres-debug.lib
-else:unix: PRE_TARGETDEPS += $$(CMAKE_PREFIX_PATH)/ceres-solver/lib/libceres.a
+# ngSpice library
+# win32:LIBS += -L"C:/Users/lizar/Downloads/ngspice-45.2_64" -lngspice
 
-win32:CONFIG(release, debug|release): LIBS += -L$$(CMAKE_PREFIX_PATH)/glog/lib/ -lglog
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$(CMAKE_PREFIX_PATH)/glog/lib/ -lglogd
-else:unix: LIBS += -L$$(CMAKE_PREFIX_PATH)/glog/lib/ -lglog
+DEPENDPATH += C:/Ceres_Install/ceres-solver/include
+DEPENDPATH += C:/Ceres_Install/gflags/include
+DEPENDPATH += C:/Ceres_Install/Eigen3/include/eigen3
 
-INCLUDEPATH += $$(CMAKE_PREFIX_PATH)/glog/include
-DEPENDPATH += $$(CMAKE_PREFIX_PATH)/glog/include
-
-win32:CONFIG(release, debug|release): LIBS += -L$$(CMAKE_PREFIX_PATH)/gflags/lib/ -lgflags_static
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$(CMAKE_PREFIX_PATH)/gflags/lib/ -lgflags_static_debug
-else:unix: LIBS += -L$$(CMAKE_PREFIX_PATH)/gflags/lib/ -lgflags_static
-
-INCLUDEPATH += $$(CMAKE_PREFIX_PATH)/gflags/include
-DEPENDPATH += $$(CMAKE_PREFIX_PATH)/gflags/include
-
-INCLUDEPATH += $$(CMAKE_PREFIX_PATH)/eigen3/include/eigen3
-DEPENDPATH += $$(CMAKE_PREFIX_PATH)/eigen3/include/eigen3
-
-win32: LIBS += -L$$PWD/ngspice/ -lngspice
-
-INCLUDEPATH += $$PWD/ngspice
-DEPENDPATH += $$PWD/ngspice
-
-RESOURCES += \
-    icons.qrc
+QMAKE_POST_LINK += copy "C:/Ceres_Install/ceres-solver/bin/ceres.dll" "$(DESTDIR)" &
+QMAKE_POST_LINK += copy "C:/Ceres_Install/gflags/bin/gflags.dll" "$(DESTDIR)" &
+QMAKE_POST_LINK += copy "C:/Ceres_Install/glog/bin/glog.dll" "$(DESTDIR)" &

@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include <QSerialPortInfo>
+#include <QDoubleSpinBox>
+#include <QLabel>
 
 namespace Ui {
 class PreferencesDialog;
@@ -27,10 +29,37 @@ public:
     bool fixTriodeParameters();
     bool showScreenCurrent();
 
+    double getHeaterVoltageCalibration();
+    double getHeaterCurrentCalibration();
+    double getAnodeVoltageCalibration();
+    double getAnodeCurrentCalibration();
+    double getScreenVoltageCalibration();
+    double getScreenCurrentCalibration();
+    double getGridVoltageCalibration();
+    double getGridCurrentCalibration();
+
 private slots:
 
 private:
     Ui::PreferencesDialog *ui;
+
+    QDoubleSpinBox *heaterVoltageSpinBox;
+    QDoubleSpinBox *heaterCurrentSpinBox;
+    QDoubleSpinBox *anodeVoltageSpinBox;
+    QDoubleSpinBox *anodeCurrentSpinBox;
+    QDoubleSpinBox *screenVoltageSpinBox;
+    QDoubleSpinBox *screenCurrentSpinBox;
+    QDoubleSpinBox *gridVoltageSpinBox;
+    QDoubleSpinBox *gridCurrentSpinBox;
+
+    QLabel *heaterVoltageLabel;
+    QLabel *heaterCurrentLabel;
+    QLabel *anodeVoltageLabel;
+    QLabel *anodeCurrentLabel;
+    QLabel *screenVoltageLabel;
+    QLabel *screenCurrentLabel;
+    QLabel *gridVoltageLabel;
+    QLabel *gridCurrentLabel;
 };
 
 #endif // PREFERENCESDIALOG_H
