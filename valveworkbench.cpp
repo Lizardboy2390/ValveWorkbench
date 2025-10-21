@@ -14,6 +14,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QTreeWidgetItem>
+#include <algorithm>
 
 #include "analyser/analyser.h"
 #include "valvemodel/model/model.h"
@@ -86,14 +87,54 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     screenStep = 0.0;
     screenStop = 0.0;
 
+    secondGridStart = 0.0;
+    secondGridStop = 0.0;
+    secondGridStep = 0.0;
+
+    secondAnodeStart = 0.0;
+    secondAnodeStop = 0.0;
+    secondAnodeStep = 0.0;
+
     readConfig(tr("analyser.json"));
 
     loadDevices();
 
     ui->setupUi(this);
 
+    // Add the Data tab programmatically
+    QWidget *dataTab = new QWidget();
+    ui->tabWidget->addTab(dataTab, "Data");
+
+    // Check if dataTab already has a layout, if not create one
+    QVBoxLayout *layout = nullptr;
+    if (dataTab->layout() == nullptr) {
+        layout = new QVBoxLayout(dataTab);
+    } else {
+        layout = qobject_cast<QVBoxLayout*>(dataTab->layout());
+    }
+
+    QLabel *dataLabel = new QLabel("Sweep Data Table", dataTab);
+    layout->addWidget(dataLabel);
+
+    dataTable = new QTableWidget(dataTab);
+    dataTable->setRowCount(10);
+    dataTable->setColumnCount(62);
+    dataTable->setHorizontalHeaderLabels(QStringList() << "Va_1" << "Va_2" << "Va_3" << "Va_4" << "Va_5" << "Va_6" << "Va_7" << "Va_8" << "Va_9" << "Va_10"
+                                                        << "Va_11" << "Va_12" << "Va_13" << "Va_14" << "Va_15" << "Va_16" << "Va_17" << "Va_18" << "Va_19" << "Va_20"
+                                                        << "Va_21" << "Va_22" << "Va_23" << "Va_24" << "Va_25" << "Va_26" << "Va_27" << "Va_28" << "Va_29" << "Va_30"
+                                                        << "Va_31" << "Va_32" << "Va_33" << "Va_34" << "Va_35" << "Va_36" << "Va_37" << "Va_38" << "Va_39" << "Va_40"
+                                                        << "Va_41" << "Va_42" << "Va_43" << "Va_44" << "Va_45" << "Va_46" << "Va_47" << "Va_48" << "Va_49" << "Va_50"
+                                                        << "Va_51" << "Va_52" << "Va_53" << "Va_54" << "Va_55" << "Va_56" << "Va_57" << "Va_58" << "Va_59" << "Va_60"
+                                                        << "Va_61" << "Va_62");
+    dataTable->setVerticalHeaderLabels(QStringList() << "Vg_1" << "Vg_2" << "Vg_3" << "Vg_4" << "Vg_5" << "Vg_6" << "Vg_7" << "Vg_8" << "Vg_9" << "Vg_10");
+    dataTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    dataTable->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    layout->addWidget(dataTable);
+
+    dataTab->setLayout(layout);
+
     // Initialize heater state to always be "on" for workflow
-    heaters = true;
+   // heaters = true;
 
     // Set initial heater button state and indicator
     ui->heaterButton->setText("Heater ON");
@@ -135,7 +176,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     checkComPorts();
 
-    analyser = new Analyser(this, &serialPort, &timeoutTimer, &heaterTimer);
+    analyser = new Analyser(this, &serialPort, &timeoutTimer);
     analyser->setPreferences(&preferencesDialog);
 
     ui->graphicsView->setScene(plot.getScene());
@@ -257,7 +298,7 @@ void ValveWorkbench::selectCircuit(int circuitType)
         return;
     }
 
-    Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
+    Circuit *circuit = circuits.at(circuitType);
     circuit->setDevice1(nullptr);
     circuit->setDevice2(nullptr);
 
@@ -266,6 +307,9 @@ void ValveWorkbench::selectCircuit(int circuitType)
 
     buildStdDeviceSelection(ui->stdDeviceSelection, circuit->getDeviceType(1));
     buildStdDeviceSelection(ui->stdDeviceSelection2, circuit->getDeviceType(2));
+
+    // Show parameter UI for the selected circuit
+    circuit->updateUI(circuitLabels, circuitValues);
 }
 
 void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)
@@ -341,7 +385,12 @@ void ValveWorkbench::updateDoubleValue(QLineEdit *input, double value)
 
 void ValveWorkbench::updateCircuitParameter(int index)
 {
-    Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0) {
+        return; // No valid circuit selected
+    }
+
+    Circuit *circuit = circuits.at(currentCircuitType);
     double value = checkDoubleValue(circuitValues[index], circuit->getParameter(index));
 
     updateDoubleValue(circuitValues[index], value);
@@ -367,7 +416,7 @@ void ValveWorkbench::updateHeater(double vh, double ih)
 
 void ValveWorkbench::testProgress(int progress)
 {
-    qInfo("Test progress received: %d", progress);
+    // qInfo("Test progress received: %d", progress);
     //QMessageBox::information(this, "Progress", QString("Test progress: %1%").arg(progress));
     ui->progressBar->setValue(progress);
 }
@@ -385,6 +434,160 @@ void ValveWorkbench::testFinished()
     measuredCurves = currentMeasurement->updatePlot(&plot);
     plot.add(measuredCurves);
     ui->measureCheck->setChecked(true);
+
+    // Populate data table with dual rows per sweep (Va and Ia)
+    if (currentMeasurement && dataTable) {
+        dataTable->clearContents();
+        int numSweeps = currentMeasurement->count();
+
+        if (numSweeps == 0) {
+            qWarning("No sweeps found in measurement data");
+            return;
+        }
+
+        // Set up table: 6 rows per sweep for double triode (Va, Ia, Vg1, Vg3, Va2, Ia2), 4 for regular (Va, Ia, Vg1, Vg3)
+        int rowsPerSweep = isDoubleTriode ? 6 : 4;
+        dataTable->setRowCount(numSweeps * rowsPerSweep);
+
+        // Set column headers for the 62 Va points
+        dataTable->setColumnCount(62);
+        QStringList headers;
+        for (int i = 0; i < 62; ++i) {
+            headers << QString("Va_%1").arg(i);
+        }
+        dataTable->setHorizontalHeaderLabels(headers);
+
+        qInfo("Populating table with %d sweeps (2 rows each)", numSweeps);
+
+        for (int sweepIdx = 0; sweepIdx < numSweeps; ++sweepIdx) {
+            Sweep *sweep = currentMeasurement->at(sweepIdx);
+            QString gridVoltage = QString("Vg_%1V").arg(sweep->getVg1Nominal(), 0, 'f', 2);
+
+            int sampleCount = sweep->count();
+            qInfo("Sweep %d: Vg1Nominal = %f, sampleCount = %d", sweepIdx, sweep->getVg1Nominal(), sampleCount);
+
+            if (sampleCount == 0) {
+                qWarning("Sweep %d has zero samples - skipping data population for this sweep", sweepIdx);
+                continue;  // Skip to next sweep
+            }
+
+            // Row for anode voltage values
+            int vaRow = sweepIdx * rowsPerSweep;
+            QString vaRowHeader = gridVoltage + " (Va)";
+            dataTable->setVerticalHeaderItem(vaRow, new QTableWidgetItem(vaRowHeader));
+
+            // Row for anode current values
+            int iaRow = sweepIdx * rowsPerSweep + 1;
+            QString iaRowHeader = gridVoltage + " (Ia)";
+            dataTable->setVerticalHeaderItem(iaRow, new QTableWidgetItem(iaRowHeader));
+
+            // Row for first grid voltage values (Vg1)
+            int vg1Row = sweepIdx * rowsPerSweep + 2;
+            QString vg1RowHeader = gridVoltage + " (Vg1)";
+            dataTable->setVerticalHeaderItem(vg1Row, new QTableWidgetItem(vg1RowHeader));
+
+            // Row for second grid voltage values (Vg3)
+            int vg3Row = sweepIdx * rowsPerSweep + 3;
+            QString vg3RowHeader = gridVoltage + " (Vg3)";
+            dataTable->setVerticalHeaderItem(vg3Row, new QTableWidgetItem(vg3RowHeader));
+
+            int va2Row = -1;
+            int ia2Row = -1;
+
+            if (isDoubleTriode) {
+                // Row for second anode voltage values (Va2)
+                va2Row = sweepIdx * rowsPerSweep + 4;
+                QString va2RowHeader = gridVoltage + " (Va2)";
+                dataTable->setVerticalHeaderItem(va2Row, new QTableWidgetItem(va2RowHeader));
+
+                // Row for second anode current values (Ia2)
+                ia2Row = sweepIdx * rowsPerSweep + 5;
+                QString ia2RowHeader = gridVoltage + " (Ia2)";
+                dataTable->setVerticalHeaderItem(ia2Row, new QTableWidgetItem(ia2RowHeader));
+            }
+
+            // Populate Va row (even row numbers)
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double va = sample->getVa();
+                if (col < 3) { // Log first few Va values for debugging
+                    qInfo("Sweep %d, Va_%d = %f", sweepIdx, col + 1, va);
+                }
+                QTableWidgetItem *vaItem = new QTableWidgetItem(QString::number(va, 'f', 2));
+                dataTable->setItem(vaRow, col, vaItem);
+            }
+
+            // Populate Ia row (odd row numbers)
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double ia = sample->getIa();
+                if (col < 3) { // Log first few Ia values for debugging
+                    qInfo("Sweep %d, Ia_%d = %f", sweepIdx, col + 1, ia);
+                }
+                QTableWidgetItem *iaItem = new QTableWidgetItem(QString::number(ia, 'f', 3));
+                dataTable->setItem(iaRow, col, iaItem);
+            }
+
+            // Populate Vg1 row (third row per sweep)
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double vg1 = sample->getVg1();
+                if (col < 3) { // Log first few Vg1 values for debugging
+                    qInfo("Sweep %d, Vg1_%d = %f", sweepIdx, col + 1, vg1);
+                }
+                QTableWidgetItem *vg1Item = new QTableWidgetItem(QString::number(vg1, 'f', 2));
+                dataTable->setItem(vg1Row, col, vg1Item);
+            }
+
+            // Populate Vg3 row (fourth row per sweep)
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double vg3 = sample->getVg3();
+                if (col < 3) { // Log first few Vg3 values for debugging
+                    qInfo("Sweep %d, Vg3_%d = %f", sweepIdx, col + 1, vg3);
+                }
+                QTableWidgetItem *vg3Item = new QTableWidgetItem(QString::number(vg3, 'f', 2));
+                dataTable->setItem(vg3Row, col, vg3Item);
+            }
+
+            if (isDoubleTriode) {
+                // Populate Va2 row (fourth row per sweep)
+                for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                    Sample *sample = sweep->at(col);
+                    double va2 = sample->getVa2();
+                    if (col < 3) { // Log first few Va2 values for debugging
+                        qInfo("Sweep %d, Va2_%d = %f", sweepIdx, col + 1, va2);
+                    }
+                    QTableWidgetItem *va2Item = new QTableWidgetItem(QString::number(va2, 'f', 2));
+                    dataTable->setItem(va2Row, col, va2Item);
+                }
+
+                // Populate Ia2 row (fifth row per sweep)
+                for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                    Sample *sample = sweep->at(col);
+                    double ia2 = sample->getIa2();
+                    if (col < 3) { // Log first few Ia2 values for debugging
+                        qInfo("Sweep %d, Ia2_%d = %f", sweepIdx, col + 1, ia2);
+                    }
+                    QTableWidgetItem *ia2Item = new QTableWidgetItem(QString::number(ia2, 'f', 3));
+                    dataTable->setItem(ia2Row, col, ia2Item);
+                }
+            }
+
+            // Resize columns to fit content and set a minimum width for visibility
+            dataTable->resizeColumnsToContents();
+            for (int col = 0; col < 62; ++col) {
+                dataTable->setColumnWidth(col, qMax(dataTable->columnWidth(col), 40)); // Minimum 40px width
+            }
+        }
+
+        // Set row heights for better readability
+        for (int row = 0; row < numSweeps * rowsPerSweep; ++row) {
+            dataTable->setRowHeight(row, qMax(dataTable->rowHeight(row), 25));
+        }
+
+        qInfo("Data table populated: %d sweeps x %d rows each = %d total rows", numSweeps, rowsPerSweep, numSweeps * rowsPerSweep);
+    }
 }
 
 void ValveWorkbench::testAborted()
@@ -501,7 +704,7 @@ void ValveWorkbench::loadDevices()
     QDir modelDir(modelPath);
 
     QStringList filters;
-    filters << "*.vwm";
+    filters << "*.vwm" << "*.json";  // Load both .vwm and .json files
     modelDir.setNameFilters(filters);
 
     QStringList models = modelDir.entryList();
@@ -559,9 +762,29 @@ void ValveWorkbench::updateParameterDisplay()
     updateDoubleValue(ui->gridStart, gridStart);
     updateDoubleValue(ui->gridStop, gridStop);
     updateDoubleValue(ui->gridStep, gridStep);
-    updateDoubleValue(ui->screenStart, screenStart);
-    updateDoubleValue(ui->screenStop, screenStop);
-    updateDoubleValue(ui->screenStep, screenStop);
+
+    if (ui->deviceType->currentText() == "Double Triode") {
+        updateDoubleValue(ui->anodeStart, anodeStart);
+        updateDoubleValue(ui->anodeStop, anodeStop);
+        updateDoubleValue(ui->anodeStep, anodeStep);
+        updateDoubleValue(ui->gridStart, secondGridStart);
+        updateDoubleValue(ui->gridStop, secondGridStop);
+        updateDoubleValue(ui->gridStep, secondGridStep);
+        updateDoubleValue(ui->screenStart, secondAnodeStart);
+        updateDoubleValue(ui->screenStop, secondAnodeStop);
+        updateDoubleValue(ui->screenStep, secondAnodeStep);
+    } else {
+        updateDoubleValue(ui->anodeStart, anodeStart);
+        updateDoubleValue(ui->anodeStop, anodeStop);
+        updateDoubleValue(ui->anodeStep, anodeStep);
+        updateDoubleValue(ui->gridStart, gridStart);
+        updateDoubleValue(ui->gridStop, gridStop);
+        updateDoubleValue(ui->gridStep, gridStep);
+        updateDoubleValue(ui->screenStart, screenStart);
+        updateDoubleValue(ui->screenStop, screenStop);
+        updateDoubleValue(ui->screenStep, screenStep);
+    }
+
     updateDoubleValue(ui->pMax, pMax);
     updateDoubleValue(ui->iaMax, iaMax);
 }
@@ -603,10 +826,48 @@ void ValveWorkbench::triodeMode(bool doubleTriode)
     ui->gridStop->setEnabled(true);
     ui->gridStep->setEnabled(true);
 
-    ui->screenLabel->setEnabled(false);
-    ui->screenStart->setEnabled(false);
-    ui->screenStop->setEnabled(false);
-    ui->screenStep->setEnabled(false);
+    if (doubleTriode) {
+        ui->screenLabel->setText("Second Anode (Read-only)");
+        ui->screenLabel->setEnabled(true);
+        ui->screenStart->setEnabled(true);
+        ui->screenStop->setEnabled(true);
+        ui->screenStep->setEnabled(true);
+
+        ui->anodeLabel->setText("First Anode");
+        ui->anodeStart->setEnabled(true);
+        ui->anodeStop->setEnabled(true);
+        ui->anodeStep->setEnabled(true);
+
+        ui->gridLabel->setText("Second Grid");
+        ui->gridStart->setEnabled(true);
+        ui->gridStop->setEnabled(true);
+        ui->gridStep->setEnabled(true);
+
+        secondGridStart = gridStart; // Use grid controls for second grid
+        secondGridStop = gridStop;
+        secondGridStep = gridStep;
+
+        secondAnodeStart = anodeStart; // Auto-fill second anode with first anode values
+        secondAnodeStop = anodeStop;
+        secondAnodeStep = anodeStep;
+    } else {
+        ui->screenLabel->setEnabled(false);
+        ui->screenStart->setEnabled(false);
+        ui->screenStop->setEnabled(false);
+        ui->screenStep->setEnabled(false);
+
+        ui->anodeLabel->setEnabled(true);
+        ui->anodeStart->setEnabled(true);
+        ui->anodeStop->setEnabled(true);
+        ui->anodeStep->setEnabled(true);
+
+        ui->gridLabel->setEnabled(true);
+        ui->gridStart->setEnabled(true);
+        ui->gridStop->setEnabled(true);
+        ui->gridStep->setEnabled(true);
+    }
+
+    updateParameterDisplay();
 }
 
 void ValveWorkbench::diodeMode()
@@ -712,10 +973,6 @@ void ValveWorkbench::handleTimeout()
     analyser->handleCommandTimeout();
 }
 
-void ValveWorkbench::handleHeaterTimeout()
-{
-    analyser->handleHeaterTimeout();
-}
 
 void ValveWorkbench::on_stdDeviceSelection_currentIndexChanged(int index)
 {
@@ -724,7 +981,10 @@ void ValveWorkbench::on_stdDeviceSelection_currentIndexChanged(int index)
 
 void ValveWorkbench::on_circuitSelection_currentIndexChanged(int index)
 {
-    selectCircuit(ui->circuitSelection->currentData().toInt());
+    int circuitType = ui->circuitSelection->currentData().toInt();
+    if (circuitType >= 0) {
+        selectCircuit(circuitType);
+    }
 }
 
 void ValveWorkbench::on_cir1Value_editingFinished()
@@ -971,6 +1231,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
     switch(current->type()) {
     case TYP_PROJECT:
+        qInfo("=== PROJECT TREE: TYP_PROJECT case triggered ===");
         setSelectedTreeItem(currentProject, false);
         currentProject = current;
         setSelectedTreeItem(currentProject, true);
@@ -978,6 +1239,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
         ((Project *)data)->updateProperties(ui->properties);
         break;
     case TYP_MEASUREMENT: {
+            qInfo("=== PROJECT TREE: TYP_MEASUREMENT case triggered ===");
             setSelectedTreeItem(currentMeasurementItem, false);
             currentMeasurementItem = current;
             setSelectedTreeItem(currentMeasurementItem, true);
@@ -990,13 +1252,19 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
             currentMeasurement->updateProperties(ui->properties);
             currentMeasurement->setShowScreen(showScreen);
-            measuredCurves = currentMeasurement->updatePlot(&plot);
-            plot.add(measuredCurves);
+           // plot.add(measuredCurves);
             modelledCurves = nullptr;
+            qInfo("=== BEFORE MEASUREMENT PLOT - Scene items count: %d ===", plot.getScene()->items().count());
+            measuredCurves = currentMeasurement->updatePlot(&plot);
+            qInfo("=== AFTER MEASUREMENT PLOT - measuredCurves items: %d, Scene items: %d ===", measuredCurves ? measuredCurves->childItems().count() : 0, plot.getScene()->items().count());
+            plot.add(measuredCurves);
+            qInfo("Added measuredCurves to plot");
             ui->measureCheck->setChecked(true);
+            qInfo("=== PROJECT TREE: Finished TYP_MEASUREMENT case ===");
             break;
         }
     case TYP_SWEEP: {
+            qInfo("=== PROJECT TREE: TYP_SWEEP case triggered ===");
             if (currentMeasurementItem != nullptr) {
                 QFont font = currentMeasurementItem->font(0);
                 font.setBold(false);
@@ -1020,10 +1288,31 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
                 Sweep *sweep = (Sweep *) data;
                 sweep->updateProperties(ui->properties);
+                qInfo("=== PROJECT TREE: About to call currentMeasurement->updatePlot(sweep) ===");
+                
+                // More aggressive clearing - clear plot completely before each update
+                qInfo("=== BEFORE PLOT CLEAR - Scene items count: %d ===", plot.getScene()->items().count());
+                plot.clear();
+                qInfo("=== AFTER PLOT CLEAR - Scene items count: %d ===", plot.getScene()->items().count());
+                
+                // Also remove measuredCurves if it exists
+                if (measuredCurves != nullptr) {
+                    plot.remove(measuredCurves);
+                    qInfo("Removed old measuredCurves");
+                } else {
+                    qInfo("measuredCurves is nullptr - no need to remove");
+                }
+                
+                // Reset measuredCurves to nullptr before updating
+                measuredCurves = nullptr;
+                qInfo("Reset measuredCurves to nullptr");
+                
                 measuredCurves = currentMeasurement->updatePlot(&plot, sweep);
+                qInfo("=== AFTER UPDATE PLOT - measuredCurves items: %d, Scene items: %d ===", measuredCurves ? measuredCurves->childItems().count() : 0, plot.getScene()->items().count());
                 plot.add(measuredCurves);
                 modelledCurves = nullptr;
                 ui->measureCheck->setChecked(true);
+                qInfo("=== PROJECT TREE: Finished TYP_SWEEP case ===");
             }
             break;
         }
@@ -1040,8 +1329,14 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             currentProject = getProject(current);
             Estimate *estimate = (Estimate *) data;
             estimate->updateProperties(ui->properties);
+            qInfo("=== BEFORE ESTIMATE PLOT - Scene items count: %d ===", plot.getScene()->items().count());
+            // Clear plot before estimate plotting
+            plot.clear();
+            qInfo("Cleared plot before estimate plotting");
             estimatedCurves = estimate->plotModel(&plot, currentMeasurement);
+            qInfo("=== AFTER ESTIMATE PLOT - estimatedCurves items: %d, Scene items: %d ===", estimatedCurves ? estimatedCurves->childItems().count() : 0, plot.getScene()->items().count());
             plot.add(estimatedCurves);
+            qInfo("Added estimatedCurves to plot");
             break;
         }
     case TYP_MODEL: {
@@ -1054,23 +1349,46 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             setSelectedTreeItem(currentProject, true);
             setFitButtons();
 
+            qInfo("=== MODEL PLOTTING: currentMeasurementItem type = %d, is null = %s ===", 
+                   currentMeasurementItem ? currentMeasurementItem->type() : -1,
+                   currentMeasurementItem ? "false" : "true");
+
             Sweep *sweep = nullptr;
 
             if (currentMeasurementItem != nullptr) {
                 if (currentMeasurementItem->type() == TYP_SWEEP) {
+                    // If currentMeasurementItem is a sweep, we're plotting a specific sweep
                     sweep = (Sweep *) currentMeasurementItem->data(0, Qt::UserRole).value<void *>();
+                } else if (currentMeasurementItem->type() == TYP_MEASUREMENT) {
+                    // If currentMeasurementItem is a measurement, force sweep to null for full measurement plotting
+                    sweep = nullptr;
                 }
+                // Otherwise, leave sweep as nullptr for full measurement plotting
             }
+
+            qInfo("=== MODEL PLOTTING: sweep is %s, about to call plotModel ===", sweep ? "NOT null" : "null");
 
             Model *model = (Model *) data;
             model->updateProperties(ui->properties);
             if (currentMeasurement != nullptr) {
-                if ((currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE) || (currentMeasurement->getDeviceType() == PENTODE && model->getType() == GARDINER_PENTODE)) {
+                qInfo("=== VALVEWORKBENCH: Attempting model plotting ===");
+                qInfo("Current measurement device type: %d, model type: %d",
+                       currentMeasurement->getDeviceType(), model->getType());
+
+                if ((currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE) ||
+                    (currentMeasurement->getDeviceType() == PENTODE && model->getType() == GARDINER_PENTODE)) {
+                    qInfo("Type check PASSED - proceeding with model plotting");
                     plot.remove(modelledCurves);
                     model->setShowScreen(showScreen);
                     modelledCurves = model->plotModel(&plot, currentMeasurement, sweep);
                     plot.add(modelledCurves);
+                    qInfo("Model plotting completed");
+                } else {
+                    qInfo("Type check FAILED - skipping model plotting");
+                    qInfo("Measurement device: %d, Model type: %d", currentMeasurement->getDeviceType(), model->getType());
                 }
+            } else {
+                qInfo("No current measurement available for model plotting");
             }
             ui->modelCheck->setChecked(true);
             break;
@@ -1207,7 +1525,8 @@ void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
         pentodeMode();
         break;
     case TRIODE:
-        triodeMode(index == DOUBLE_TRIODE);
+        triodeMode(ui->deviceType->currentText() == "Double Triode");
+        isDoubleTriode = ui->deviceType->currentText() == "Double Triode";
         break;
     case DIODE:
         diodeMode();
@@ -1279,47 +1598,86 @@ void ValveWorkbench::on_testType_currentIndexChanged(int index)
 
 void ValveWorkbench::on_anodeStart_editingFinished()
 {
-    anodeStart = updateVoltage(ui->anodeStart, anodeStart, ANODE);
+    double value = updateVoltage(ui->anodeStart, anodeStart, ANODE);
+    anodeStart = value;
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondAnodeStart = value;
+        updateDoubleValue(ui->screenStart, secondAnodeStart);
+    }
 }
 
 void ValveWorkbench::on_anodeStop_editingFinished()
 {
-    anodeStop = updateVoltage(ui->anodeStop, anodeStop, ANODE);
+    double value = updateVoltage(ui->anodeStop, anodeStop, ANODE);
+    anodeStop = value;
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondAnodeStop = value;
+        updateDoubleValue(ui->screenStop, secondAnodeStop);
+    }
 }
 
 void ValveWorkbench::on_anodeStep_editingFinished()
 {
-    anodeStep = updateVoltage(ui->anodeStep, anodeStep, ANODE);
+    double value = updateVoltage(ui->anodeStep, anodeStep, ANODE);
+    anodeStep = value;
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondAnodeStep = value;
+        updateDoubleValue(ui->screenStep, secondAnodeStep);
+    }
 }
 
 void ValveWorkbench::on_gridStart_editingFinished()
 {
-    gridStart = updateVoltage(ui->gridStart, gridStart, GRID);
+    double value = updateVoltage(ui->gridStart, gridStart, GRID);
+    gridStart = value;
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondGridStart = value;
+    }
 }
 
 void ValveWorkbench::on_gridStop_editingFinished()
 {
-    gridStop = updateVoltage(ui->gridStop, gridStop, GRID);
+    double value = updateVoltage(ui->gridStop, gridStop, GRID);
+    gridStop = value;
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondGridStop = value;
+    }
 }
 
 void ValveWorkbench::on_gridStep_editingFinished()
 {
-    gridStep = updateVoltage(ui->gridStep, gridStep, GRID);
+    double value = updateVoltage(ui->gridStep, gridStep, GRID);
+    gridStep = value;
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondGridStep = value;
+    }
 }
 
 void ValveWorkbench::on_screenStart_editingFinished()
 {
-    screenStart = updateVoltage(ui->screenStart, screenStart, SCREEN);
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondAnodeStart = updateVoltage(ui->screenStart, secondAnodeStart, ANODE);
+    } else {
+        screenStart = updateVoltage(ui->screenStart, screenStart, SCREEN);
+    }
 }
 
 void ValveWorkbench::on_screenStop_editingFinished()
 {
-    screenStop = updateVoltage(ui->screenStop, screenStop, SCREEN);
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondAnodeStop = updateVoltage(ui->screenStop, secondAnodeStop, ANODE);
+    } else {
+        screenStop = updateVoltage(ui->screenStop, screenStop, SCREEN);
+    }
 }
 
 void ValveWorkbench::on_screenStep_editingFinished()
 {
-    screenStep = updateVoltage(ui->screenStep, screenStep, SCREEN);
+    if (ui->deviceType->currentText() == "Double Triode") {
+        secondAnodeStep = updateVoltage(ui->screenStep, secondAnodeStep, ANODE);
+    } else {
+        screenStep = updateVoltage(ui->screenStep, screenStep, SCREEN);
+    }
 }
 
 void ValveWorkbench::on_heaterVoltage_editingFinished()
@@ -1359,9 +1717,11 @@ void ValveWorkbench::on_runButton_clicked()
     log("Configuring analyser");
     analyser->setDeviceType(deviceType);
     analyser->setTestType(testType);
+    analyser->setIsDoubleTriode(ui->deviceType->currentText() == "Double Triode");
+    isDoubleTriode = ui->deviceType->currentText() == "Double Triode";
     analyser->setPMax(pMax);
     analyser->setIaMax(iaMax);
-    analyser->setSweepParameters(anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep);
+    analyser->setSweepParameters(anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep, secondGridStart, secondGridStop, secondGridStep, secondAnodeStart, secondAnodeStop, secondAnodeStep);
 
     qInfo("Analyser parameters: anodeStart=%f, anodeStop=%f, anodeStep=%f, gridStart=%f, gridStop=%f, gridStep=%f, screenStart=%f, screenStop=%f, screenStep=%f", anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep);
 
@@ -1391,15 +1751,18 @@ void ValveWorkbench::on_btnAddToProject_clicked()
         measurement->buildTree(currentProject);
         qDebug("Tree built successfully");
         qDebug("About to switch tab");
-        ui->tabWidget->setCurrentWidget(ui->tab_2);
-        qDebug("Tab switched successfully");
+        // Temporarily commented out due to Qt bug in tab switching
+        // ui->tabWidget->setCurrentIndex(1);
+        qDebug("Tab switch commented out for workaround");
+        qDebug("Setting button enabled to false");
+        ui->btnAddToProject->setEnabled(false);
+        qDebug("Save to Project function completed");
     } else {
         qWarning("Failed to add measurement to project");
     }
 
     ui->btnAddToProject->setEnabled(false);
 }
-
 void ValveWorkbench::on_fitTriodeButton_clicked()
 {
     modelProject = currentProject;
@@ -1689,7 +2052,7 @@ void ValveWorkbench::on_compareButton_clicked()
 void ValveWorkbench::on_heaterButton_clicked()
 {
     // Always keep heaters as true for workflow to proceed
-    heaters = true;
+   // heaters = true;
 
     if (analyser != nullptr) {
         analyser->setIsHeatersOn(true);

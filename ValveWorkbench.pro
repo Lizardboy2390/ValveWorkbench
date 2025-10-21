@@ -103,3 +103,6 @@ DEPENDPATH += C:/Ceres_Install/Eigen3/include/eigen3
 QMAKE_POST_LINK += copy "C:/Ceres_Install/ceres-solver/bin/ceres.dll" "$(DESTDIR)" &
 QMAKE_POST_LINK += copy "C:/Ceres_Install/gflags/bin/gflags.dll" "$(DESTDIR)" &
 QMAKE_POST_LINK += copy "C:/Ceres_Install/glog/bin/glog.dll" "$(DESTDIR)" &
+
+FORMS += \
+    valveworkbench.ui

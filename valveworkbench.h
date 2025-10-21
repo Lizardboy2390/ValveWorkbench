@@ -88,8 +88,6 @@ private slots:
 
     void handleTimeout();
 
-    void handleHeaterTimeout();
-
     void on_deviceType_currentIndexChanged(int index);
 
     void on_testType_currentIndexChanged(int index);
@@ -158,6 +156,7 @@ private:
     // UI related member variables
     QLineEdit *circuitValues[16];
     QLabel *circuitLabels[16];
+    QTableWidget *dataTable;
 
     Plot plot;
     QGraphicsItemGroup *modelPlot = nullptr;
@@ -191,10 +190,18 @@ private:
     double screenStop;
     double screenStep;
 
+    double secondGridStart;
+    double secondGridStop;
+    double secondGridStep;
+
+    double secondAnodeStart;
+    double secondAnodeStop;
+    double secondAnodeStep;
+
     double iaMax;
     double pMax;
 
-    bool heaters = false;
+    bool isDoubleTriode = false;
 
     QFile *logFile;
 
@@ -220,7 +227,6 @@ private:
     QSerialPort serialPort;
 
     QTimer timeoutTimer;
-    QTimer heaterTimer;
 
     QList<QSerialPortInfo> serialPorts;
 

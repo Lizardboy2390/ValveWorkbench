@@ -2,14 +2,34 @@
 #define TRIODECOMMONCATHODE_H
 
 #include "valvemodel/circuit/circuit.h"
+#include <QVector>
+#include <QPointF>
 
 class TriodeCommonCathode : public Circuit
 {
+    Q_OBJECT
+
 public:
     TriodeCommonCathode();
     virtual ~TriodeCommonCathode();
 
-    // Implementation needed
+    int getDeviceType(int index) override;
+    void plot(Plot *plot) override;
+    void update(int index) override;
+
+    void calculateOperatingPoint();
+    double calculateGain();
+
+private:
+    void calculateAnodeLoadLine(double vb, double ra, double rl);
+    void calculateCathodeLoadLine(double rk);
+    QPointF findOperatingPoint();
+    QPointF lineIntersection(QPointF p1, QPointF p2, QPointF p3, QPointF p4);
+    bool isOnSegment(QPointF p, QPointF a, QPointF b);
+
+    QVector<QPointF> anodeLoadLine;
+    QVector<QPointF> cathodeLoadLine;
+    QPointF operatingPoint;
 };
 
 #endif // TRIODECOMMONCATHODE_H

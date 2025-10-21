@@ -15,6 +15,11 @@ enum eTriodeCommonCathodeParameter {
     TRI_CC_GAIN_B
 };
 
+#include <QPointF>
+#include <QVector>
+#include <cmath>
+#include <QJsonObject>
+
 class TriodeCommonCathode : public Circuit
 {
     Q_OBJECT
@@ -27,7 +32,24 @@ public:
 
     virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
 
-protected:
+    // SPICE export functionality
+    QJsonObject exportSPICE();
 
+protected:
     virtual void update(int index);
+
+private:
+    // Load line data storage
+    QVector<QPointF> anodeLoadLineData;
+    QVector<QPointF> cathodeLoadLineData;
+
+    // Circuit calculation methods
+    void calculateAnodeLoadLine();
+    void calculateCathodeLoadLine();
+    QPointF findOperatingPoint();
+    QPointF findOperatingPointSimple();
+    QPointF findLineIntersection(QPointF line1Start, QPointF line1End,
+                                QPointF line2Start, QPointF line2End);
+    void calculateOperatingPoint();
+    void calculateGains();
 };

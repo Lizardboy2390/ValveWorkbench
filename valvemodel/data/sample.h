@@ -9,7 +9,7 @@
 class Sample : DataSet
 {
 public:
-    Sample(double va_ = 0.0, double vg1_ = 0.0, double vg2_ = 0.0, double ia_ = 0.0, double ig2_ = 0.0, double vh_ = 0.0, double ih_ = 0.0);
+    Sample(double va_ = 0.0, double vg1_ = 0.0, double vg2_ = 0.0, double ia_ = 0.0, double ig2_ = 0.0, double vh_ = 0.0, double ih_ = 0.0, double vg3_ = 0.0, double va2_ = 0.0, double ia2_ = 0.0);
 
     double getVa() const;
     double getVg1() const;
@@ -18,6 +18,9 @@ public:
     double getIg2() const;
     double getVh() const;
     double getIh() const;
+    double getVg3() const;
+    double getVa2() const;
+    double getIa2() const;
 
     virtual void fromJson(QJsonObject source);
     virtual void toJson(QJsonObject &destination);
@@ -39,6 +42,9 @@ private:
     double ig2 = 0.0;
     double vh = 0.0;
     double ih = 0.0;
+    double vg3 = 0.0;
+    double va2 = 0.0;
+    double ia2 = 0.0;
 };
 
 #endif // SAMPLE_H

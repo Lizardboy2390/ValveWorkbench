@@ -1,6 +1,6 @@
 #include "sample.h"
 
-Sample::Sample(double vg1_, double va_, double ia_, double vg2_, double ig2_, double vh_, double ih_) : vg1(vg1_), va(va_), ia(ia_), vg2(vg2_), ig2(ig2_), vh(vh_), ih(ih_)
+Sample::Sample(double vg1_, double va_, double ia_, double vg2_, double ig2_, double vh_, double ih_, double vg3_, double va2_, double ia2_) : vg1(vg1_), va(va_), ia(ia_), vg2(vg2_), ig2(ig2_), vh(vh_), ih(ih_), vg3(vg3_), va2(va2_), ia2(ia2_)
 {
 
 }
@@ -35,9 +35,19 @@ double Sample::getVh() const
     return vh;
 }
 
-double Sample::getIh() const
+double Sample::getVg3() const
 {
-    return ih;
+    return vg3;
+}
+
+double Sample::getVa2() const
+{
+    return va2;
+}
+
+double Sample::getIa2() const
+{
+    return ia2;
 }
 
 void Sample::fromJson(QJsonObject source)
@@ -69,6 +79,18 @@ void Sample::fromJson(QJsonObject source)
     if (source.contains("ih") && source["ih"].isDouble()) {
         ih = source["ih"].toDouble();
     }
+
+    if (source.contains("vg3") && source["vg3"].isDouble()) {
+        vg3 = source["vg3"].toDouble();
+    }
+
+    if (source.contains("va2") && source["va2"].isDouble()) {
+        va2 = source["va2"].toDouble();
+    }
+
+    if (source.contains("ia2") && source["ia2"].isDouble()) {
+        ia2 = source["ia2"].toDouble();
+    }
 }
 
 void Sample::toJson(QJsonObject &destination)
@@ -80,6 +102,9 @@ void Sample::toJson(QJsonObject &destination)
     destination["ig2"] = ig2;
     destination["vh"] = vh;
     destination["ih"] = ih;
+    destination["vg3"] = vg3;
+    destination["va2"] = va2;
+    destination["ia2"] = ia2;
 }
 
 QTreeWidgetItem *Sample::buildTree(QTreeWidgetItem *parent)
@@ -105,6 +130,9 @@ void Sample::updateProperties(QTableWidget *properties)
     addProperty(properties, "Ig2", QString("%1").arg(ig2));
     addProperty(properties, "Vh", QString("%1").arg(vh));
     addProperty(properties, "Ih", QString("%1").arg(ih));
+    addProperty(properties, "Vg3", QString("%1").arg(vg3));
+    addProperty(properties, "Va2", QString("%1").arg(va2));
+    addProperty(properties, "Ia2", QString("%1").arg(ia2));
 }
 
 QGraphicsItemGroup *Sample::updatePlot(Plot *plot)

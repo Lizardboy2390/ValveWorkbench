@@ -12,16 +12,17 @@ QRegularExpression *Analyser::sampleMatcher2 = new QRegularExpression(R"(^OK: Mo
 QRegularExpression *Analyser::getMatcher = new QRegularExpression(R"(^OK: Get\((\d+)\) = (\d+))");
 QRegularExpression *Analyser::infoMatcher = new QRegularExpression(R"(^OK: Info\((\d+)\) = (.*)\r)");
 
-Analyser::Analyser(Client *client_, QSerialPort *port, QTimer *timeout, QTimer *heater) : client(client_), serialPort(port), timeoutTimer(timeout), heaterTimer(heater)
+Analyser::Analyser(Client *client_, QSerialPort *port, QTimer *timeout) : client(client_), serialPort(port), timeoutTimer(timeout)
 {
-   // heaterTimer->start(2000); // waits for 2s before starting to poll the measured heater values
-
-    //sendCommand("I0"); // Get the hardware version of the board
-    //sendCommand("I1"); // Get the software version of the board
 }
 
 Analyser::~Analyser()
 {
+}
+
+void Analyser::setDeviceType(int newDeviceType)
+{
+    deviceType = newDeviceType;
 }
 
 Sample *Analyser::createSample(QString response)
@@ -33,6 +34,15 @@ Sample *Analyser::createSample(QString response)
     double ia = convertMeasuredCurrent(ANODE, match.captured(5).toInt(), match.captured(6).toInt(), match.captured(11).toInt()) * 1000;
     double vg2 = convertMeasuredVoltage(SCREEN, match.captured(8).toInt());
     double ig2 = convertMeasuredCurrent(SCREEN, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
+    double vg3 = 0.0;
+    double va2 = 0.0;
+    double ia2 = 0.0;
+
+    if (isDoubleTriode) {
+        vg3 = convertMeasuredVoltage(GRID, match.captured(7).toInt());
+        va2 = convertMeasuredVoltage(ANODE, match.captured(8).toInt());
+        ia2 = convertMeasuredCurrent(ANODE, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
+    }
     double vh = convertMeasuredVoltage(HEATER, match.captured(1).toInt());
     double ih = convertMeasuredCurrent(HEATER, match.captured(2).toInt());
 
@@ -41,7 +51,7 @@ Sample *Analyser::createSample(QString response)
     int rawCurrentLo = match.captured(6).toInt();
     int rawCurrentHi = match.captured(11).toInt();
 
-    qInfo("Raw ADC values - Current: %d, CurrentLo: %d, CurrentHi: %d", rawCurrent, rawCurrentLo, rawCurrentHi);
+    // qInfo("Raw ADC values - Current: %d, CurrentLo: %d, CurrentHi: %d", rawCurrent, rawCurrentLo, rawCurrentHi);
 
     // This line adjusts the anode current measurement to account for the current that always flows through the voltage sense network
     // The resistance of the voltage sense network (3 x 470k + 2 * 4k7) is 1.4194M and the current needs to be adjusted for mA
@@ -49,6 +59,12 @@ Sample *Analyser::createSample(QString response)
     // For very low anode currents, this could lead to very small negative values, hence...
     if (ia < 0.0) {
         ia = 0.0;
+    }
+
+    // Apply the same correction for the second triode section
+    ia2 = ia2 - va2 / 1419.4;
+    if (ia2 < 0.0) {
+        ia2 = 0.0;
     }
 
     if (ia > measuredIaMax) {
@@ -59,9 +75,9 @@ Sample *Analyser::createSample(QString response)
         measuredIg2Max = ig2;
     }
 
-    Sample *sample = new Sample(vg1, va, ia, vg2, ig2, vh, ih);
+    Sample *sample = new Sample(vg1, va, ia, vg2, ig2, vh, ih, vg3, va2, ia2);
 
-    qInfo("Converted values - Va: %.3fV, Ia: %.3fmA, Vg1: %.3fV, Vg2: %.3fV", va, ia, vg1, vg2);
+    // qInfo("Converted values - Va: %.3fV, Ia: %.3fmA, Vg1: %.3fV, Vg2: %.3fV", va, ia, vg1, vg2);
 
     return sample;
 }
@@ -121,19 +137,19 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
         break;
     case ANODE:
     case SCREEN:
-        qInfo("Converting current - isMega: %d, current: %d, currentHi: %d", isMega, current, currentHi);
+        // qInfo("Converting current - isMega: %d, current: %d, currentHi: %d", isMega, current, currentHi);
 
         if (isMega && currentHi < 1023) { // We haven't saturated the ADC
             value = ((double) currentHi) * vRefMaster / 1023 / 8.0 / 33.333333;
-            qInfo("Using high range: %f mA", value * 1000);
+            // qInfo("Using high range: %f mA", value * 1000);
         } else if (current < 1000) { // We haven't saturated the ADC
                                      // (slight safety factor as the voltage at saturation is 2.048v
                                      // and this could be close to onset of diode conduction)
             value = ((double) current) * vRefMaster / 1023 / 2.0 / 33.333333;
-            qInfo("Using normal range: %f mA", value * 1000);
+            // qInfo("Using normal range: %f mA", value * 1000);
         } else {
             value = ((double) currentLo) * vRefMaster / 1023 / 2.0 / 3.333333;
-            qInfo("Using low range: %f mA", value * 1000);
+            // qInfo("Using low range: %f mA", value * 1000);
         }
         break;
     case GRID:
@@ -150,6 +166,9 @@ void Analyser::reset()
     measuredIaMax = 0.0;
     measuredIg2Max = 0.0;
     isVersionRead = false;
+    expectedResponses = 0;
+    isVerifyingHardware = false;  // ← ADD THIS
+    verificationAttempts = 0;     // ← ADD THIS
 }
 
 const QString &Analyser::getHwVersion() const
@@ -167,9 +186,9 @@ void Analyser::setTestType(int newTestType)
     testType = newTestType;
 }
 
-void Analyser::setDeviceType(int newDeviceType)
+void Analyser::setIsDoubleTriode(bool isDouble)
 {
-    deviceType = newDeviceType;
+    isDoubleTriode = isDouble;
 }
 
 void Analyser::setSweepPoints(int newSweepPoints)
@@ -177,7 +196,7 @@ void Analyser::setSweepPoints(int newSweepPoints)
     sweepPoints = newSweepPoints;
 }
 
-void Analyser::setSweepParameters(double aStart, double aStop, double aStep, double gStart, double gStop, double gStep, double sStart, double sStop, double sStep)
+void Analyser::setSweepParameters(double aStart, double aStop, double aStep, double gStart, double gStop, double gStep, double sStart, double sStop, double sStep, double sgStart, double sgStop, double sgStep, double saStart, double saStop, double saStep)
 {
     anodeStart = aStart;
     anodeStop = aStop;
@@ -190,6 +209,14 @@ void Analyser::setSweepParameters(double aStart, double aStop, double aStep, dou
     screenStart = sStart;
     screenStop = sStop;
     screenStep = sStep;
+
+    secondGridStart = sgStart;
+    secondGridStop = sgStop;
+    secondGridStep = sgStep;
+
+    secondAnodeStart = saStart;
+    secondAnodeStop = saStop;
+    secondAnodeStep = saStep;
 }
 
 void Analyser::setPMax(double newPMax)
@@ -270,20 +297,35 @@ void Analyser::startTest()
 
         result->setAnodeStart(anodeStart);
         result->setAnodeStop(anodeStop);
-        result->setGridStart(gridStart);
-        result->setGridStop(gridStop);
-        result->setGridStep(gridStep);
+        if (isDoubleTriode) {
+            result->setAnodeStart(secondAnodeStart);
+            result->setAnodeStop(secondAnodeStop);
+            result->setAnodeStep(secondAnodeStep);
+        }
 
         result->nextSweep(gridStart, screenStart);
 
-        steppedSweep(anodeStart, anodeStop, gridStart, gridStop, gridStep);
+        if (isDoubleTriode) {
+            steppedSweep(secondAnodeStart, secondAnodeStop, secondGridStart, secondGridStop, secondGridStep);
+            sweepCommandPrefix = "S7 ";
+            stepCommandPrefix = "S6 ";
+            stepType = GRID;
+            sweepType = ANODE;
+        } else {
+            steppedSweep(anodeStart, anodeStop, gridStart, gridStop, gridStep);
+        }
 
         if (deviceType == PENTODE) { // Anode swept, Grid stepped, Screen fixed
             result->setScreenStart(screenStart);
 
             sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
-        } else { // Anode swept, Grid stepped
-            sendCommand("S7 0");
+        } else if (isDoubleTriode) { // First and second anode swept with same values, Second grid stepped, Main grid 0
+            result->setAnodeStart(anodeStart);
+
+            sendCommand(buildSetCommand("S2 ", 0)); // Set main grid to 0V
+            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+            sendCommand(buildSetCommand("S6 ", convertTargetVoltage(GRID, secondGridStart)));
+            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
         }
         sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
 
@@ -310,6 +352,25 @@ void Analyser::startTest()
             steppedSweep(gridStop, gridStart, screenStart, screenStop, screenStep); // Sweep is reversed to finish on low (absolute) value
 
             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+        } else if (isDoubleTriode) { // First and second anode stepped with same values, Second grid swept, Main grid 0
+            stepType = GRID;
+            stepCommandPrefix = "S6 ";
+
+            result->setAnodeStart(anodeStart);
+            result->setAnodeStop(anodeStop);
+            result->setAnodeStep(anodeStep);
+            result->setGridStart(secondGridStart);
+            result->setGridStop(secondGridStop);
+            result->setGridStep(secondGridStep);
+
+            result->nextSweep(anodeStart);
+
+            steppedSweep(secondGridStop, secondGridStart, anodeStart, anodeStop, anodeStep); // Sweep is reversed to finish on low (absolute) value
+
+            sendCommand(buildSetCommand("S2 ", 0)); // Set main grid to 0V
+            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+            sendCommand(buildSetCommand("S6 ", convertTargetVoltage(GRID, secondGridStart)));
+            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
         } else { // Anode stepped, Grid swept
             stepType = ANODE;
             stepCommandPrefix = "S3 ";
@@ -361,22 +422,42 @@ void Analyser::stopTest()
 }
 
 void Analyser::nextSample() {
-    qInfo("Analyser: nextSample called, stepIndex=%d, sweepIndex=%d", stepIndex, sweepIndex);
+    // qInfo("=== NEXT SAMPLE DEBUG ===");
+    // qInfo("Analyser: nextSample called, stepIndex=%d, sweepIndex=%d, isEndSweep=%d", stepIndex, sweepIndex, isEndSweep);
+    // qInfo("expectedResponses: %d, awaitingResponse: %d", expectedResponses, awaitingResponse);
+    // qInfo("stepParameter.length(): %d, sweepParameter.size(): %d", stepParameter.length(), sweepParameter.size());
+    if (stepIndex < stepParameter.length()) {
+        // qInfo("sweepParameter[%d].length(): %d", stepIndex, sweepParameter.at(stepIndex).length());
+    }
          // Run the next value in the sweep
     if (!isEndSweep && sweepIndex < sweepParameter.at(stepIndex).length()) {
-       
-        qInfo("Sending sweep command: S%d %d", sweepType, sweepParameter.at(stepIndex).at(sweepIndex));
-      
+
+        // qInfo("Sending sweep command: S%d %d", sweepType, sweepParameter.at(stepIndex).at(sweepIndex));
+        if (sweepIndex == 0) {
+            // qInfo("This is the first command for stepIndex=%d", stepIndex);
+        }
+
         sendCommand(buildSetCommand(sweepCommandPrefix, sweepParameter.at(stepIndex).at(sweepIndex)));
+        if (isDoubleTriode) {
+            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, sweepParameter.at(stepIndex).at(sweepIndex))));
+        }
         sendCommand("M2");
-        sweepIndex++;
+        expectedResponses++; // Expect a response for this measurement
     } else {
-        qInfo("End of sweep reached, moving to next step");
+        // qInfo("=== END OF SWEEP DEBUG ===");
+        // qInfo("End of sweep reached, moving to next step");
+        // qInfo("Before increment: stepIndex=%d, sweepIndex=%d", stepIndex, sweepIndex);
         stepIndex++;
         sweepIndex = 0;
         isEndSweep = false;
+        measuredIaMax = 0.0;      // ← ADD THIS
+        measuredIg2Max = 0.0;     // ← ADD THIS
+        // qInfo("After increment: stepIndex=%d, sweepIndex=%d, isEndSweep=%d", stepIndex, sweepIndex, isEndSweep);
+        // qInfo("Reset isEndSweep to false for stepIndex=%d", stepIndex);
 
         if (stepIndex < stepParameter.length()) {// There is another sweep to measure
+            // qInfo("=== NEW SWEEP DEBUG ===");
+            // qInfo("Creating new sweep - stepIndex: %d, total steps: %d", stepIndex, stepParameter.length());
             double v1Nominal = stepValue.at(stepIndex);
             double v2Nominal = 0.0;
             if (deviceType == PENTODE) {
@@ -386,35 +467,49 @@ void Analyser::nextSample() {
                     v2Nominal = anodeStart;
                 }
             }
+
             result->nextSweep(v1Nominal, v2Nominal);
-            sendCommand("M1"); // Discharge the capacitor banks at the end of a sweep
-            qInfo("Sending step command: %s %d", stepCommandPrefix.toStdString().c_str(), stepParameter.at(stepIndex));
-            sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(stepIndex)));
-            qInfo("Sending step command: %s %d", sweepCommandPrefix.toStdString().c_str(), sweepParameter.at(sweepIndex));
-            int dac = sweepParameter.at(stepIndex).at(sweepIndex);
-            double estimatedVoltage = (dac / vRefMaster) * 1023.0 * 9400.0 / 1419400.0;
-            qInfo("Sending sweep DAC: %d, estimated voltage: %f V", dac, estimatedVoltage);
-            sendCommand(buildSetCommand(sweepCommandPrefix, dac));
+            // qInfo("Created new sweep for stepIndex: %d, v1Nominal: %f, v2Nominal: %f", stepIndex, v1Nominal, v2Nominal);
+
+            // Verify hardware is at safe 0V state before starting sweep
+            // qInfo("=== HARDWARE VERIFICATION ===");
+            sendCommand("M1"); // Discharge capacitors
+
+            // Set grid voltage for new step
+            // qInfo("Setting grid voltage for new step: S2 %d", stepParameter.at(stepIndex));
+            sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
+
+            // Set anode voltage to 0 for verification
+            // qInfo("Setting anode voltage to 0V for verification");
+            sendCommand(buildSetCommand("S3 ", 0));
+
+            // Take verification measurement
+            // qInfo("Taking verification measurement to confirm 0V state");
             sendCommand("M2");
+
+            // Set verification state for next response
+            isVerifyingHardware = true;
+            verificationAttempts = 0;
         } else {
-            qInfo("Test completed, sending M1");
+            // qInfo("Test completed, sending M1");
             sendCommand("M1");
             isDataSetValid = true;
             isTestRunning = false;
 
-            qInfo("Calling client->testFinished()");
+            // qInfo("Calling client->testFinished()");
             client->testFinished();
         }
     }
 
     int progress = ((stepIndex * sweepPoints) + sweepIndex) * 100 / (sweepPoints * stepParameter.length());
-    qInfo("Sending progress: %d", progress);
+    // qInfo("Sending progress: %d", progress);
     client->testProgress(progress);
+    // qInfo("Sweep progress: %d%%", progress); // Added debug log
 }
 
 void Analyser::abortTest()
 {
-    qInfo("Analyser: abortTest called, isTestRunning=%d", isTestRunning);
+    // qInfo("Analyser: abortTest called, isTestRunning=%d", isTestRunning);
     isTestRunning = false;
     isTestAborted = true;
     isDataSetValid = false;
@@ -434,13 +529,27 @@ QString Analyser::buildSetCommand(QString command, int value)
 
 void Analyser::sendCommand(QString command)
 {
+    // qInfo("=== SEND COMMAND DEBUG ===");
+    // qInfo("Attempting to send command: %s", command.toStdString().c_str());
+    // qInfo("awaitingResponse: %d, commandBuffer.size(): %d", awaitingResponse, commandBuffer.size());
+
     if (awaitingResponse) { // Need to wait for previous command to complete (or timeout) before sending next command
+        // qInfo("Buffering command (waiting for previous response): %s", command.toStdString().c_str());
         commandBuffer.append(command);
 
         return;
     }
 
-    qInfo("Sending command: %s", command.toStdString().c_str());
+    // qInfo("Sending command immediately: %s", command.toStdString().c_str());
+
+    if (command.startsWith("S") || command.startsWith("M")) {
+        // qDebug("Sending command: %s", command.toStdString().c_str());
+    }
+
+    if (command.startsWith("S3") || command.startsWith("M2")) {
+        expectedResponses++;
+        // qInfo("Incremented expectedResponses to: %d", expectedResponses);
+    }
 
     QByteArray c = command.toLatin1();
 
@@ -449,13 +558,21 @@ void Analyser::sendCommand(QString command)
 
     timeoutTimer->start(30000);
     awaitingResponse = true;
+    // qInfo("Command sent, awaitingResponse set to true");
 }
 
 void Analyser::nextCommand()
 {
+    // qInfo("=== NEXT COMMAND DEBUG ===");
+    // qInfo("nextCommand called, commandBuffer.size(): %d", commandBuffer.size());
+
     if (!commandBuffer.isEmpty()) { // There is a command to send
         QString command = commandBuffer.takeFirst();
+        // qInfo("Processing buffered command: %s", command.toStdString().c_str());
+        // qInfo("commandBuffer.size() after takeFirst: %d", commandBuffer.size());
         sendCommand(command);
+    } else {
+        // qInfo("No buffered commands to process");
     }
 }
 
@@ -463,11 +580,18 @@ void Analyser::checkResponse(QString response)
 {
     timeoutTimer->stop();
 
-    qInfo("Received response: %s", response.toStdString().c_str());
+    if (sweepIndex == 0) {
+        isEndSweep = false;
+        measuredIaMax = 0.0;     // ← ADD THIS  
+        measuredIg2Max = 0.0;    // ← ADD THIS
+        // qInfo("Reset isEndSweep to false for new sweep stepIndex=%d", stepIndex);
+    }
+
+    // qInfo("Received response: %s", response.toStdString().c_str());
 
     QString message = " Response received: ";
     message += response;
-    qInfo(message.toStdString().c_str());
+    // qInfo(message.toStdString().c_str());
 
     if (response == "\n") {
         return;
@@ -488,13 +612,9 @@ void Analyser::checkResponse(QString response)
             if (variable == VH) {
                 double measuredHeaterVoltage = convertMeasuredVoltage(HEATER, value);
                 aveHeaterVoltage = aveHeaterVoltage * 0.75 + measuredHeaterVoltage;
-                //client->updateHeater(measuredHeaterVoltage, -1.0);
-               // client->updateHeater(aveHeaterVoltage / 4.0, -1.0);
             } else if (variable == IH) {
                 double measuredHeaterCurrent = convertMeasuredCurrent(HEATER, value);
                 aveHeaterCurrent = aveHeaterCurrent * 0.75 + measuredHeaterCurrent;
-                //client->updateHeater(-1.0, measuredHeaterCurrent);
-               // client->updateHeater(-1.0, aveHeaterCurrent / 4.0);
             }
         }
     } else if (response.startsWith("OK: Info")) {
@@ -513,31 +633,76 @@ void Analyser::checkResponse(QString response)
                 swVersion = value;
             }
         }
+    } else if (response.startsWith("OK: Set")) {
+        // qInfo("Processing OK: Set response");
+        expectedResponses--;
+        // qInfo("Decremented expectedResponses to: %d", expectedResponses);
     } else if (response.startsWith("OK: Mode(2)")) {
         if (isTestRunning) {
-            // Store the measurement
             Sample *sample = createSample(response);
-            result->addSample(sample);
+
             double va = sample->getVa();
             double ia = sample->getIa();
+            double va2 = sample->getVa2();
+            double ia2 = sample->getIa2();
 
-            message = QString {"Anode voltage: %1v"}.arg(va, 6, 'f', 1, '0' );
-            qInfo(message.toStdString().c_str());
-            message = QString {"Anode current: %1mA"}.arg(ia, 6, 'f', 4, '0' );
-            qInfo(message.toStdString().c_str());
+            // Handle verification measurements
+            if (isVerifyingHardware) {
+                // qInfo("=== VERIFICATION MEASUREMENT ===");
+                // qInfo("Verification measurement: va=%.1fV, ia=%.3fmA", va, ia);
 
-            if (ia > iaMax || (ia * va / 1000.0) > pMax) {
-                isEndSweep = true;
-                qInfo("Ending sweep due to exceeding power threshold");
+                if (va < 1.0 && ia < 0.001 && va2 < 1.0 && ia2 < 0.001) { // Close enough to 0V/0mA
+                    // qInfo("Verification PASSED - hardware at safe 0V state");
+                    isVerifyingHardware = false;
+                    verificationAttempts = 0;
+
+                    // Now send the first actual sample
+                    int firstSampleValue = sweepParameter.at(stepIndex).at(0);
+                    // qInfo("Sending first actual sample: S3 %d", firstSampleValue);
+                    sendCommand(buildSetCommand("S3 ", firstSampleValue));
+                    sendCommand("M2");
+                } else {
+                    verificationAttempts++;
+                    // qInfo("Verification FAILED - attempt %d/%d", verificationAttempts, MAX_VERIFICATION_ATTEMPTS);
+
+                    if (verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
+                        qWarning("Verification failed after %d attempts - aborting sweep", MAX_VERIFICATION_ATTEMPTS);
+                        isVerifyingHardware = false;
+                        verificationAttempts = 0;
+                        isEndSweep = true;
+                        return;
+                    } else {
+                        // qInfo("Retrying hardware reset...");
+                        // Retry the reset sequence
+                        sendCommand("M1");
+                        sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
+                        sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+                        if (isDoubleTriode) {
+                            sendCommand(buildSetCommand("S6 ", convertTargetVoltage(GRID, secondGridStart)));
+                            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
+                        }
+                        sendCommand("M2");
+                    }
+                }
+            } else {
+                // Normal sample processing
+                if (ia > iaMax || (ia * va / 1000.0) > pMax) {
+                    isEndSweep = true;
+                    // qInfo("SWEEP LIMIT: ia=%.3fmA va=%.1fV (limits: %.1fmA %.3fW)", ia, va, iaMax, pMax);
+                }
+
+                result->addSample(sample);
+
+                if (!isEndSweep) {
+                    sweepIndex++;
+                }
+
+                nextSample();
             }
+        }
 
-            
-            if (sampleCount++ > 29) {
-                
-                sampleCount = 0;
-            }
-
-            nextSample();
+        if (expectedResponses <= 0 && isDataSetValid) {
+            isTestRunning = false;
         }
     } else if (!response.startsWith("OK:")) {
         abortTest();
@@ -545,24 +710,38 @@ void Analyser::checkResponse(QString response)
 
     // At this point, the response has been fully processed, any additional test commands have been queued, so
     // we can now flag that we're no longer waiting for a response and process the next command in the buffer
+    // qInfo("=== RESPONSE PROCESSED DEBUG ===");
+    // qInfo("Response fully processed, setting awaitingResponse = false");
+    // qInfo("About to call nextCommand, commandBuffer.size(): %d", commandBuffer.size());
     awaitingResponse = false;
     nextCommand();
 }
 
 void Analyser::handleReadyRead()
 {
-    serialBuffer.append(serialPort->readAll());
+    QByteArray data = serialPort->readAll();
+    // qInfo("=== HANDLE READY READ DEBUG ===");
+    // qInfo("Received %d bytes from serial port", data.size());
+    // qInfo("Raw data: %s", data.toStdString().c_str());
+
+    serialBuffer.append(data);
 
     if (awaitingResponse) {
+        // qInfo("Currently awaiting response, checking for line ending");
         if (serialBuffer.contains('\n') || serialBuffer.contains('\r')) {
             // We have a complete line and so can process it as a response
-            qInfo(serialBuffer);
+            // qInfo("Found complete line, processing response");
+            // qInfo("Full buffer: %s", serialBuffer.toStdString().c_str());
 
             checkResponse(serialBuffer);
 
             serialBuffer.clear();
+            // qInfo("Buffer cleared after processing response");
+        } else {
+            // qInfo("Incomplete line, waiting for more data");
         }
     } else {
+        // qInfo("Not awaiting response - unexpected data received");
         // We should log the unexpected characters
     }
 }
@@ -570,32 +749,15 @@ void Analyser::handleReadyRead()
 void Analyser::handleCommandTimeout()
 {
     qWarning("Test timeout");
+    if (expectedResponses > 0) {
+        qWarning("Timeout with %d unprocessed responses - data may be incomplete", expectedResponses);
+    }
     awaitingResponse = false;
     timeoutTimer->stop();
 
     abortTest();
 }
 
-void Analyser::handleHeaterTimeout()
-{
-    if (isHeatersOn) { // Only poll if the heaters are on
-        if (!isTestRunning) { // Only poll if we're not running a test
-            sendCommand("G0");
-            sendCommand("G1");
-        }
-    } else {
-       // client->updateHeater(0.0, 0.0);
-    }
-
-    if (!isVersionRead) {
-        sendCommand("I0");
-        sendCommand("I1");
-
-        isVersionRead = true;
-    }
-
-    heaterTimer->start(500); // Do it again in 500ms...
-}
 
 void Analyser::setPreferences(PreferencesDialog *newPreferences)
 {
@@ -640,7 +802,7 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
             } else {
                 sweepVoltage = sweepStart + (sweepStop - sweepStart) * sweep;
             }
-            qInfo("sweepStop: %f, sweep: %f, sweepVoltage: %f", sweepStop, sweep, sweepVoltage);
+            // qInfo("sweepStop: %f, sweep: %f, sweepVoltage: %f", sweepStop, sweep, sweepVoltage);
             thisSweep.append(convertTargetVoltage(sweepType, sweepVoltage));
             sweep += increment;
         }
@@ -650,7 +812,7 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
         stepVoltage += step;
     }
 
-    qInfo("Generated sweep parameters: %d steps, each with %d points", stepParameter.length(), sweepParameter.at(0).length());
+    // qInfo("Generated sweep parameters: %d steps, each with %d points", stepParameter.length(), sweepParameter.at(0).length());
 }
 
 double Analyser::sampleFunction(double linearValue)

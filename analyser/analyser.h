@@ -23,8 +23,7 @@
 #define HV2      7   //Anode voltage 2
 #define IA_HI_2  8   //Anode current hi 2
 #define IA_LO_2  9   //Anode current lo 2
-#define IA_XHI_1 10  //Anode current extra hi 1
-#define IA_XHI_2 11  //Anode current extra hi 2
+
 
 enum eSamplingType {
     SMP_LINEAR,
@@ -34,10 +33,12 @@ enum eSamplingType {
 class Analyser
 {
 public:
-    Analyser(Client *client, QSerialPort *port, QTimer *timeoutTimer, QTimer *heaterTimer);
+    Analyser(Client *client, QSerialPort *port, QTimer *timeoutTimer);
     ~Analyser();
 
     void reset(void);
+
+    void setDeviceType(int newDeviceType);
 
     void startTest();
     void stopTest();
@@ -48,11 +49,11 @@ public:
 
     void setTestType(int newTestType);
 
-    void setDeviceType(int newDeviceType);
+    void setIsDoubleTriode(bool isDouble);
 
     void setSweepPoints(int newSweepPoints);
 
-    void setSweepParameters(double aStart, double aStop, double aStep, double gStart, double gStop, double gStep, double sStart, double sStop, double sStep);
+    void setSweepParameters(double aStart, double aStop, double aStep, double gStart, double gStop, double gStep, double sStart, double sStop, double sStep, double sgStart, double sgStop, double sgStep, double saStart, double saStop, double saStep);
 
     void setPMax(double newPMax);
 
@@ -76,17 +77,16 @@ public:
     void handleError(QSerialPort::SerialPortError error);
 
     void handleCommandTimeout();
-    void handleHeaterTimeout();
 
     void setPreferences(PreferencesDialog *newPreferences);
 
 private:
-    double vRefMaster = 4.096;
-    double vRefSlave = 2.048;
+    double vRefMaster = 4.1;
+    double vRefSlave = 4.1;
 
     double heaterVoltage;
-    double aveHeaterVoltage = 0;
-    double aveHeaterCurrent = 0;
+    double aveHeaterVoltage = 6.3;
+    double aveHeaterCurrent = 0.045;
 
     double anodeStart;
     double anodeStop;
@@ -99,6 +99,14 @@ private:
     double screenStart;
     double screenStop;
     double screenStep;
+
+    double secondGridStart;
+    double secondGridStop;
+    double secondGridStep;
+
+    double secondAnodeStart;
+    double secondAnodeStop;
+    double secondAnodeStep;
 
     double pMax = 0.0;
     double iaMax = 0.0;
@@ -116,7 +124,6 @@ private:
     QByteArray serialBuffer;
 
     QTimer *timeoutTimer;
-    QTimer *heaterTimer;
 
     QList<QString> commandBuffer;
     QList<QString> setupCommands;
@@ -140,6 +147,8 @@ private:
     int sweepPoints = 60;
 
     int sampleCount = 0;
+    int samplesInCurrentSweep = 0;
+    int expectedResponses = 0;
 
     bool isHeatersOn = false;
     bool isStopRequested = false;
@@ -149,6 +158,10 @@ private:
     bool isDataSetValid = false;
     bool isVersionRead = false;
     bool isMega = false;
+    bool isDoubleTriode = false;
+    bool isVerifyingHardware = false;  // ← ADD THIS: Track verification state
+    int verificationAttempts = 0;      // ← ADD THIS: Track verification attempts
+    static const int MAX_VERIFICATION_ATTEMPTS = 3; // ← ADD THIS: Max verification retries
 
     static QRegularExpression *sampleMatcher;
     static QRegularExpression *sampleMatcher2;

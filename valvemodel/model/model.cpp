@@ -151,7 +151,7 @@ void Model::solve()
 
     converged = summary.termination_type == ceres::CONVERGENCE;
 
-    qInfo(summary.FullReport().c_str());
+    // qInfo(summary.FullReport().c_str());
     }
 
 void Model::solveThreaded()
@@ -172,7 +172,7 @@ void Model::solveThreaded()
 
     converged = summary.termination_type == ceres::CONVERGENCE;
 
-    qInfo(summary.FullReport().c_str());
+    // qInfo(summary.FullReport().c_str());
 
     emit modelReady();
 }
@@ -193,6 +193,11 @@ QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)
 
 QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep *sweep)
 {
+    qInfo("=== MODEL PLOTTING DEBUG ===");
+    qInfo("Model::plotModel called with measurement type: %s, test type: %s",
+           measurement->getDeviceType() == TRIODE ? "TRIODE" : "PENTODE",
+           measurement->getTestType() == ANODE_CHARACTERISTICS ? "ANODE_CHARACTERISTICS" : "TRANSFER_CHARACTERISTICS");
+
     QGraphicsItemGroup *group = new QGraphicsItemGroup();
     QPen anodePen;
     anodePen.setColor(QColor::fromRgb(255, 0, 0));
@@ -201,11 +206,78 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
     int deviceType = measurement->getDeviceType();
     int testType = measurement->getTestType();
+    qInfo("Device type: %d, Test type: %d", deviceType, testType);
     if (deviceType == TRIODE) {
         if (testType == ANODE_CHARACTERISTICS) {
             double vgStart = measurement->getGridStart();
             double vgStop = measurement->getGridStop();
             double vgStep = measurement->getGridStep();
+
+            qInfo("STORED VALUES: vgStart=%.3f, vgStop=%.3f, vgStep=%.3f", vgStart, vgStop, vgStep);
+            qInfo("Measurement has %d sweeps", measurement->count());
+
+            // If range is invalid, calculate from actual sweep data
+            if (vgStart == 0.0 && vgStop == 0.0) {
+                if (measurement->count() > 0) {
+                    // Find the actual min and max grid voltages from sweeps
+                    double minVg = 0.0;
+                    double maxVg = 0.0;
+                    bool first = true;
+                    bool validData = false;
+
+                    for (int i = 0; i < measurement->count(); i++) {
+                        double sweepVg = -measurement->at(i)->getVg1Nominal();
+                        qInfo("Sweep %d: Vg1Nominal=%.3f, negated=%.3f", i, measurement->at(i)->getVg1Nominal(), sweepVg);
+
+                        // Skip invalid voltage values (outside reasonable range)
+                        if (sweepVg >= -10.0 && sweepVg <= 10.0) {
+                            if (first || sweepVg < minVg) minVg = sweepVg;
+                            if (first || sweepVg > maxVg) maxVg = sweepVg;
+                            first = false;
+                            validData = true;
+                        }
+                    }
+
+                    qInfo("After scanning: minVg=%.3f, maxVg=%.3f, validData=%s", minVg, maxVg, validData ? "true" : "false");
+
+                    if (validData && (maxVg - minVg) <= 10.0) {
+                        vgStart = minVg;
+                        vgStop = maxVg;
+                        qInfo("Calculated grid range from sweep data: start=%.3f, stop=%.3f", vgStart, vgStop);
+                    } else {
+                        // Fallback to reasonable defaults
+                        vgStart = 0.0;
+                        vgStop = -4.0;
+                        qInfo("No valid sweep data found, using defaults: start=%.3f, stop=%.3f", vgStart, vgStop);
+                    }
+                }
+            }
+
+            // If step is 0 or invalid, calculate from actual sweep data
+            if (vgStep == 0.0 || vgStep > (vgStop - vgStart)) {
+                if (measurement->count() > 1) {
+                    double firstVg = -measurement->at(0)->getVg1Nominal();
+                    double secondVg = -measurement->at(1)->getVg1Nominal();
+
+                    qInfo("First sweep Vg1Nominal=%.3f, negated=%.3f", measurement->at(0)->getVg1Nominal(), firstVg);
+                    qInfo("Second sweep Vg1Nominal=%.3f, negated=%.3f", measurement->at(1)->getVg1Nominal(), secondVg);
+
+                    // Validate the calculated step is reasonable
+                    double calculatedStep = secondVg - firstVg;
+                    qInfo("Calculated step: %.3f", calculatedStep);
+
+                    if (calculatedStep > -10.0 && calculatedStep < 10.0 && calculatedStep != 0.0) {
+                        vgStep = calculatedStep;
+                        qInfo("Using calculated grid step: %.3f", vgStep);
+                    } else {
+                        vgStep = -0.5; // Default fallback for negative steps
+                        qInfo("Invalid calculated step (%.3f), using default: %.3f", calculatedStep, vgStep);
+                    }
+                } else {
+                    vgStep = -0.5; // Default fallback
+                    qInfo("Using default grid step: %.3f", vgStep);
+                }
+            }
 
             if (sweep != nullptr) {
                 vgStart = -sweep->getVg1Nominal();
@@ -214,19 +286,34 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
             double vg2 = measurement->getScreenStart();
 
+            qInfo("Final grid voltage range: start=%.3f, stop=%.3f, step=%.3f", vgStart, vgStop, vgStep);
+            qInfo("Screen voltage: %.3f", vg2);
+
             double vg1 = vgStart;
+            int curveCount = 0;
             while ( vg1 <= vgStop) {
+                qInfo("Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
                 double vaStart = measurement->getAnodeStart();
                 double vaStop = measurement->getAnodeStop();
                 double vaInc = (vaStop - vaStart) / 50;
+
+                qInfo("Anode voltage range: start=%.1f, stop=%.1f, inc=%.3f", vaStart, vaStop, vaInc);
 
                 double vaPrev = vaStart;
                 double iaPrev = anodeCurrent(vaStart, -vg1, vg2);
 
                 double va = vaStart + vaInc;
+                int segmentCount = 0;
                 while (va < vaStop) {
                     double ia = anodeCurrent(va, -vg1, vg2);
-                    group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, anodePen));
+                    QGraphicsItem *segment = plot->createSegment(vaPrev, iaPrev, va, ia, anodePen);
+
+                    if (segment != nullptr) {
+                        group->addToGroup(segment);
+                        segmentCount++;
+                    } else {
+                        qWarning("Failed to create segment for va=%.3f, ia=%.3f", va, ia);
+                    }
 
                     vaPrev = va;
                     iaPrev = ia;
@@ -234,14 +321,84 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     va += vaInc;
                 }
 
+                qInfo("Curve %d completed: %d segments created", curveCount + 1, segmentCount);
                 vg1 += vgStep;
+                curveCount++;
             }
+
+            qInfo("Total curves created: %d", curveCount);
         }
     } else if (deviceType == PENTODE) {
         if (testType == ANODE_CHARACTERISTICS) {
             double vgStart = measurement->getGridStart();
             double vgStop = measurement->getGridStop();
             double vgStep = measurement->getGridStep();
+
+            qInfo("PENTODE STORED VALUES: vgStart=%.3f, vgStop=%.3f, vgStep=%.3f", vgStart, vgStop, vgStep);
+            qInfo("PENTODE: Measurement has %d sweeps", measurement->count());
+
+            // If range is invalid, calculate from actual sweep data
+            if (vgStart == 0.0 && vgStop == 0.0) {
+                if (measurement->count() > 0) {
+                    // Find the actual min and max grid voltages from sweeps
+                    double minVg = 0.0;
+                    double maxVg = 0.0;
+                    bool first = true;
+                    bool validData = false;
+
+                    for (int i = 0; i < measurement->count(); i++) {
+                        double sweepVg = -measurement->at(i)->getVg1Nominal();
+                        qInfo("PENTODE Sweep %d: Vg1Nominal=%.3f, negated=%.3f", i, measurement->at(i)->getVg1Nominal(), sweepVg);
+
+                        // Skip invalid voltage values (outside reasonable range)
+                        if (sweepVg >= -10.0 && sweepVg <= 10.0) {
+                            if (first || sweepVg < minVg) minVg = sweepVg;
+                            if (first || sweepVg > maxVg) maxVg = sweepVg;
+                            first = false;
+                            validData = true;
+                        }
+                    }
+
+                    qInfo("PENTODE: After scanning: minVg=%.3f, maxVg=%.3f, validData=%s", minVg, maxVg, validData ? "true" : "false");
+
+                    if (validData && (maxVg - minVg) <= 10.0) {
+                        vgStart = minVg;
+                        vgStop = maxVg;
+                        qInfo("PENTODE: Calculated grid range from sweep data: start=%.3f, stop=%.3f", vgStart, vgStop);
+                    } else {
+                        // Fallback to reasonable defaults
+                        vgStart = 0.0;
+                        vgStop = -4.0;
+                        qInfo("PENTODE: No valid sweep data found, using defaults: start=%.3f, stop=%.3f", vgStart, vgStop);
+                    }
+                }
+            }
+
+            // If step is 0 or invalid, calculate from actual sweep data
+            if (vgStep == 0.0 || vgStep > (vgStop - vgStart)) {
+                if (measurement->count() > 1) {
+                    double firstVg = -measurement->at(0)->getVg1Nominal();
+                    double secondVg = -measurement->at(1)->getVg1Nominal();
+
+                    qInfo("PENTODE: First sweep Vg1Nominal=%.3f, negated=%.3f", measurement->at(0)->getVg1Nominal(), firstVg);
+                    qInfo("PENTODE: Second sweep Vg1Nominal=%.3f, negated=%.3f", measurement->at(1)->getVg1Nominal(), secondVg);
+
+                    // Validate the calculated step is reasonable
+                    double calculatedStep = secondVg - firstVg;
+                    qInfo("PENTODE: Calculated step: %.3f", calculatedStep);
+
+                    if (calculatedStep > -10.0 && calculatedStep < 10.0 && calculatedStep != 0.0) {
+                        vgStep = calculatedStep;
+                        qInfo("PENTODE: Using calculated grid step: %.3f", vgStep);
+                    } else {
+                        vgStep = -0.5; // Default fallback for negative steps
+                        qInfo("PENTODE: Invalid calculated step (%.3f), using default: %.3f", calculatedStep, vgStep);
+                    }
+                } else {
+                    vgStep = -0.5; // Default fallback
+                    qInfo("PENTODE: Using default grid step: %.3f", vgStep);
+                }
+            }
 
             if (sweep != nullptr) {
                 vgStart = -sweep->getVg1Nominal();
@@ -250,8 +407,13 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
             double vg2 = measurement->getScreenStart();
 
+            qInfo("PENTODE: Final grid voltage range: start=%.3f, stop=%.3f, step=%.3f", vgStart, vgStop, vgStep);
+            qInfo("PENTODE: Screen voltage: %.3f", vg2);
+
             double vg1 = vgStart;
+            int curveCount = 0;
             while ( vg1 <= vgStop) {
+                qInfo("PENTODE: Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
                 double vaStart = measurement->getAnodeStart();
                 double vaStop = measurement->getAnodeStop();
                 double vaInc = (vaStop - vaStart) / 50;
@@ -260,9 +422,17 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 double iaPrev = anodeCurrent(vaStart, -vg1, vg2);
 
                 double va = vaStart + vaInc;
+                int segmentCount = 0;
                 while (va < vaStop) {
                     double ia = anodeCurrent(va, -vg1, vg2);
-                    group->addToGroup(plot->createSegment(vaPrev, iaPrev, va, ia, anodePen));
+                    QGraphicsItem *segment = plot->createSegment(vaPrev, iaPrev, va, ia, anodePen);
+
+                    if (segment != nullptr) {
+                        group->addToGroup(segment);
+                        segmentCount++;
+                    } else {
+                        qWarning("PENTODE: Failed to create segment for va=%.3f, ia=%.3f", va, ia);
+                    }
 
                     vaPrev = va;
                     iaPrev = ia;
@@ -277,7 +447,13 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     va = vaStart + vaInc;
                     while (va < vaStop) {
                         double ig2 = screenCurrent(va, -vg1, vg2);
-                        group->addToGroup(plot->createSegment(vaPrev, ig2Prev, va, ig2, screenPen));
+                        QGraphicsItem *segment = plot->createSegment(vaPrev, ig2Prev, va, ig2, screenPen);
+
+                        if (segment != nullptr) {
+                            group->addToGroup(segment);
+                        } else {
+                            qWarning("PENTODE: Failed to create screen segment for va=%.3f, ig2=%.3f", va, ig2);
+                        }
 
                         vaPrev = va;
                         ig2Prev = ig2;
@@ -286,11 +462,17 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     }
                 }
 
+                qInfo("PENTODE: Curve %d completed: %d anode segments, %s screen segments",
+                      curveCount + 1, segmentCount, showScreen ? "with" : "without");
                 vg1 += vgStep;
+                curveCount++;
             }
+
+            qInfo("PENTODE: Total curves created: %d", curveCount);
         }
     }
 
+    qInfo("Model plotting completed - returning group with %d items", group->childItems().count());
     return group;
 }
 

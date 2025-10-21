@@ -20,13 +20,21 @@ void Measurement::addSweep(Sweep *sweep)
 
 void Measurement::addSample(Sample *sample)
 {
+    int sweepIndex = sweeps.indexOf(currentSweep);
+    // qInfo("=== ADDING SAMPLE TO SWEEP %d ===", sweepIndex);
+    // qInfo("Sweep v1Nominal: %f, v2Nominal: %f", currentSweep->getVg1Nominal(), currentSweep->getVg2Nominal());
+    // qInfo("Sample va: %f V, ia: %f mA", sample->getVa(), sample->getIa());
     currentSweep->addSample(sample);
+    // qInfo("Sample added, sweep now has %d samples", currentSweep->count());
 }
 
 void Measurement::nextSweep(double v1Nominal, double v2Nominal)
 {
+    // qInfo("=== CREATING NEW SWEEP ===");
+    // qInfo("v1Nominal: %f, v2Nominal: %f", v1Nominal, v2Nominal);
     currentSweep = new Sweep(deviceType, testType, v1Nominal, v2Nominal);
     addSweep(currentSweep);
+    // qInfo("New sweep created, total sweeps: %d", sweeps.size());
 }
 
 void Measurement::fromJson(QJsonObject source)
@@ -433,7 +441,6 @@ QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot, Sweep *sweep)
     } else {
         sweep->plotTriodeAnode(plot, &samplePen, segments);
     }
-
     return segments;
 }
 

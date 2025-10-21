@@ -15,6 +15,10 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
     xScale = PLOT_WIDTH / (xStop - xStart);
     yScale = PLOT_HEIGHT / (yStop - yStart);
 
+    // Debug output for axis setup
+    // qDebug("Plot::setAxes: xStart=%f, xStop=%f, yStart=%f, yStop=%f", xStart, xStop, yStart, yStop);
+    // qDebug("Plot::setAxes: xScale=%f, yScale=%f", xScale, yScale);
+
     double rounding = 0.5;
 
     scene->clear();
@@ -94,8 +98,13 @@ QGraphicsLineItem *Plot::createSegment(double x1, double y1, double x2, double y
     double x2_ = (x2 - xStart) * xScale;
     double y2_ = PLOT_HEIGHT - (y2 - yStart) * yScale;
 
+    // Debug output for coordinate transformation issues
+    // qDebug("Plot::createSegment: x1=%f->%f, y1=%f->%f, x2=%f->%f, y2=%f->%f",
+    //        x1, x1_, y1, y1_, x2, x2_, y2, y2_);
+
     if (x1_ < 0.0 || x1_ > PLOT_WIDTH || x2_ < 0.0 || x2_ > PLOT_WIDTH || y1_ < 0.0 || y1_ > PLOT_HEIGHT || y2_ < 0.0 || y2_ > PLOT_HEIGHT) {
-        return scene->addLine(0.0, PLOT_HEIGHT, 0.0, PLOT_HEIGHT, pen); // Return an invisible segment if out of bounds
+        qWarning("Segment out of bounds - skipping: x1=%f,y1=%f to x2=%f,y2=%f", x1, y1, x2, y2);
+        return nullptr; // Return null instead of invisible segment
     }
 
     return scene->addLine(x1_, y1_, x2_, y2_, pen);

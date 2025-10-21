@@ -266,15 +266,34 @@ Measurement *Sweep::getMeasurement() const
 
 void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
-    qInfo("Plotting triode anode sweep with %d samples", samples.count());
+    // qInfo("=== SWEEP::PLOTTRIODEANODE - Sample count: %d ===", samples.count());
+
+    // ADD VALIDATION FOR EMPTY SWEEPS
+    if (samples.count() < 2) {
+        // qWarning("Sweep has insufficient samples (%d) for plotting - skipping", samples.count());
+        return;
+    }
 
     Sample *firstSample = samples.at(0);
-
     double vg = firstSample->getVg1();
+
+    // qInfo("First sample: vg1=%.6fV, va=%.6fV, ia=%.6fA", vg, firstSample->getVa(), firstSample->getIa());
+
+    // DEBUG: Show all grid voltages being processed with high precision
+    // qInfo("*** DEBUG: Processing sweep with grid voltage: %.6fV (samples: %d) ***", vg, samples.count());
+
+    // DEBUG: Check for exact -1.5V sweep with high precision
+    if (qAbs(vg - (-1.5)) < 0.0001) {
+        // qInfo("*** DEBUG: FOUND EXACT -1.5V SWEEP with %.6fV and %d samples ***", vg, samples.count());
+    }
+
+    // DEBUG: Track segments for problematic voltages
+    if (qAbs(vg - (-2.5)) < 0.1 || qAbs(vg - (-3.0)) < 0.1 || qAbs(vg - (-3.5)) < 0.1 || qAbs(vg - (-4.0)) < 0.1) {
+        // qInfo("*** DEBUG: Processing problematic voltage %.6fV - tracking segments ***", vg);
+    }
+
     double va = firstSample->getVa();
     double ia = firstSample->getIa();
-
-    qInfo("First sample: vg1=%f, va=%f, ia=%f", vg, va, ia);
 
     int nSamples = samples.count();
     for (int j = 1; j < nSamples; j++) {
@@ -283,13 +302,27 @@ void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> 
          double vaNext = sample->getVa();
          double iaNext = sample->getIa();
 
-         qInfo("Sample %d: va=%f->%f, ia=%f->%f", j, va, vaNext, ia, iaNext);
+         // qInfo("Segment %d: va=%f->%f, ia=%f->%f", j, va, vaNext, ia, iaNext);
+
+         // DEBUG: Track segments for problematic voltages
+        if (qAbs(vg - (-2.5)) < 0.1 || qAbs(vg - (-3.0)) < 0.1 || qAbs(vg - (-3.5)) < 0.1 || qAbs(vg - (-4.0)) < 0.1) {
+            // qInfo("*** DEBUG: Creating segment %d for %.6fV: va=%.6f->%.6f, ia=%.6f->%.6f ***", j, vg, va, vaNext, ia, iaNext);
+            // qInfo("*** DEBUG: Current segments list size before adding: %d ***", segments->size());
+        }
 
          QGraphicsLineItem *segment = plot->createSegment(va, ia, vaNext, iaNext, *samplePen);
          if (segment != nullptr) {
              segments->append(segment);
+            // qInfo("Segment %d added successfully", j);
+
+            // DEBUG: Track successful segment addition for problematic voltages
+            if (qAbs(vg - (-2.5)) < 0.1 || qAbs(vg - (-3.0)) < 0.1 || qAbs(vg - (-3.5)) < 0.1 || qAbs(vg - (-4.0)) < 0.1) {
+                // qInfo("*** DEBUG: Successfully added segment %d for %.6fV - list size now: %d ***", j, vg, segments->size());
+            }
          } else {
-             qWarning("Failed to create segment for sample %d", j);
+             // qWarning("Failed to create segment %d", j);
+             // Handle nullptr return
+             continue;
          }
 
          va = vaNext;
@@ -297,16 +330,32 @@ void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> 
      }
 
     segments->append(plot->createLabel(va, ia, vg1Nominal));
-    qInfo("Finished plotting triode anode sweep");
+    // qInfo("Finished plotting triode anode sweep - %d segments created", nSamples - 1);
+    // qInfo("*** DEBUG: Completed plotting sweep with grid voltage: %.6fV ***", vg);
+
+    // DEBUG: Show final segments list size for problematic voltages
+    if (qAbs(vg - (-2.5)) < 0.1 || qAbs(vg - (-3.0)) < 0.1 || qAbs(vg - (-3.5)) < 0.1 || qAbs(vg - (-4.0)) < 0.1) {
+        // qInfo("*** DEBUG: Final segments list size for %.6fV: %d ***", vg, segments->size());
+    }
 }
 
 void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
+    // qInfo("=== SWEEP::PLOTTRIODETRANSFER - Sample count: %d ===", samples.count());
+
+    // ADD VALIDATION FOR EMPTY SWEEPS
+    if (samples.count() < 2) {
+        // qWarning("Sweep has insufficient samples (%d) for plotting - skipping", samples.count());
+        return;
+    }
+
     Sample *firstSample = samples.at(0);
 
     double vg = firstSample->getVg1();
     double va = firstSample->getVa();
     double ia = firstSample->getIa();
+
+    // qInfo("First sample: vg1=%f, va=%f, ia=%f", vg, va, ia);
 
     int nSamples = samples.count();
     for (int j = 1; j < nSamples; j++) {
@@ -315,22 +364,36 @@ void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem 
          double vgNext = sample->getVg1();
          double iaNext = sample->getIa();
 
-         segments->append(plot->createSegment(vg, ia, vgNext, iaNext, *samplePen));
+         // qInfo("Transfer segment %d: vg=%f->%f, ia=%f->%f", j, vg, vgNext, ia, iaNext);
+
+         QGraphicsLineItem *segment = plot->createSegment(vg, ia, vgNext, iaNext, *samplePen);
+         if (segment != nullptr) {
+             segments->append(segment);
+             // qInfo("Transfer segment %d added successfully", j);
+         } else {
+             // qWarning("Failed to create transfer segment %d", j);
+             continue;
+         }
 
          vg = vgNext;
          ia = iaNext;
      }
 
     segments->append(plot->createLabel(vg, ia, vaNominal));
+    // qInfo("Finished plotting triode transfer sweep - %d segments created", nSamples - 1);
 }
 
 void Sweep::plotPentodeScreen(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
+    // qInfo("=== SWEEP::PLOTPENTODESCREEN - Sample count: %d ===", samples.count());
+
     Sample *firstSample = samples.at(0);
 
     double vg = firstSample->getVg1();
     double va = firstSample->getVa();
     double ig2 = firstSample->getIg2();
+
+    // qInfo("First sample: vg1=%f, va=%f, ig2=%f", vg, va, ig2);
 
     int nSamples = samples.count();
     for (int j = 1; j < nSamples; j++) {
@@ -339,22 +402,42 @@ void Sweep::plotPentodeScreen(Plot *plot, QPen *samplePen, QList<QGraphicsItem *
          double vaNext = sample->getVa();
          double ig2Next = sample->getIg2();
 
-         segments->append(plot->createSegment(va, ig2, vaNext, ig2Next, *samplePen));
+         // qInfo("Screen segment %d: va=%f->%f, ig2=%f->%f", j, va, vaNext, ig2, ig2Next);
+
+         QGraphicsLineItem *segment = plot->createSegment(va, ig2, vaNext, ig2Next, *samplePen);
+         if (segment != nullptr) {
+             segments->append(segment);
+             // qInfo("Screen segment %d added successfully", j);
+         } else {
+             // qWarning("Failed to create screen segment %d", j);
+             continue;
+         }
 
          va = vaNext;
          ig2 = ig2Next;
      }
 
-    //segments->append(plot->createLabel(va, ig2, vg1Nominal));
+    segments->append(plot->createLabel(va, ig2, vg1Nominal));
+    // qInfo("Finished plotting pentode screen sweep - %d segments created", nSamples - 1);
 }
 
 void Sweep::plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
+    // qInfo("=== SWEEP::PLOTPENTODEANODE - Sample count: %d ===", samples.count());
+
+    // ADD VALIDATION FOR EMPTY SWEEPS
+    if (samples.count() < 2) {
+        // qWarning("Sweep has insufficient samples (%d) for plotting - skipping", samples.count());
+        return;
+    }
+
     Sample *firstSample = samples.at(0);
 
     double vg = firstSample->getVg1();
     double va = firstSample->getVa();
     double ia = firstSample->getIa();
+
+    // qInfo("First sample: vg1=%f, va=%f, ia=%f", vg, va, ia);
 
     int nSamples = samples.count();
     for (int j = 1; j < nSamples; j++) {
@@ -363,22 +446,42 @@ void Sweep::plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *>
          double vaNext = sample->getVa();
          double iaNext = sample->getIa();
 
-         segments->append(plot->createSegment(va, ia, vaNext, iaNext, *samplePen));
+         // qInfo("Pentode anode segment %d: va=%f->%f, ia=%f->%f", j, va, vaNext, ia, iaNext);
+
+         QGraphicsLineItem *segment = plot->createSegment(va, ia, vaNext, iaNext, *samplePen);
+         if (segment != nullptr) {
+             segments->append(segment);
+             // qInfo("Pentode anode segment %d added successfully", j);
+         } else {
+             // qWarning("Failed to create pentode anode segment %d", j);
+             continue;
+         }
 
          va = vaNext;
          ia = iaNext;
      }
 
     segments->append(plot->createLabel(va, ia, vg1Nominal));
+    // qInfo("Finished plotting pentode anode sweep - %d segments created", nSamples - 1);
 }
 
 void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
+    // qInfo("=== SWEEP::PLOTPENTODETRANSFER - Sample count: %d ===", samples.count());
+
+    // ADD VALIDATION FOR EMPTY SWEEPS
+    if (samples.count() < 2) {
+        // qWarning("Sweep has insufficient samples (%d) for plotting - skipping", samples.count());
+        return;
+    }
+
     Sample *firstSample = samples.at(0);
 
     double vg = firstSample->getVg1();
     double vg2 = firstSample->getVg2();
     double ia = firstSample->getIa();
+
+    // qInfo("First sample: vg1=%f, vg2=%f, ia=%f", vg, vg2, ia);
 
     int nSamples = samples.count();
     for (int j = 1; j < nSamples; j++) {
@@ -387,13 +490,23 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
          double vgNext = sample->getVg1();
          double iaNext = sample->getIa();
 
-         segments->append(plot->createSegment(vg, ia, vgNext, iaNext, *samplePen));
+         // qInfo("Pentode transfer segment %d: vg=%f->%f, ia=%f->%f", j, vg, vgNext, ia, iaNext);
+
+         QGraphicsLineItem *segment = plot->createSegment(vg, ia, vgNext, iaNext, *samplePen);
+         if (segment != nullptr) {
+             segments->append(segment);
+             // qInfo("Pentode transfer segment %d added successfully", j);
+         } else {
+             // qWarning("Failed to create pentode transfer segment %d", j);
+             continue;
+         }
 
          vg = vgNext;
          ia = iaNext;
      }
 
     segments->append(plot->createLabel(vg, ia, vg2Nominal));
+    // qInfo("Finished plotting pentode transfer sweep - %d segments created", nSamples - 1);
 }
 
 void Sweep::propertyEdited(QTableWidgetItem *item)
