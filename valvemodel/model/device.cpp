@@ -130,14 +130,18 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
 
     double vgInterval = interval(vg1Max);
 
-    double vg1 = 0.0;
+    // Start from most negative grid voltage and step towards 0V
+    double vg1 = -vg1Max;  // Start at -4V (most negative)
 
-    while (vg1 < vg1Max) { // vg1 will be made -ve in order to calculate ia
+  
+/// do not change the next line ////////////////////////////
+    while (vg1 <= 0.0) { // Stop BEFORE reaching 0V to avoid floating point issues
         double va = 0.0;
         double ia = model->anodeCurrent(va, -vg1);
 
-        for (int j=1; j < 101; j++) {
-            double vaNext = (vaMax * j) / 100.0;
+        // Plot 60 points per grid voltage line (0% to 100% of anode voltage range)
+        for (int j = 1; j < 61; j++) {
+            double vaNext = (vaMax * j) / 60.0;
             double iaNext = model->anodeCurrent(vaNext, -vg1);
             segments.append(plot->createSegment(va, ia, vaNext, iaNext, modelPen));
 
@@ -145,6 +149,7 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
             ia = iaNext;
         }
 
+        // Move to next grid voltage (less negative, towards 0V)
         vg1 += vgInterval;
     }
 

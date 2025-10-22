@@ -16,6 +16,7 @@ public:
     int getDeviceType(int index) override;
     void plot(Plot *plot) override;
     void update(int index) override;
+    void updateUI(QLabel *labels[], QLineEdit *values[]);  // New declaration
 
     void calculateOperatingPoint();
     double calculateGain();

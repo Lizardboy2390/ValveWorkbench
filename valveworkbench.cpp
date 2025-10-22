@@ -102,16 +102,28 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->setupUi(this);
 
     // Add the Data tab programmatically
-    QWidget *dataTab = new QWidget();
-    ui->tabWidget->addTab(dataTab, "Data");
-
-    // Check if dataTab already has a layout, if not create one
-    QVBoxLayout *layout = nullptr;
-    if (dataTab->layout() == nullptr) {
-        layout = new QVBoxLayout(dataTab);
-    } else {
-        layout = qobject_cast<QVBoxLayout*>(dataTab->layout());
+    QWidget *dataTab = nullptr;
+    bool dataTabExists = false;
+    for (int i = 0; i < ui->tabWidget->count(); i++) {
+        if (ui->tabWidget->tabText(i) == "Data") {
+            dataTab = ui->tabWidget->widget(i);
+            dataTabExists = true;
+            break;
+        }
     }
+
+    if (!dataTabExists) {
+        dataTab = new QWidget();
+        ui->tabWidget->addTab(dataTab, "Data");
+    }
+
+    // Check if dataTab already has a layout, if so remove it and create a new one
+    QVBoxLayout *layout = nullptr;
+    if (dataTab->layout() != nullptr) {
+        // Remove existing layout to avoid "already has a parent" error
+        delete dataTab->layout();
+    }
+    layout = new QVBoxLayout(dataTab);
 
     QLabel *dataLabel = new QLabel("Sweep Data Table", dataTab);
     layout->addWidget(dataLabel);
@@ -131,10 +143,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     dataTable->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     layout->addWidget(dataTable);
 
-    dataTab->setLayout(layout);
-
-    // Initialize heater state to always be "on" for workflow
-   // heaters = true;
+    // Set the layout for the dataTab
 
     // Set initial heater button state and indicator
     ui->heaterButton->setText("Heater ON");
@@ -245,14 +254,16 @@ void ValveWorkbench::buildCircuitSelection()
 
     ui->circuitSelection->addItem("Select...", -1);
     ui->circuitSelection->addItem("Triode Common Cathode", TRIODE_COMMON_CATHODE);
-
-    /*if (currentDevice != nullptr) {
-        if (currentDevice->getDeviceType() == MODEL_TRIODE) {
-            ui->circuitSelection->addItem("Common Cathode", TRIODE_COMMON_CATHODE);
-        } else if (currentDevice->getDeviceType() == MODEL_PENTODE) {
-            ui->circuitSelection->addItem("Common Cathode", PENTODE_COMMON_CATHODE);
-        }
-    }*/
+    ui->circuitSelection->addItem("Pentode Common Cathode", PENTODE_COMMON_CATHODE);
+    ui->circuitSelection->addItem("AC Cathode Follower", AC_CATHODE_FOLLOWER);
+    ui->circuitSelection->addItem("DC Cathode Follower", DC_CATHODE_FOLLOWER);
+    ui->circuitSelection->addItem("Long Tailed Pair", LONG_TAILED_PAIR);
+    ui->circuitSelection->addItem("Cathodyne Phase Splitter", CATHODYNE_PHASE_SPLITTER);
+    ui->circuitSelection->addItem("Single Ended Output", SINGLE_ENDED_OUTPUT);
+    ui->circuitSelection->addItem("Ultralinear Single Ended", ULTRALINEAR_SINGLE_ENDED);
+    ui->circuitSelection->addItem("Push Pull Output", PUSH_PULL_OUTPUT);
+    ui->circuitSelection->addItem("Ultralinear Push Pull", ULTRALINEAR_PUSH_PULL);
+    ui->circuitSelection->addItem("Test Calculator", TEST_CALCULATOR);  // New test item
 }
 
 void ValveWorkbench::selectStdDevice(int index, int deviceNumber)

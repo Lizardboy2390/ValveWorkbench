@@ -39,8 +39,29 @@ int TriodeCommonCathode::getDeviceType(int index)
 
 void TriodeCommonCathode::plot(Plot *plot)
 {
-    // TODO: Implement plotting of load lines and operating point
-    // This will be implemented in Phase 5
+    // Clear existing plot items
+    if (Circuit::anodeLoadLine) {
+        plot->remove(Circuit::anodeLoadLine);
+        delete Circuit::anodeLoadLine;
+        Circuit::anodeLoadLine = nullptr;
+    }
+
+    if (!device1) return;
+
+    // Plot anode load line (green)
+    QPen anodePen;
+    anodePen.setColor(QColor::fromRgb(0, 128, 0));  // Green
+
+    Circuit::anodeLoadLine = new QGraphicsItemGroup();
+    for (int i = 0; i < anodeLoadLine.size() - 1; i++) {
+        QPointF p1 = anodeLoadLine[i];
+        QPointF p2 = anodeLoadLine[i + 1];
+        QGraphicsLineItem *segment = plot->createSegment(p1.x(), p1.y(), p2.x(), p2.y(), anodePen);
+        if (segment) {
+            Circuit::anodeLoadLine->addToGroup(segment);
+        }
+    }
+    plot->add(Circuit::anodeLoadLine);
 }
 
 void TriodeCommonCathode::update(int index)
@@ -153,6 +174,41 @@ QPointF TriodeCommonCathode::lineIntersection(QPointF p1, QPointF p2, QPointF p3
     double y = (a1 * c2 - a2 * c1) / d;
 
     return QPointF(x, y);
+}
+
+void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
+{
+    // Map the first parameter (Supply Voltage) to UI
+    if (parameter[0]) {
+        labels[0]->setVisible(true);
+        values[0]->setVisible(true);
+        labels[0]->setText(parameter[0]->getName());
+        values[0]->setText(QString::number(parameter[0]->getValue(), 'f', 2));
+    }
+
+    // Map the second parameter (Cathode resistor Rk) to UI
+    if (parameter[1]) {
+        labels[1]->setVisible(true);
+        values[1]->setVisible(true);
+        labels[1]->setText(parameter[1]->getName());
+        values[1]->setText(QString::number(parameter[1]->getValue(), 'f', 2));
+    }
+
+    // Map the third parameter (Anode resistor Ra) to UI
+    if (parameter[2]) {
+        labels[2]->setVisible(true);
+        values[2]->setVisible(true);
+        labels[2]->setText(parameter[2]->getName());
+        values[2]->setText(QString::number(parameter[2]->getValue(), 'f', 2));
+    }
+
+    // Map the fourth parameter (Load impedance Rl) to UI
+    if (parameter[3]) {
+        labels[3]->setVisible(true);
+        values[3]->setVisible(true);
+        labels[3]->setText(parameter[3]->getName());
+        values[3]->setText(QString::number(parameter[3]->getValue(), 'f', 2));
+    }
 }
 
 bool TriodeCommonCathode::isOnSegment(QPointF p, QPointF a, QPointF b)

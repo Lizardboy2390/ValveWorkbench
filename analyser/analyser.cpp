@@ -775,6 +775,11 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
 {
     double increment = 1.0 / sweepPoints;
 
+    // Handle both ascending and descending step ranges
+    bool isDescending = stepStart > stepStop;
+    double stepIncrement = isDescending ? -fabs(step) : fabs(step);
+    double endCondition = isDescending ? stepStop - 0.01 : stepStop + 0.01;
+
     double stepVoltage = stepStart;
 
     stepValue.clear();
@@ -783,9 +788,13 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
     stepIndex = 0;
     sweepIndex = 0;
 
-    while (stepVoltage <= (stepStop + 0.01)) {
+    // Ensure we generate at least one step
+    int maxSteps = fabs((stepStop - stepStart) / step) + 1;
+    int stepCount = 0;
+
+    while (((isDescending && stepVoltage >= endCondition) || (!isDescending && stepVoltage <= endCondition)) && stepCount < maxSteps) {
         if (stepType == GRID) {
-            stepValue.append(-stepVoltage);
+            stepValue.append(-stepVoltage);  // Store the actual negative voltage for grid
         } else {
             stepValue.append(stepVoltage);
         }
@@ -793,7 +802,6 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
         stepParameter.append(convertTargetVoltage(stepType, stepVoltage));
 
         QList<int> thisSweep;
-
         double sweep = 0.0;
         while (sweep <= 1.01) {
             double sweepVoltage;
@@ -802,14 +810,14 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
             } else {
                 sweepVoltage = sweepStart + (sweepStop - sweepStart) * sweep;
             }
-            // qInfo("sweepStop: %f, sweep: %f, sweepVoltage: %f", sweepStop, sweep, sweepVoltage);
             thisSweep.append(convertTargetVoltage(sweepType, sweepVoltage));
             sweep += increment;
         }
 
         sweepParameter.append(thisSweep);
 
-        stepVoltage += step;
+        stepVoltage += stepIncrement;
+        stepCount++;
     }
 
     // qInfo("Generated sweep parameters: %d steps, each with %d points", stepParameter.length(), sweepParameter.at(0).length());
