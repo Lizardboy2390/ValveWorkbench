@@ -15,17 +15,13 @@
 #include "../ui/parameter.h"
 #include "../ui/uibridge.h"
 #include "../ui/plot.h"
+#include "../constants.h"
 #include "model.h"
 #include "simpletriode.h"
 #include "korentriode.h"
 #include "cohenhelietriode.h"
 #include "reefmanpentode.h"
 #include "gardinerpentode.h"
-
-enum eModelDeviceType {
-    MODEL_TRIODE,
-    MODEL_PENTODE
-};
 
 enum ePlotType {
     PLOT_TRIODE_ANODE,
@@ -72,7 +68,7 @@ public:
     virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
 
 private:
-    int deviceType = MODEL_TRIODE;
+    int deviceType = TRIODE;  // Use main app constants
     int modelType = COHEN_HELIE_TRIODE;
 
     Model *model = nullptr;

@@ -111,14 +111,39 @@ void KorenTriode::setOptions()
 
 double KorenTriode::korenCurrent(double va, double vg, double kp, double kvb, double a, double mu)
 {
-    double x1 = std::sqrt(kvb + va * va);
-    double x2 = kp * (1 / mu + vg / x1);
-    double x3 = std::log(1.0 + std::exp(x2));
-    double et = (va / kp) * x3;
-
-    if (et < 0.0) {
-        et = 0.0;
+    // Check for invalid inputs
+    if (std::isnan(va) || std::isnan(vg) || std::isnan(kp) || std::isnan(kvb) || std::isnan(a) || std::isnan(mu)) {
+        return 0.0;
     }
 
-    return pow(et, a);
+    // Prevent negative values in sqrt
+    double x1 = std::sqrt(std::max(0.0, kvb + va * va));
+    if (x1 == 0.0) {
+        return 0.0;
+    }
+
+    double x2 = kp * (1.0 / mu + vg / x1);
+
+    // Prevent overflow in exp
+    if (x2 > 50.0) {
+        x2 = 50.0;
+    }
+
+    double x3 = std::log(1.0 + std::exp(x2));
+
+    double et = (va / kp) * x3;
+
+    // Prevent negative values before pow
+    if (et <= 0.0) {
+        return 0.0;
+    }
+
+    double result = std::pow(et, a);
+
+    // Check for overflow
+    if (std::isinf(result) || std::isnan(result) || result > 1e6) {
+        return 0.0;
+    }
+
+    return result;
 }

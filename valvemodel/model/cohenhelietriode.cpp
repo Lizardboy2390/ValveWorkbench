@@ -128,16 +128,65 @@ void CohenHelieTriode::setOptions()
 
 double CohenHelieTriode::cohenHelieCurrent(double v, double vg, double kg1, double kp, double kvb, double kvb1, double vct, double x, double mu)
 {
+    qInfo("DEBUG: Kg1 = %.6f", kg1);
     return cohenHelieEpk(v, vg, kp, kvb, kvb1, vct, x, mu) / kg1;
 }
 
 double CohenHelieTriode::cohenHelieEpk(double v, double vg, double kp, double kvb, double kvb1, double vct, double x, double mu)
 {
-    double f = std::sqrt(kvb + v * kvb1 + v * v);
-    double y = kp * (1 / mu + (vg + vct) / f);
-    double ep = (v / kp) * std::log(1.0 + std::exp(y));
+    // Debug parameter values
+    qInfo("Cohen-Helie params: v=%.3f, vg=%.3f, kp=%.3f, kvb=%.3f, kvb1=%.3f, vct=%.3f, x=%.3f, mu=%.3f",
+          v, vg, kp, kvb, kvb1, vct, x, mu);
 
-    return pow(ep, x);
+    // Check for invalid inputs
+    if (std::isnan(v) || std::isnan(vg) || std::isnan(kp) || std::isnan(kvb) || std::isnan(kvb1) ||
+        std::isnan(vct) || std::isnan(x) || std::isnan(mu)) {
+        qInfo("NaN detected in inputs - returning 0");
+        return 0.0;
+    }
+
+    // Bounds check vg (grid voltage should be reasonable for vacuum tubes)
+    if (vg < -10.0 || vg > 10.0) {
+        qInfo("vg=%.3f out of bounds [-10, 10] - returning 0", vg);
+        return 0.0;
+    }
+
+    // Prevent division by zero or negative values in sqrt
+    double f = std::sqrt(std::max(0.0, kvb + v * kvb1 + v * v));
+    if (f == 0.0) {
+        qInfo("f is zero - returning 0");
+        return 0.0;
+    }
+
+    double y = kp * (1.0 / mu + (vg + vct) / f);
+    qInfo("Intermediate values: f=%.3f, y=%.3f", f, y);
+
+    // Prevent overflow in exp
+    if (y > 50.0) {
+        qInfo("y=%.3f > 50, capping to 50", y);
+        y = 50.0;
+    }
+
+    double ep = (v / kp) * std::log(1.0 + std::exp(y));
+    qInfo("ep=%.3f", ep);
+
+    // Prevent negative or zero values before pow
+    if (ep <= 0.0) {
+        qInfo("ep=%.3f <= 0 - returning 0", ep);
+        return 0.0;
+    }
+
+    double result = std::pow(ep, x);
+    qInfo("pow(ep, x) = %.3f", result);
+
+    // Check for overflow
+    if (std::isinf(result) || std::isnan(result) || result > 1e6) {
+        qInfo("Overflow detected: result=%.3f - returning 0", result);
+        return 0.0;
+    }
+
+    qInfo("Final result: %.3f", result);
+    return result;
 }
 
 double CohenHelieTriode::cohenHelieEpk(double v, double vg)

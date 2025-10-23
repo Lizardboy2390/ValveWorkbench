@@ -9,6 +9,7 @@
 #include <QSerialPortInfo>
 #include <QTimer>
 #include <QThread>
+#include <QCoreApplication>
 
 #include "valvemodel/data/project.h"
 #include "valvemodel/model/estimate.h"

@@ -43,11 +43,35 @@ double SimpleTriode::triodeAnodeCurrent(double va, double vg1)
 
 double SimpleTriode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
+    // Check for invalid inputs
+    if (std::isnan(va) || std::isnan(vg1) || std::isnan(vg2)) {
+        return 0.0;
+    }
+
     double ia = 0.0;
 
     double e1t = va / parameter[PAR_MU]->getValue() + vg1 + parameter[PAR_VCT]->getValue();
-    if (e1t > 0) {
-        ia = pow(e1t, parameter[PAR_X]->getValue()) / parameter[PAR_KG1]->getValue();
+
+    // Only calculate current if e1t is positive (tube conducting)
+    if (e1t > 0.0) {
+        double exponent = parameter[PAR_X]->getValue();
+        double base = e1t;
+
+        // Check for overflow before pow
+        if (exponent > 0 && base > 0) {
+            double log_base = std::log(base);
+            if (log_base * exponent > 50.0) {
+                // Would overflow, return safe value
+                ia = 1e6; // Cap at reasonable maximum
+            } else {
+                ia = std::pow(base, exponent) / parameter[PAR_KG1]->getValue();
+            }
+        }
+    }
+
+    // Check for overflow
+    if (std::isinf(ia) || std::isnan(ia) || ia > 1e6) {
+        return 0.0;
     }
 
     return ia;

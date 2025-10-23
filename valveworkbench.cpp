@@ -117,16 +117,9 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         ui->tabWidget->addTab(dataTab, "Data");
     }
 
-    // Check if dataTab already has a layout, if so remove it and create a new one
-    QVBoxLayout *layout = nullptr;
-    if (dataTab->layout() != nullptr) {
-        // Remove existing layout to avoid "already has a parent" error
-        delete dataTab->layout();
-    }
-    layout = new QVBoxLayout(dataTab);
-
+    // Don't manage the layout - just add widgets directly
+    // The UI file should already have proper layout
     QLabel *dataLabel = new QLabel("Sweep Data Table", dataTab);
-    layout->addWidget(dataLabel);
 
     dataTable = new QTableWidget(dataTab);
     dataTable->setRowCount(10);
@@ -141,9 +134,20 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     dataTable->setVerticalHeaderLabels(QStringList() << "Vg_1" << "Vg_2" << "Vg_3" << "Vg_4" << "Vg_5" << "Vg_6" << "Vg_7" << "Vg_8" << "Vg_9" << "Vg_10");
     dataTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     dataTable->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    layout->addWidget(dataTable);
 
-    // Set the layout for the dataTab
+    // Check if dataTab already has a layout and handle it properly
+    QLayout *existingLayout = dataTab->layout();
+    if (existingLayout) {
+        qInfo("Data tab already has layout - using existing layout");
+        existingLayout->addWidget(dataLabel);
+        existingLayout->addWidget(dataTable);
+    } else {
+        qInfo("Data tab has no layout - creating new one");
+        QVBoxLayout *dataLayout = new QVBoxLayout(dataTab);
+        dataLayout->addWidget(dataLabel);
+        dataLayout->addWidget(dataTable);
+        dataTab->setLayout(dataLayout);
+    }
 
     // Set initial heater button state and indicator
     ui->heaterButton->setText("Heater ON");
@@ -163,9 +167,11 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->progressBar->reset();
     ui->progressBar->setVisible(false);
 
-    // Initialize heater indicator
+    // Initialize heater indicator - simplified approach
     heaterIndicator = new LedIndicator();
     heaterIndicator->setOffColor(QColorConstants::LightGray);
+
+    // Just add to layout - let Qt handle any existing widgets
     ui->heaterLayout->addWidget(heaterIndicator);
     heaterIndicator->setState(true); // Heater is always "on"
 
@@ -188,7 +194,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     analyser = new Analyser(this, &serialPort, &timeoutTimer);
     analyser->setPreferences(&preferencesDialog);
 
-    ui->graphicsView->setScene(plot.getScene());
+    // Removed duplicate ui->graphicsView->setScene(plot.getScene());
 
     int count = ui->properties->rowCount();
     for (int i = 0; i < count; i++) {
@@ -295,12 +301,16 @@ void ValveWorkbench::selectModel(int modelType)
 
 void ValveWorkbench::selectCircuit(int circuitType)
 {
+    qInfo("=== SELECTING CIRCUIT ===");
+    qInfo("Circuit type: %d", circuitType);
+
     for (int i = 0; i < 16; i++) {
         circuitLabels[i]->setVisible(false);
         circuitValues[i]->setVisible(false);
     }
 
     if (circuitType < 0) {
+        qInfo("Invalid circuit type - disabling device selections");
         ui->stdDeviceSelection->setCurrentIndex(0);
         ui->stdDeviceSelection2->setCurrentIndex(0);
 
@@ -310,17 +320,26 @@ void ValveWorkbench::selectCircuit(int circuitType)
     }
 
     Circuit *circuit = circuits.at(circuitType);
+    qInfo("Circuit class: %s", typeid(*circuit).name());
+
     circuit->setDevice1(nullptr);
     circuit->setDevice2(nullptr);
 
     ui->stdDeviceSelection->setCurrentIndex(0);
     ui->stdDeviceSelection2->setCurrentIndex(0);
 
-    buildStdDeviceSelection(ui->stdDeviceSelection, circuit->getDeviceType(1));
-    buildStdDeviceSelection(ui->stdDeviceSelection2, circuit->getDeviceType(2));
+    int deviceType1 = circuit->getDeviceType(1);
+    int deviceType2 = circuit->getDeviceType(2);
+
+    qInfo("Circuit requires device1 type: %d, device2 type: %d", deviceType1, deviceType2);
+
+    buildStdDeviceSelection(ui->stdDeviceSelection, deviceType1);
+    buildStdDeviceSelection(ui->stdDeviceSelection2, deviceType2);
 
     // Show parameter UI for the selected circuit
     circuit->updateUI(circuitLabels, circuitValues);
+
+    qInfo("Circuit selection completed");
 }
 
 void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)
@@ -335,12 +354,21 @@ void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)
     selection->setEnabled(true);
     selection->addItem("Select...", -1);
 
+    qInfo("=== BUILDING DEVICE SELECTION ===");
+    qInfo("Requested device type: %d", type);
+    qInfo("Available devices: %d", devices.size());
+
     for (int i = 0; i < devices.size(); i++) {
         Device *device = devices.at(i);
+        qInfo("Device %d: %s, type: %d", i, device->getName().toStdString().c_str(), device->getDeviceType());
+
         if (device->getDeviceType() == type) {
             selection->addItem(device->getName(), i);
+            qInfo("MATCH! Added device %s to dropdown", device->getName().toStdString().c_str());
         }
     }
+
+    qInfo("Dropdown populated with %d matching devices", selection->count() - 1); // -1 for "Select..." item
 }
 
 void ValveWorkbench::plotModel()
@@ -711,7 +739,36 @@ void ValveWorkbench::readConfig(QString filename)
 
 void ValveWorkbench::loadDevices()
 {
-    QString modelPath = tr("../models");
+    // Try multiple paths to find models - executable runs from deep build directory
+    QStringList possiblePaths = {
+        QCoreApplication::applicationDirPath() + "/../../../../../models",  // From release/release/bin
+        QCoreApplication::applicationDirPath() + "/../../../../models",     // From release/bin
+        QCoreApplication::applicationDirPath() + "/../../../models",       // From bin
+        QCoreApplication::applicationDirPath() + "/../models",             // From app dir
+        QCoreApplication::applicationDirPath() + "/models",                // Adjacent to app
+        QDir::currentPath() + "/models",                                   // From current dir
+        QDir::currentPath() + "/../models",                               // From current parent
+        QDir::currentPath() + "/../../models",                            // From current grandparent
+        QDir::currentPath() + "/../../../models"                          // From source root
+    };
+
+    QString modelPath;
+    for (const QString& path : possiblePaths) {
+        QDir testDir(path);
+        if (testDir.exists()) {
+            modelPath = path;
+            qInfo("Found models at: %s", path.toStdString().c_str());
+            break;
+        } else {
+            qInfo("Path not found: %s", path.toStdString().c_str());
+        }
+    }
+
+    if (modelPath.isEmpty()) {
+        modelPath = tr("../models"); // fallback to original
+        qInfo("Using fallback path: %s", modelPath.toStdString().c_str());
+    }
+
     QDir modelDir(modelPath);
 
     QStringList filters;
@@ -719,6 +776,12 @@ void ValveWorkbench::loadDevices()
     modelDir.setNameFilters(filters);
 
     QStringList models = modelDir.entryList();
+
+    qInfo("=== LOADING DEVICES ===");
+    qInfo("Application dir: %s", QCoreApplication::applicationDirPath().toStdString().c_str());
+    qInfo("Current dir: %s", QDir::currentPath().toStdString().c_str());
+    qInfo("Model path: %s", modelPath.toStdString().c_str());
+    qInfo("Found %d model files", models.size());
 
     for (int i = 0; i < models.size(); i++) {
         QString modelFileName = modelPath + "/" + models.at(i);
@@ -731,9 +794,12 @@ void ValveWorkbench::loadDevices()
             QJsonDocument modelDoc(QJsonDocument::fromJson(modelData));
 
             Device *model = new Device(modelDoc);
+            qInfo("Loaded device: %s, type: %d", model->getName().toStdString().c_str(), model->getDeviceType());
             this->devices.append(model);
         }
     }
+
+    qInfo("Total devices loaded: %d", devices.size());
 }
 
 void ValveWorkbench::loadTemplate(int index)

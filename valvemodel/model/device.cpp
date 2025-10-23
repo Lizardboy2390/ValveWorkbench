@@ -2,7 +2,7 @@
 
 Device::Device(int _modelDeviceType) : deviceType(_modelDeviceType)
 {
-    if (deviceType == MODEL_TRIODE) {
+    if (deviceType == TRIODE) {
         modelType = COHEN_HELIE_TRIODE;
     }
 }
@@ -15,11 +15,15 @@ Device::Device(QJsonDocument modelDocument)
     vg2Max = vaMax;
     paMax = 1.25;
 
+    qInfo("=== DEVICE CONSTRUCTOR ===");
+    qInfo("JSON is object: %s", modelDocument.isObject() ? "true" : "false");
+
     if (modelDocument.isObject()) {
         QJsonObject deviceObject = modelDocument.object();
 
         if (deviceObject.contains("name") && deviceObject["name"].isString()) {
             name = deviceObject["name"].toString();
+            qInfo("Device name: %s", name.toStdString().c_str());
         }
 
         if (deviceObject.contains("vaMax") && deviceObject["vaMax"].isDouble()) {
@@ -44,18 +48,21 @@ Device::Device(QJsonDocument modelDocument)
 
         if (deviceObject.contains("model") && deviceObject["model"].isObject()) {
             QJsonObject modelObject = deviceObject["model"].toObject();
+            qInfo("Found model object");
 
-            deviceType = MODEL_TRIODE;
+            deviceType = TRIODE;  // Use main app constants
 
             if (modelObject.contains("device") && modelObject["device"].isString()) {
-                if (modelObject["device"].toString() == "pentode") {
-                    deviceType = MODEL_PENTODE;
+                QString deviceStr = modelObject["device"].toString();
+                qInfo("Device string: %s", deviceStr.toStdString().c_str());
+                if (deviceStr == "pentode") {
+                    deviceType = PENTODE;  // Use main app constants
                 }
             }
 
             if (modelObject.contains("type") && modelObject["type"].isString()) {
                 QString modelType = modelObject["type"].toString();
-                model = nullptr;
+                qInfo("Model type: %s", modelType.toStdString().c_str());
 
                 if (modelType == "simple") {
                     model = new SimpleTriode();
@@ -71,10 +78,19 @@ Device::Device(QJsonDocument modelDocument)
 
                 if (model != nullptr) {
                     model->fromJson(modelObject);
+                    qInfo("Model created and initialized");
+                } else {
+                    qInfo("Model type not recognized: %s", modelType.toStdString().c_str());
                 }
             }
+        } else {
+            qInfo("No model object found in JSON");
         }
+    } else {
+        qInfo("JSON document is not an object");
     }
+
+    qInfo("Final device type: %d", deviceType);
 }
 
 double Device::anodeCurrent(double va, double vg1, double vg2)

@@ -31,14 +31,22 @@ TriodeCommonCathode::~TriodeCommonCathode()
 
 int TriodeCommonCathode::getDeviceType(int index)
 {
-    if (index == 0) {
-        return MODEL_TRIODE;  // Triode for common cathode
+    if (index == 1) {
+        qInfo("TriodeCommonCathode::getDeviceType(%d) returning TRIODE = %d", index, TRIODE);
+        return TRIODE;  // Triode for device1
     }
+    if (index == 2) {
+        qInfo("TriodeCommonCathode::getDeviceType(%d) returning -1", index);
+        return -1;  // No device2 for triode common cathode
+    }
+    qInfo("TriodeCommonCathode::getDeviceType(%d) returning -1", index);
     return -1;  // No device for other indices
 }
 
 void TriodeCommonCathode::plot(Plot *plot)
 {
+    qInfo("=== TRIODE COMMON CATHODE PLOT CALLED ===");
+
     // Clear existing plot items
     if (Circuit::anodeLoadLine) {
         plot->remove(Circuit::anodeLoadLine);
@@ -46,7 +54,13 @@ void TriodeCommonCathode::plot(Plot *plot)
         Circuit::anodeLoadLine = nullptr;
     }
 
-    if (!device1) return;
+    if (!device1) {
+        qInfo("No device1 selected - cannot plot");
+        return;
+    }
+
+    qInfo("Device1: %s", device1->getName().toStdString().c_str());
+    qInfo("Anode load line size: %d", anodeLoadLine.size());
 
     // Plot anode load line (green)
     QPen anodePen;
@@ -62,6 +76,8 @@ void TriodeCommonCathode::plot(Plot *plot)
         }
     }
     plot->add(Circuit::anodeLoadLine);
+
+    qInfo("Anode load line plotted with %d segments", anodeLoadLine.size() - 1);
 }
 
 void TriodeCommonCathode::update(int index)

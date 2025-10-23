@@ -4,15 +4,18 @@
 This plan outlines the incremental porting of web-based valve calculators from `valvedesigner-web` into the Qt Designer tab. The focus is on small, compileable steps to integrate UI, plots, interfaces, and functionality.
 
 ## Current Status
-- **Designer Tab Implemented**: Triode Common Cathode calculator fully ported with UI, plotting, and calculations.
-- **Runtime Issue**: Application crashes when selecting "Triode Common Cathode" due to unresolved initialization error.
-- **Next Phase**: Debug and fix the runtime crash to ensure stable operation.
+- **Designer Tab Implemented**: Triode Common Cathode calculator basic UI and parameter system functional.
+- **Issues Resolved**: Device dropdowns populated, graph display working, no crashes when selecting devices.
+- **Model Plotting Fixed**: Grid plot order corrected, loop overrun resolved, debug flood removed.
+- **Parameter Scaling Fixed**: Updated 12AX7.json with datasheet parameters, Kg1 internal value 0.000898 appropriate.
+- **Next Phase**: Testing and validation of all features.
 
 ## Immediate Next Step
-- Debug TriodeCommonCathode circuit selection crash in `valveworkbench.cpp` and `triodecommoncathode.cpp`.
-- Identify root cause of initialization failure and propose targeted fix.
-- Approval needed for debugging steps and code changes.
+- Test all functionality in Modeller and Designer tabs.
+- Validate model parameters against datasheet and web version.
+- Document fixes and update README.
 
 ## Notes
-- Update this document after each completed step.
-- All changes must be tiny, approved, and compileable.
+- All changes approved and implemented.
+- Work in small steps with user approval and testing.
+- Document all changes and test results properly.

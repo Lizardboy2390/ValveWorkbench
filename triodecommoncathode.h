@@ -2,6 +2,7 @@
 #define TRIODECOMMONCATHODE_H
 
 #include "valvemodel/circuit/circuit.h"
+#include "valvemodel/constants.h"
 #include <QVector>
 #include <QPointF>
 

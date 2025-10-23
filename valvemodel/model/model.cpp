@@ -292,6 +292,9 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             double vg1 = vgStart;
             int curveCount = 0;
             while ( vg1 <= vgStop) {
+                qInfo("TRIODE LOOP: vg1=%.3f, vgStart=%.3f, vgStop=%.3f, vgStep=%.3f, condition (%.3f <= %.3f) = %s",
+                      vg1, vgStart, vgStop, vgStep, vg1, vgStop, (vg1 <= vgStop) ? "true" : "false");
+
                 qInfo("Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
                 double vaStart = measurement->getAnodeStart();
                 double vaStop = measurement->getAnodeStop();
@@ -305,7 +308,10 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 double va = vaStart + vaInc;
                 int segmentCount = 0;
                 while (va < vaStop) {
+                    qInfo("TRIODE: Calculating current for va=%.3f, vg1=%.3f", va, vg1);
                     double ia = anodeCurrent(va, vg1, vg2);
+                    qInfo("TRIODE: Current result ia=%.3f mA", ia * 1000.0); // Convert to mA for readability
+
                     QGraphicsItem *segment = plot->createSegment(vaPrev, iaPrev, va, ia, anodePen);
 
                     if (segment != nullptr) {
@@ -322,8 +328,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 }
 
                 qInfo("Curve %d completed: %d segments created", curveCount + 1, segmentCount);
+
+                double oldVg1 = vg1;
                 vg1 += vgStep;
                 curveCount++;
+                qInfo("TRIODE LOOP: Progressed vg1 from %.3f to %.3f (added %.3f)", oldVg1, vg1, vgStep);
             }
 
             qInfo("Total curves created: %d", curveCount);
