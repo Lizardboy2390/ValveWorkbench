@@ -101,7 +101,7 @@ void CohenHelieTriode::updateProperties(QTableWidget *properties)
     clearProperties(properties);
 
     addProperty(properties, "Mu", QString("%1").arg(parameter[PAR_MU]->getValue()));
-    addProperty(properties, "Kg1", QString("%1").arg(parameter[PAR_KG1]->getValue() * 1000.0));
+    addProperty(properties, "Kg1", QString("%1").arg(parameter[PAR_KG1]->getValue()));
     addProperty(properties, "X", QString("%1").arg(parameter[PAR_X]->getValue()));
     addProperty(properties, "Kp", QString("%1").arg(parameter[PAR_KP]->getValue()));
     addProperty(properties, "Kvb", QString("%1").arg(parameter[PAR_KVB]->getValue()));

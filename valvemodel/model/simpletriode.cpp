@@ -81,6 +81,8 @@ void SimpleTriode::fromJson(QJsonObject source)
 {
     if (source.contains("kg1") && source["kg1"].isDouble()) {
         parameter[PAR_KG1]->setValue(source["kg1"].toDouble() / 1000.0);
+    } else if (source.contains("kg") && source["kg"].isDouble()) {
+        parameter[PAR_KG1]->setValue(source["kg"].toDouble());
     }
 
     if (source.contains("mu") && source["mu"].isDouble()) {
@@ -99,7 +101,6 @@ void SimpleTriode::fromJson(QJsonObject source)
 void SimpleTriode::toJson(QJsonObject &model)
 {
     model["kg1"] = parameter[PAR_KG1]->getValue() * 1000.0;
-    model["mu"] = parameter[PAR_MU]->getValue();
     model["x"] = parameter[PAR_X]->getValue();
     model["vct"] = parameter[PAR_VCT]->getValue();
 

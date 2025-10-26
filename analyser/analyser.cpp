@@ -297,11 +297,7 @@ void Analyser::startTest()
 
         result->setAnodeStart(anodeStart);
         result->setAnodeStop(anodeStop);
-        if (isDoubleTriode) {
-            result->setAnodeStart(secondAnodeStart);
-            result->setAnodeStop(secondAnodeStop);
-            result->setAnodeStep(secondAnodeStep);
-        }
+        result->setAnodeStep(anodeStep);
 
         result->nextSweep(gridStart, screenStart);
 
@@ -311,8 +307,47 @@ void Analyser::startTest()
             stepCommandPrefix = "S6 ";
             stepType = GRID;
             sweepType = ANODE;
+
+            if (!stepValue.isEmpty()) {
+                double minGrid = stepValue.first();
+                double maxGrid = stepValue.first();
+                for (int i = 1; i < stepValue.size(); ++i) {
+                    double v = stepValue.at(i);
+                    if (v < minGrid) minGrid = v;
+                    if (v > maxGrid) maxGrid = v;
+                }
+                double derivedStep = 0.0;
+                if (stepValue.size() >= 2) {
+                    derivedStep = stepValue.at(1) - stepValue.at(0);
+                }
+
+                result->setGridStart(minGrid);
+                result->setGridStop(maxGrid);
+                result->setGridStep(derivedStep);
+                result->setAnodeStart(secondAnodeStart);
+                result->setAnodeStop(secondAnodeStop);
+                result->setAnodeStep(secondAnodeStep);
+            }
         } else {
             steppedSweep(anodeStart, anodeStop, gridStart, gridStop, gridStep);
+
+            if (!stepValue.isEmpty()) {
+                double minGrid = stepValue.first();
+                double maxGrid = stepValue.first();
+                for (int i = 1; i < stepValue.size(); ++i) {
+                    double v = stepValue.at(i);
+                    if (v < minGrid) minGrid = v;
+                    if (v > maxGrid) maxGrid = v;
+                }
+                double derivedStep = 0.0;
+                if (stepValue.size() >= 2) {
+                    derivedStep = stepValue.at(1) - stepValue.at(0);
+                }
+
+                result->setGridStart(minGrid);
+                result->setGridStop(maxGrid);
+                result->setGridStep(derivedStep);
+            }
         }
 
         if (deviceType == PENTODE) { // Anode swept, Grid stepped, Screen fixed
@@ -359,10 +394,6 @@ void Analyser::startTest()
             result->setAnodeStart(anodeStart);
             result->setAnodeStop(anodeStop);
             result->setAnodeStep(anodeStep);
-            result->setGridStart(secondGridStart);
-            result->setGridStop(secondGridStop);
-            result->setGridStep(secondGridStep);
-
             result->nextSweep(anodeStart);
 
             steppedSweep(secondGridStop, secondGridStart, anodeStart, anodeStop, anodeStep); // Sweep is reversed to finish on low (absolute) value
@@ -374,10 +405,6 @@ void Analyser::startTest()
         } else { // Anode stepped, Grid swept
             stepType = ANODE;
             stepCommandPrefix = "S3 ";
-
-            result->setAnodeStart(anodeStart);
-            result->setAnodeStop(anodeStop);
-            result->setAnodeStep(anodeStep);
 
             result->nextSweep(anodeStart);
 

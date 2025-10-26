@@ -1,0 +1,2284 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "lib/ceres-debug.lib"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"install",
+			"add_compile_options",
+			"add_definitions",
+			"add_compile_definitions",
+			"target_include_directories",
+			"target_link_libraries",
+			"target_compile_features"
+		],
+		"files" : 
+		[
+			"internal/ceres/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 297,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 420,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 623,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 410,
+				"parent" : 3
+			},
+			{
+				"command" : 4,
+				"file" : 1,
+				"line" : 633,
+				"parent" : 3
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 383,
+				"parent" : 0
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 354,
+				"parent" : 0
+			},
+			{
+				"command" : 6,
+				"file" : 0,
+				"line" : 366,
+				"parent" : 0
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 337,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : " -Qunused-arguments -mllvm -inline-threshold=600 -Wno-return-type-c-linkage -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -std=gnu++17 -fvisibility-inlines-hidden"
+				},
+				{
+					"backtrace" : 4,
+					"fragment" : "-Wno-deprecated-declarations"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 5,
+					"define" : "MAX_LOG_LEVEL=2"
+				},
+				{
+					"backtrace" : 6,
+					"define" : "NOMINMAX"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 7,
+					"path" : "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/ceres-solver/internal/ceres/miniglog"
+				},
+				{
+					"backtrace" : 8,
+					"path" : "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/ceres-solver/include"
+				},
+				{
+					"backtrace" : 8,
+					"path" : "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/ceres-solver/internal"
+				},
+				{
+					"backtrace" : 8,
+					"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/include"
+				},
+				{
+					"backtrace" : 9,
+					"isSystem" : true,
+					"path" : "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/eigen"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					10
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				143,
+				144,
+				145,
+				146,
+				147,
+				148,
+				149,
+				150,
+				151,
+				318
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"id" : "ceres_internal::@64c00a5a6641fac95aa4"
+		}
+	],
+	"id" : "ceres::@64c00a5a6641fac95aa4",
+	"install" : 
+	{
+		"destinations" : 
+		[
+			{
+				"backtrace" : 2,
+				"path" : "lib"
+			}
+		],
+		"prefix" : 
+		{
+			"path" : "C:/Program Files (x86)/Ceres"
+		}
+	},
+	"name" : "ceres",
+	"nameOnDisk" : "ceres-debug.lib",
+	"paths" : 
+	{
+		"build" : "internal/ceres",
+		"source" : "internal/ceres"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Object Libraries",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41,
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				48,
+				49,
+				50,
+				51,
+				52,
+				53,
+				54,
+				55,
+				56,
+				57,
+				58,
+				59,
+				60,
+				61,
+				62,
+				63,
+				64,
+				65,
+				66,
+				67,
+				68,
+				69,
+				70,
+				71,
+				72,
+				73,
+				74,
+				75,
+				76,
+				77,
+				78,
+				79,
+				80,
+				81,
+				82,
+				83,
+				84,
+				85,
+				86,
+				87,
+				88,
+				89,
+				90,
+				91,
+				92,
+				93,
+				94,
+				95,
+				96,
+				97,
+				98,
+				99,
+				100,
+				101,
+				102,
+				103,
+				104,
+				105,
+				106,
+				107,
+				108,
+				109,
+				110,
+				111,
+				112,
+				113,
+				114,
+				115,
+				116,
+				117,
+				118,
+				119,
+				120,
+				121,
+				122,
+				123,
+				124,
+				125,
+				126,
+				127,
+				128,
+				129,
+				130,
+				131,
+				132,
+				133,
+				134,
+				135,
+				136,
+				137,
+				138,
+				139,
+				140,
+				141,
+				142
+			]
+		},
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				143,
+				144,
+				145,
+				146,
+				147,
+				148,
+				149,
+				150,
+				151,
+				318
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				152,
+				153,
+				154,
+				155,
+				156,
+				157,
+				158,
+				159,
+				160,
+				161,
+				162,
+				163,
+				164,
+				165,
+				166,
+				167,
+				168,
+				169,
+				170,
+				171,
+				172,
+				173,
+				174,
+				175,
+				176,
+				177,
+				178,
+				179,
+				180,
+				181,
+				182,
+				183,
+				184,
+				185,
+				186,
+				187,
+				188,
+				189,
+				190,
+				191,
+				192,
+				193,
+				194,
+				195,
+				196,
+				197,
+				198,
+				199,
+				200,
+				201,
+				202,
+				203,
+				204,
+				205,
+				206,
+				207,
+				208,
+				209,
+				210,
+				211,
+				212,
+				213,
+				214,
+				215,
+				216,
+				217,
+				218,
+				219,
+				220,
+				221,
+				222,
+				223,
+				224,
+				225,
+				226,
+				227,
+				228,
+				229,
+				230,
+				231,
+				232,
+				233,
+				234,
+				235,
+				236,
+				237,
+				238,
+				239,
+				240,
+				241,
+				242,
+				243,
+				244,
+				245,
+				246,
+				247,
+				248,
+				249,
+				250,
+				251,
+				252,
+				253,
+				254,
+				255,
+				256,
+				257,
+				258,
+				259,
+				260,
+				261,
+				262,
+				263,
+				264,
+				265,
+				266,
+				267,
+				268,
+				269,
+				270,
+				271,
+				272,
+				273,
+				274,
+				275,
+				276,
+				277,
+				278,
+				279,
+				280,
+				281,
+				282,
+				283,
+				284,
+				285,
+				286,
+				287,
+				288,
+				289,
+				290,
+				291,
+				292,
+				293,
+				294,
+				295,
+				296,
+				297,
+				298,
+				299,
+				300,
+				301,
+				302,
+				303,
+				304,
+				305,
+				306,
+				307,
+				308,
+				309,
+				310,
+				311,
+				312,
+				313,
+				314,
+				315,
+				316,
+				317
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_2_2.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_2_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_2_4.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_2_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_3_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_3_4.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_3_6.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_3_9.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_3_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_4_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_4_4.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_4_6.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_4_8.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_4_9.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_4_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_2_d_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_3_3_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_4_4_2.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_4_4_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_4_4_4.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_4_4_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/partitioned_matrix_view_d_d_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_2_2.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_2_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_2_4.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_2_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_3_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_3_4.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_3_6.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_3_9.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_3_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_4_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_4_4.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_4_6.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_4_8.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_4_9.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_4_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_2_d_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_3_3_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_4_4_2.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_4_4_3.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_4_4_4.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_4_4_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/generated/schur_eliminator_d_d_d.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/parallel_for_cxx.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/thread_pool.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/accelerate_sparse.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/array_utils.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_evaluate_preparer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_jacobi_preconditioner.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_jacobian_writer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_random_access_dense_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_random_access_diagonal_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_random_access_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_random_access_sparse_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_sparse_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/block_structure.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/callbacks.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/canonical_views_clustering.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/cgnr_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/compressed_col_sparse_matrix_utils.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/compressed_row_jacobian_writer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/compressed_row_sparse_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/conditioned_cost_function.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/context.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/context_impl.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/coordinate_descent_minimizer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/corrector.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/cost_function.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/covariance.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/covariance_impl.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/cuda_sparse_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/cuda_vector.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dense_cholesky.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dense_normal_cholesky_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dense_qr.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dense_qr_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dense_sparse_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/detect_structure.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dogleg_strategy.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dynamic_compressed_row_jacobian_writer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dynamic_compressed_row_sparse_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/dynamic_sparse_normal_cholesky_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/eigensparse.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/evaluation_callback.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/evaluator.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/fake_bundle_adjustment_jacobian.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/file.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/first_order_function.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/float_suitesparse.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/function_sample.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/gradient_checking_cost_function.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/gradient_problem_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/implicit_schur_complement.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/inner_product_computer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/is_close.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/iteration_callback.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/iterative_refiner.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/iterative_schur_complement_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/levenberg_marquardt_strategy.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/line_search.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/line_search_direction.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/line_search_minimizer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/line_search_preprocessor.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/linear_least_squares_problems.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/linear_operator.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/linear_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/low_rank_inverse_hessian.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/minimizer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/parallel_utils.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/parameter_block_ordering.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/partitioned_matrix_view.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/polynomial.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/power_series_expansion_preconditioner.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/preconditioner.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/preprocessor.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/problem_impl.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/program.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/reorder_program.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/residual_block.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/residual_block_utils.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/schur_complement_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/schur_eliminator.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/schur_jacobi_preconditioner.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/schur_templates.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/scratch_evaluate_preparer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/single_linkage_clustering.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/solver_utils.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/sparse_cholesky.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/sparse_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/sparse_normal_cholesky_solver.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/stringprintf.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/subset_preconditioner.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/suitesparse.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/thread_token_provider.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/triplet_sparse_matrix.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/trust_region_minimizer.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/trust_region_preprocessor.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/trust_region_step_evaluator.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/trust_region_strategy.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/visibility.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/visibility_based_preconditioner.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/internal/ceres/CMakeFiles/ceres_internal.dir/wall_time.cc.obj",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/c_api.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/gradient_checker.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/gradient_problem.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/loss_function.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/manifold.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/normal_prior.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/problem.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/solver.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/types.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/accelerate_sparse.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/array_utils.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_evaluate_preparer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_jacobi_preconditioner.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_jacobian_writer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_random_access_dense_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_random_access_diagonal_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_random_access_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_random_access_sparse_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_sparse_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/block_structure.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/bundle_adjustment_test_util.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/callbacks.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/canonical_views_clustering.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/casts.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/cgnr_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/compressed_col_sparse_matrix_utils.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/compressed_row_jacobian_writer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/compressed_row_sparse_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/concurrent_queue.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/conjugate_gradients_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/context_impl.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/coordinate_descent_minimizer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/corrector.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/covariance_impl.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/cuda_buffer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/cuda_kernels.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/cuda_sparse_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/cuda_vector.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dense_cholesky.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dense_jacobian_writer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dense_normal_cholesky_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dense_qr.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dense_qr_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dense_sparse_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/detect_structure.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dogleg_strategy.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dynamic_compressed_row_finalizer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dynamic_compressed_row_jacobian_writer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dynamic_compressed_row_sparse_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/dynamic_sparse_normal_cholesky_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/eigen_vector_ops.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/eigensparse.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/evaluator.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/evaluator_test_utils.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/execution_summary.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/fake_bundle_adjustment_jacobian.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/file.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/float_suitesparse.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/function_sample.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/gradient_checking_cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/gradient_problem_evaluator.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/graph.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/graph_algorithms.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/implicit_schur_complement.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/inner_product_computer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/invert_psd_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/is_close.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/iterative_refiner.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/iterative_schur_complement_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/levenberg_marquardt_strategy.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/line_search.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/line_search_direction.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/line_search_minimizer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/line_search_preprocessor.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/linear_least_squares_problems.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/linear_operator.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/linear_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/low_rank_inverse_hessian.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/map_util.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/minimizer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/numeric_diff_test_utils.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/pair_hash.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/parallel_for.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/parallel_utils.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/parameter_block.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/parameter_block_ordering.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/partitioned_matrix_view.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/partitioned_matrix_view_impl.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/polynomial.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/power_series_expansion_preconditioner.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/preconditioner.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/preprocessor.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/problem_impl.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/program.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/program_evaluator.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/reorder_program.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/residual_block.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/residual_block_utils.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/schur_complement_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/schur_eliminator.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/schur_eliminator_impl.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/schur_jacobi_preconditioner.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/schur_templates.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/scoped_thread_token.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/scratch_evaluate_preparer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/single_linkage_clustering.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/small_blas.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/small_blas_generic.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/solver_utils.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/sparse_cholesky.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/sparse_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/sparse_normal_cholesky_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/stl_util.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/stringprintf.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/subset_preconditioner.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/suitesparse.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/test_util.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/thread_pool.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/thread_token_provider.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/tiny_solver_test_util.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/triplet_sparse_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/trust_region_minimizer.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/trust_region_preprocessor.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/trust_region_step_evaluator.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/trust_region_strategy.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/visibility.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/visibility_based_preconditioner.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/wall_time.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "internal/ceres/miniglog/glog/logging.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/autodiff_cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/autodiff_first_order_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/autodiff_manifold.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/c_api.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/ceres.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/conditioned_cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/context.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/cost_function_to_functor.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/covariance.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/crs_matrix.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/cubic_interpolation.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/dynamic_autodiff_cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/dynamic_cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/dynamic_cost_function_to_functor.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/dynamic_numeric_diff_cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/evaluation_callback.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/first_order_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/gradient_checker.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/gradient_problem.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/gradient_problem_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/iteration_callback.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/jet.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/jet_fwd.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/line_manifold.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/loss_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/manifold.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/manifold_test_utils.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/normal_prior.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/numeric_diff_cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/numeric_diff_first_order_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/numeric_diff_options.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/ordered_groups.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/problem.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/product_manifold.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/rotation.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/sized_cost_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/sphere_manifold.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/tiny_solver.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/tiny_solver_autodiff_function.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/tiny_solver_cost_function_adapter.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/types.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/ceres/version.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/include/ceres/internal/config.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/include/ceres/internal/export.h",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "internal/ceres/miniglog/glog/logging.cc",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

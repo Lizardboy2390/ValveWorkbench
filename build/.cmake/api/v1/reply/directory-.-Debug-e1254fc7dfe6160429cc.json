@@ -1,0 +1,211 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 671,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 674,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 679,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 685,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 731,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 757,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 760,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "include/ceres",
+			"paths" : 
+			[
+				"include/ceres/autodiff_cost_function.h",
+				"include/ceres/autodiff_first_order_function.h",
+				"include/ceres/autodiff_manifold.h",
+				"include/ceres/c_api.h",
+				"include/ceres/ceres.h",
+				"include/ceres/conditioned_cost_function.h",
+				"include/ceres/context.h",
+				"include/ceres/cost_function.h",
+				"include/ceres/cost_function_to_functor.h",
+				"include/ceres/covariance.h",
+				"include/ceres/crs_matrix.h",
+				"include/ceres/cubic_interpolation.h",
+				"include/ceres/dynamic_autodiff_cost_function.h",
+				"include/ceres/dynamic_cost_function.h",
+				"include/ceres/dynamic_cost_function_to_functor.h",
+				"include/ceres/dynamic_numeric_diff_cost_function.h",
+				"include/ceres/evaluation_callback.h",
+				"include/ceres/first_order_function.h",
+				"include/ceres/gradient_checker.h",
+				"include/ceres/gradient_problem.h",
+				"include/ceres/gradient_problem_solver.h",
+				"include/ceres/iteration_callback.h",
+				"include/ceres/jet.h",
+				"include/ceres/jet_fwd.h",
+				"include/ceres/line_manifold.h",
+				"include/ceres/loss_function.h",
+				"include/ceres/manifold.h",
+				"include/ceres/manifold_test_utils.h",
+				"include/ceres/normal_prior.h",
+				"include/ceres/numeric_diff_cost_function.h",
+				"include/ceres/numeric_diff_first_order_function.h",
+				"include/ceres/numeric_diff_options.h",
+				"include/ceres/ordered_groups.h",
+				"include/ceres/problem.h",
+				"include/ceres/product_manifold.h",
+				"include/ceres/rotation.h",
+				"include/ceres/sized_cost_function.h",
+				"include/ceres/solver.h",
+				"include/ceres/sphere_manifold.h",
+				"include/ceres/tiny_solver.h",
+				"include/ceres/tiny_solver_autodiff_function.h",
+				"include/ceres/tiny_solver_cost_function_adapter.h",
+				"include/ceres/types.h",
+				"include/ceres/version.h"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "include/ceres/internal",
+			"paths" : 
+			[
+				"include/ceres/internal/array_selector.h",
+				"include/ceres/internal/autodiff.h",
+				"include/ceres/internal/disable_warnings.h",
+				"include/ceres/internal/eigen.h",
+				"include/ceres/internal/fixed_array.h",
+				"include/ceres/internal/householder_vector.h",
+				"include/ceres/internal/integer_sequence_algorithm.h",
+				"include/ceres/internal/jet_traits.h",
+				"include/ceres/internal/line_parameterization.h",
+				"include/ceres/internal/memory.h",
+				"include/ceres/internal/numeric_diff.h",
+				"include/ceres/internal/parameter_dims.h",
+				"include/ceres/internal/port.h",
+				"include/ceres/internal/reenable_warnings.h",
+				"include/ceres/internal/sphere_manifold_functions.h",
+				"include/ceres/internal/variadic_evaluate.h"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "include",
+			"paths" : 
+			[
+				{
+					"from" : "C:/Users/lizar/Documents/ValveWorkbench/build/include",
+					"to" : "."
+				}
+			],
+			"type" : "directory"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "Unspecified",
+			"destination" : "include/ceres/internal/miniglog/glog",
+			"paths" : 
+			[
+				"internal/ceres/miniglog/glog/logging.h"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/Ceres",
+			"exportName" : "CeresExport",
+			"exportTargets" : 
+			[
+				{
+					"id" : "ceres::@64c00a5a6641fac95aa4",
+					"index" : 84
+				}
+			],
+			"paths" : 
+			[
+				"CMakeFiles/Export/9a3bb6344a10c987f9c537d2a0e39364/CeresTargets.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 6,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/Ceres",
+			"paths" : 
+			[
+				{
+					"from" : "C:/Users/lizar/Documents/ValveWorkbench/build/CeresConfig-install.cmake",
+					"to" : "CeresConfig.cmake"
+				}
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 7,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/Ceres",
+			"paths" : 
+			[
+				"C:/Users/lizar/Documents/ValveWorkbench/build/CeresConfigVersion.cmake"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	}
+}

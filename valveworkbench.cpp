@@ -201,6 +201,11 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         ui->properties->removeRow(0);
     }
 
+    ui->properties->setColumnCount(3);
+    QStringList propertyHeaders;
+    propertyHeaders << "Parameter" << "Triode A" << "Triode B";
+    ui->properties->setHorizontalHeaderLabels(propertyHeaders);
+
     buildCircuitParameters();
     buildCircuitSelection();
 

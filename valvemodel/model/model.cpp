@@ -1,6 +1,11 @@
 #include "model.h"
 #include "estimate.h"
 #include "../data/sweep.h"
+#include "../data/sample.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <vector>
 
 /**
  * @brief Model::anodeVoltage
@@ -108,7 +113,11 @@ void Model::setEstimate(Estimate *estimate)
     this->estimate = estimate;
 
     parameter[PAR_MU]->setValue(estimate->getMu());
-    parameter[PAR_KG1]->setValue(estimate->getKg1());
+    double estimateKg1 = estimate->getKg1();
+    if (estimateKg1 > 0.01) {
+        estimateKg1 /= 1000.0;
+    }
+    parameter[PAR_KG1]->setValue(estimateKg1);
     parameter[PAR_X]->setValue(estimate->getX());
     parameter[PAR_KP]->setValue(estimate->getKp());
     parameter[PAR_KVB]->setValue(estimate->getKvb());
@@ -213,75 +222,160 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 double vgStop = measurement->getGridStop();
                 double vgStep = measurement->getGridStep();
 
+                if (!std::isfinite(vgStart)) vgStart = 0.0;
+                if (!std::isfinite(vgStop))  vgStop  = 0.0;
+                if (!std::isfinite(vgStep))  vgStep  = 0.0;
+
                 qInfo("STORED VALUES: vgStart=%.3f, vgStop=%.3f, vgStep=%.3f", vgStart, vgStop, vgStep);
                 qInfo("Measurement has %d sweeps", measurement->count());
 
-                // If range is invalid or we're plotting all sweeps, calculate from actual sweep data
-                if ((vgStart == 0.0 && vgStop == 0.0) || sweep == nullptr) {
-                if (measurement->count() > 0) {
-                    // Find the actual min and max grid voltages from sweeps (grid voltages are typically negative)
-                    double minVg = 0.0;
-                    double maxVg = 0.0;
-                    bool first = true;
-                    bool validData = false;
+                auto deriveGridRangeFromSweeps = [measurement]() -> std::pair<double, double> {
+                    double minVg = std::numeric_limits<double>::infinity();
+                    double maxVg = -std::numeric_limits<double>::infinity();
+                    bool sawValidSample = false;
+                    bool sawZeroBias = false;
+                    bool sawZeroNominal = false;
+                    const double zeroClampLower = -0.5;
+                    const double zeroClampUpper = 0.0;
 
-                    for (int i = 0; i < measurement->count(); i++) {
-                        double sweepVg = measurement->at(i)->getVg1Nominal(); // Grid voltages are negative
-                        qInfo("Sweep %d: Vg1Nominal=%.3f", i, sweepVg);
+                    for (int i = 0; i < measurement->count(); ++i) {
+                        Sweep *sweep = measurement->at(i);
+                        if (sweep == nullptr) {
+                            continue;
+                        }
 
-                        // Skip invalid voltage values (outside reasonable range for negative grid voltages)
-                        if (sweepVg >= -10.0 && sweepVg <= 0.0) { // Grid voltages should be negative or zero
-                            if (first || sweepVg < minVg) minVg = sweepVg;
-                            if (first || sweepVg > maxVg) maxVg = sweepVg;
-                            first = false;
-                            validData = true;
+                        // Prefer sample grid voltages for the range.
+                        for (int sampleIndex = 0; sampleIndex < sweep->count(); ++sampleIndex) {
+                            Sample *sample = sweep->at(sampleIndex);
+                            if (sample == nullptr) {
+                                continue;
+                            }
+                            double vg = sample->getVg1();
+                            if (!std::isfinite(vg)) {
+                                continue;
+                            }
+                            if (vg >= zeroClampLower && vg <= zeroClampUpper) {
+                                qInfo("GRID RANGE: sample vg=%.3f within [%0.1f, %0.1f], clamping to 0V", vg, zeroClampLower, zeroClampUpper);
+                                vg = 0.0;
+                                sawZeroBias = true;
+                            }
+
+                            minVg = std::min(minVg, vg);
+                            maxVg = std::max(maxVg, vg);
+                            sawValidSample = true;
+                        }
+
+                        // Fallback to nominal if no samples were available.
+                        if (!sawValidSample) {
+                            double vgNominal = sweep->getVg1Nominal();
+                            if (std::isfinite(vgNominal)) {
+                                if (vgNominal >= zeroClampLower && vgNominal <= zeroClampUpper) {
+                                    qInfo("GRID RANGE: nominal vg=%.3f within [%0.1f, %0.1f], clamping to 0V", vgNominal, zeroClampLower, zeroClampUpper);
+                                    vgNominal = 0.0;
+                                    sawZeroBias = true;
+                                    sawZeroNominal = true;
+                                }
+
+                                minVg = std::min(minVg, vgNominal);
+                                maxVg = std::max(maxVg, vgNominal);
+                                sawValidSample = true;
+                            }
                         }
                     }
 
-                    qInfo("After scanning: minVg=%.3f, maxVg=%.3f, validData=%s", minVg, maxVg, validData ? "true" : "false");
+                    if (!sawValidSample || !std::isfinite(minVg) || !std::isfinite(maxVg)) {
+                        return {std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()};
+                    }
 
-                    if (validData && (maxVg - minVg) <= 10.0) {
-                        vgStart = minVg; // Most negative (lowest) grid voltage
-                        vgStop = maxVg;  // Least negative (highest) grid voltage
-                        qInfo("Calculated grid range from sweep data: start=%.3f, stop=%.3f", vgStart, vgStop);
+                    if (sawZeroBias || sawZeroNominal) {
+                        maxVg = std::max(maxVg, 0.0);
+                        minVg = std::min(minVg, 0.0);
+                    }
+
+                    // Ensure the range progresses from most negative to least negative.
+                    if (maxVg > 0.0 && minVg >= 0.0) {
+                        // Likely stored as magnitudes; reflect to negative.
+                        minVg = -maxVg;
+                        maxVg = 0.0;
+                    }
+
+                    if (minVg > maxVg) {
+                        std::swap(minVg, maxVg);
+                    }
+
+                    return {minVg, maxVg};
+                };
+
+                const bool rangeInvalid = (vgStart == 0.0 && vgStop == 0.0) || vgStart > vgStop;
+                if (rangeInvalid) {
+                    auto [derivedStart, derivedStop] = deriveGridRangeFromSweeps();
+                    if (std::isfinite(derivedStart) && std::isfinite(derivedStop) && derivedStart < derivedStop) {
+                        vgStart = derivedStart;
+                        vgStop = derivedStop;
+                        qInfo("Derived grid range from sweep data: start=%.3f, stop=%.3f", vgStart, vgStop);
                     } else {
-                        // Fallback to reasonable defaults
-                        vgStart = 0.0;
-                        vgStop = -4.0;
-                        qInfo("No valid sweep data found, using defaults: start=%.3f, stop=%.3f", vgStart, vgStop);
+                        vgStart = -60.0;
+                        vgStop = 0.0;
+                        qInfo("Unable to derive grid range, using defaults: start=%.3f, stop=%.3f", vgStart, vgStop);
                     }
                 }
-            }
-
             // If step is 0 or invalid, calculate from actual sweep data
-            if (vgStep == 0.0 || vgStep > (vgStop - vgStart)) {
+            if (vgStep <= 0.0 || vgStep > (vgStop - vgStart)) {
+                qInfo("GRID STEP FALLBACK: stored step %.6f invalid, analysing sweeps (count=%d)",
+                      vgStep, measurement->count());
+                double calculatedStep = 0.0;
                 if (measurement->count() > 1) {
-                    double firstVg = measurement->at(0)->getVg1Nominal();  // Already negated
-                    double secondVg = measurement->at(1)->getVg1Nominal(); // Already negated
-
-                    qInfo("First sweep Vg1Nominal=%.3f", measurement->at(0)->getVg1Nominal());
-                    qInfo("Second sweep Vg1Nominal=%.3f", measurement->at(1)->getVg1Nominal());
-
-                    // Calculate step - ensure it's positive for ascending loop
-                    double calculatedStep = fabs(secondVg - firstVg);
-                    qInfo("Calculated step: %.3f", calculatedStep);
-
-                    if (calculatedStep > 0.0 && calculatedStep < 10.0 && calculatedStep != 0.0) {
-                        vgStep = calculatedStep;
-                        qInfo("Using calculated grid step: %.3f", vgStep);
-                    } else {
-                        vgStep = 0.5; // Default fallback for positive steps
-                        qInfo("Invalid calculated step (%.3f), using default: %.3f", calculatedStep, vgStep);
+                    const double firstVg = measurement->at(0)->getVg1Nominal();
+                    qInfo("GRID STEP FALLBACK: sweep 0 Vg1Nominal=%.6f", firstVg);
+                    for (int sweepIndex = 1; sweepIndex < measurement->count(); ++sweepIndex) {
+                        const double candidateVg = measurement->at(sweepIndex)->getVg1Nominal();
+                        double diff = std::numeric_limits<double>::quiet_NaN();
+                        if (std::isfinite(candidateVg) && std::isfinite(firstVg)) {
+                            diff = std::fabs(candidateVg - firstVg);
+                        }
+                        qInfo("GRID STEP FALLBACK: comparing sweep %d Vg1Nominal=%.6f (diff vs sweep 0 = %.6f)",
+                              sweepIndex, candidateVg, diff);
+                        if (!std::isfinite(candidateVg)) {
+                            continue;
+                        }
+                        const double stepCandidate = std::fabs(candidateVg - firstVg);
+                        if (stepCandidate > 0.0 && stepCandidate < 10.0) {
+                            calculatedStep = stepCandidate;
+                            qInfo("GRID STEP FALLBACK: accepting sweep %d diff %.6f as grid step",
+                                  sweepIndex, calculatedStep);
+                            break;
+                        }
                     }
-                } else {
-                    vgStep = 0.5; // Default fallback
-                    qInfo("Using default grid step: %.3f", vgStep);
                 }
+
+                if (calculatedStep > 0.0) {
+                    vgStep = calculatedStep;
+                    qInfo("GRID STEP FALLBACK: using calculated grid step %.6f", vgStep);
+                } else {
+                    vgStep = 0.5;
+                    qInfo("GRID STEP FALLBACK: no valid diff found, using default %.6f", vgStep);
+                }
+                qInfo("GRID STEP FALLBACK: final vgStep %.6f", vgStep);
             }
 
             if (sweep != nullptr) {
-                vgStart = -sweep->getVg1Nominal();
-                vgStop = -sweep->getVg1Nominal();
+                vgStart = sweep->getVg1Nominal();
+                vgStop = sweep->getVg1Nominal();
+            }
+
+            if (vgStart > vgStop) {
+                qInfo("GRID RANGE NORMALIZATION: swapping start %.3f and stop %.3f", vgStart, vgStop);
+                std::swap(vgStart, vgStop);
+            }
+
+            if (vgStep < 0.0) {
+                qInfo("GRID STEP NORMALIZATION: converting negative step %.6f to positive", vgStep);
+                vgStep = std::abs(vgStep);
+            }
+
+            if (vgStep == 0.0) {
+                vgStep = 0.5;
+                qInfo("GRID STEP NORMALIZATION: step was zero, using default %.3f", vgStep);
             }
 
             double vg2 = measurement->getScreenStart();

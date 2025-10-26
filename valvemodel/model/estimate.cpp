@@ -228,7 +228,10 @@ void Estimate::estimateKg1X(Measurement *measurement)
                 Sample *sample = sweep->at(i);
 
                 if (sample->getIa() > iThresh) {
-                    solver->addSample(log(sample->getVa() / mu + sample->getVg1()), log(sample->getIa()));
+                    constexpr double milliampToAmp = 1000.0;
+                    solver->addSample(
+                        log(sample->getVa() / mu + sample->getVg1()),
+                        log(sample->getIa() / milliampToAmp));
                 }
             }
         }
@@ -647,7 +650,7 @@ void Estimate::updateProperties(QTableWidget *properties)
     clearProperties(properties);
 
     addProperty(properties, "Mu", QString("%1").arg(mu));
-    addProperty(properties, "Kg1", QString("%1").arg(kg1));
+    addProperty(properties, "Kg1", QString("%1").arg(kg1 / 1000.0));
     addProperty(properties, "X", QString("%1").arg(x));
     addProperty(properties, "Kp", QString("%1").arg(kp));
     addProperty(properties, "Kvb", QString("%1").arg(kvb));

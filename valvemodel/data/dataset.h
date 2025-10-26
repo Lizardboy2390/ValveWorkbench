@@ -27,7 +27,7 @@ protected:
     QTreeWidgetItem *treeItem = nullptr;
 
     void clearProperties(QTableWidget *properties);
-    void addProperty(QTableWidget *properties, QString label, QString value, int field = 0);
+    void addProperty(QTableWidget *properties, const QString &label, const QString &valueA, const QString &valueB = QString(), int field = 0);
 
     virtual void propertyEdited(QTableWidgetItem *item) = 0;
 

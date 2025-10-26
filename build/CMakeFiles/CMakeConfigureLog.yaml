@@ -1273,3 +1273,141 @@ events:
         
       exitCode: 1
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "CMakeLists.txt:615 (check_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_RETURN_TYPE_C_LINKAGE"
+    directories:
+      source: "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-mprkn7"
+      binary: "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-mprkn7"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/Llvm/x64/bin/clang-scan-deps.exe"
+      CMAKE_CXX_FLAGS: " -Qunused-arguments -mllvm -inline-threshold=600"
+      CMAKE_CXX_FLAGS_DEBUG: "-O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/ceres-solver/cmake"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "HAVE_RETURN_TYPE_C_LINKAGE"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-mprkn7'
+        
+        Run Build Command(s): C:/Users/lizar/AppData/Local/Programs/Python/Python311/Scripts/ninja.exe -v cmTC_20a8a
+        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DHAVE_RETURN_TYPE_C_LINKAGE  -Qunused-arguments -mllvm -inline-threshold=600  -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd   -Wno-return-type-c-linkage -MD -MT CMakeFiles/cmTC_20a8a.dir/src.cxx.obj -MF CMakeFiles\\cmTC_20a8a.dir\\src.cxx.obj.d -o CMakeFiles/cmTC_20a8a.dir/src.cxx.obj -c C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-mprkn7/src.cxx
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -nostartfiles -nostdlib -Qunused-arguments -mllvm -inline-threshold=600  -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -Xlinker /subsystem:console  -fuse-ld=lld-link CMakeFiles/cmTC_20a8a.dir/src.cxx.obj -o cmTC_20a8a.exe -Xlinker /MANIFEST:EMBED -Xlinker /implib:cmTC_20a8a.lib -Xlinker /pdb:cmTC_20a8a.pdb -Xlinker /version:0.0   -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -loldnames  && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/FindThreads.cmake:136 (try_compile)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/FindThreads.cmake:179 (_threads_check_flag_pthread)"
+      - "internal/ceres/CMakeLists.txt:37 (find_package)"
+    checks:
+      - "Check if compiler accepts -pthread"
+    directories:
+      source: "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-10un6k"
+      binary: "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-10un6k"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/Llvm/x64/bin/clang-scan-deps.exe"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/ceres-solver/cmake"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "THREADS_HAVE_PTHREAD_ARG"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-10un6k'
+        
+        Run Build Command(s): C:/Users/lizar/AppData/Local/Programs/Python/Python311/Scripts/ninja.exe -v cmTC_848db
+        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe   -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -MD -MT CMakeFiles/cmTC_848db.dir/CheckForPthreads.c.obj -MF CMakeFiles\\cmTC_848db.dir\\CheckForPthreads.c.obj.d -o CMakeFiles/cmTC_848db.dir/CheckForPthreads.c.obj -c C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-10un6k/CheckForPthreads.c
+        FAILED: CMakeFiles/cmTC_848db.dir/CheckForPthreads.c.obj 
+        C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe   -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -MD -MT CMakeFiles/cmTC_848db.dir/CheckForPthreads.c.obj -MF CMakeFiles\\cmTC_848db.dir\\CheckForPthreads.c.obj.d -o CMakeFiles/cmTC_848db.dir/CheckForPthreads.c.obj -c C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-10un6k/CheckForPthreads.c
+        C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-10un6k/CheckForPthreads.c:1:10: fatal error: 'pthread.h' file not found\x0d
+            1 | #include <pthread.h>\x0d
+              |          ^~~~~~~~~~~\x0d
+        1 error generated.\x0d
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "internal/ceres/CMakeLists.txt:290 (check_cxx_compiler_flag)"
+    checks:
+      - "Performing Test CHECK_CXX_FLAG_Wno_missing_declarations"
+    directories:
+      source: "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-menkdn"
+      binary: "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-menkdn"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/Llvm/x64/bin/clang-scan-deps.exe"
+      CMAKE_CXX_FLAGS: " -Qunused-arguments -mllvm -inline-threshold=600 -Wno-return-type-c-linkage"
+      CMAKE_CXX_FLAGS_DEBUG: "-O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/ceres-solver/cmake"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "CHECK_CXX_FLAG_Wno_missing_declarations"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-menkdn'
+        
+        Run Build Command(s): C:/Users/lizar/AppData/Local/Programs/Python/Python311/Scripts/ninja.exe -v cmTC_2b5e4
+        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCHECK_CXX_FLAG_Wno_missing_declarations  -Qunused-arguments -mllvm -inline-threshold=600 -Wno-return-type-c-linkage  -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd   -Wno-missing-declarations -MD -MT CMakeFiles/cmTC_2b5e4.dir/src.cxx.obj -MF CMakeFiles\\cmTC_2b5e4.dir\\src.cxx.obj.d -o CMakeFiles/cmTC_2b5e4.dir/src.cxx.obj -c C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-menkdn/src.cxx
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -nostartfiles -nostdlib -Qunused-arguments -mllvm -inline-threshold=600 -Wno-return-type-c-linkage  -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -Xlinker /subsystem:console  -fuse-ld=lld-link CMakeFiles/cmTC_2b5e4.dir/src.cxx.obj -o cmTC_2b5e4.exe -Xlinker /MANIFEST:EMBED -Xlinker /implib:cmTC_2b5e4.lib -Xlinker /pdb:cmTC_2b5e4.pdb -Xlinker /version:0.0   -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -loldnames  && cd ."
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckSourceCompiles.cmake:89 (cmake_check_source_compiles)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/GenerateExportHeader.cmake:206 (check_source_compiles)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/GenerateExportHeader.cmake:263 (_check_cxx_compiler_attribute)"
+      - "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/GenerateExportHeader.cmake:420 (_test_compiler_has_deprecated)"
+      - "internal/ceres/CMakeLists.txt:409 (generate_export_header)"
+    checks:
+      - "Performing Test COMPILER_HAS_DEPRECATED_ATTR"
+    directories:
+      source: "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-c0cvx5"
+      binary: "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-c0cvx5"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/Llvm/x64/bin/clang-scan-deps.exe"
+      CMAKE_CXX_FLAGS: " -Qunused-arguments -mllvm -inline-threshold=600 -Wno-return-type-c-linkage"
+      CMAKE_CXX_FLAGS_DEBUG: "-O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/ceres-solver/cmake"
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "COMPILER_HAS_DEPRECATED_ATTR"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-c0cvx5'
+        
+        Run Build Command(s): C:/Users/lizar/AppData/Local/Programs/Python/Python311/Scripts/ninja.exe -v cmTC_bda32
+        [1/2] C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -DCOMPILER_HAS_DEPRECATED_ATTR  -Qunused-arguments -mllvm -inline-threshold=600 -Wno-return-type-c-linkage  -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -MD -MT CMakeFiles/cmTC_bda32.dir/src.cxx.obj -MF CMakeFiles\\cmTC_bda32.dir\\src.cxx.obj.d -o CMakeFiles/cmTC_bda32.dir/src.cxx.obj -c C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-c0cvx5/src.cxx
+        C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-c0cvx5/src.cxx:2:25: warning: 'somefunc' is deprecated [-Wdeprecated-declarations]\x0d
+            2 |     int main() { return somefunc();}\x0d
+              |                         ^\x0d
+        C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/CMakeScratch/TryCompile-c0cvx5/src.cxx:1:16: note: 'somefunc' has been explicitly marked deprecated here\x0d
+            1 | __attribute__((__deprecated__)) int somefunc() { return 0; }\x0d
+              |                ^\x0d
+        1 warning generated.\x0d
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && C:\\PROGRA~2\\MICROS~3\\2022\\BUILDT~1\\VC\\Tools\\Llvm\\x64\\bin\\clang.exe -nostartfiles -nostdlib -Qunused-arguments -mllvm -inline-threshold=600 -Wno-return-type-c-linkage  -O0 -g -Xclang -gcodeview -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -Xlinker /subsystem:console  -fuse-ld=lld-link CMakeFiles/cmTC_bda32.dir/src.cxx.obj -o cmTC_bda32.exe -Xlinker /MANIFEST:EMBED -Xlinker /implib:cmTC_bda32.lib -Xlinker /pdb:cmTC_bda32.pdb -Xlinker /version:0.0   -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -loldnames  && cd ."
+        
+      exitCode: 0
+...

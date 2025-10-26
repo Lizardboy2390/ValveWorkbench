@@ -84,7 +84,7 @@ BLAS_sunperf_LIBRARY:FILEPATH=BLAS_sunperf_LIBRARY-NOTFOUND
 BLAS_vecLib_LIBRARY:FILEPATH=BLAS_vecLib_LIBRARY-NOTFOUND
 
 //Build Ceres benchmarking suite
-BUILD_BENCHMARKS:BOOL=ON
+BUILD_BENCHMARKS:BOOL=OFF
 
 //Build User's Guide (html)
 BUILD_DOCUMENTATION:BOOL=OFF
@@ -418,6 +418,9 @@ CUDA_CUDART_LIBRARY:FILEPATH=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/
 //"cuda" library (older versions only).
 CUDA_CUDA_LIBRARY:FILEPATH=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/lib/x64/cuda.lib
 
+//The directory containing a CMake configuration file for CUDA.
+CUDA_DIR:PATH=CUDA_DIR-NOTFOUND
+
 //Directory to put all the output files.  If blank it will default
 // to the CMAKE_CURRENT_BINARY_DIR
 CUDA_GENERATED_OUTPUT_DIR:PATH=
@@ -588,7 +591,10 @@ METIS_LIBRARY_DEBUG:FILEPATH=METIS_LIBRARY_DEBUG-NOTFOUND
 METIS_LIBRARY_RELEASE:FILEPATH=METIS_LIBRARY_RELEASE-NOTFOUND
 
 //Use a stripped down version of glog.
-MINIGLOG:BOOL=OFF
+MINIGLOG:BOOL=ON
+
+//The maximum message severity level to be logged
+MINIGLOG_MAX_LOG_LEVEL:STRING=2
 
 //CXX compiler flags for OpenMP parallelization
 OpenMP_CXX_FLAGS:STRING=-fopenmp=libomp
@@ -664,13 +670,22 @@ SuiteSparse_SPQR_INCLUDE_DIR:PATH=SuiteSparse_SPQR_INCLUDE_DIR-NOTFOUND
 SuiteSparse_SPQR_LIBRARY:FILEPATH=SuiteSparse_SPQR_LIBRARY-NOTFOUND
 
 //Enable use of CUDA linear algebra solvers.
-USE_CUDA:BOOL=ON
+USE_CUDA:BOOL=OFF
+
+//The directory containing a CMake configuration file for benchmark.
+benchmark_DIR:PATH=benchmark_DIR-NOTFOUND
 
 //The directory containing a CMake configuration file for gflags.
 gflags_DIR:PATH=C:/Ceres_Install/gflags/lib/cmake/gflags
 
 //The directory containing a CMake configuration file for glog.
 glog_DIR:PATH=glog_DIR-NOTFOUND
+
+//Dependencies for the target
+gtest_LIB_DEPENDS:STATIC=general;Ceres::ceres;general;gflags;
+
+//Dependencies for the target
+test_util_LIB_DEPENDS:STATIC=general;ceres_static;general;gflags;general;gtest;
 
 
 ########################
@@ -727,6 +742,8 @@ BLAS_sunperf_LIBRARY-ADVANCED:INTERNAL=1
 BLAS_vecLib_LIBRARY-ADVANCED:INTERNAL=1
 //STRINGS property for variable: CERES_THREADING_MODEL
 CERES_THREADING_MODEL-STRINGS:INTERNAL=CXX_THREADS;OPENMP;NO_THREADS
+//Test CHECK_CXX_FLAG_Wno_missing_declarations
+CHECK_CXX_FLAG_Wno_missing_declarations:INTERNAL=1
 //ADVANCED property for variable: CMAKE_ADDR2LINE
 CMAKE_ADDR2LINE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_AR
@@ -885,7 +902,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=1
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=8
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -941,6 +958,10 @@ CMAKE_STRIP-ADVANCED:INTERNAL=1
 CMAKE_TAPI-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
+//Compiler support for a deprecated attribute
+COMPILER_HAS_DEPRECATED:INTERNAL=1
+//Test COMPILER_HAS_DEPRECATED_ATTR
+COMPILER_HAS_DEPRECATED_ATTR:INTERNAL=1
 //ADVANCED property for variable: CUDA_64_BIT_DEVICE_CODE
 CUDA_64_BIT_DEVICE_CODE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE
@@ -1043,13 +1064,15 @@ CUDA_run_nvcc:INTERNAL=C:/Users/lizar/AppData/Local/Programs/Python/Python313/Li
 //Details about finding Threads
 FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
 //ADVANCED property for variable: GLOG_INCLUDE_DIR
-GLOG_INCLUDE_DIR-ADVANCED:INTERNAL=0
+GLOG_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //Test HAVE_BIGOBJ
 HAVE_BIGOBJ:INTERNAL=
 //Have library m
 HAVE_LIBM:INTERNAL=
 //Have library rt
 HAVE_LIBRT:INTERNAL=
+//Test HAVE_RETURN_TYPE_C_LINKAGE
+HAVE_RETURN_TYPE_C_LINKAGE:INTERNAL=1
 //ADVANCED property for variable: METIS_INCLUDE_DIR
 METIS_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: METIS_LIBRARY_DEBUG
@@ -1078,6 +1101,10 @@ OpenMP_SPECTEST_CXX_:INTERNAL=TRUE
 OpenMP_SPECTEST_C_:INTERNAL=TRUE
 //ADVANCED property for variable: OpenMP_libomp_LIBRARY
 OpenMP_libomp_LIBRARY-ADVANCED:INTERNAL=1
+//Result of TRY_COMPILE
+THREADS_HAVE_PTHREAD_ARG:INTERNAL=FALSE
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=C:/Program Files (x86)/Ceres
+//ADVANCED property for variable: benchmark_DIR
+benchmark_DIR-ADVANCED:INTERNAL=1
 

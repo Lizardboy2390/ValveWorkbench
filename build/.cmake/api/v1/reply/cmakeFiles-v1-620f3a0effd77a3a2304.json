@@ -1,0 +1,493 @@
+{
+	"inputs" : 
+	[
+		{
+			"path" : "CMakeLists.txt"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/3.31.6/CMakeSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeSystemSpecificInitialize.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Windows-Initialize.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/3.31.6/CMakeCCompiler.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/3.31.6/CMakeCXXCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeSystemSpecificInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeGenericSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeInitializeConfigs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Windows.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/WindowsPaths.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeCInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Compiler/Clang-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Compiler/Clang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Windows-Clang-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Windows-Clang.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/build/CMakeFiles/3.31.6/CMakeRCCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeRCInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCLinkerInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCommonLinkerInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Linker/LLD-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Linker/LLD.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Linker/GNU.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Linker/Windows-LLD-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Linker/Windows-LLD.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Linker/Windows-MSVC.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeCXXInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Compiler/Clang-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Compiler/Clang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Windows-Clang-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Windows-Clang.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCXXLinkerInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCommonLinkerInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Linker/LLD-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Linker/LLD.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Linker/Windows-LLD-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Linker/Windows-LLD.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Platform/Linker/Windows-MSVC.cmake"
+		},
+		{
+			"path" : "cmake/AddCompileFlagsIfSupported.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckFlagCommonConfig.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/GNUInstallDirs.cmake"
+		},
+		{
+			"path" : "cmake/UpdateCacheVariable.cmake"
+		},
+		{
+			"path" : "cmake/DetectBrokenStackCheckMacOSXcodePairing.cmake"
+		},
+		{
+			"path" : "cmake/AddGerritCommitHook.cmake"
+		},
+		{
+			"path" : "cmake/ReadCeresVersionFromSource.cmake"
+		},
+		{
+			"path" : "cmake/CeresThreadingModels.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeDependentOption.cmake"
+		},
+		{
+			"path" : "cmake/PrettyPrintCMakeList.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/FindOpenMP.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakeParseImplicitLinkInfo.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "cmake/EnableSanitizer.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/build/Eigen/Eigen3ConfigVersion.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/build/Eigen/Eigen3Config.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/build/Eigen/Eigen3Targets.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Ceres_Install/gflags/lib/cmake/gflags/gflags-config-version.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Ceres_Install/gflags/lib/cmake/gflags/gflags-config.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Ceres_Install/gflags/lib/cmake/gflags/gflags-nonamespace-targets.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Ceres_Install/gflags/lib/cmake/gflags/gflags-nonamespace-targets-release.cmake"
+		},
+		{
+			"path" : "cmake/CreateCeresConfig.cmake"
+		},
+		{
+			"path" : "cmake/config.h.in"
+		},
+		{
+			"path" : "cmake/CeresCompileOptionsToComponents.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CMakePackageConfigHelpers.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/WriteBasicConfigVersionFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/BasicConfigVersion-SameMajorVersion.cmake.in"
+		},
+		{
+			"path" : "cmake/CeresConfig.cmake.in"
+		},
+		{
+			"path" : "cmake/uninstall.cmake.in"
+		},
+		{
+			"path" : "internal/ceres/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/FindThreads.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckIncludeFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/GenerateExportHeader.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Users/lizar/AppData/Local/Programs/Python/Python313/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/exportheader.cmake.in"
+		},
+		{
+			"path" : "internal/ceres/generated_bundle_adjustment_tests/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/sampled_function/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/slam/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/slam/pose_graph_2d/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/slam/pose_graph_3d/CMakeLists.txt"
+		}
+	],
+	"kind" : "cmakeFiles",
+	"paths" : 
+	{
+		"build" : "C:/Users/lizar/Documents/ValveWorkbench/build",
+		"source" : "C:/Users/lizar/Documents/ValveWorkbench/external/ceres/ceres-solver"
+	},
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 1
+	}
+}
