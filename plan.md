@@ -15,6 +15,13 @@ This plan outlines the incremental porting of web-based valve calculators from `
 - Validate model parameters against datasheet and web version.
 - Document fixes and update README.
 
+## Current Objective – Double Triode Modelling
+- Run Triode A fitting exactly as today (red curves & parameter column).
+- Detect when measurements include second-triode samples (va2/ia2/vg3).
+- Clone measurement data for Triode B, run a second fitting pass, and plot green curves.
+- Populate Modeller property tables with side-by-side Triode A (existing) and Triode B values.
+- Keep changes easily revertable and test after each step.
+
 ## Notes
 - All changes approved and implemented.
 - Work in small steps with user approval and testing.

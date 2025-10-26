@@ -62,6 +62,19 @@ Each code change must include:
   - Expected Files: `triodecommoncathode.cpp`, plot-related files
   - Success Criteria: Load line graphs display when circuit selected
 
+- [ ] **Double Triode Modelling Pipeline**
+  - Status: pending
+  - Owner: assistant (on behalf of user)
+  - Description: Run Triode A fit (current behaviour), then clone Triode B data, run second fit, plot green curves, populate properties column
+  - Success Criteria: Red/green curves plotted together; property tables show Triode A/B side-by-side; change documented and easily revertable
+
+#### Active Subtasks (Chronological)
+- [ ] Document triode A/B modelling plan in plan.md and tasks.md
+- [ ] Implement Triode B measurement clone and model fit
+- [ ] Overlay green curves for Triode B in plot
+- [ ] Populate Modeller property tables with Triode B parameters
+- [ ] Testing & user confirmation (double-triode measurement)
+
 ### Low Priority
 - [ ] **Parameter Input Validation**
   - Status: pending
