@@ -29,19 +29,44 @@ Sample *Analyser::createSample(QString response)
 {
     QRegularExpressionMatch match = sampleMatcher2->match(response);
 
-    double vg1 = convertMeasuredVoltage(GRID, match.captured(3).toInt());
-    double va = convertMeasuredVoltage(ANODE, match.captured(4).toInt());
+    if (!match.hasMatch()) {
+        qWarning("Failed to parse Mode(2) response: %s", response.toStdString().c_str());
+        return nullptr;
+    }
+
+    qInfo("Raw capture: vh=%d ih=%d vg1=%d va1=%d ia1=%d ia1_lo=%d vg3=%d va2=%d ia2=%d ia2_lo=%d ia_hi=%d ig2_hi=%d",
+          match.captured(1).toInt(), match.captured(2).toInt(), match.captured(3).toInt(), match.captured(4).toInt(),
+          match.captured(5).toInt(), match.captured(6).toInt(), match.captured(7).toInt(), match.captured(8).toInt(),
+          match.captured(9).toInt(), match.captured(10).toInt(), match.captured(11).toInt(), match.captured(12).toInt());
+
+    double vg1 = convertMeasuredVoltage(GRID, match.captured(3).toInt());       // Commanded grid bias (not sensed)
+    double va = convertMeasuredVoltage(ANODE, match.captured(4).toInt());        // Primary anode voltage
     double ia = convertMeasuredCurrent(ANODE, match.captured(5).toInt(), match.captured(6).toInt(), match.captured(11).toInt()) * 1000;
-    double vg2 = convertMeasuredVoltage(SCREEN, match.captured(8).toInt());
-    double ig2 = convertMeasuredCurrent(SCREEN, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
-    double vg3 = 0.0;
-    double va2 = 0.0;
+    double vg2 = 0.0;                                                           // Screen grid (pentode) or unused
+    double ig2 = 0.0;
+    double vg3 = 0.0;                                                           // Commanded grid bias for secondary triode
+    double va2 = 0.0;                                                           // Secondary anode voltage
     double ia2 = 0.0;
 
     if (isDoubleTriode) {
-        vg3 = convertMeasuredVoltage(GRID, match.captured(7).toInt());
-        va2 = convertMeasuredVoltage(ANODE, match.captured(8).toInt());
+        vg3 = convertMeasuredVoltage(GRID, match.captured(7).toInt());          // Commanded secondary grid bias
+        va2 = convertMeasuredVoltage(ANODE, match.captured(8).toInt());         // Secondary anode sense channel
         ia2 = convertMeasuredCurrent(ANODE, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
+
+        qInfo("Sample (double triode): vg1(set)=%.3f vg3(set)=%.3f va=%.3f va2=%.3f ia=%.3f ia2=%.3f",
+              vg1, vg3, va, va2, ia, ia2);
+        qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
+              match.captured(5).toInt(), match.captured(6).toInt(), ia);
+        qInfo("Raw ADC secondary: HI=%d LO=%d (%.3fmA)",
+              match.captured(9).toInt(), match.captured(10).toInt(), ia2);
+    } else {
+        vg2 = convertMeasuredVoltage(SCREEN, match.captured(8).toInt());
+        ig2 = convertMeasuredCurrent(SCREEN, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
+
+        qInfo("Sample (single channel): vg1(set)=%.3f vg2=%.3f va=%.3f ia=%.3f ig2=%.3f",
+              vg1, vg2, va, ia, ig2);
+        qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
+              match.captured(5).toInt(), match.captured(6).toInt(), ia);
     }
     double vh = convertMeasuredVoltage(HEATER, match.captured(1).toInt());
     double ih = convertMeasuredCurrent(HEATER, match.captured(2).toInt());
@@ -136,22 +161,20 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
         value += 0.045; // apparent 45mA offset (i.e. 0.011v across R sense)
         break;
     case ANODE:
-    case SCREEN:
-        // qInfo("Converting current - isMega: %d, current: %d, currentHi: %d", isMega, current, currentHi);
+    case SCREEN: {
+        const double highRangeDivisor = 2.0 * 30.0;
+        const double lowRangeDivisor = 2.0 * 3.333333;
 
-        if (isMega && currentHi < 1023) { // We haven't saturated the ADC
-            value = ((double) currentHi) * vRefMaster / 1023 / 8.0 / 33.333333;
-            // qInfo("Using high range: %f mA", value * 1000);
-        } else if (current < 1000) { // We haven't saturated the ADC
-                                     // (slight safety factor as the voltage at saturation is 2.048v
-                                     // and this could be close to onset of diode conduction)
-            value = ((double) current) * vRefMaster / 1023 / 2.0 / 33.333333;
-            // qInfo("Using normal range: %f mA", value * 1000);
-        } else {
-            value = ((double) currentLo) * vRefMaster / 1023 / 2.0 / 3.333333;
+        bool highRangeSaturated = current >= 1000;
+        if (highRangeSaturated && currentLo > 0) {
+            value = ((double) currentLo) * vRefMaster / 1023 / lowRangeDivisor;
             // qInfo("Using low range: %f mA", value * 1000);
+        } else {
+            value = ((double) current) * vRefMaster / 1023 / highRangeDivisor;
+            // qInfo("Using high range: %f mA", value * 1000);
         }
         break;
+    }
     case GRID:
         break;
     default:
@@ -359,7 +382,10 @@ void Analyser::startTest()
 
             sendCommand(buildSetCommand("S2 ", 0)); // Set main grid to 0V
             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-            sendCommand(buildSetCommand("S6 ", convertTargetVoltage(GRID, secondGridStart)));
+
+            int initialSecondaryGrid = convertTargetVoltage(GRID, secondGridStart);
+            qInfo("Command: S6 %d (initial secondary grid)", initialSecondaryGrid);
+            sendCommand(buildSetCommand("S6 ", initialSecondaryGrid));
             sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
         }
         sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
@@ -464,9 +490,14 @@ void Analyser::nextSample() {
             // qInfo("This is the first command for stepIndex=%d", stepIndex);
         }
 
-        sendCommand(buildSetCommand(sweepCommandPrefix, sweepParameter.at(stepIndex).at(sweepIndex)));
+        const int sweepValue = sweepParameter.at(stepIndex).at(sweepIndex);
+        QString primaryCommand = buildSetCommand(sweepCommandPrefix, sweepValue);
+        qInfo("Command: %s (primary sweep)", primaryCommand.toStdString().c_str());
+        sendCommand(primaryCommand);
         if (isDoubleTriode) {
-            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, sweepParameter.at(stepIndex).at(sweepIndex))));
+            QString secondaryCommand = buildSetCommand("S3 ", sweepValue);
+            qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
+            sendCommand(secondaryCommand);
         }
         sendCommand("M2");
         expectedResponses++; // Expect a response for this measurement
@@ -504,6 +535,9 @@ void Analyser::nextSample() {
 
             // Set grid voltage for new step
             // qInfo("Setting grid voltage for new step: S2 %d", stepParameter.at(stepIndex));
+            if (isDoubleTriode && stepCommandPrefix == "S6 ") {
+                qInfo("Command: S6 %d (secondary grid step)", stepParameter.at(stepIndex));
+            }
             sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
 
             // Set anode voltage to 0 for verification
@@ -713,7 +747,9 @@ void Analyser::checkResponse(QString response)
                 }
             } else {
                 // Normal sample processing
-                if (ia > iaMax || (ia * va / 1000.0) > pMax) {
+                double power1 = ia * va / 1000.0;
+                double power2 = ia2 * va2 / 1000.0;
+                if (ia > iaMax || ia2 > iaMax || power1 > pMax || power2 > pMax) {
                     isEndSweep = true;
                     // qInfo("SWEEP LIMIT: ia=%.3fmA va=%.1fV (limits: %.1fmA %.3fW)", ia, va, iaMax, pMax);
                 }

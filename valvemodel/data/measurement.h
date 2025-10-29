@@ -73,6 +73,8 @@ public:
     bool getShowScreen() const;
     void setShowScreen(bool newShowScreen);
 
+    bool hasTriodeBData() const;
+
 protected:
     int deviceType = TRIODE;
     int testType = ANODE_CHARACTERISTICS;

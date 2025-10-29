@@ -424,6 +424,29 @@ void Measurement::setShowScreen(bool newShowScreen)
     showScreen = newShowScreen;
 }
 
+bool Measurement::hasTriodeBData() const
+{
+    for (int sweepIndex = 0; sweepIndex < sweeps.count(); ++sweepIndex) {
+        Sweep *sweep = sweeps.at(sweepIndex);
+        if (sweep == nullptr) {
+            continue;
+        }
+
+        for (int sampleIndex = 0; sampleIndex < sweep->count(); ++sampleIndex) {
+            Sample *sample = sweep->at(sampleIndex);
+            if (sample == nullptr) {
+                continue;
+            }
+
+            if (sample->getVa2() != 0.0 || sample->getIa2() != 0.0 || sample->getVg3() != 0.0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot, Sweep *sweep)
 {
     QPen samplePen;

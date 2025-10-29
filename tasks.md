@@ -69,11 +69,15 @@ Each code change must include:
   - Success Criteria: Red/green curves plotted together; property tables show Triode A/B side-by-side; change documented and easily revertable
 
 #### Active Subtasks (Chronological)
-- [ ] Document triode A/B modelling plan in plan.md and tasks.md
-- [ ] Implement Triode B measurement clone and model fit
+- [x] Document triode A/B modelling plan in plan.md and tasks.md
+- [x] Add measurement helper to detect Triode B data (no behavioural change)
+- [x] Implement Triode B measurement clone helper (no behaviour change)
+- [ ] Feed cloned measurement into separate model fit
 - [ ] Overlay green curves for Triode B in plot
 - [ ] Populate Modeller property tables with Triode B parameters
 - [ ] Testing & user confirmation (double-triode measurement)
+
+Note: Automatic Triode B fitting was rolled back after convergence failures. Reintroduce future steps in ≤10-line increments with validation after each change.
 
 ### Low Priority
 - [ ] **Parameter Input Validation**

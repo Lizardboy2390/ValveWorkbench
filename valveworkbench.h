@@ -211,6 +211,7 @@ private:
     QGraphicsItemGroup *measuredCurves = nullptr;
     QGraphicsItemGroup *estimatedCurves = nullptr;
     QGraphicsItemGroup *modelledCurves = nullptr;
+    QGraphicsItemGroup *modelledCurvesSecondary = nullptr;
 
     Measurement *currentMeasurement = nullptr;
     Sweep *currentSweep = nullptr;
@@ -219,6 +220,13 @@ private:
     QTreeWidgetItem *currentModelItem = nullptr;
 
     Model *model;
+    Model *triodeModelPrimary = nullptr;
+    Model *triodeModelSecondary = nullptr;
+    Measurement *triodeMeasurementPrimary = nullptr;
+    QList<Measurement *> triodeBClones;
+    bool triodeBFitPending = false;
+    bool runningTriodeBFit = false;
+
     QThread *thread;
     QTreeWidgetItem *modelProject = nullptr;
     bool doPentodeModel = false;
@@ -276,4 +284,14 @@ private:
     void setFitButtons();
     void modelTriode();
     void modelPentode();
+    bool measurementHasTriodeBData(Measurement *measurement) const;
+    Measurement *createTriodeBMeasurementClone(Measurement *source) const;
+    void deleteMeasurementClone(Measurement *measurement) const;
+    void cleanupTriodeBResources();
+    void startTriodeBFit();
+    void finalizeTriodeModelling();
+    void applyTriodeBProperties(Model *primary, Model *secondary);
+    Measurement *firstTriodeBMeasurement() const;
+    void queueTriodeModelRun(Model *modelToRun);
+    bool measurementHasValidSamples(Measurement *measurement) const;
 };

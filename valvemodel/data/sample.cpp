@@ -35,6 +35,11 @@ double Sample::getVh() const
     return vh;
 }
 
+double Sample::getIh() const
+{
+    return ih;
+}
+
 double Sample::getVg3() const
 {
     return vg3;

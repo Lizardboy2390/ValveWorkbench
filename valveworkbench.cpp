@@ -15,6 +15,8 @@
 #include <QDir>
 #include <QTreeWidgetItem>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
 #include "analyser/analyser.h"
 #include "valvemodel/model/model.h"
@@ -38,6 +40,206 @@ int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
     // Callback for ngSpice to send characters (e.g., print output)
     // For now, just return 0
     return 0;
+}
+
+bool ValveWorkbench::measurementHasValidSamples(Measurement *measurement) const
+{
+    if (measurement == nullptr) {
+        return false;
+    }
+
+    constexpr double minimumCurrent = 1e-9;
+    int validSamples = 0;
+
+    for (int sweepIndex = 0; sweepIndex < measurement->count(); ++sweepIndex) {
+        Sweep *sweep = measurement->at(sweepIndex);
+        if (sweep == nullptr) {
+            continue;
+        }
+
+        for (int sampleIndex = 0; sampleIndex < sweep->count(); ++sampleIndex) {
+            Sample *sample = sweep->at(sampleIndex);
+            if (sample == nullptr) {
+                continue;
+            }
+
+            const double current = sample->getIa();
+            const double voltage = sample->getVa();
+            if (!std::isfinite(current) || !std::isfinite(voltage)) {
+                continue;
+            }
+
+            if (std::fabs(current) > minimumCurrent) {
+                ++validSamples;
+                if (validSamples >= 3) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+bool ValveWorkbench::measurementHasTriodeBData(Measurement *measurement) const
+{
+    return measurement != nullptr && measurement->hasTriodeBData();
+}
+
+Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) const
+{
+    if (source == nullptr || !measurementHasTriodeBData(source)) {
+        return nullptr;
+    }
+
+    Measurement *clone = new Measurement();
+
+    clone->setDeviceType(source->getDeviceType());
+    clone->setTestType(source->getTestType());
+    clone->setHeaterVoltage(source->getHeaterVoltage());
+    clone->setShowScreen(source->getShowScreen());
+    clone->setIaMax(source->getIaMax());
+    clone->setPMax(source->getPMax());
+
+    double minVa = std::numeric_limits<double>::infinity();
+    double maxVa = -std::numeric_limits<double>::infinity();
+    double minGrid = std::numeric_limits<double>::infinity();
+    double maxGrid = -std::numeric_limits<double>::infinity();
+
+    for (int sweepIndex = 0; sweepIndex < source->count(); ++sweepIndex) {
+        Sweep *sourceSweep = source->at(sweepIndex);
+        if (sourceSweep == nullptr) {
+            continue;
+        }
+
+        Sweep *cloneSweep = new Sweep(source->getDeviceType(), source->getTestType());
+        clone->addSweep(cloneSweep);
+
+        double nominalGrid = std::numeric_limits<double>::quiet_NaN();
+
+        for (int sampleIndex = 0; sampleIndex < sourceSweep->count(); ++sampleIndex) {
+            Sample *sourceSample = sourceSweep->at(sampleIndex);
+            if (sourceSample == nullptr) {
+                continue;
+            }
+
+            const double vg3 = sourceSample->getVg3();
+            const double va2 = sourceSample->getVa2();
+            const double ia2 = sourceSample->getIa2();
+
+            if (std::isfinite(vg3)) {
+                minGrid = std::min(minGrid, vg3);
+                maxGrid = std::max(maxGrid, vg3);
+                if (!std::isfinite(nominalGrid)) {
+                    nominalGrid = vg3;
+                }
+            }
+
+            if (std::isfinite(va2)) {
+                minVa = std::min(minVa, va2);
+                maxVa = std::max(maxVa, va2);
+            }
+
+            Sample *cloneSample = new Sample(
+                vg3,
+                va2,
+                ia2,
+                0.0,
+                0.0,
+                sourceSample->getVh(),
+                sourceSample->getIh());
+
+            cloneSweep->addSample(cloneSample);
+        }
+
+        if (std::isfinite(nominalGrid)) {
+            cloneSweep->setVg1Nominal(nominalGrid);
+        } else {
+            cloneSweep->setVg1Nominal(sourceSweep->getVg1Nominal());
+        }
+    }
+
+    if (std::isfinite(minVa) && std::isfinite(maxVa) && minVa <= maxVa) {
+        clone->setAnodeStart(minVa);
+        clone->setAnodeStop(maxVa);
+    } else {
+        clone->setAnodeStart(source->getAnodeStart());
+        clone->setAnodeStop(source->getAnodeStop());
+    }
+    clone->setAnodeStep(source->getAnodeStep());
+
+    if (std::isfinite(minGrid) && std::isfinite(maxGrid) && minGrid <= maxGrid) {
+        clone->setGridStart(minGrid);
+        clone->setGridStop(maxGrid);
+    } else {
+        clone->setGridStart(source->getGridStart());
+        clone->setGridStop(source->getGridStop());
+    }
+    clone->setGridStep(source->getGridStep());
+
+    clone->setScreenStart(source->getScreenStart());
+    clone->setScreenStop(source->getScreenStop());
+    clone->setScreenStep(source->getScreenStep());
+
+    return clone;
+}
+
+void ValveWorkbench::deleteMeasurementClone(Measurement *measurement) const
+{
+    if (measurement == nullptr) {
+        return;
+    }
+
+    for (int sweepIndex = 0; sweepIndex < measurement->count(); ++sweepIndex) {
+        Sweep *sweep = measurement->at(sweepIndex);
+        if (sweep == nullptr) {
+            continue;
+        }
+
+        for (int sampleIndex = 0; sampleIndex < sweep->count(); ++sampleIndex) {
+            Sample *sample = sweep->at(sampleIndex);
+            delete sample;
+        }
+
+        delete sweep;
+    }
+
+    delete measurement;
+}
+
+void ValveWorkbench::cleanupTriodeBResources()
+{
+    for (Measurement *clone : std::as_const(triodeBClones)) {
+        deleteMeasurementClone(clone);
+    }
+    triodeBClones.clear();
+
+    triodeModelSecondary = nullptr;
+    modelledCurvesSecondary = nullptr;
+    triodeBFitPending = false;
+    runningTriodeBFit = false;
+}
+
+void ValveWorkbench::startTriodeBFit()
+{
+    // Will be implemented in subsequent steps.
+}
+
+void ValveWorkbench::finalizeTriodeModelling()
+{
+    // Will be implemented in subsequent steps.
+}
+
+void ValveWorkbench::applyTriodeBProperties(Model *primary, Model *secondary)
+{
+    Q_UNUSED(primary);
+    Q_UNUSED(secondary);
+    // Will be implemented in subsequent steps.
+}
+
+Measurement *ValveWorkbench::firstTriodeBMeasurement() const
+{
+    return triodeBClones.isEmpty() ? nullptr : triodeBClones.first();
 }
 
 int ngspice_getstat(char* outputreturn, int ident, void* userdata) {
@@ -1878,6 +2080,45 @@ void ValveWorkbench::modelTriode()
     model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
     model->setEstimate(&estimate);
 
+    triodeMeasurementPrimary = measurement;
+    cleanupTriodeBResources();
+    triodeBFitPending = false;
+
+    if (isDoubleTriode && measurementHasTriodeBData(measurement)) {
+        Measurement *clone = createTriodeBMeasurementClone(measurement);
+        if (clone != nullptr) {
+            qInfo("Triode B clone created: source sweeps=%d, clone sweeps=%d", measurement->count(), clone->count());
+            int logCount = 0;
+            const int maxLogs = 5;
+            for (int sweepIndex = 0; sweepIndex < measurement->count() && logCount < maxLogs; ++sweepIndex) {
+                Sweep *sourceSweep = measurement->at(sweepIndex);
+                Sweep *cloneSweep = clone->at(sweepIndex);
+                if (sourceSweep == nullptr || cloneSweep == nullptr) {
+                    continue;
+                }
+                int sampleCount = qMin(sourceSweep->count(), cloneSweep->count());
+                for (int sampleIndex = 0; sampleIndex < sampleCount && logCount < maxLogs; ++sampleIndex) {
+                    Sample *sourceSample = sourceSweep->at(sampleIndex);
+                    Sample *cloneSample = cloneSweep->at(sampleIndex);
+                    if (sourceSample == nullptr || cloneSample == nullptr) {
+                        continue;
+                    }
+                    qInfo("Triode B sample %d/%d: source vg=%.3f va=%.3f ia=%.6f | clone vg=%.3f va=%.3f ia=%.6f",
+                          sweepIndex, sampleIndex,
+                          sourceSample->getVg3(), sourceSample->getVa2(), sourceSample->getIa2(),
+                          cloneSample->getVg1(), cloneSample->getVa(), cloneSample->getIa());
+                    ++logCount;
+                }
+            }
+            if (logCount == 0) {
+                qInfo("Triode B clone logging: no comparable samples found");
+            }
+            deleteMeasurementClone(clone);
+        } else {
+            qInfo("Triode B clone creation returned null");
+        }
+    }
+
     int children = currentProject->childCount();
     for (int i = 0; i < children; i++) {
         QTreeWidgetItem *child = currentProject->child(i);
@@ -1918,6 +2159,8 @@ void ValveWorkbench::loadModel()
     project->addModel(model);
     model->buildTree(modelProject);
 
+
+
     if (doPentodeModel) {
         modelPentode(); // Will be done in a new thread
     } else {
@@ -1926,6 +2169,19 @@ void ValveWorkbench::loadModel()
 
         modelProject = nullptr;
     }
+}
+
+void ValveWorkbench::queueTriodeModelRun(Model *modelToRun)
+{
+    model = modelToRun;
+    thread = new QThread;
+
+    modelToRun->moveToThread(thread);
+    connect(thread, &QThread::started, modelToRun, &Model::solveThreaded);
+    connect(modelToRun, &Model::modelReady, this, &ValveWorkbench::loadModel);
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+
+    thread->start();
 }
 
 void ValveWorkbench::on_fitPentodeButton_clicked()
