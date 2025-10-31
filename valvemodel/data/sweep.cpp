@@ -329,7 +329,7 @@ void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> 
          ia = iaNext;
      }
 
-    segments->append(plot->createLabel(va, ia, vg1Nominal));
+    segments->append(plot->createLabel(va, ia, vg1Nominal, samplePen->color()));
     // qInfo("Finished plotting triode anode sweep - %d segments created", nSamples - 1);
     // qInfo("*** DEBUG: Completed plotting sweep with grid voltage: %.6fV ***", vg);
 
@@ -379,7 +379,7 @@ void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem 
          ia = iaNext;
      }
 
-    segments->append(plot->createLabel(vg, ia, vaNominal));
+    segments->append(plot->createLabel(vg, ia, vaNominal, samplePen->color()));
     // qInfo("Finished plotting triode transfer sweep - %d segments created", nSamples - 1);
 }
 
@@ -417,7 +417,7 @@ void Sweep::plotPentodeScreen(Plot *plot, QPen *samplePen, QList<QGraphicsItem *
          ig2 = ig2Next;
      }
 
-    segments->append(plot->createLabel(va, ig2, vg1Nominal));
+    segments->append(plot->createLabel(va, ig2, vg1Nominal, samplePen->color()));
     // qInfo("Finished plotting pentode screen sweep - %d segments created", nSamples - 1);
 }
 
@@ -461,7 +461,7 @@ void Sweep::plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *>
          ia = iaNext;
      }
 
-    segments->append(plot->createLabel(va, ia, vg1Nominal));
+    segments->append(plot->createLabel(va, ia, vg1Nominal, samplePen->color()));
     // qInfo("Finished plotting pentode anode sweep - %d segments created", nSamples - 1);
 }
 
@@ -505,7 +505,7 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
          ia = iaNext;
      }
 
-    segments->append(plot->createLabel(vg, ia, vg2Nominal));
+    segments->append(plot->createLabel(vg, ia, vg2Nominal, samplePen->color()));
     // qInfo("Finished plotting pentode transfer sweep - %d segments created", nSamples - 1);
 }
 

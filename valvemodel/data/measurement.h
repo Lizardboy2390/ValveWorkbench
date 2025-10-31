@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QTreeWidgetItem>
+#include <QColor>
 
 #include "../ui/plot.h"
 
@@ -37,6 +38,7 @@ public:
     virtual QGraphicsItemGroup *updatePlot(Plot *plot);
 
     QGraphicsItemGroup *updatePlot(Plot *plot, Sweep *sweep);
+    QGraphicsItemGroup *updatePlotWithoutAxes(Plot *plot, Sweep *sweep = nullptr);
 
     int getDeviceType() const;
     void setDeviceType(int newDeviceType);
@@ -66,6 +68,9 @@ public:
     void setIaMax(double newIaMax);
     double getPMax() const;
     void setPMax(double newPMax);
+
+    void setSampleColor(const QColor &color);
+    QColor getSampleColor() const;
 
     Sweep *at(int i);
     int count();
@@ -101,6 +106,7 @@ protected:
     Sweep *currentSweep;
 
     bool showScreen = true;
+    QColor sampleColor = QColor::fromRgb(0, 0, 0);
 
     void anodeAxes(Plot *plot);
     QList<QGraphicsItem *> *plotTriodeAnode(Plot *plot, Sweep *sweep = nullptr);

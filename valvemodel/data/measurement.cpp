@@ -264,6 +264,27 @@ QGraphicsItemGroup *Measurement::updatePlot(Plot *plot)
     return updatePlot(plot, nullptr);
 }
 
+QGraphicsItemGroup *Measurement::updatePlotWithoutAxes(Plot *plot, Sweep *sweep)
+{
+    if (deviceType == TRIODE) {
+        if (testType == ANODE_CHARACTERISTICS) {
+            return createGroup(plotTriodeAnode(plot, sweep));
+        } else if (testType == TRANSFER_CHARACTERISTICS) {
+            return createGroup(plotTriodeTransfer(plot, sweep));
+        }
+    } else if (deviceType == PENTODE) {
+        if (testType == ANODE_CHARACTERISTICS) {
+            return createGroup(plotPentodeAnode(plot, sweep));
+        } else if (testType == TRANSFER_CHARACTERISTICS) {
+            return createGroup(plotPentodeTransfer(plot, sweep));
+        } else if (testType == SCREEN_CHARACTERISTICS) {
+            return createGroup(plotPentodeScreen(sweep));
+        }
+    }
+
+    return nullptr;
+}
+
 int Measurement::getDeviceType() const
 {
     return deviceType;
@@ -449,8 +470,7 @@ bool Measurement::hasTriodeBData() const
 
 QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot, Sweep *sweep)
 {
-    QPen samplePen;
-    samplePen.setColor(QColor::fromRgb(0, 0, 0));
+    QPen samplePen(sampleColor);
 
     QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
 
@@ -467,10 +487,19 @@ QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot, Sweep *sweep)
     return segments;
 }
 
+void Measurement::setSampleColor(const QColor &color)
+{
+    sampleColor = color;
+}
+
+QColor Measurement::getSampleColor() const
+{
+    return sampleColor;
+}
+
 QList<QGraphicsItem *> *Measurement::plotTriodeTransfer(Plot *plot, Sweep *sweep)
 {
-    QPen samplePen;
-    samplePen.setColor(QColor::fromRgb(0, 0, 0));
+    QPen samplePen(sampleColor);
 
     QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
 

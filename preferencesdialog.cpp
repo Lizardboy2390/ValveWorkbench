@@ -3,6 +3,10 @@
 #include "valvemodel/model/model.h"
 #include "analyser/analyser.h"
 
+#include <QGridLayout>
+#include <QLabel>
+#include <cmath>
+
 PreferencesDialog::PreferencesDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::PreferencesDialog)
@@ -24,66 +28,83 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
     ui->sampling->addItem("Simple", SMP_LINEAR);
     ui->sampling->addItem("Optimised", SMP_LOGARITHMIC);
 
-    // Create calibration controls
-    QVBoxLayout *layout = new QVBoxLayout(this);
+    auto createCalibrationSpin = [this]() {
+        auto *spin = new QDoubleSpinBox(this);
+        spin->setRange(-10.0, 10.0);
+        spin->setDecimals(4);
+        spin->setSingleStep(0.01);
+        spin->setValue(0.0);
+        return spin;
+    };
 
-    heaterVoltageLabel = new QLabel("Heater Voltage Calibration:", this);
-    heaterVoltageSpinBox = new QDoubleSpinBox(this);
-    heaterVoltageSpinBox->setRange(0.0, 10.0);
-    heaterVoltageSpinBox->setValue(1.0);
-    layout->addWidget(heaterVoltageLabel);
-    layout->addWidget(heaterVoltageSpinBox);
+    auto createGridMeasurementSpin = [this]() {
+        auto *spin = new QDoubleSpinBox(this);
+        spin->setRange(-200.0, 200.0);
+        spin->setDecimals(4);
+        spin->setSingleStep(0.01);
+        spin->setValue(0.0);
+        return spin;
+    };
 
-    heaterCurrentLabel = new QLabel("Heater Current Calibration:", this);
-    heaterCurrentSpinBox = new QDoubleSpinBox(this);
-    heaterCurrentSpinBox->setRange(0.0, 10.0);
-    heaterCurrentSpinBox->setValue(1.0);
-    layout->addWidget(heaterCurrentLabel);
-    layout->addWidget(heaterCurrentSpinBox);
+    anodeVoltageSpinBox = createCalibrationSpin();
+    anodeCurrentSpinBox = createCalibrationSpin();
+    screenVoltageSpinBox = createCalibrationSpin();
+    screenCurrentSpinBox = createCalibrationSpin();
+    grid1VoltageSpinBox = createCalibrationSpin();
+    grid2VoltageSpinBox = createCalibrationSpin();
 
-    anodeVoltageLabel = new QLabel("Anode Voltage Calibration:", this);
-    anodeVoltageSpinBox = new QDoubleSpinBox(this);
-    anodeVoltageSpinBox->setRange(0.0, 10.0);
-    anodeVoltageSpinBox->setValue(1.0);
-    layout->addWidget(anodeVoltageLabel);
-    layout->addWidget(anodeVoltageSpinBox);
+    QGroupBox *calibrationGroup = new QGroupBox(tr("Calibration offsets"), this);
+    QFormLayout *calibrationLayout = new QFormLayout(calibrationGroup);
+    calibrationLayout->addRow(tr("Anode Voltage"), anodeVoltageSpinBox);
+    calibrationLayout->addRow(tr("Anode Current"), anodeCurrentSpinBox);
+    calibrationLayout->addRow(tr("Screen Voltage"), screenVoltageSpinBox);
+    calibrationLayout->addRow(tr("Screen Current"), screenCurrentSpinBox);
+    calibrationLayout->addRow(tr("Grid 1 Voltage"), grid1VoltageSpinBox);
+    calibrationLayout->addRow(tr("Grid 2 Voltage"), grid2VoltageSpinBox);
 
-    anodeCurrentLabel = new QLabel("Anode Current Calibration:", this);
-    anodeCurrentSpinBox = new QDoubleSpinBox(this);
-    anodeCurrentSpinBox->setRange(0.0, 10.0);
-    anodeCurrentSpinBox->setValue(1.0);
-    layout->addWidget(anodeCurrentLabel);
-    layout->addWidget(anodeCurrentSpinBox);
+    auto *gridCalibrationGroup = new QGroupBox(tr("Grid calibration"), this);
+    auto *gridCalibrationLayout = new QGridLayout(gridCalibrationGroup);
+    gridCalibrationLayout->addWidget(new QLabel(tr("Reference"), this), 0, 0);
+    gridCalibrationLayout->addWidget(new QLabel(tr("Grid 1 measured"), this), 0, 1);
+    gridCalibrationLayout->addWidget(new QLabel(tr("Grid 2 measured"), this), 0, 2);
 
-    screenVoltageLabel = new QLabel("Screen Voltage Calibration:", this);
-    screenVoltageSpinBox = new QDoubleSpinBox(this);
-    screenVoltageSpinBox->setRange(0.0, 10.0);
-    screenVoltageSpinBox->setValue(1.0);
-    layout->addWidget(screenVoltageLabel);
-    layout->addWidget(screenVoltageSpinBox);
+    gridCalibrationLayout->addWidget(new QLabel(tr("-5 V command"), this), 1, 0);
+    grid1MeasuredLowSpinBox = createGridMeasurementSpin();
+    grid1MeasuredLowSpinBox->setValue(-PreferencesDialog::GRID_CAL_LOW_REF);
+    grid2MeasuredLowSpinBox = createGridMeasurementSpin();
+    grid2MeasuredLowSpinBox->setValue(-PreferencesDialog::GRID_CAL_LOW_REF);
+    gridCalibrationLayout->addWidget(grid1MeasuredLowSpinBox, 1, 1);
+    gridCalibrationLayout->addWidget(grid2MeasuredLowSpinBox, 1, 2);
 
-    screenCurrentLabel = new QLabel("Screen Current Calibration:", this);
-    screenCurrentSpinBox = new QDoubleSpinBox(this);
-    screenCurrentSpinBox->setRange(0.0, 10.0);
-    screenCurrentSpinBox->setValue(1.0);
-    layout->addWidget(screenCurrentLabel);
-    layout->addWidget(screenCurrentSpinBox);
+    gridCalibrationLayout->addWidget(new QLabel(tr("-60 V command"), this), 2, 0);
+    grid1MeasuredHighSpinBox = createGridMeasurementSpin();
+    grid1MeasuredHighSpinBox->setValue(-PreferencesDialog::GRID_CAL_HIGH_REF);
+    grid2MeasuredHighSpinBox = createGridMeasurementSpin();
+    grid2MeasuredHighSpinBox->setValue(-PreferencesDialog::GRID_CAL_HIGH_REF);
+    gridCalibrationLayout->addWidget(grid1MeasuredHighSpinBox, 2, 1);
+    gridCalibrationLayout->addWidget(grid2MeasuredHighSpinBox, 2, 2);
 
-    gridVoltageLabel = new QLabel("Grid Voltage Calibration:", this);
-    gridVoltageSpinBox = new QDoubleSpinBox(this);
-    gridVoltageSpinBox->setRange(0.0, 10.0);
-    gridVoltageSpinBox->setValue(1.0);
-    layout->addWidget(gridVoltageLabel);
-    layout->addWidget(gridVoltageSpinBox);
+    QWidget *scrollContents = new QWidget(this);
+    auto *scrollContentsLayout = new QVBoxLayout(scrollContents);
+    scrollContentsLayout->setContentsMargins(0, 0, 0, 0);
+    scrollContentsLayout->setSpacing(12);
+    scrollContentsLayout->addWidget(ui->verticalLayoutWidget);
+    scrollContentsLayout->addWidget(calibrationGroup);
+    scrollContentsLayout->addWidget(gridCalibrationGroup);
+    scrollContentsLayout->addStretch();
 
-    gridCurrentLabel = new QLabel("Grid Current Calibration:", this);
-    gridCurrentSpinBox = new QDoubleSpinBox(this);
-    gridCurrentSpinBox->setRange(0.0, 10.0);
-    gridCurrentSpinBox->setValue(1.0);
-    layout->addWidget(gridCurrentLabel);
-    layout->addWidget(gridCurrentSpinBox);
+    auto *scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setWidget(scrollContents);
 
-    ui->verticalLayout->addLayout(layout);
+    auto *dialogLayout = new QVBoxLayout(this);
+    dialogLayout->setContentsMargins(12, 12, 12, 12);
+    dialogLayout->setSpacing(12);
+    dialogLayout->addWidget(scrollArea);
+    dialogLayout->addWidget(ui->buttonBox);
+
+    setLayout(dialogLayout);
 }
 
 PreferencesDialog::~PreferencesDialog()
@@ -140,16 +161,6 @@ bool PreferencesDialog::showScreenCurrent()
     return ui->checkScreenCurrent->isChecked();
 }
 
-double PreferencesDialog::getHeaterVoltageCalibration()
-{
-    return heaterVoltageSpinBox->value();
-}
-
-double PreferencesDialog::getHeaterCurrentCalibration()
-{
-    return heaterCurrentSpinBox->value();
-}
-
 double PreferencesDialog::getAnodeVoltageCalibration()
 {
     return anodeVoltageSpinBox->value();
@@ -170,12 +181,43 @@ double PreferencesDialog::getScreenCurrentCalibration()
     return screenCurrentSpinBox->value();
 }
 
-double PreferencesDialog::getGridVoltageCalibration()
+double PreferencesDialog::getGrid1VoltageCalibration()
 {
-    return gridVoltageSpinBox->value();
+    return grid1VoltageSpinBox->value();
 }
 
-double PreferencesDialog::getGridCurrentCalibration()
+double PreferencesDialog::getGrid2VoltageCalibration()
 {
-    return gridCurrentSpinBox->value();
+    return grid2VoltageSpinBox->value();
+}
+
+double PreferencesDialog::grid1CommandForDesired(double desiredVoltage) const
+{
+    return gridCommandForDesired(desiredVoltage, grid1MeasuredLowSpinBox->value(), grid1MeasuredHighSpinBox->value());
+}
+
+double PreferencesDialog::grid2CommandForDesired(double desiredVoltage) const
+{
+    return gridCommandForDesired(desiredVoltage, grid2MeasuredLowSpinBox->value(), grid2MeasuredHighSpinBox->value());
+}
+
+double PreferencesDialog::gridCommandForDesired(double desiredVoltage, double measuredLow, double measuredHigh) const
+{
+    const double commandLow = -GRID_CAL_LOW_REF;
+    const double commandHigh = -GRID_CAL_HIGH_REF;
+
+    const double commandSpan = commandHigh - commandLow;
+    const double measuredSpan = measuredHigh - measuredLow;
+
+    if (std::fabs(commandSpan) < GRID_CAL_EPSILON || std::fabs(measuredSpan) < GRID_CAL_EPSILON) {
+        return desiredVoltage;
+    }
+
+    const double slope = measuredSpan / commandSpan;
+    if (std::fabs(slope) < GRID_CAL_EPSILON) {
+        return desiredVoltage;
+    }
+
+    const double offset = measuredLow - slope * commandLow;
+    return (desiredVoltage - offset) / slope;
 }

@@ -14,6 +14,9 @@
 #include <QDebug>
 #include <QDir>
 #include <QTreeWidgetItem>
+#include <QVector>
+#include <QColor>
+#include <QBrush>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -100,11 +103,21 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
     clone->setShowScreen(source->getShowScreen());
     clone->setIaMax(source->getIaMax());
     clone->setPMax(source->getPMax());
+    clone->setAnodeStart(source->getAnodeStart());
+    clone->setAnodeStop(source->getAnodeStop());
+    clone->setAnodeStep(source->getAnodeStep());
+    clone->setGridStart(source->getGridStart());
+    clone->setGridStop(source->getGridStop());
+    clone->setGridStep(source->getGridStep());
 
     double minVa = std::numeric_limits<double>::infinity();
     double maxVa = -std::numeric_limits<double>::infinity();
     double minGrid = std::numeric_limits<double>::infinity();
     double maxGrid = -std::numeric_limits<double>::infinity();
+    double ia2Max = 0.0;
+    double powerMax = 0.0;
+    const double initialIaClamp = source->getIaMax();
+    double iaLimit = initialIaClamp;
 
     for (int sweepIndex = 0; sweepIndex < source->count(); ++sweepIndex) {
         Sweep *sourceSweep = source->at(sweepIndex);
@@ -112,8 +125,8 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
             continue;
         }
 
-        Sweep *cloneSweep = new Sweep(source->getDeviceType(), source->getTestType());
-        clone->addSweep(cloneSweep);
+        QVector<Sample *> bufferedSamples;
+        bufferedSamples.reserve(sourceSweep->count());
 
         double nominalGrid = std::numeric_limits<double>::quiet_NaN();
 
@@ -125,7 +138,13 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
 
             const double vg3 = sourceSample->getVg3();
             const double va2 = sourceSample->getVa2();
-            const double ia2 = sourceSample->getIa2();
+            const double ia2Raw = sourceSample->getIa2();
+
+            if (!std::isfinite(vg3) || !std::isfinite(va2) || !std::isfinite(ia2Raw) || va2 <= 0.0 || ia2Raw <= 0.0) {
+                continue;
+            }
+
+            const double ia2 = (iaLimit > 0.0) ? std::min(ia2Raw, iaLimit) : ia2Raw;
 
             if (std::isfinite(vg3)) {
                 minGrid = std::min(minGrid, vg3);
@@ -141,14 +160,41 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
             }
 
             Sample *cloneSample = new Sample(
-                vg3,
-                va2,
-                ia2,
-                0.0,
+                vg3,                    // Triode B grid voltage -> primary Vg1
+                va2,                    // Triode B anode voltage -> primary Va
+                ia2,                    // Triode B anode current -> primary Ia
+                0.0,                    // No screen voltage for Triode B
                 0.0,
                 sourceSample->getVh(),
-                sourceSample->getIh());
+                sourceSample->getIh(),
+                0.0,
+                0.0,
+                0.0);
 
+            bufferedSamples.append(cloneSample);
+            qInfo("Triode B clone sample buffered: vg3=%.6f, va2=%.6f, ia2=%.6f",
+                  vg3, va2, ia2);
+
+            if (std::isfinite(ia2Raw)) {
+                ia2Max = std::max(ia2Max, ia2Raw);
+                if (std::isfinite(va2)) {
+                    powerMax = std::max(powerMax, va2 * (ia2Raw / 1000.0));
+                }
+            }
+        }
+
+        if (bufferedSamples.isEmpty()) {
+            qInfo("Triode B clone sweep skipped: no valid samples");
+            std::for_each(bufferedSamples.begin(), bufferedSamples.end(), [](Sample *sample) {
+                delete sample;
+            });
+            continue;
+        }
+
+        Sweep *cloneSweep = new Sweep(source->getDeviceType(), source->getTestType());
+        clone->addSweep(cloneSweep);
+
+        for (Sample *cloneSample : std::as_const(bufferedSamples)) {
             cloneSweep->addSample(cloneSample);
         }
 
@@ -162,24 +208,36 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
     if (std::isfinite(minVa) && std::isfinite(maxVa) && minVa <= maxVa) {
         clone->setAnodeStart(minVa);
         clone->setAnodeStop(maxVa);
-    } else {
-        clone->setAnodeStart(source->getAnodeStart());
-        clone->setAnodeStop(source->getAnodeStop());
     }
-    clone->setAnodeStep(source->getAnodeStep());
 
     if (std::isfinite(minGrid) && std::isfinite(maxGrid) && minGrid <= maxGrid) {
         clone->setGridStart(minGrid);
         clone->setGridStop(maxGrid);
-    } else {
-        clone->setGridStart(source->getGridStart());
-        clone->setGridStop(source->getGridStop());
     }
-    clone->setGridStep(source->getGridStep());
 
     clone->setScreenStart(source->getScreenStart());
     clone->setScreenStop(source->getScreenStop());
     clone->setScreenStep(source->getScreenStep());
+
+    if (ia2Max > 0.0) {
+        iaLimit = (iaLimit > 0.0) ? std::min(iaLimit, ia2Max) : ia2Max;
+    }
+    if (iaLimit <= 0.0) {
+        iaLimit = ia2Max > 0.0 ? ia2Max : 1.0; // fall back to measured peak or 1mA to keep estimator active
+    }
+    clone->setIaMax(iaLimit);
+
+    double powerLimit = source->getPMax();
+    if (powerMax > 0.0) {
+        powerLimit = (powerLimit > 0.0) ? std::min(powerLimit, powerMax) : powerMax;
+    }
+    if (powerLimit <= 0.0 && powerMax > 0.0) {
+        powerLimit = powerMax;
+    }
+    clone->setPMax(powerLimit);
+
+    qInfo("Triode B clone summary: sweeps=%d, iaMax=%.6f, pMax=%.6f",
+          clone->count(), clone->getIaMax(), clone->getPMax());
 
     return clone;
 }
@@ -218,23 +276,63 @@ void ValveWorkbench::cleanupTriodeBResources()
     modelledCurvesSecondary = nullptr;
     triodeBFitPending = false;
     runningTriodeBFit = false;
+
+    if (measuredCurvesSecondary != nullptr) {
+        plot.remove(measuredCurvesSecondary);
+        measuredCurvesSecondary = nullptr;
+    }
+
+    if (triodeMeasurementSecondary != nullptr) {
+        deleteMeasurementClone(triodeMeasurementSecondary);
+        triodeMeasurementSecondary = nullptr;
+    }
 }
 
 void ValveWorkbench::startTriodeBFit()
 {
-    // Will be implemented in subsequent steps.
-}
+    if (triodeMeasurementSecondary == nullptr || triodeModelSecondary == nullptr) {
+        qWarning("startTriodeBFit called without secondary measurement/model");
+        finalizeTriodeModelling();
+        return;
+    }
 
-void ValveWorkbench::finalizeTriodeModelling()
-{
-    // Will be implemented in subsequent steps.
+    runningTriodeBFit = true;
+    queueTriodeModelRun(triodeModelSecondary);
 }
 
 void ValveWorkbench::applyTriodeBProperties(Model *primary, Model *secondary)
 {
     Q_UNUSED(primary);
     Q_UNUSED(secondary);
-    // Will be implemented in subsequent steps.
+}
+
+void ValveWorkbench::finalizeTriodeModelling()
+{
+    Project *project = (Project *) modelProject->data(0, Qt::UserRole).value<void *>();
+    if (project != nullptr && model != nullptr) {
+        project->addModel(model);
+        model->buildTree(modelProject);
+    }
+
+    if (triodeMeasurementSecondary != nullptr) {
+        deleteMeasurementClone(triodeMeasurementSecondary);
+        triodeMeasurementSecondary = nullptr;
+    }
+    if (measuredCurvesSecondary != nullptr) {
+        plot.remove(measuredCurvesSecondary);
+        measuredCurvesSecondary = nullptr;
+    }
+
+    runningTriodeBFit = false;
+
+    if (doPentodeModel) {
+        modelPentode();
+        return;
+    }
+
+    ui->fitPentodeButton->setEnabled(true);
+    ui->fitTriodeButton->setEnabled(true);
+    modelProject = nullptr;
 }
 
 Measurement *ValveWorkbench::firstTriodeBMeasurement() const
@@ -679,6 +777,11 @@ void ValveWorkbench::testFinished()
     currentMeasurement = analyser->getResult();
     measuredCurves = currentMeasurement->updatePlot(&plot);
     plot.add(measuredCurves);
+
+    if (isDoubleTriode && triodeMeasurementSecondary != nullptr) {
+        measuredCurvesSecondary = triodeMeasurementSecondary->updatePlot(&plot);
+        plot.add(measuredCurvesSecondary);
+    }
     ui->measureCheck->setChecked(true);
 
     // Populate data table with dual rows per sweep (Va and Ia)
@@ -1542,6 +1645,19 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             measuredCurves = currentMeasurement->updatePlot(&plot);
             qInfo("=== AFTER MEASUREMENT PLOT - measuredCurves items: %d, Scene items: %d ===", measuredCurves ? measuredCurves->childItems().count() : 0, plot.getScene()->items().count());
             plot.add(measuredCurves);
+
+            if (isDoubleTriode && triodeMeasurementSecondary != nullptr && triodeMeasurementSecondary->count() > 0) {
+                if (measuredCurvesSecondary != nullptr) {
+                    plot.remove(measuredCurvesSecondary);
+                    measuredCurvesSecondary = nullptr;
+                }
+
+                measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
+                if (measuredCurvesSecondary != nullptr) {
+                    plot.add(measuredCurvesSecondary);
+                    measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+                }
+            }
             qInfo("Added measuredCurves to plot");
             ui->measureCheck->setChecked(true);
             qInfo("=== PROJECT TREE: Finished TYP_MEASUREMENT case ===");
@@ -1586,6 +1702,12 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 } else {
                     qInfo("measuredCurves is nullptr - no need to remove");
                 }
+
+                if (measuredCurvesSecondary != nullptr) {
+                    plot.remove(measuredCurvesSecondary);
+                    measuredCurvesSecondary = nullptr;
+                    qInfo("Removed old measuredCurvesSecondary");
+                }
                 
                 // Reset measuredCurves to nullptr before updating
                 measuredCurves = nullptr;
@@ -1594,6 +1716,36 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 measuredCurves = currentMeasurement->updatePlot(&plot, sweep);
                 qInfo("=== AFTER UPDATE PLOT - measuredCurves items: %d, Scene items: %d ===", measuredCurves ? measuredCurves->childItems().count() : 0, plot.getScene()->items().count());
                 plot.add(measuredCurves);
+
+                if (isDoubleTriode && triodeMeasurementSecondary != nullptr && triodeMeasurementSecondary->count() > 0) {
+                    if (measuredCurvesSecondary != nullptr) {
+                        plot.remove(measuredCurvesSecondary);
+                        measuredCurvesSecondary = nullptr;
+                    }
+
+                    Sweep *secondarySweep = nullptr;
+                    if (sweep != nullptr) {
+                        int sweepIndex = -1;
+                        for (int i = 0; i < currentMeasurement->count(); ++i) {
+                            if (currentMeasurement->at(i) == sweep) {
+                                sweepIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (sweepIndex >= 0 && sweepIndex < triodeMeasurementSecondary->count()) {
+                            secondarySweep = triodeMeasurementSecondary->at(sweepIndex);
+                        }
+                    }
+
+                    if (secondarySweep != nullptr) {
+                        measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot, secondarySweep);
+                        if (measuredCurvesSecondary != nullptr) {
+                            plot.add(measuredCurvesSecondary);
+                            measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+                        }
+                    }
+                }
                 modelledCurves = nullptr;
                 ui->measureCheck->setChecked(true);
                 qInfo("=== PROJECT TREE: Finished TYP_SWEEP case ===");
@@ -2079,8 +2231,14 @@ void ValveWorkbench::modelTriode()
 
     model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
     model->setEstimate(&estimate);
+    model->setPlotColor(QColor::fromRgb(255, 0, 0));
+    triodeModelPrimary = model;
+    runningTriodeBFit = false;
 
     triodeMeasurementPrimary = measurement;
+    if (triodeMeasurementPrimary != nullptr) {
+        triodeMeasurementPrimary->setSampleColor(QColor::fromRgb(0, 0, 0));
+    }
     cleanupTriodeBResources();
     triodeBFitPending = false;
 
@@ -2088,32 +2246,12 @@ void ValveWorkbench::modelTriode()
         Measurement *clone = createTriodeBMeasurementClone(measurement);
         if (clone != nullptr) {
             qInfo("Triode B clone created: source sweeps=%d, clone sweeps=%d", measurement->count(), clone->count());
-            int logCount = 0;
-            const int maxLogs = 5;
-            for (int sweepIndex = 0; sweepIndex < measurement->count() && logCount < maxLogs; ++sweepIndex) {
-                Sweep *sourceSweep = measurement->at(sweepIndex);
-                Sweep *cloneSweep = clone->at(sweepIndex);
-                if (sourceSweep == nullptr || cloneSweep == nullptr) {
-                    continue;
-                }
-                int sampleCount = qMin(sourceSweep->count(), cloneSweep->count());
-                for (int sampleIndex = 0; sampleIndex < sampleCount && logCount < maxLogs; ++sampleIndex) {
-                    Sample *sourceSample = sourceSweep->at(sampleIndex);
-                    Sample *cloneSample = cloneSweep->at(sampleIndex);
-                    if (sourceSample == nullptr || cloneSample == nullptr) {
-                        continue;
-                    }
-                    qInfo("Triode B sample %d/%d: source vg=%.3f va=%.3f ia=%.6f | clone vg=%.3f va=%.3f ia=%.6f",
-                          sweepIndex, sampleIndex,
-                          sourceSample->getVg3(), sourceSample->getVa2(), sourceSample->getIa2(),
-                          cloneSample->getVg1(), cloneSample->getVa(), cloneSample->getIa());
-                    ++logCount;
-                }
+            triodeBClones.append(clone);
+            triodeMeasurementSecondary = clone;
+            if (triodeMeasurementSecondary != nullptr) {
+                triodeMeasurementSecondary->setSampleColor(QColor::fromRgb(0, 0, 255));
             }
-            if (logCount == 0) {
-                qInfo("Triode B clone logging: no comparable samples found");
-            }
-            deleteMeasurementClone(clone);
+            triodeBFitPending = true;
         } else {
             qInfo("Triode B clone creation returned null");
         }
@@ -2143,6 +2281,7 @@ void ValveWorkbench::modelTriode()
 void ValveWorkbench::loadModel()
 {
     thread->quit();
+    thread = nullptr;
 
     if (!model->isConverged()) {
         QMessageBox message;
@@ -2157,17 +2296,79 @@ void ValveWorkbench::loadModel()
 
     Project *project = (Project *) modelProject->data(0, Qt::UserRole).value<void *>();
     project->addModel(model);
-    model->buildTree(modelProject);
+    QTreeWidgetItem *modelItem = model->buildTree(modelProject);
+    if (modelItem != nullptr) {
+        QString label = modelItem->text(0);
+        if (model == triodeModelPrimary) {
+            label = "Model A";
+        } else if (model == triodeModelSecondary) {
+            label = "Model B";
+        }
+        modelItem->setText(0, label);
 
+        QColor plotColour = model->getPlotColor();
+        if (plotColour.isValid()) {
+            modelItem->setForeground(0, QBrush(plotColour));
+        }
+    }
 
+    if (model == triodeModelPrimary) {
+        triodeModelPrimary = nullptr;
+    } else if (model == triodeModelSecondary) {
+        triodeModelSecondary = nullptr;
+    }
+
+    if (!triodeBClones.isEmpty() && triodeBFitPending && !runningTriodeBFit) {
+        Measurement *clone = triodeBClones.takeFirst();
+        triodeMeasurementSecondary = clone;
+
+        Estimate secondaryEstimate;
+        secondaryEstimate.estimateTriode(clone);
+
+        triodeModelSecondary = ModelFactory::createModel(COHEN_HELIE_TRIODE);
+        triodeModelSecondary->setEstimate(&secondaryEstimate);
+        triodeModelSecondary->setPlotColor(QColor::fromRgb(0, 128, 0));
+        triodeModelSecondary->addMeasurement(clone);
+
+        triodeBFitPending = !triodeBClones.isEmpty();
+        runningTriodeBFit = true;
+        queueTriodeModelRun(triodeModelSecondary);
+        return;
+    }
 
     if (doPentodeModel) {
         modelPentode(); // Will be done in a new thread
-    } else {
-        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
-        ui->fitTriodeButton->setEnabled(true);
+        return;
+    }
 
-        modelProject = nullptr;
+    ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+    ui->fitTriodeButton->setEnabled(true);
+    modelProject = nullptr;
+
+    if (triodeMeasurementPrimary != nullptr) {
+        if (measuredCurves != nullptr) {
+            plot.remove(measuredCurves);
+            measuredCurves = nullptr;
+        }
+
+        measuredCurves = triodeMeasurementPrimary->updatePlot(&plot);
+        if (measuredCurves != nullptr) {
+            plot.add(measuredCurves);
+            measuredCurves->setVisible(ui->measureCheck->isChecked());
+        }
+    }
+
+    if (triodeMeasurementSecondary != nullptr && triodeMeasurementPrimary != nullptr) {
+        if (measuredCurvesSecondary != nullptr) {
+            plot.remove(measuredCurvesSecondary);
+            measuredCurvesSecondary = nullptr;
+        }
+
+        measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
+        if (measuredCurvesSecondary != nullptr) {
+            plot.add(measuredCurvesSecondary);
+            measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+        }
     }
 }
 
@@ -2310,6 +2511,10 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
             if (project->getDeviceType() == TRIODE) {
                 ui->fitTriodeButton->setVisible(true);
                 ui->fitPentodeButton->setVisible(false);
+                if (!autoTriodeFitRun && !runningTriodeBFit && !triodeBFitPending && thread == nullptr) {
+                    autoTriodeFitRun = true;
+                    on_fitTriodeButton_clicked();
+                }
             } else if (project->getDeviceType() == PENTODE) {
                 ui->fitTriodeButton->setVisible(false);
                 ui->fitPentodeButton->setVisible(true);
@@ -2326,16 +2531,18 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
     default:
         break;
     }
+    ui->measureCheck->setChecked(true);
 }
-
 
 void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
 {
     if (measuredCurves != nullptr) {
         measuredCurves->setVisible(ui->measureCheck->isChecked());
     }
+    if (measuredCurvesSecondary != nullptr) {
+        measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+    }
 }
-
 
 void ValveWorkbench::on_modelCheck_stateChanged(int arg1)
 {

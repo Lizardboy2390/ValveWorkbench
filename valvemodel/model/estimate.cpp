@@ -4,6 +4,9 @@
 #include "linearsolver.h"
 #include "quadraticsolver.h"
 
+#include <cmath>
+#include <limits>
+
 Estimate::Estimate()
 {
 
@@ -13,6 +16,7 @@ void Estimate::estimateTriode(Measurement *measurement) {
     estimateMu(measurement);
     estimateKg1X(measurement);
     estimateKp(measurement);
+    estimateKvbKvb1(measurement);
     // There does not appear to be a meangingful way of estimating Vct, Kvb or Kvb1 and so fixed values will be used
     //estimateKvbKvb1(measurement);
 }
@@ -281,6 +285,8 @@ void Estimate::estimateKvbKvb1(Measurement *measurement)
     solver->setFixedA(true);
     solver->setRequirePositive(true);
 
+    bool hasSamples = false;
+
     double iThresh = measurement->getIaMax() * 0.20;
 
     int sweeps = measurement->count();
@@ -296,16 +302,23 @@ void Estimate::estimateKvbKvb1(Measurement *measurement)
                     double f = sample->getVg1() / (pow(sample->getIa() * kg1, 1 / x) / sample->getVa() - 1/ mu);
 
                     solver->addSample(sample->getVa(), f * f);
+                    hasSamples = true;
                 }
             }
         }
     }
 
-    solver->solve();
+    if (hasSamples) {
+        solver->solve();
+        if (solver->isConverged()) {
+            double a = solver->getA();
+            Q_UNUSED(a);
+            kvb1 = solver->getB();
+            kvb = solver->getC();
+        }
+    }
 
-    double a = solver->getA();
-    kvb1 = solver->getB();
-    kvb = solver->getC();
+    delete solver;
 }
 
 /**

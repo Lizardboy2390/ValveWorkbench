@@ -4,7 +4,9 @@
 #include <QDialog>
 #include <QSerialPortInfo>
 #include <QDoubleSpinBox>
-#include <QLabel>
+#include <QGroupBox>
+#include <QFormLayout>
+#include <QScrollArea>
 
 namespace Ui {
 class PreferencesDialog;
@@ -29,37 +31,40 @@ public:
     bool fixTriodeParameters();
     bool showScreenCurrent();
 
-    double getHeaterVoltageCalibration();
-    double getHeaterCurrentCalibration();
     double getAnodeVoltageCalibration();
     double getAnodeCurrentCalibration();
     double getScreenVoltageCalibration();
     double getScreenCurrentCalibration();
-    double getGridVoltageCalibration();
-    double getGridCurrentCalibration();
+    double getGrid1VoltageCalibration();
+    double getGrid2VoltageCalibration();
+    double grid1CommandForDesired(double desiredVoltage) const;
+    double grid2CommandForDesired(double desiredVoltage) const;
+    double getGrid1MeasuredLow() const;
+    double getGrid1MeasuredHigh() const;
+    double getGrid2MeasuredLow() const;
+    double getGrid2MeasuredHigh() const;
 
 private slots:
 
 private:
+    static constexpr double GRID_CAL_LOW_REF = 5.0;
+    static constexpr double GRID_CAL_HIGH_REF = 60.0;
+    static constexpr double GRID_CAL_EPSILON = 1e-6;
+
     Ui::PreferencesDialog *ui;
 
-    QDoubleSpinBox *heaterVoltageSpinBox;
-    QDoubleSpinBox *heaterCurrentSpinBox;
     QDoubleSpinBox *anodeVoltageSpinBox;
     QDoubleSpinBox *anodeCurrentSpinBox;
     QDoubleSpinBox *screenVoltageSpinBox;
     QDoubleSpinBox *screenCurrentSpinBox;
-    QDoubleSpinBox *gridVoltageSpinBox;
-    QDoubleSpinBox *gridCurrentSpinBox;
+    QDoubleSpinBox *grid1VoltageSpinBox;
+    QDoubleSpinBox *grid2VoltageSpinBox;
+    QDoubleSpinBox *grid1MeasuredLowSpinBox;
+    QDoubleSpinBox *grid1MeasuredHighSpinBox;
+    QDoubleSpinBox *grid2MeasuredLowSpinBox;
+    QDoubleSpinBox *grid2MeasuredHighSpinBox;
 
-    QLabel *heaterVoltageLabel;
-    QLabel *heaterCurrentLabel;
-    QLabel *anodeVoltageLabel;
-    QLabel *anodeCurrentLabel;
-    QLabel *screenVoltageLabel;
-    QLabel *screenCurrentLabel;
-    QLabel *gridVoltageLabel;
-    QLabel *gridCurrentLabel;
+    double gridCommandForDesired(double desiredVoltage, double measuredLow, double measuredHigh) const;
 };
 
 #endif // PREFERENCESDIALOG_H

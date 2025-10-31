@@ -4,6 +4,7 @@
 #include <QJsonObject>
 #include <QString>
 #include <QObject>
+#include <QColor>
 
 #include "ceres/ceres.h"
 #include "glog/logging.h"
@@ -150,6 +151,9 @@ public:
 
     void setPreferences(PreferencesDialog *newPreferences);
 
+    void setPlotColor(const QColor &color);
+    QColor getPlotColor() const;
+
 public slots:
     void solveThreaded();
 
@@ -188,6 +192,8 @@ protected:
     bool showScreen = true;
 
     PreferencesDialog *preferences;
+
+    QColor plotColor;
 
     void setLowerBound(Parameter* parameter, double lowerBound);
     void setUpperBound(Parameter* parameter, double upperBound);

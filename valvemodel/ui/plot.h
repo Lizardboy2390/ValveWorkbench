@@ -3,6 +3,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsLineItem>
 #include <QGraphicsTextItem>
+#include <QColor>
 
 #define PLOT_WIDTH 430
 #define PLOT_HEIGHT 370
@@ -15,7 +16,7 @@ public:
     void setAxes(double xStart, double xStop, double xMajorDivision, double yStart, double yStop, double yMajorDivision, int xLabelEvery = 0, int yLabelEvery = 0);
     QGraphicsScene *getScene();
     QGraphicsLineItem *createSegment(double x1, double y1, double x2, double y2, QPen pen);
-    QGraphicsTextItem *createLabel(double x, double y, double value);
+    QGraphicsTextItem *createLabel(double x, double y, double value, const QColor &color = QColor());
     void clear();
     void add(QGraphicsItem *item);
     void remove(QGraphicsItem *item);

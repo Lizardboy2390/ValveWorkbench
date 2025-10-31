@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20251031-1809-Experimental"
+	Name="(empty)"
+	Generator="ctest-3.31.6"
+	CompilerName=""
+	CompilerVersion=""
+	OSName="Windows"
+	Hostname="CAD-DAW"
+	OSRelease=" Personal"
+	OSVersion=" (Build 26100)"
+	OSPlatform="AMD64"
+	Is64Bits="1"
+	VendorString="GenuineIntel"
+	VendorID="Intel Corporation"
+	FamilyID="6"
+	ModelID="7"
+	ModelName=""
+	ProcessorCacheSize="-1"
+	NumberOfLogicalCPU="6"
+	NumberOfPhysicalCPU="6"
+	TotalVirtualMemory="51988"
+	TotalPhysicalMemory="48916"
+	LogicalProcessorsPerPhysical="1"
+	ProcessorClockFrequency="3912"
+	>
+	<Testing>
+		<StartDateTime>Oct 31 11:09 Pacific Daylight Time</StartDateTime>
+		<StartTestTime>1761934147</StartTestTime>
+		<TestList/>
+		<EndDateTime>Oct 31 11:09 Pacific Daylight Time</EndDateTime>
+		<EndTestTime>1761934147</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

@@ -209,6 +209,7 @@ private:
     LedIndicator *heaterIndicator;
 
     QGraphicsItemGroup *measuredCurves = nullptr;
+    QGraphicsItemGroup *measuredCurvesSecondary = nullptr;
     QGraphicsItemGroup *estimatedCurves = nullptr;
     QGraphicsItemGroup *modelledCurves = nullptr;
     QGraphicsItemGroup *modelledCurvesSecondary = nullptr;
@@ -223,11 +224,13 @@ private:
     Model *triodeModelPrimary = nullptr;
     Model *triodeModelSecondary = nullptr;
     Measurement *triodeMeasurementPrimary = nullptr;
+    Measurement *triodeMeasurementSecondary = nullptr;
     QList<Measurement *> triodeBClones;
     bool triodeBFitPending = false;
     bool runningTriodeBFit = false;
+    bool autoTriodeFitRun = false;
 
-    QThread *thread;
+    QThread *thread = nullptr;
     QTreeWidgetItem *modelProject = nullptr;
     bool doPentodeModel = false;
 

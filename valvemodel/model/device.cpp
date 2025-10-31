@@ -9,7 +9,7 @@ Device::Device(int _modelDeviceType) : deviceType(_modelDeviceType)
 
 Device::Device(QJsonDocument modelDocument)
 {
-    vaMax = 400.0;
+    vaMax =400.0;
     iaMax = 6.0;
     vg1Max = 4.0;
     vg2Max = vaMax;

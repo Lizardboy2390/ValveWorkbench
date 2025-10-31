@@ -46,6 +46,8 @@ Model::Model()
     parameter[PAR_NU] = new Parameter("Nu:", 0.0);
     parameter[PAR_S] = new Parameter("S:", 0.0);
     parameter[PAR_AP] = new Parameter("Ap:", 0.0);
+
+    plotColor = QColor::fromRgb(255, 0, 0);
 }
 
 double Model::anodeVoltage(double ia, double vg1, double vg2, bool secondaryEmission)
@@ -209,7 +211,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
     QGraphicsItemGroup *group = new QGraphicsItemGroup();
     QPen anodePen;
-    anodePen.setColor(QColor::fromRgb(255, 0, 0));
+    anodePen.setColor(plotColor.isValid() ? plotColor : QColor::fromRgb(255, 0, 0));
     QPen screenPen;
     screenPen.setColor(QColor::fromRgb(0, 0, 255));
 
@@ -622,6 +624,16 @@ void Model::setShowScreen(bool newShowScreen)
 void Model::setPreferences(PreferencesDialog *newPreferences)
 {
     preferences = newPreferences;
+}
+
+void Model::setPlotColor(const QColor &color)
+{
+    plotColor = color;
+}
+
+QColor Model::getPlotColor() const
+{
+    return plotColor;
 }
 
 void Model::setLowerBound(Parameter* parameter, double lowerBound)

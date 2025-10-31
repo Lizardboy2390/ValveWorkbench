@@ -388,7 +388,12 @@ void Analyser::startTest()
             sendCommand(buildSetCommand("S6 ", initialSecondaryGrid));
             sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
         }
-        sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
+        if (isDoubleTriode && stepCommandPrefix == "S6 ") {
+            sendCommand("S2 0");
+            sendCommand(buildSetCommand("S6 ", stepParameter.at(0)));
+        } else {
+            sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
+        }
 
         nextSample();
         break;
@@ -491,6 +496,12 @@ void Analyser::nextSample() {
         }
 
         const int sweepValue = sweepParameter.at(stepIndex).at(sweepIndex);
+
+        if (isDoubleTriode && stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()) {
+            const int primaryGrid = stepParameter.at(stepIndex);
+            sendCommand(buildSetCommand("S2 ", primaryGrid));
+        }
+
         QString primaryCommand = buildSetCommand(sweepCommandPrefix, sweepValue);
         qInfo("Command: %s (primary sweep)", primaryCommand.toStdString().c_str());
         sendCommand(primaryCommand);
@@ -538,11 +549,19 @@ void Analyser::nextSample() {
             if (isDoubleTriode && stepCommandPrefix == "S6 ") {
                 qInfo("Command: S6 %d (secondary grid step)", stepParameter.at(stepIndex));
             }
-            sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
+            if (isDoubleTriode && stepCommandPrefix == "S6 ") {
+                sendCommand("S2 0");
+                sendCommand(buildSetCommand("S6 ", stepParameter.at(stepIndex)));
+            } else {
+                sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(stepIndex)));
+            }
 
             // Set anode voltage to 0 for verification
             // qInfo("Setting anode voltage to 0V for verification");
             sendCommand(buildSetCommand("S3 ", 0));
+            if (isDoubleTriode) {
+                sendCommand(buildSetCommand("S7 ", 0));
+            }
 
             // Take verification measurement
             // qInfo("Taking verification measurement to confirm 0V state");
@@ -719,8 +738,17 @@ void Analyser::checkResponse(QString response)
 
                     // Now send the first actual sample
                     int firstSampleValue = sweepParameter.at(stepIndex).at(0);
-                    // qInfo("Sending first actual sample: S3 %d", firstSampleValue);
-                    sendCommand(buildSetCommand("S3 ", firstSampleValue));
+                    if (isDoubleTriode && stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()) {
+                        const int primaryGrid = stepParameter.at(stepIndex);
+                        sendCommand(buildSetCommand("S2 ", primaryGrid));
+                    }
+
+                    QString resumeCommand = buildSetCommand(sweepCommandPrefix, firstSampleValue);
+                    // qInfo("Sending first actual sample after verification: %s", resumeCommand.toStdString().c_str());
+                    sendCommand(resumeCommand);
+                    if (isDoubleTriode) {
+                        sendCommand(buildSetCommand("S3 ", firstSampleValue));
+                    }
                     sendCommand("M2");
                 } else {
                     verificationAttempts++;
@@ -736,11 +764,17 @@ void Analyser::checkResponse(QString response)
                         // qInfo("Retrying hardware reset...");
                         // Retry the reset sequence
                         sendCommand("M1");
-                        sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
-                        sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                         if (isDoubleTriode) {
-                            sendCommand(buildSetCommand("S6 ", convertTargetVoltage(GRID, secondGridStart)));
+                            const int primaryGrid = stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()
+                                                    ? stepParameter.at(stepIndex)
+                                                    : convertTargetVoltage(GRID, gridStart);
+                            sendCommand(buildSetCommand("S2 ", primaryGrid));
+                            sendCommand(buildSetCommand("S6 ", stepParameter.at(stepIndex)));
+                            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                             sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
+                        } else {
+                            sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
+                            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                         }
                         sendCommand("M2");
                     }

@@ -110,13 +110,16 @@ QGraphicsLineItem *Plot::createSegment(double x1, double y1, double x2, double y
     return scene->addLine(x1_, y1_, x2_, y2_, pen);
 }
 
-QGraphicsTextItem *Plot::createLabel(double x, double y, double value)
+QGraphicsTextItem *Plot::createLabel(double x, double y, double value, const QColor &color)
 {
     QGraphicsTextItem *text;
     char labelText[16];
     sprintf(labelText, "%.1fv", value + 0.04);
     text = scene->addText(labelText);
     text->setPos((x - xStart) * xScale + 5, PLOT_HEIGHT - (y - yStart) * yScale - 10);
+    if (color.isValid()) {
+        text->setDefaultTextColor(color);
+    }
 
     return text;
 }

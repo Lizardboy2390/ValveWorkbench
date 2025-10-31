@@ -4,6 +4,9 @@
 #include <QDialog>
 #include "valvemodel/model/model.h"
 
+class QComboBox;
+class QGroupBox;
+
 namespace Ui {
 class CompareDialog;
 }
@@ -20,6 +23,10 @@ public:
 
 private:
     Ui::CompareDialog *ui;
+    QGroupBox *modelSelectionGroup;
+    QComboBox *referenceModelCombo;
+    QComboBox *comparisonModelCombo;
+
 };
 
 #endif // COMPAREDIALOG_H
