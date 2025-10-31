@@ -30,8 +30,9 @@ This plan outlines the incremental porting of web-based valve calculators from `
 - Keep changes easily revertable and test after each step.
 
 ## Pending Feature – Compare Dialog
-- Implement model-selection UI within Compare dialog (choose reference and comparison fits).
-- Calculate triode/pentode metrics at user-specified test conditions using selected models.
+- ✅ Step 1: Added model-selection panel and reorganised dialog layout to host the upcoming controls.
+- ✅ Step 2: Model selectors now populate from available fits, preserve selections, and emit reference/comparison change signals.
+- ✅ Step 3: Dialog computes and displays Mu, gm, rp, and Ia for the selected models at the entered test conditions (triode and pentode blocks).
 - Present side-by-side values, leaving existing modelling workflow unchanged until feature is ready.
 
 ## Notes

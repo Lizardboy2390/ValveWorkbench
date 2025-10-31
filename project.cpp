@@ -43,6 +43,11 @@ bool Project::addModel(Model *model)
     return true;
 }
 
+const QList<Model *> &Project::getModels() const
+{
+    return models;
+}
+
 void Project::setTreeItem(QTreeWidgetItem *item)
 {
     treeItem = item;

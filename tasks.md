@@ -194,7 +194,11 @@ Note: Automatic Triode B fitting was rolled back after convergence failures. Rei
 - **Files Impacted**: `comparedialog.h`, `comparedialog.cpp`, `valveworkbench.cpp`, `ui_comparedialog.h`
 - **Description**: Flesh out the Compare dialog so users can pick two fitted models (reference vs comparison) and evaluate triode/pentode metrics at user-entered test conditions. No implementation yet—requires UI widgets for selection plus logic to compute and display results.
 - **Impact**: Enables side-by-side analysis of model fits without altering existing modelling workflow.
-- **Status**: pending
+- **Status**: completed
+- **Progress**:
+  - 2025-10-31 14:04 UTC-07:00 — Step 1 complete: Added model selection panel and reorganised layout to host upcoming controls (`comparedialog.h`, `comparedialog.cpp`).
+  - 2025-10-31 14:15 UTC-07:00 — Step 2 update: Model selectors now accept available model lists, preserve selections, and emit reference/comparison change signals (`comparedialog.h`, `comparedialog.cpp`).
+  - 2025-10-31 14:55 UTC-07:00 — Step 3 complete: Compare dialog computes Mu, gm, rp, and Ia for triode/pentode test conditions, updating reference vs comparison labels on selection/input changes (`comparedialog.h`, `comparedialog.cpp`).
 ### [Date: 2025-10-22 13:30 UTC-07:00]
 
 #### Task: Fix Device Dropdown Population

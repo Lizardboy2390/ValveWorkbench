@@ -2301,8 +2301,10 @@ void ValveWorkbench::loadModel()
         QString label = modelItem->text(0);
         if (model == triodeModelPrimary) {
             label = "Model A";
+            model->setProperty("compareLabel", label);
         } else if (model == triodeModelSecondary) {
             label = "Model B";
+            model->setProperty("compareLabel", label);
         }
         modelItem->setText(0, label);
 
@@ -2574,22 +2576,46 @@ void ValveWorkbench::on_compareButton_clicked()
     CompareDialog dialog;
 
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-    Model *model;
-    if (project->getDeviceType() == TRIODE) {
-        model = findModel(COHEN_HELIE_TRIODE);
-    } else {
-        model = findModel(GARDINER_PENTODE);
-    }
-
-    if (model == nullptr) {
+    if (project == nullptr) {
         QMessageBox message;
-        message.setText("No model found");
+        message.setText("Project data not available");
         message.exec();
-
         return;
     }
 
-    dialog.setModel(model);
+    const QList<Model *> &models = project->getModels();
+    if (models.isEmpty()) {
+        QMessageBox message;
+        message.setText("No fitted models available");
+        message.exec();
+        return;
+    }
+
+    dialog.setAvailableModels(models);
+
+    Model *defaultReference = nullptr;
+    if (project->getDeviceType() == TRIODE) {
+        defaultReference = findModel(COHEN_HELIE_TRIODE);
+    } else {
+        defaultReference = findModel(GARDINER_PENTODE);
+    }
+    if (defaultReference == nullptr) {
+        defaultReference = models.first();
+    }
+
+    dialog.setModel(defaultReference);
+
+    if (models.size() > 1) {
+        Model *defaultComparison = models.at(0) == defaultReference && models.size() > 1
+            ? models.at(1)
+            : models.at(0);
+        if (defaultComparison == defaultReference && models.size() > 2) {
+            defaultComparison = models.at(1);
+        }
+        if (defaultComparison != defaultReference) {
+            dialog.setComparisonModel(defaultComparison);
+        }
+    }
 
     dialog.exec();
 }
