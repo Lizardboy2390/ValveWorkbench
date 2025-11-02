@@ -2168,9 +2168,37 @@ void ValveWorkbench::on_runButton_clicked()
 void ValveWorkbench::on_btnAddToProject_clicked()
 {
     qDebug("Save to Project button clicked");
+    // Always prompt for project details before saving
+    ProjectDialog dialog;
+    if (dialog.exec() != QDialog::Accepted) {
+        qDebug("Project save cancelled by user");
+        return;
+    }
+
+    // Ensure a project exists, create or update with dialog values
     if (currentProject == nullptr) {
-        qDebug("No current project, creating new one");
-        on_actionNew_Project_triggered();
+        qDebug("No current project, creating new one from dialog");
+        Project *project = new Project();
+        project->setName(dialog.getName());
+        project->setDeviceType(dialog.getDeviceType());
+
+        setSelectedTreeItem(currentProject, false);
+        currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
+        currentProject->setText(0, dialog.getName());
+        currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
+        currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) project));
+
+        project->setTreeItem(currentProject);
+        setSelectedTreeItem(currentProject, true);
+    } else {
+        // Update existing project's name/device
+        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+        if (project != nullptr) {
+            project->setName(dialog.getName());
+            project->setDeviceType(dialog.getDeviceType());
+        }
+        currentProject->setText(0, dialog.getName());
     }
 
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();

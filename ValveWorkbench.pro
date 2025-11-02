@@ -13,6 +13,8 @@ DEFINES += NOMINMAX
 DEFINES += WIN32_LEAN_AND_MEAN
 DEFINES += GLOG_USE_GLOG_EXPORT
 
+win32:CONFIG(release, debug|release): DESTDIR = $$OUT_PWD/release
+
 # Force Release runtime to match Ceres
 win32: QMAKE_CXXFLAGS += /MD
 win32: QMAKE_CXXFLAGS_DEBUG += /MD

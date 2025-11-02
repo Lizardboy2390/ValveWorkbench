@@ -94,11 +94,36 @@ void Model::addMeasurement(Measurement *measurement)
     for (int s = 0; s < sweeps; s++) {
         Sweep *sweep = measurement->at(s);
 
+        // Determine if this sweep's grid values (Vg1) are incorrectly positive.
+        // If the first meaningful (finite, non-zero) Vg1 sample is > 0, we flip
+        // the sign of Vg1 for all samples when adding to the solver. This does
+        // not mutate the Measurement; it only corrects the data fed to the model.
+        bool flipVg1 = false;
+        {
+            int probeCount = sweep->count();
+            for (int pi = 0; pi < probeCount; ++pi) {
+                Sample *probe = sweep->at(pi);
+                double vgProbe = probe->getVg1();
+                if (std::isfinite(vgProbe) && std::fabs(vgProbe) > 1e-9) {
+                    flipVg1 = (vgProbe > 0.0);
+                    break;
+                }
+            }
+        }
+
         int samples = sweep->count();
-            for (int i = 0; i < samples; i++) {
+        for (int i = 0; i < samples; i++) {
             Sample *sample = sweep->at(i);
 
-            addSample(sample->getVa(), sample->getIa(), sample->getVg1(), sample->getVg2(), sample->getIg2());
+            const double va = sample->getVa();
+            const double ia = sample->getIa();
+            const double vg1 = sample->getVg1();
+            const double vg2 = sample->getVg2();
+            const double ig2 = sample->getIg2();
+
+            const double vg1Corrected = flipVg1 ? -vg1 : vg1;
+
+            addSample(va, ia, vg1Corrected, vg2, ig2);
         }
     }
 }
