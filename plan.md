@@ -1,40 +1,45 @@
-# Valve Workbench - Calculator Porting Plan
+# Valve Workbench — Project Plan (AudioSmith)
 
-## Overview
-This plan outlines the incremental porting of web-based valve calculators from `valvedesigner-web` into the Qt Designer tab. The focus is on small, compileable steps to integrate UI, plots, interfaces, and functionality.
+Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
-## Current Status
-- **Designer Tab Implemented**: Triode Common Cathode calculator basic UI and parameter system functional.
-- **Issues Resolved**: Device dropdowns populated, graph display working, no crashes when selecting devices.
-- **Model Plotting Fixed**: Grid plot order corrected, loop overrun resolved, debug flood removed.
-- **Parameter Scaling Fixed**: Updated 12AX7.json with datasheet parameters, Kg1 internal value 0.000898 appropriate.
-- **Grid Calibration UI Added**: Preferences dialog now captures measured −5 V/−60 V grid readings and exposes two-point command helper (analyser integration pending).
-- **Double-Triode Sweeps Stabilised**: Selecting measurements or individual sweeps now keeps both triode overlays visible and prevents plot crashes.
-- **Modeller Auto Fit**: First visit to the Modeller tab automatically runs one triode fit so both plots appear without manual action.
-- **Next Phase**: Testing and validation of all features.
+## Purpose
+Deliver a stable, end‑user application for measuring, modeling, and designing vacuum‑tube circuits with clear workflows for Single and Double Triode devices.
 
-## Immediate Next Step
-- Test all functionality in Modeller and Designer tabs.
-- Validate model parameters against datasheet and web version.
-- Document fixes and update README.
-- Plan analyser grid-calibration integration once measurement workflow is verified.
-- Design Compare dialog workflow (model selection + parameter display) before implementation.
+## Current state (high level)
+- Analyser: Automated sweeps working; Save to Project prompts every time
+- Modeller: Fitting stable; guard flips positive grid voltages to negative
+- Designer: Triode Common Cathode functional; device selection and plotting work
 
-## Current Objective – Double Triode Modelling
-- Run Triode A fitting exactly as today (red curves & parameter column).
-- Step 1 ✅: Measurement-layer helper detects second-triode samples (no behaviour change).
-- Step 2 ✅: ValveWorkbench helper clones Triode B measurement data (still dormant).
-- Step 2a ✅: Keep Triode B clone alive across modelling runs so analyser overlay can render while selecting sweeps.
-- Step 3 (pending): Feed cloned measurement into a separate model fit and capture parameters (reintroduce incrementally; current build runs single fit only).
-- Step 4: Plot Triode B curves in green and update properties with side-by-side values.
-- Keep changes easily revertable and test after each step.
+## Goals (near‑term)
+- Reliability: Validate measurement → save → model → compare workflow
+- Double‑Triode UX: Clear A/B overlays, colors, and labels throughout
+- Documentation: End‑user README, concise tasks, visible change log
 
-## Pending Feature – Compare Dialog
-- Implement model-selection UI within Compare dialog (choose reference and comparison fits).
-- Calculate triode/pentode metrics at user-specified test conditions using selected models.
-- Present side-by-side values, leaving existing modelling workflow unchanged until feature is ready.
+## Milestones
+- M1: Workflow baseline (complete)
+  - Save to Project prompts every time
+  - Modeller guard for grid polarity
+  - A/B overlay colour coding
+- M2: Polishing & stability (in progress)
+  - Robust plotting in Designer and Modeller (no empty or runaway plots)
+  - Helpful error messages for invalid ranges/ports
+- M3: Documentation & Release prep (in progress)
+  - Updated README (end user), plan, tasks
+  - Curated change log and screenshots
 
-## Notes
-- All changes approved and implemented.
-- Work in small steps with user approval and testing.
-- Document all changes and test results properly.
+## Risks & mitigations
+- Hardware variance → Provide safe defaults and sanity checks
+- Fit convergence issues → Initial parameter hints and Vg guard (done)
+- UI confusion → Consistent colours/labels (A=red, B=green) and prompts
+
+## Roadmap (rolling)
+- Week 1: Stabilize double‑triode visuals and property tables
+- Week 2: Validate Designer calculations; add SPICE examples
+- Week 3: Expand troubleshooting; refine error dialogs
+
+## Change log (highlights)
+- 2025‑11‑02: Always prompt for project name before save; modelling guard for positive Vg
+- 2025‑10‑21: Fixed infinite loop in model plotting (grid step direction)
+
+## Contact
+AudioSmith — Darrin Smith, Nelson BC, Canada
