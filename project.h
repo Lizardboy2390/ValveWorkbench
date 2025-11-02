@@ -1,10 +1,9 @@
-#ifndef APP_PROJECT_H
-#define APP_PROJECT_H
+#ifndef PROJECT_H
+#define PROJECT_H
 
 #include <QString>
 #include <QJsonObject>
 #include <QTreeWidgetItem>
-#include <QList>
 #include "valvemodel/data/measurement.h"
 #include "valvemodel/model/model.h"
 
@@ -23,8 +22,6 @@ public:
     bool addMeasurement(Measurement *measurement);
     bool addModel(Model *model);
 
-    const QList<Model *> &getModels() const;
-
     void setTreeItem(QTreeWidgetItem *item);
     QTreeWidgetItem *getTreeItem() const;
 
@@ -41,4 +38,4 @@ private:
     QTreeWidgetItem *treeItem;
 };
 
-#endif // APP_PROJECT_H
+#endif // PROJECT_H

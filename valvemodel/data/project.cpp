@@ -163,11 +163,6 @@ bool Project::addModel(Model *model)
     return true;
 }
 
-const QList<Model *> &Project::getModels() const
-{
-    return models;
-}
-
 int Project::getPentodeType() const
 {
     return pentodeType;
