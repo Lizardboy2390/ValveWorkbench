@@ -47,6 +47,138 @@ int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
     return 0;
 }
 
+void ValveWorkbench::on_pushButton_3_clicked()
+{
+    // Load Template...
+    QString baseDir = QDir::cleanPath(QDir::currentPath() + "/models");
+    QString startDir = QDir(baseDir).exists() ? baseDir : QCoreApplication::applicationDirPath();
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Template"), startDir, tr("JSON Files (*.json)"));
+    if (fileName.isEmpty()) return;
+
+    QFile f(fileName);
+    if (!f.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("Load Template"), tr("Could not open file."));
+        return;
+    }
+    const QByteArray bytes = f.readAll();
+    f.close();
+
+    QJsonParseError perr;
+    QJsonDocument doc = QJsonDocument::fromJson(bytes, &perr);
+    if (perr.error != QJsonParseError::NoError || !doc.isObject()) {
+        QMessageBox::warning(this, tr("Load Template"), tr("Invalid JSON template."));
+        return;
+    }
+    const QJsonObject obj = doc.object();
+
+    // Name
+    if (ui && ui->deviceName) {
+        ui->deviceName->setText(obj.value("name").toString(QFileInfo(fileName).baseName()));
+    }
+
+    // Device type
+    const QString devType = obj.value("deviceType").toString().toUpper();
+    if (devType == QLatin1String("TRIODE")) {
+        deviceType = TRIODE;
+        if (ui && ui->deviceType) ui->deviceType->setCurrentIndex(0);
+    } else if (devType == QLatin1String("PENTODE")) {
+        deviceType = PENTODE;
+        if (ui && ui->deviceType) ui->deviceType->setCurrentIndex(1);
+    } else if (devType == QLatin1String("DOUBLE_TRIODE")) {
+        deviceType = DOUBLE_TRIODE;
+        if (ui && ui->deviceType) ui->deviceType->setCurrentIndex(2);
+    }
+
+    // Analyser defaults
+    const QJsonObject defs = obj.value("analyserDefaults").toObject();
+    if (!defs.isEmpty()) {
+        heaterVoltage = defs.value("heaterVoltage").toDouble(heaterVoltage);
+
+        const auto setRange = [&](const char *key, double &start, double &stop, double &step){
+            const QJsonObject r = defs.value(QLatin1String(key)).toObject();
+            if (!r.isEmpty()) {
+                start = r.value("start").toDouble(start);
+                stop  = r.value("stop").toDouble(stop);
+                step  = r.value("step").toDouble(step);
+            }
+        };
+        setRange("anode", anodeStart, anodeStop, anodeStep);
+        setRange("grid", gridStart, gridStop, gridStep);
+        setRange("screen", screenStart, screenStop, screenStep);
+
+        const QJsonObject lim = defs.value("limits").toObject();
+        if (!lim.isEmpty()) {
+            iaMax = lim.value("iaMax").toDouble(iaMax);
+            pMax = lim.value("pMax").toDouble(pMax);
+        }
+    }
+
+    // Optionally apply model parameters to the active model if present in template
+    const QJsonObject modelObj = obj.value("model").toObject();
+    if (!modelObj.isEmpty()) {
+        // Determine model type from template
+        const QString mtype = modelObj.value("type").toString();
+        int desiredType = -1;
+        if (mtype.compare("COHEN_HELIE_TRIODE", Qt::CaseInsensitive) == 0 || mtype.compare("TRIODE", Qt::CaseInsensitive) == 0) {
+            desiredType = COHEN_HELIE_TRIODE;
+        } else if (mtype.compare("KOREN_TRIODE", Qt::CaseInsensitive) == 0) {
+            desiredType = KOREN_TRIODE;
+        } else if (mtype.compare("SIMPLE_TRIODE", Qt::CaseInsensitive) == 0) {
+            desiredType = SIMPLE_TRIODE;
+        } else if (mtype.compare("GARDINER_PENTODE", Qt::CaseInsensitive) == 0 || mtype.compare("PENTODE", Qt::CaseInsensitive) == 0) {
+            desiredType = GARDINER_PENTODE;
+        }
+
+        if (desiredType != -1) {
+            // Ensure the correct model type is selected
+            selectModel(desiredType);
+            if (model) {
+                // Use full template object for fromJson as elsewhere in the app
+                model->fromJson(obj);
+            }
+        }
+    }
+
+    // Update UI to reflect loaded values
+    updateParameterDisplay();
+}
+
+void ValveWorkbench::on_pushButton_4_clicked()
+{
+    // Save Template...
+    QJsonObject obj;
+    obj.insert("name", ui && ui->deviceName ? ui->deviceName->text() : QString("Device"));
+    QString devTypeStr = "TRIODE";
+    if (deviceType == PENTODE) devTypeStr = "PENTODE";
+    else if (deviceType == DOUBLE_TRIODE) devTypeStr = "DOUBLE_TRIODE";
+    obj.insert("deviceType", devTypeStr);
+
+    QJsonObject defs;
+    auto makeRange = [&](double start, double stop, double step){
+        QJsonObject r; r.insert("start", start); r.insert("stop", stop); r.insert("step", step); return r; };
+    defs.insert("anode", makeRange(anodeStart, anodeStop, anodeStep));
+    defs.insert("grid", makeRange(gridStart, gridStop, gridStep));
+    defs.insert("screen", makeRange(screenStart, screenStop, screenStep));
+    QJsonObject lim; lim.insert("iaMax", iaMax); lim.insert("pMax", pMax); defs.insert("limits", lim);
+    obj.insert("analyserDefaults", defs);
+
+    QJsonDocument out(obj);
+
+    QString baseDir = QDir::cleanPath(QDir::currentPath() + "/models");
+    QDir().mkpath(baseDir);
+    QString suggested = baseDir + "/" + obj.value("name").toString("Device").replace(' ', '_') + ".json";
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save Template"), suggested, tr("JSON Files (*.json)"));
+    if (fileName.isEmpty()) return;
+    QFile f(fileName);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QMessageBox::warning(this, tr("Save Template"), tr("Could not write file."));
+        return;
+    }
+    f.write(out.toJson(QJsonDocument::Indented));
+    f.close();
+}
+
+
 bool ValveWorkbench::measurementHasValidSamples(Measurement *measurement) const
 {
     if (measurement == nullptr) {

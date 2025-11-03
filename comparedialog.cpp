@@ -7,6 +7,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QDoubleValidator>
 #include <QLocale>
 #include <QPushButton>
 #include <QSignalBlocker>
@@ -39,6 +40,23 @@ CompareDialog::CompareDialog(QWidget *parent) :
     configureLineEdit(ui->gridP);
     configureLineEdit(ui->anodeP);
     configureLineEdit(ui->screen);
+
+    // Validators and sensible defaults
+    auto *validator = new QDoubleValidator(this);
+    validator->setDecimals(3);
+    validator->setNotation(QDoubleValidator::StandardNotation);
+    ui->grid->setValidator(validator);
+    ui->anode->setValidator(validator);
+    ui->gridP->setValidator(validator);
+    ui->anodeP->setValidator(validator);
+    ui->screen->setValidator(validator);
+
+    // Defaults: users enter positive magnitudes for "-ve Grid Voltage"; code will negate internally
+    ui->grid->setText(QStringLiteral("1.500"));    // means -1.5 V
+    ui->anode->setText(QStringLiteral("250.000"));
+    ui->gridP->setText(QStringLiteral("2.000"));   // means -2.0 V
+    ui->anodeP->setText(QStringLiteral("250.000"));
+    ui->screen->setText(QStringLiteral("150.000"));
 
     triodeReferenceLabels = {ui->refMu, ui->refIa, ui->refGm, ui->refRa};
     triodeComparisonLabels = {ui->modMu, ui->modIa, ui->modGm, ui->modRa};
@@ -105,7 +123,7 @@ CompareDialog::CompareDialog(QWidget *parent) :
         });
     }
 
-    connect(ui->pushButton, &QPushButton::clicked, this, &QWidget::close);
+    connect(ui->pushButton, &QPushButton::clicked, this, &QDialog::accept);
 
     updateMetrics();
 
@@ -392,9 +410,10 @@ QString CompareDialog::displayNameForModel(Model *model) const
 void CompareDialog::updateMetrics()
 {
     const double triodeVa = valueFromLineEdit(ui->anode);
-    const double triodeVg = valueFromLineEdit(ui->grid);
+    // Inputs labeled "-ve Grid Voltage" accept positive magnitudes; negate for computation
+    const double triodeVg = -valueFromLineEdit(ui->grid);
     const double pentodeVa = valueFromLineEdit(ui->anodeP);
-    const double pentodeVg = valueFromLineEdit(ui->gridP);
+    const double pentodeVg = -valueFromLineEdit(ui->gridP);
     const double pentodeVs = valueFromLineEdit(ui->screen);
 
     Model *referenceModel = modelForComboIndex(referenceModelCombo, referenceModelCombo->currentIndex());

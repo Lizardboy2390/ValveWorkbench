@@ -151,6 +151,10 @@ private slots:
 
     void on_actionExport_Model_triggered();
 
+    // Analyser tab: Template buttons (Load/Save Template)
+    void on_pushButton_3_clicked();
+    void on_pushButton_4_clicked();
+
 private:
     Ui::ValveWorkbench *ui;
 
