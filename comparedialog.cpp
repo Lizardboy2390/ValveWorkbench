@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QLocale>
+#include <QPushButton>
 #include <QSignalBlocker>
 #include <QSizePolicy>
 #include <QVariant>
@@ -103,6 +104,8 @@ CompareDialog::CompareDialog(QWidget *parent) :
             updateMetrics();
         });
     }
+
+    connect(ui->pushButton, &QPushButton::clicked, this, &QWidget::close);
 
     updateMetrics();
 
@@ -299,15 +302,11 @@ void CompareDialog::repopulateCombo(QComboBox *combo, Model *selectedModel)
     QSignalBlocker blocker(combo);
     combo->clear();
     combo->addItem(colorSwatch(QColor()), tr("(none)"), QVariant::fromValue<Model *>(nullptr));
-    combo->setItemData(0, QVariant::fromValue<QColor>(QColor()), Qt::ForegroundRole);
 
     int selectedIndex = 0;
     for (int i = 0; i < availableModels.size(); ++i) {
         Model *candidate = availableModels.at(i);
         combo->addItem(colorSwatch(candidate->getPlotColor()), displayNameForModel(candidate), QVariant::fromValue<Model *>(candidate));
-        // Tint the text to match the model's plot color
-        const int addedIndex = combo->count() - 1;
-        combo->setItemData(addedIndex, QVariant::fromValue<QColor>(candidate->getPlotColor()), Qt::ForegroundRole);
         if (candidate == selectedModel) {
             selectedIndex = i + 1;
         }
