@@ -442,6 +442,8 @@ void Analyser::startTest()
             steppedSweep(gridStop, gridStart, anodeStart, anodeStop, anodeStep); // Sweep is reversed to finish on low (absolute) value
 
             sendCommand("S7 0");
+            // Ensure anode is set to starting voltage before beginning grid sweep
+            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
         }
         sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
 
@@ -497,6 +499,21 @@ void Analyser::nextSample() {
 
         const int sweepValue = sweepParameter.at(stepIndex).at(sweepIndex);
 
+        // For Transfer mode: discharge and reassert anode only at the first point of each sweep
+        if (testType == TRANSFER_CHARACTERISTICS && sweepIndex == 0) {
+            sendCommand("M1");
+            // Reassert anode after discharge at start of sweep
+            if (stepType == ANODE) {
+                // Triode transfer: anode is stepped per stepIndex
+                if (stepIndex < stepParameter.length()) {
+                    sendCommand(buildSetCommand("S3 ", stepParameter.at(stepIndex)));
+                }
+            } else {
+                // Pentode transfer: anode fixed at anodeStart
+                sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+            }
+        }
+
         if (isDoubleTriode && stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()) {
             const int primaryGrid = stepParameter.at(stepIndex);
             sendCommand(buildSetCommand("S2 ", primaryGrid));
@@ -510,8 +527,11 @@ void Analyser::nextSample() {
             qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
             sendCommand(secondaryCommand);
         }
+        if (testType == TRANSFER_CHARACTERISTICS) {
+            // Refire each point
+            sendCommand("M6");
+        }
         sendCommand("M2");
-        expectedResponses++; // Expect a response for this measurement
     } else {
         // qInfo("=== END OF SWEEP DEBUG ===");
         // qInfo("End of sweep reached, moving to next step");
@@ -738,6 +758,16 @@ void Analyser::checkResponse(QString response)
 
                     // Now send the first actual sample
                     int firstSampleValue = sweepParameter.at(stepIndex).at(0);
+                    // Ensure anode is asserted for Transfer mode before first actual sample
+                    if (testType == TRANSFER_CHARACTERISTICS) {
+                        if (stepType == ANODE) {
+                            if (stepIndex < stepParameter.length()) {
+                                sendCommand(buildSetCommand("S3 ", stepParameter.at(stepIndex)));
+                            }
+                        } else {
+                            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+                        }
+                    }
                     if (isDoubleTriode && stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()) {
                         const int primaryGrid = stepParameter.at(stepIndex);
                         sendCommand(buildSetCommand("S2 ", primaryGrid));

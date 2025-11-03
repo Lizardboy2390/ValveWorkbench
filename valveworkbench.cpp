@@ -1256,6 +1256,9 @@ void ValveWorkbench::loadTemplate(int index)
     anodeStart = tpl.getVaStart();
     anodeStop = tpl.getVaStop();
     anodeStep = tpl.getVaStep();
+    if (anodeStep <= 0.0) {
+        anodeStep = 25.0;
+    }
     gridStart = tpl.getVgStart();
     gridStop = tpl.getVgStop();
     gridStep = tpl.getVgStep();
@@ -2150,6 +2153,11 @@ void ValveWorkbench::on_testType_currentIndexChanged(int index)
         } else { // (Triode) Anode stepped and no Screen
             ui->anodeStop->setEnabled(true);
             ui->anodeStep->setEnabled(true);
+            // Default: 25V anode steps for transfer characteristics if not set
+            if (anodeStep <= 0.0) {
+                anodeStep = 25.0;
+                updateDoubleValue(ui->anodeStep, anodeStep);
+            }
         }
         break;
     case SCREEN_CHARACTERISTICS: // Anode fixed, Screen swept and Grid stepped
