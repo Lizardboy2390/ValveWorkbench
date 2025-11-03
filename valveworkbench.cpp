@@ -535,6 +535,13 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     ui->setupUi(this);
 
+    // Remove heater button row to free space (heaters are fixed in hardware)
+    if (ui->heaterButton && ui->heaterLayout) {
+        ui->heaterLayout->removeWidget(ui->heaterButton);
+        ui->heaterButton->hide();
+        ui->heaterButton->deleteLater();
+    }
+
     // Add the Data tab programmatically
     QWidget *dataTab = nullptr;
     bool dataTabExists = false;
@@ -583,8 +590,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         dataTab->setLayout(dataLayout);
     }
 
-    // Set initial heater button state and indicator
-    ui->heaterButton->setText("Heater ON");
+    // Heater button is unused in new hardware; no initialization needed
 
     ui->deviceType->addItem("Triode", TRIODE);
     ui->deviceType->addItem("Pentode", PENTODE);
@@ -601,13 +607,8 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->progressBar->reset();
     ui->progressBar->setVisible(false);
 
-    // Initialize heater indicator - simplified approach
-    heaterIndicator = new LedIndicator();
-    heaterIndicator->setOffColor(QColorConstants::LightGray);
-
-    // Just add to layout - let Qt handle any existing widgets
-    ui->heaterLayout->addWidget(heaterIndicator);
-    heaterIndicator->setState(true); // Heater is always "on"
+    // Heater indicator removed (cosmetic change)
+    heaterIndicator = nullptr;
 
     ui->measureCheck->setVisible(false);
     ui->modelCheck->setVisible(false);
@@ -2883,18 +2884,6 @@ void ValveWorkbench::on_compareButton_clicked()
 
 void ValveWorkbench::on_heaterButton_clicked()
 {
-    // Always keep heaters as true for workflow to proceed
-   // heaters = true;
-
-    if (analyser != nullptr) {
-        analyser->setIsHeatersOn(true);
-    }
-
-    if (heaterIndicator != nullptr) {
-        heaterIndicator->setState(true);
-    }
-
-    // Button shows "Heater ON" to indicate heaters are on and ready
-    ui->heaterButton->setText("Heater ON");
-    log("Heater confirmed ON - ready for testing");
+    // No-op: heater control is not used; heaters are fixed in hardware
+    Q_UNUSED(this);
 }

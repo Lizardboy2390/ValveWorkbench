@@ -29,7 +29,9 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 ## Using the app
 - Analyser tab
   - Select device type, set sweep ranges, click Run
+  - Load/Save Template to reuse analyser settings
   - Save to Project to keep a measurement (dialog prompts for project name every time)
+  - Note: Heater controls are not present; heaters are fixed in the new hardware
 - Modeller tab
   - Select a measurement → Fit Triode/Pentode
   - Red curves (Triode A) and Green curves (Triode B) overlay when available
@@ -51,6 +53,8 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - Empty plots in Designer: Select a device model first
 
 ## Change log (highlights)
+- 2025‑11‑02: Analyser: removed heater button/LCDs (heaters fixed in hardware)
+- 2025‑11‑02: Analyser: Load/Save Template for analyser settings
 - 2025‑11‑02: Always prompt for Project name before saving measurements
 - 2025‑11‑02: Modeller guard flips positive grid voltages to negative during fitting
 - 2025‑10‑21: Fixed infinite loop in model plotting (grid stepping correction)
