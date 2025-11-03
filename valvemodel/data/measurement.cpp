@@ -590,47 +590,50 @@ void Measurement::anodeAxes(Plot *plot)
 void Measurement::transferAxes(Plot *plot)
 {
     plot->clear();
-    // Determine dynamic ranges from measured data when available
-    double minVg = 0.0;    // most negative grid voltage
-    double maxIaObs = 0.0; // maximum observed anode current (mA)
-
-    if (!sweeps.isEmpty()) {
-        bool haveAny = false;
-        for (int i = 0; i < sweeps.size(); ++i) {
-            Sweep *sw = sweeps.at(i);
-            if (!sw) continue;
-            for (int j = 0; j < sw->count(); ++j) {
-                Sample *s = sw->at(j);
-                if (!s) continue;
-                double vg = s->getVg1();
-                double ia = s->getIa();
-                if (!haveAny) {
-                    minVg = vg;
-                    haveAny = true;
-                } else {
-                    if (vg < minVg) minVg = vg;
-                }
-                if (ia > maxIaObs) maxIaObs = ia;
+    // Gather observed data bounds for Vg and Ia
+    double minVgObs = 0.0, maxVgObs = 0.0;
+    bool haveVg = false;
+    double maxIaObs = 0.0;
+    for (int i = 0; i < sweeps.size(); ++i) {
+        Sweep *sw = sweeps.at(i);
+        if (!sw) continue;
+        for (int j = 0; j < sw->count(); ++j) {
+            Sample *s = sw->at(j);
+            if (!s) continue;
+            const double vg = s->getVg1();
+            const double ia = s->getIa();
+            if (!haveVg) { minVgObs = maxVgObs = vg; haveVg = true; }
+            else {
+                if (vg < minVgObs) minVgObs = vg;
+                if (vg > maxVgObs) maxVgObs = vg;
             }
+            if (ia > maxIaObs) maxIaObs = ia;
         }
-
-        // Fallbacks if no valid samples found
-        if (!std::isfinite(minVg) || minVg >= 0.0) minVg = -gridStop; // use configured span
-        if (!std::isfinite(maxIaObs) || maxIaObs <= 0.0) maxIaObs = iaMax;
     }
 
-    // If no sweeps or no data, use configured spans
-    if (sweeps.isEmpty()) {
-        minVg = -gridStop; // gridStop is a magnitude in UI; X axis is negative to 0
-        maxIaObs = iaMax;
+    // Build X axis from both UI and observed data (so points aren't left of the plot)
+    double xStart = -gridStop;
+    double xStop  = -gridStart;
+    if (haveVg) {
+        if (minVgObs < xStart) xStart = minVgObs;
+        if (maxVgObs > xStop)  xStop  = maxVgObs;
+    }
+    if (xStop > 0.0) xStop = 0.0; // never exceed 0V
+    if (xStart >= xStop) {
+        // Fallback if configuration produces an invalid or zero-width range
+        xStart = (gridStop > 0.0 ? -gridStop : -1.0);
+        xStop  = (gridStart > 0.0 ? -gridStart : 0.0);
+        if (xStop > 0.0) xStop = 0.0;
     }
 
-    const double vgSpan = std::abs(minVg);
-    double vg1Interval = interval(vgSpan);
-    double iaInterval = interval(maxIaObs);
+    // Determine a safe Y-axis upper bound from observed data with fallback to iaMax
+    double yStop = (maxIaObs > 0.0) ? (maxIaObs * 1.05) : ((iaMax > 0.0) ? iaMax : 0.01);
 
-    // X axis must cover negative grid voltages increasing to 0V
-    plot->setAxes(-vgSpan, 0.0, vg1Interval, 0.0, maxIaObs, iaInterval, 2, 1);
+    double vg1Interval = interval(std::abs(xStop - xStart));
+    double iaInterval = interval(yStop);
+
+    // X axis: negative voltages increasing towards 0
+    plot->setAxes(xStart, xStop, vg1Interval, 0.0, yStop, iaInterval, 2, 1);
 }
 
 void Measurement::screenAxes(Plot *plot)
