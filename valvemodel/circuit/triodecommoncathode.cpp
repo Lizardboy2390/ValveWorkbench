@@ -95,13 +95,20 @@ void TriodeCommonCathode::calculateCathodeLoadLine()
     }
 
     double rk = parameter[TRI_CC_RK]->getValue();  // Cathode resistor
-    double vgMax = 10.0;  // Maximum grid voltage to consider
+    // Use device's grid range, constrained to a sensible Designer range
+    double vgMax = device1->getVg1Max();
+    if (!std::isfinite(vgMax) || vgMax <= 0.0) {
+        vgMax = 4.0;
+    }
+    // Clamp to [2V, 6V] typical for small-signal triodes to avoid extreme flat regions
+    if (vgMax < 2.0) vgMax = 2.0;
+    if (vgMax > 6.0) vgMax = 6.0;
     int steps = 50;       // Number of steps for cathode load line
 
     cathodeLoadLineData.clear();
 
     for (int i = 0; i <= steps; i++) {
-        double vg = (vgMax * i) / steps;  // Grid voltage from 0 to vgMax
+        double vg = (vgMax * i) / steps;  // Grid voltage from 0 to vgMax (will be negated for model)
 
         // Required anode current for this grid voltage: Ia = Vg / Rk
         double iaRequired = (vg / rk) * 1000.0;  // Convert to mA
@@ -264,6 +271,20 @@ void TriodeCommonCathode::plot(Plot *plot)
     calculateAnodeLoadLine();
     calculateCathodeLoadLine();
     QPointF op = findOperatingPoint();
+
+    // Set axes appropriate for Designer before drawing so segments are in-bounds
+    double vb = parameter[TRI_CC_VB]->getValue();
+    double ra = parameter[TRI_CC_RA]->getValue();
+    double rk = parameter[TRI_CC_RK]->getValue();
+    double iaMax = (ra + rk) > 0.0 ? (vb / (ra + rk)) * 1000.0 : 50.0; // mA
+    if (iaMax <= 0.0 || !std::isfinite(iaMax)) {
+        iaMax = 50.0;
+    }
+    double yStop = std::max(iaMax, 50.0);
+    double yMajor = yStop / 10.0;
+    if (yMajor <= 0.0) yMajor = 5.0;
+    double xMajor = vb > 0.0 ? vb / 10.0 : 25.0;
+    plot->setAxes(0.0, std::max(10.0, vb), xMajor, 0.0, yStop, yMajor);
 
     // Plot anode load line (green)
     if (anodeLoadLineData.size() >= 2) {

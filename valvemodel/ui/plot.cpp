@@ -93,21 +93,44 @@ QGraphicsScene *Plot::getScene()
 
 QGraphicsLineItem *Plot::createSegment(double x1, double y1, double x2, double y2, QPen pen)
 {
-    double x1_ = (x1 - xStart) * xScale;
-    double y1_ = PLOT_HEIGHT - (y1 - yStart) * yScale;
-    double x2_ = (x2 - xStart) * xScale;
-    double y2_ = PLOT_HEIGHT - (y2 - yStart) * yScale;
+    // Liang-Barsky clipping in data space against [xStart,xStop] x [yStart,yStop]
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    double p[4] = { -dx, dx, -dy, dy };
+    double q[4] = { x1 - xStart, xStop - x1, y1 - yStart, yStop - y1 };
+    double u1 = 0.0;
+    double u2 = 1.0;
 
-    // Debug output for coordinate transformation issues
-    // qDebug("Plot::createSegment: x1=%f->%f, y1=%f->%f, x2=%f->%f, y2=%f->%f",
-    //        x1, x1_, y1, y1_, x2, x2_, y2, y2_);
-
-    if (x1_ < 0.0 || x1_ > PLOT_WIDTH || x2_ < 0.0 || x2_ > PLOT_WIDTH || y1_ < 0.0 || y1_ > PLOT_HEIGHT || y2_ < 0.0 || y2_ > PLOT_HEIGHT) {
-        qWarning("Segment out of bounds - skipping: x1=%f,y1=%f to x2=%f,y2=%f", x1, y1, x2, y2);
-        return nullptr; // Return null instead of invisible segment
+    for (int i = 0; i < 4; ++i) {
+        if (p[i] == 0.0) {
+            if (q[i] < 0.0) {
+                // Line parallel and outside boundary
+                return nullptr;
+            }
+        } else {
+            double r = q[i] / p[i];
+            if (p[i] < 0.0) {
+                if (r > u2) return nullptr;
+                if (r > u1) u1 = r;
+            } else {
+                if (r < u1) return nullptr;
+                if (r < u2) u2 = r;
+            }
+        }
     }
 
-    return scene->addLine(x1_, y1_, x2_, y2_, pen);
+    double cx1 = x1 + u1 * dx;
+    double cy1 = y1 + u1 * dy;
+    double cx2 = x1 + u2 * dx;
+    double cy2 = y1 + u2 * dy;
+
+    // Transform to scene coordinates
+    double sx1 = (cx1 - xStart) * xScale;
+    double sy1 = PLOT_HEIGHT - (cy1 - yStart) * yScale;
+    double sx2 = (cx2 - xStart) * xScale;
+    double sy2 = PLOT_HEIGHT - (cy2 - yStart) * yScale;
+
+    return scene->addLine(sx1, sy1, sx2, sy2, pen);
 }
 
 QGraphicsTextItem *Plot::createLabel(double x, double y, double value, const QColor &color)

@@ -116,6 +116,7 @@ void Model::addMeasurement(Measurement *measurement)
         }
 
         int samples = sweep->count();
+        bool loggedFirstVg = false;
         for (int i = 0; i < samples; i++) {
             Sample *sample = sweep->at(i);
 
@@ -124,13 +125,21 @@ void Model::addMeasurement(Measurement *measurement)
             const double vg2 = sample->getVg2();
             const double ig2 = sample->getIg2();
 
-            // Use sample vg1 when available; otherwise fall back to the sweep's nominal (negative) grid
+            // Use sample vg1 when available; otherwise fall back to the sweep's nominal grid
             double vg1raw = sample->getVg1();
+            bool usedNominal = false;
             if (!std::isfinite(vg1raw) || std::fabs(vg1raw) < 1e-6) {
                 vg1raw = sweep->getVg1Nominal();
+                usedNominal = true;
             }
 
-            const double vg1Corrected = flipVg1 ? -vg1raw : vg1raw;
+            // Force non-positive for solver
+            const double vg1Corrected = (vg1raw > 0.0) ? -vg1raw : vg1raw;
+
+            if (!loggedFirstVg && std::isfinite(vg1Corrected) && std::fabs(vg1Corrected) > 1e-9) {
+                qInfo("MODEL INPUT: sweep=%d first vg1 used=%.6f (%s)", s, vg1Corrected, usedNominal ? "nominal" : "sample");
+                loggedFirstVg = true;
+            }
 
             addSample(va, ia, vg1Corrected, vg2, ig2);
         }

@@ -719,8 +719,8 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     }
 
     Device *device = devices.at(deviceNumber);
-    device->anodeAxes(&plot);
-    modelPlot = device->anodePlot(&plot);
+    // For Designer, do not set model axes or draw model curves here to avoid overriding
+    // the circuit load-line axes. The circuit plot will set appropriate axes.
 
     Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
     if (index == 1) {
