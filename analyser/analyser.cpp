@@ -367,6 +367,14 @@ void Analyser::startTest()
                     derivedStep = stepValue.at(1) - stepValue.at(0);
                 }
 
+                // Log the grid step list for Anode Characteristics
+                QString stepList;
+                for (int i = 0; i < stepValue.size(); ++i) {
+                    if (i) stepList.append(", ");
+                    stepList.append(QString::asprintf("%.3f", stepValue.at(i)));
+                }
+                qInfo("AnodeChar steps: count=%d gridSteps=[%s]", stepValue.size(), stepList.toStdString().c_str());
+
                 result->setGridStart(minGrid);
                 result->setGridStop(maxGrid);
                 result->setGridStep(derivedStep);
@@ -392,6 +400,11 @@ void Analyser::startTest()
             sendCommand("S2 0");
             sendCommand(buildSetCommand("S6 ", stepParameter.at(0)));
         } else {
+            // Log initial S2 setting at start of first sweep (Anode Characteristics)
+            if (stepCommandPrefix == "S2 ") {
+                double gridV = stepValue.isEmpty() ? 0.0 : stepValue.at(0);
+                qInfo("AnodeChar set S2 (initial): code=%d grid=%.3fV", stepParameter.at(0), gridV);
+            }
             sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
         }
 
@@ -582,6 +595,11 @@ void Analyser::nextSample() {
                 sendCommand("S2 0");
                 sendCommand(buildSetCommand("S6 ", stepParameter.at(stepIndex)));
             } else {
+                // Log S2 setting at the start of each new sweep (Anode Characteristics)
+                if (stepCommandPrefix == "S2 ") {
+                    double gridV = (stepIndex < stepValue.size()) ? stepValue.at(stepIndex) : 0.0;
+                    qInfo("AnodeChar set S2 (new sweep): stepIndex=%d code=%d grid=%.3fV", stepIndex, stepParameter.at(stepIndex), gridV);
+                }
                 sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(stepIndex)));
             }
 
@@ -777,6 +795,11 @@ void Analyser::checkResponse(QString response)
                             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                         }
                     }
+                    // One-line fix for Anode Characteristics: re-assert grid (S2) after verification PASS
+                    if (testType == ANODE_CHARACTERISTICS && stepCommandPrefix == "S2 " && stepIndex < stepParameter.length()) {
+                        sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
+                    }
+
                     if (isDoubleTriode && stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()) {
                         const int primaryGrid = stepParameter.at(stepIndex);
                         sendCommand(buildSetCommand("S2 ", primaryGrid));

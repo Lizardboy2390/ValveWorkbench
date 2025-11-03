@@ -104,6 +104,10 @@ void Model::addMeasurement(Measurement *measurement)
             for (int pi = 0; pi < probeCount; ++pi) {
                 Sample *probe = sweep->at(pi);
                 double vgProbe = probe->getVg1();
+                // If per-sample vg is unavailable or ~0, use the sweep's nominal grid for flip detection
+                if (!std::isfinite(vgProbe) || std::fabs(vgProbe) <= 1e-9) {
+                    vgProbe = sweep->getVg1Nominal();
+                }
                 if (std::isfinite(vgProbe) && std::fabs(vgProbe) > 1e-9) {
                     flipVg1 = (vgProbe > 0.0);
                     break;
@@ -117,11 +121,16 @@ void Model::addMeasurement(Measurement *measurement)
 
             const double va = sample->getVa();
             const double ia = sample->getIa();
-            const double vg1 = sample->getVg1();
             const double vg2 = sample->getVg2();
             const double ig2 = sample->getIg2();
 
-            const double vg1Corrected = flipVg1 ? -vg1 : vg1;
+            // Use sample vg1 when available; otherwise fall back to the sweep's nominal (negative) grid
+            double vg1raw = sample->getVg1();
+            if (!std::isfinite(vg1raw) || std::fabs(vg1raw) < 1e-6) {
+                vg1raw = sweep->getVg1Nominal();
+            }
+
+            const double vg1Corrected = flipVg1 ? -vg1raw : vg1raw;
 
             addSample(va, ia, vg1Corrected, vg2, ig2);
         }
