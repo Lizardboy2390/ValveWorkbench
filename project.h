@@ -22,6 +22,8 @@ public:
     bool addMeasurement(Measurement *measurement);
     bool addModel(Model *model);
 
+    const QList<Model *> &getModels() const { return models; }
+
     void setTreeItem(QTreeWidgetItem *item);
     QTreeWidgetItem *getTreeItem() const;
 
