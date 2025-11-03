@@ -497,7 +497,16 @@ void Analyser::nextSample() {
             // qInfo("This is the first command for stepIndex=%d", stepIndex);
         }
 
-        const int sweepValue = sweepParameter.at(stepIndex).at(sweepIndex);
+        int sweepValue = sweepParameter.at(stepIndex).at(sweepIndex);
+
+        // Hard clamp GRID command to UI range to prevent any overshoot (e.g., jump to -8V)
+        if (testType == TRANSFER_CHARACTERISTICS && sweepCommandPrefix == "S2 ") {
+            int codeLo = convertTargetVoltage(GRID, std::min(gridStart, gridStop));
+            int codeHi = convertTargetVoltage(GRID, std::max(gridStart, gridStop));
+            if (codeLo > codeHi) std::swap(codeLo, codeHi);
+            if (sweepValue < codeLo) sweepValue = codeLo;
+            if (sweepValue > codeHi) sweepValue = codeHi;
+        }
 
         // For Transfer mode: discharge and reassert anode only at the first point of each sweep
         if (testType == TRANSFER_CHARACTERISTICS && sweepIndex == 0) {
@@ -803,7 +812,14 @@ void Analyser::checkResponse(QString response)
                             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                             sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
                         } else {
-                            sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
+                            // TRANSFER (single triode): set S2 to the first GRID sweep value, not an anode step code
+                            int firstGridCode = 0;
+                            if (stepIndex < sweepParameter.length() && !sweepParameter.at(stepIndex).isEmpty()) {
+                                firstGridCode = sweepParameter.at(stepIndex).at(0);
+                            } else {
+                                firstGridCode = convertTargetVoltage(GRID, gridStart);
+                            }
+                            sendCommand(buildSetCommand("S2 ", firstGridCode));
                             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                         }
                         sendCommand("M2");
