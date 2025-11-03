@@ -13,8 +13,6 @@
 #include <QFileDialog>
 #include <QDebug>
 #include <QDir>
-#include <QFileInfo>
-#include <QCoreApplication>
 #include <QTreeWidgetItem>
 #include <QVector>
 #include <QColor>
@@ -2593,11 +2591,7 @@ void ValveWorkbench::on_properties_itemChanged(QTableWidgetItem *item)
 
 void ValveWorkbench::on_compareButton_clicked()
 {
-    // TEMP LOG START
-    qInfo("Compare: handler start");
-    // Prefer the project node that modelling used (it holds fitted models)
-    QTreeWidgetItem *projectItem = modelProject != nullptr ? modelProject : currentProject;
-    if (projectItem == nullptr) {
+    if (currentProject == nullptr) {
         QMessageBox message;
         message.setText("No project selected");
         message.exec();
@@ -2607,22 +2601,7 @@ void ValveWorkbench::on_compareButton_clicked()
 
     CompareDialog dialog;
 
-    // Ensure we are using the actual project node (not a child) before casting
-    QTreeWidgetItem *rootProject = nullptr;
-    if (projectItem->type() == TYP_PROJECT) {
-        rootProject = projectItem;
-    } else {
-        rootProject = getParent(projectItem, TYP_PROJECT);
-    }
-    if (rootProject == nullptr) {
-        qWarning("Compare: could not locate project node from current selection");
-        QMessageBox message;
-        message.setText("Could not locate the project for comparison.");
-        message.exec();
-        return;
-    }
-
-    Project *project = (Project *) rootProject->data(0, Qt::UserRole).value<void *>();
+    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
     Model *model;
     if (project->getDeviceType() == TRIODE) {
         model = findModel(COHEN_HELIE_TRIODE);
@@ -2638,115 +2617,9 @@ void ValveWorkbench::on_compareButton_clicked()
         return;
     }
 
-    // Build available models list: project models + presets from models/ folder
-    QList<Model *> available;
-    const QList<Model *> &projectModels = project->getModels();
-    qInfo("Compare: project models count=%d", projectModels.size());
-    for (Model *m : projectModels) {
-        qInfo("Compare: project model ptr=%p name=%s", m, m ? m->getName().toUtf8().constData() : "(null)");
-        available.append(m);
-    }
-    // Ensure the current model is present at least once
-    if (!available.contains(model)) {
-        qInfo("Compare: appending current model ptr=%p name=%s", model, model->getName().toUtf8().constData());
-        available.prepend(model);
-    }
+    dialog.setModel(model);
 
-    // Also include any model nodes present in the project tree (in case the project list isn't updated yet)
-    if (projectItem != nullptr) {
-        for (int i = 0; i < projectItem->childCount(); ++i) {
-            QTreeWidgetItem *child = projectItem->child(i);
-            if (!child) continue;
-            if (child->type() != TYP_MODEL) continue;
-            QVariant v = child->data(0, Qt::UserRole);
-            Model *m = static_cast<Model *>(v.value<void *>());
-            if (m && !available.contains(m)) {
-                qInfo("Compare: adding model from tree ptr=%p text=%s", m, child->text(0).toUtf8().constData());
-                available.append(m);
-            }
-        }
-    }
-
-    // Load preset models (triode) from models/ folder as additional comparison options
-    if (project->getDeviceType() == TRIODE) {
-        QDir modelDir(QCoreApplication::applicationDirPath());
-        // Try project root \models first if running from source
-        QDir sourceModelsDir(QDir::cleanPath(QDir::currentPath() + "/models"));
-        QStringList candidates;
-        if (sourceModelsDir.exists()) {
-            candidates = sourceModelsDir.entryList(QStringList() << "*.json", QDir::Files);
-            qInfo("Compare: preset candidates in models/ count=%d", candidates.size());
-            for (const QString &file : candidates) {
-                QFile f(sourceModelsDir.filePath(file));
-                if (!f.open(QIODevice::ReadOnly)) continue;
-                const QByteArray bytes = f.readAll();
-                f.close();
-                QJsonDocument doc = QJsonDocument::fromJson(bytes);
-                if (!doc.isObject()) continue;
-                // Create a triode model and load parameters
-                Model *preset = ModelFactory::createModel(COHEN_HELIE_TRIODE);
-                if (!preset) continue;
-                preset->fromJson(doc.object());
-                preset->setProperty("compareLabel", QFileInfo(file).baseName());
-                qInfo("Compare: preset added label=%s ptr=%p", QFileInfo(file).baseName().toUtf8().constData(), preset);
-                available.append(preset);
-            }
-        }
-    }
-
-    // Derive friendly labels from project tree (e.g. "Model A" / "Model B")
-    // and attach them to the model objects for CompareDialog to use
-    if (projectItem != nullptr) {
-        for (int i = 0; i < projectItem->childCount(); ++i) {
-            QTreeWidgetItem *child = projectItem->child(i);
-            if (!child) continue;
-            if (child->type() != TYP_MODEL) continue;
-            QVariant v = child->data(0, Qt::UserRole);
-            Model *m = static_cast<Model *>(v.value<void *>());
-            if (m) {
-                m->setProperty("compareLabel", child->text(0));
-            }
-        }
-        // Ensure the current model also has a label (in case it was not in the tree yet)
-        if (model && !model->property("compareLabel").isValid()) {
-            model->setProperty("compareLabel", model->getName());
-        }
-    }
-
-    // Populate dialog with available models and set initial selections
-    qInfo("Compare: final available count=%d", available.size());
-    for (int i = 0; i < available.size(); ++i) {
-        Model *m = available.at(i);
-        const QVariant labelProp = m ? m->property("compareLabel") : QVariant();
-        const QString label = labelProp.isValid() ? labelProp.toString() : (m ? m->getName() : QString("(null)"));
-        qInfo("Compare: [%d] ptr=%p label=%s", i, m, label.toUtf8().constData());
-    }
-    dialog.setAvailableModels(available);
-    dialog.setModel(model); // reference selection defaults to the recently fitted model
-
-    // If there is more than one model, prefer "Model B" for comparison if present
-    if (available.size() > 1) {
-        Model *preferred = nullptr;
-        for (Model *m : available) {
-            if (m == model) continue; // skip reference
-            const QVariant lbl = m->property("compareLabel");
-            if (lbl.isValid() && lbl.toString().contains("Model B", Qt::CaseInsensitive)) {
-                preferred = m;
-                break;
-            }
-        }
-        if (!preferred) {
-            // pick the first different from reference
-            for (Model *m : available) { if (m != model) { preferred = m; break; } }
-        }
-        if (preferred) {
-            dialog.setComparisonModel(preferred);
-        }
-    }
-
-    qInfo("Compare: opening dialog");
     dialog.exec();
-    qInfo("Compare: dialog closed");
 }
 
 void ValveWorkbench::on_heaterButton_clicked()

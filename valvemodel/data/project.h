@@ -29,8 +29,6 @@ public:
     bool addEstimate(Estimate *estimate);
     bool addModel(Model *model);
 
-    const QList<Model *> &getModels() const { return models; }
-
     int getPentodeType() const;
     void setPentodeType(int newPentodeType);
 
