@@ -43,7 +43,7 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
                 case 9: labelText = "Gain (bypassed):"; break;
             }
             labels[i]->setText(labelText);
-            values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 3));
+            values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 1));
             labels[i]->setVisible(true);
             values[i]->setVisible(true);
             values[i]->setReadOnly(true);  // Make output parameters read-only
@@ -245,17 +245,54 @@ void TriodeCommonCathode::calculateOperatingPoint()
     parameter[TRI_CC_VA]->setValue(va);
     parameter[TRI_CC_IA]->setValue(ia * 1000.0);  // Convert back to mA
 
-    // Calculate small-signal parameters
-    // For now, use simplified approximations
-    double mu = 100.0;  // Typical triode mu
-    double ra_internal = 1000.0;  // Typical ra
+    // Calculate small-signal parameters from device at OP using finite differences
+    double mu = 0.0;
+    double ra_internal = 0.0;  // Ohms
+
+    if (device1 && std::isfinite(va) && std::isfinite(ia)) {
+        // Operating point quantities
+        const double ia_mA = ia * 1000.0; // mA
+        const double vg0 = -ia * rk;      // V (self-bias, grid at 0V)
+
+        // Steps for numerical derivatives
+        const double dIa_mA = std::max(0.1, std::abs(ia_mA) * 0.01);   // at least 0.1 mA
+        const double dVg = std::max(0.01, std::abs(vg0) * 0.02);       // at least 10 mV
+
+        // Clamp Vg within device limits (non-positive)
+        const double vgMin = -device1->getVg1Max();
+        const double vgPlus = std::clamp(vg0 + dVg, vgMin, 0.0);
+        const double vgMinus = std::clamp(vg0 - dVg, vgMin, 0.0);
+
+        // ra = dVa/dIa (hold Vg constant at vg0). Units: V / A → Ohms
+        double va_plusIa = device1->anodeVoltage(ia_mA + dIa_mA, vg0);
+        double va_minusIa = device1->anodeVoltage(ia_mA - dIa_mA, vg0);
+        if (std::isfinite(va_plusIa) && std::isfinite(va_minusIa) && dIa_mA > 0.0) {
+            double dVa_dIa_V_per_mA = (va_plusIa - va_minusIa) / (2.0 * dIa_mA);
+            ra_internal = dVa_dIa_V_per_mA * 1000.0; // convert V/mA to Ohms
+        }
+
+        // mu = - dVa/dVg (hold Ia constant at ia_mA). Unitless
+        double va_plusVg = device1->anodeVoltage(ia_mA, vgPlus);
+        double va_minusVg = device1->anodeVoltage(ia_mA, vgMinus);
+        if (std::isfinite(va_plusVg) && std::isfinite(va_minusVg) && (vgPlus - vgMinus) != 0.0) {
+            double dVa_dVg = (va_plusVg - va_minusVg) / (vgPlus - vgMinus);
+            mu = -dVa_dVg;
+        }
+    }
+
+    // Fallbacks if derivatives failed
+    if (!std::isfinite(mu) || mu <= 0.0) mu = 100.0;
+    if (!std::isfinite(ra_internal) || ra_internal <= 0.0) ra_internal = 1000.0;
 
     parameter[TRI_CC_AR]->setValue(ra_internal);
 
-    // Calculate gains (simplified)
+    // Calculate gains using device-derived mu and ra
     double rl = parameter[TRI_CC_RL]->getValue();
-    double gain_unbypassed = mu * rl / (rl + ra + (mu + 1) * rk);
+    double gain_unbypassed = mu * rl / (rl + ra + (mu + 1.0) * rk);
     double gain_bypassed = mu * rl / (rl + ra + ra_internal);
+
+    if (!std::isfinite(gain_unbypassed)) gain_unbypassed = 0.0;
+    if (!std::isfinite(gain_bypassed)) gain_bypassed = 0.0;
 
     parameter[TRI_CC_GAIN]->setValue(gain_unbypassed);
     parameter[TRI_CC_GAIN_B]->setValue(gain_bypassed);

@@ -833,6 +833,12 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     }
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);
+    // Trigger a compute pass so derived fields (e.g., gains, Va, Ia, Vk) populate on initial load
+    // Use index 0 (first editable parameter) with its current value to invoke Circuit::update(int)
+    if (circuit) {
+        double current = circuit->getParameter(0);
+        circuit->setParameter(0, current);
+    }
     circuit->updateUI(circuitLabels, circuitValues);
 
     // Auto-plot device model curves in Designer (no measurements required)

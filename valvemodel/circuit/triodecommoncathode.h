@@ -6,11 +6,11 @@ enum eTriodeCommonCathodeParameter {
     TRI_CC_VB,
     TRI_CC_RK,
     TRI_CC_RA,
+    TRI_CC_RL,
     TRI_CC_VK,
     TRI_CC_VA,
     TRI_CC_IA,
     TRI_CC_AR,
-    TRI_CC_RL,
     TRI_CC_GAIN,
     TRI_CC_GAIN_B
 };
