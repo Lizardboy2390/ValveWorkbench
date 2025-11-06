@@ -117,6 +117,8 @@ void Model::addMeasurement(Measurement *measurement)
 
         int samples = sweep->count();
         bool loggedFirstVg = false;
+        double minVgUsed = std::numeric_limits<double>::infinity();
+        double maxVgUsed = -std::numeric_limits<double>::infinity();
         for (int i = 0; i < samples; i++) {
             Sample *sample = sweep->at(i);
 
@@ -133,15 +135,23 @@ void Model::addMeasurement(Measurement *measurement)
                 usedNominal = true;
             }
 
-            // Force non-positive for solver
-            const double vg1Corrected = (vg1raw > 0.0) ? -vg1raw : vg1raw;
+            // Force strictly non-positive for solver: treat any stored magnitude as negative bias
+            const double vg1Corrected = -std::fabs(vg1raw);
 
             if (!loggedFirstVg && std::isfinite(vg1Corrected) && std::fabs(vg1Corrected) > 1e-9) {
                 qInfo("MODEL INPUT: sweep=%d first vg1 used=%.6f (%s)", s, vg1Corrected, usedNominal ? "nominal" : "sample");
                 loggedFirstVg = true;
             }
 
+            if (std::isfinite(vg1Corrected)) {
+                minVgUsed = std::min(minVgUsed, vg1Corrected);
+                maxVgUsed = std::max(maxVgUsed, vg1Corrected);
+            }
+
             addSample(va, ia, vg1Corrected, vg2, ig2);
+        }
+        if (std::isfinite(minVgUsed) && std::isfinite(maxVgUsed)) {
+            qInfo("MODEL INPUT: sweep=%d vg1 range used [%.6f, %.6f] (should be <= 0)", s, minVgUsed, maxVgUsed);
         }
     }
 }
@@ -364,6 +374,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                         qInfo("Unable to derive grid range, using defaults: start=%.3f, stop=%.3f", vgStart, vgStop);
                     }
                 }
+                // Enforce non-positive grids for triode modelling regardless of source
+                vgStart = -std::fabs(vgStart);
+                vgStop = -std::fabs(vgStop);
+                // Prefer to end at 0V (least negative) for plotting families
+                if (vgStop > 0.0) vgStop = 0.0;
             // If step is 0 or invalid, calculate from actual sweep data
             if (vgStep <= 0.0 || vgStep > (vgStop - vgStart)) {
                 qInfo("GRID STEP FALLBACK: stored step %.6f invalid, analysing sweeps (count=%d)",
@@ -404,8 +419,9 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             }
 
             if (sweep != nullptr) {
-                vgStart = sweep->getVg1Nominal();
-                vgStop = sweep->getVg1Nominal();
+                double nominal = sweep->getVg1Nominal();
+                vgStart = -std::fabs(nominal);
+                vgStop = -std::fabs(nominal);
             }
 
             if (vgStart > vgStop) {
@@ -428,6 +444,21 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             qInfo("Final grid voltage range: start=%.3f, stop=%.3f, step=%.3f", vgStart, vgStop, vgStep);
             qInfo("Screen voltage: %.3f", vg2);
 
+            // Set axes only if scene is empty to preserve existing measurement/Designer overlays
+            double vaStart = measurement->getAnodeStart();
+            double vaStop = measurement->getAnodeStop();
+            if (!std::isfinite(vaStart)) vaStart = 0.0;
+            if (!std::isfinite(vaStop) || vaStop <= vaStart) vaStop = std::max(vaStart + 10.0, 250.0);
+            if (plot->getScene()->items().isEmpty()) {
+                // Estimate max current at 0V grid (least negative) and highest anode voltage
+                double iaEst_mA = anodeCurrent(vaStop, 0.0, vg2) * 1000.0;
+                if (!std::isfinite(iaEst_mA) || iaEst_mA <= 0.0) iaEst_mA = 50.0;
+                double yStop = std::max(50.0, iaEst_mA * 1.1);
+                double xMajor = std::max(10.0, (vaStop - vaStart) / 10.0);
+                double yMajor = std::max(5.0, yStop / 10.0);
+                plot->setAxes(0.0, vaStop, xMajor, 0.0, yStop, yMajor);
+            }
+
             double vg1 = vgStart;
             int curveCount = 0;
             while ( vg1 <= vgStop) {
@@ -435,8 +466,8 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                       vg1, vgStart, vgStop, vgStep, vg1, vgStop, (vg1 <= vgStop) ? "true" : "false");
 
                 qInfo("Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
-                double vaStart = measurement->getAnodeStart();
-                double vaStop = measurement->getAnodeStop();
+                vaStart = measurement->getAnodeStart();
+                vaStop = measurement->getAnodeStop();
                 double vaInc = (vaStop - vaStart) / 50;
 
                 qInfo("Anode voltage range: start=%.1f, stop=%.1f, inc=%.3f", vaStart, vaStop, vaInc);
@@ -449,7 +480,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 while (va < vaStop) {
                     qInfo("TRIODE: Calculating current for va=%.3f, vg1=%.3f", va, vg1);
                     double ia = anodeCurrent(va, vg1, vg2);
-                    qInfo("TRIODE: Current result ia=%.3f mA", ia * 1000.0); // Convert to mA for readability
+                    qInfo("TRIODE: Current result ia=%.3f mA", ia);
 
                     QGraphicsItem *segment = plot->createSegment(vaPrev, iaPrev, va, ia, anodePen);
 
@@ -590,7 +621,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
                 if (showScreen) {
                     vaPrev = vaStart;
-                    double ig2Prev = screenCurrent(vaStart, vg1, vg2);
+                    double ig2Prev = screenCurrent(vaStart, vg1, vg2); // assume same unit convention
 
                     va = vaStart + vaInc;
                     while (va < vaStop) {

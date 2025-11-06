@@ -36,10 +36,17 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Select a measurement → Fit Triode/Pentode
   - Red curves (Triode A) and Green curves (Triode B) overlay when available
   - Positive grid voltages are auto-corrected negative for fitting
+  - Export to Devices: after fitting, click "Export to Devices" to save the fitted model preset JSON into `models/` and refresh device dropdowns in Designer
 - Designer tab
   - Choose circuit (e.g., Triode Common Cathode)
   - Adjust parameters and see load lines and operating point
   - Export SPICE netlist when ready
+  - Device selection: pick a device from the dropdown; if "Show Fitted Model" is checked, red model curves will auto-plot even without measurements
+  - Toggles (bottom row):
+    - Show Measurement (measurement curves)
+    - Show Fitted Model (model curves)
+    - Show Designer Overlays (anode/cathode/AC/OP designer lines)
+    - Show Screen Current (pentode only; hidden for triode circuits)
 
 ## Features
 - Double‑triode workflow with A/B overlays and color‑coded labels
@@ -51,13 +58,17 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - No “Save to Project” prompt: The app now prompts every time before saving
 - Modeller fails to converge: Ensure grid voltages are within range; guard auto‑flips positive Vg to negative
 - Empty plots in Designer: Select a device model first
+- No model curves in Designer: Ensure a device is selected and "Show Fitted Model" is checked
+- Designer overlays extend beyond model curves: Axes are clamped to device `vaMax`/`iaMax`; ensure your device preset has correct limits
 
 ## Change log (highlights)
+- 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only
 - 2025‑11‑02: Analyser: removed heater button/LCDs (heaters fixed in hardware)
 - 2025‑11‑02: Analyser: Load/Save Template for analyser settings
 - 2025‑11‑02: Always prompt for Project name before saving measurements
 - 2025‑11‑02: Modeller guard flips positive grid voltages to negative during fitting
 - 2025‑10‑21: Fixed infinite loop in model plotting (grid stepping correction)
+- 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only
 
 ## Credits & Contact
 - AudioSmith — Darrin Smith, Nelson BC, Canada

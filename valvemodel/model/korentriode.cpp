@@ -24,9 +24,10 @@ KorenTriode::KorenTriode()
 
 void KorenTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
+    double vg1n = -std::fabs(vg1);
     anodeProblem.AddResidualBlock(
         new AutoDiffCostFunction<KorenTriodeResidual, 1, 1, 1, 1, 1, 1>(
-            new KorenTriodeResidual(va, vg1, ia)),
+            new KorenTriodeResidual(va, vg1n, ia)),
         NULL,
         parameter[PAR_KG1]->getPointer(),
         parameter[PAR_KP]->getPointer(),

@@ -19,6 +19,14 @@ Circuit::Circuit()
 
 }
 
+void Circuit::setOverlaysVisible(bool visible)
+{
+    if (anodeLoadLine) anodeLoadLine->setVisible(visible);
+    if (cathodeLoadLine) cathodeLoadLine->setVisible(visible);
+    if (acSignalLine) acSignalLine->setVisible(visible);
+    if (opMarker) opMarker->setVisible(visible);
+}
+
 void Circuit::setParameter(int index, double value)
 {
     parameter[index]->setValue(value);

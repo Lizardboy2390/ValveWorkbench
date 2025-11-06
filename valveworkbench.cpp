@@ -15,7 +15,11 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QCoreApplication>
+#include <QInputDialog>
+#include <QPushButton>
+#include <QRegularExpression>
 #include <QTreeWidgetItem>
+#include <QCheckBox>
 #include <QVector>
 #include <QColor>
 #include <QBrush>
@@ -47,6 +51,8 @@ int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
     return 0;
 }
 
+// (Removed duplicate checkbox handlers; using the canonical implementations below.)
+
 void ValveWorkbench::on_pushButton_3_clicked()
 {
     // Load Template...
@@ -59,6 +65,55 @@ void ValveWorkbench::on_pushButton_3_clicked()
     if (!f.open(QIODevice::ReadOnly)) {
         QMessageBox::warning(this, tr("Load Template"), tr("Could not open file."));
         return;
+    }
+
+    // Ensure Designer overlays checkbox is present on its own second row under the existing toggle row
+    if (ui->horizontalLayout_9) {
+        bool hasDesigner = false;
+        for (int i = 0; i < ui->horizontalLayout_9->count(); ++i) {
+            QWidget *w = ui->horizontalLayout_9->itemAt(i) ? ui->horizontalLayout_9->itemAt(i)->widget() : nullptr;
+            if (w && w->objectName() == QLatin1String("designerCheck")) { hasDesigner = true; break; }
+        }
+        if (!hasDesigner) {
+            // Try to insert a new row (QHBoxLayout) directly after the existing checkbox row
+            QBoxLayout *parentLayout = qobject_cast<QBoxLayout*>(ui->horizontalLayout_9->parentWidget() ? ui->horizontalLayout_9->parentWidget()->layout() : nullptr);
+            if (parentLayout) {
+                int idx = parentLayout->indexOf(ui->horizontalLayout_9);
+                QHBoxLayout *designerRow = new QHBoxLayout();
+                designerCheck = new QCheckBox(tr("Show Designer Overlays"), this);
+                designerCheck->setObjectName("designerCheck");
+                designerCheck->setChecked(true);
+                designerRow->addStretch();
+                designerRow->addWidget(designerCheck);
+                designerRow->addStretch();
+                parentLayout->insertLayout(idx + 1, designerRow);
+                connect(designerCheck, &QCheckBox::stateChanged, this, &ValveWorkbench::on_designerCheck_stateChanged);
+            } else {
+                // Fallback: add to end of the existing row
+                designerCheck = new QCheckBox(tr("Show Designer Overlays"), this);
+                designerCheck->setObjectName("designerCheck");
+                designerCheck->setChecked(true);
+                ui->horizontalLayout_9->addWidget(designerCheck);
+                connect(designerCheck, &QCheckBox::stateChanged, this, &ValveWorkbench::on_designerCheck_stateChanged);
+            }
+        }
+    }
+
+    // Add Designer overlays checkbox next to existing measurement/model toggles (if not present)
+    if (ui->horizontalLayout_9) {
+        bool hasDesigner = false;
+        for (int i = 0; i < ui->horizontalLayout_9->count(); ++i) {
+            QWidget *w = ui->horizontalLayout_9->itemAt(i) ? ui->horizontalLayout_9->itemAt(i)->widget() : nullptr;
+            if (w && w->objectName() == QLatin1String("designerCheck")) { hasDesigner = true; break; }
+        }
+        if (!hasDesigner) {
+            designerCheck = new QCheckBox(tr("Show Designer Overlays"), this);
+            designerCheck->setObjectName("designerCheck");
+            designerCheck->setChecked(true);
+            int insertAt = std::max(0, ui->horizontalLayout_9->count() - 1); // before trailing spacer
+            ui->horizontalLayout_9->insertWidget(insertAt, designerCheck);
+            connect(designerCheck, &QCheckBox::stateChanged, this, &ValveWorkbench::on_designerCheck_stateChanged);
+        }
     }
     const QByteArray bytes = f.readAll();
     f.close();
@@ -133,8 +188,8 @@ void ValveWorkbench::on_pushButton_3_clicked()
             // Ensure the correct model type is selected
             selectModel(desiredType);
             if (model) {
-                // Use full template object for fromJson as elsewhere in the app
-                model->fromJson(obj);
+                // Load only the nested 'model' object so parameters map correctly
+                model->fromJson(modelObj);
             }
         }
     }
@@ -535,6 +590,51 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     ui->setupUi(this);
 
+    // Ensure a Designer checkbox exists in the bottom toggle row, positioned after the Model checkbox
+    if (ui->horizontalLayout_9) {
+        // Check if one already exists in the row
+        QCheckBox *found = nullptr;
+        for (int i = 0; i < ui->horizontalLayout_9->count(); ++i) {
+            QWidget *w = ui->horizontalLayout_9->itemAt(i) ? ui->horizontalLayout_9->itemAt(i)->widget() : nullptr;
+            if (w && w->objectName() == QLatin1String("designerCheck")) { found = qobject_cast<QCheckBox*>(w); break; }
+        }
+        if (!found) {
+            designerCheck = new QCheckBox(tr("Show Designer Overlays"), this);
+            designerCheck->setObjectName("designerCheck");
+            designerCheck->setChecked(true);
+            int modelIdx = ui->horizontalLayout_9->indexOf(ui->modelCheck);
+            int insertAt = (modelIdx >= 0) ? modelIdx + 1 : ui->horizontalLayout_9->count();
+            ui->horizontalLayout_9->insertWidget(insertAt, designerCheck);
+            QObject::connect(designerCheck, &QCheckBox::stateChanged, this, &ValveWorkbench::on_designerCheck_stateChanged, Qt::UniqueConnection);
+        } else {
+            designerCheck = found;
+            QObject::connect(designerCheck, &QCheckBox::stateChanged, this, &ValveWorkbench::on_designerCheck_stateChanged, Qt::UniqueConnection);
+        }
+    }
+
+    // Ensure Modeller tab has an Export to Devices button
+    if (ui->horizontalLayout_3) {
+        bool foundExisting = false;
+        QPushButton *exportBtn = nullptr;
+        // Avoid duplicating if created twice
+        for (int i = 0; i < ui->horizontalLayout_3->count(); ++i) {
+            QWidget *w = ui->horizontalLayout_3->itemAt(i) ? ui->horizontalLayout_3->itemAt(i)->widget() : nullptr;
+            if (w && w->objectName() == QLatin1String("exportToDevicesButton")) { foundExisting = true; exportBtn = qobject_cast<QPushButton*>(w); break; }
+        }
+        if (!foundExisting) {
+            exportBtn = new QPushButton(tr("Export to Devices"), this);
+            exportBtn->setObjectName("exportToDevicesButton");
+            int insertAt = std::max(0, ui->horizontalLayout_3->count() - 1); // before trailing spacer
+            ui->horizontalLayout_3->insertWidget(insertAt, exportBtn);
+            qInfo("Created Export to Devices button in Modeller tab");
+        } else {
+            qInfo("Found existing Export to Devices button in Modeller tab");
+        }
+        if (exportBtn) {
+            QObject::connect(exportBtn, &QPushButton::clicked, this, &ValveWorkbench::exportFittedModelToDevices, Qt::UniqueConnection);
+        }
+    }
+
     // Remove heater button row to free space (heaters are fixed in hardware)
     if (ui->heaterButton && ui->heaterLayout) {
         ui->heaterLayout->removeWidget(ui->heaterButton);
@@ -610,9 +710,11 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     // Heater indicator removed (cosmetic change)
     heaterIndicator = nullptr;
 
-    ui->measureCheck->setVisible(false);
-    ui->modelCheck->setVisible(false);
-    ui->screenCheck->setVisible(false);
+    ui->measureCheck->setVisible(true);
+    ui->modelCheck->setVisible(true);
+    ui->screenCheck->setVisible(true);
+    // Default to showing model curves so selecting a device renders immediately
+    ui->modelCheck->setChecked(true);
 
     ui->fitPentodeButton->setVisible(false);
     ui->fitTriodeButton->setVisible(false);
@@ -719,6 +821,7 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     }
 
     Device *device = devices.at(deviceNumber);
+    currentDevice = device;
     // For Designer, do not set model axes or draw model curves here to avoid overriding
     // the circuit load-line axes. The circuit plot will set appropriate axes.
 
@@ -731,6 +834,19 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
+
+    // Auto-plot device model curves in Designer (no measurements required)
+    // Revertable: remove this block to disable auto model plotting on selection
+    plot.remove(modelledCurves);
+    modelledCurves = nullptr;
+    if (ui->modelCheck->isChecked() && device) {
+        // Draw the model family (red) using the device's model
+        modelledCurves = device->anodePlot(&plot);
+        if (modelledCurves) {
+            plot.add(modelledCurves);
+            modelledCurves->setVisible(ui->modelCheck->isChecked());
+        }
+    }
 }
 
 void ValveWorkbench::selectModel(int modelType)
@@ -780,6 +896,10 @@ void ValveWorkbench::selectCircuit(int circuitType)
     circuit->updateUI(circuitLabels, circuitValues);
 
     qInfo("Circuit selection completed");
+
+    // Show 'Show Screen Current' checkbox only for pentode circuits
+    bool wantsPentodeScreen = (deviceType1 == PENTODE);
+    if (ui->screenCheck) ui->screenCheck->setVisible(wantsPentodeScreen);
 }
 
 void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)
@@ -1239,6 +1359,11 @@ void ValveWorkbench::loadDevices()
             QJsonDocument modelDoc(QJsonDocument::fromJson(modelData));
 
             Device *model = new Device(modelDoc);
+            // Ensure device has a visible name; fallback to filename (without extension)
+            if (model->getName().isEmpty()) {
+                QFileInfo fi(modelFileName);
+                model->setName(fi.baseName());
+            }
             qInfo("Loaded device: %s, type: %d", model->getName().toStdString().c_str(), model->getDeviceType());
             this->devices.append(model);
         }
@@ -2671,8 +2796,9 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
 {
     switch (index) {
     case 0:
-        ui->measureCheck->setVisible(false);
-        ui->modelCheck->setVisible(false);
+        // Show toggles on Designer as well, so user can hide/show analyser/modeller plots
+        ui->measureCheck->setVisible(true);
+        ui->modelCheck->setVisible(true);
         break;
     case 1:
         ui->measureCheck->setVisible(true);
@@ -2717,8 +2843,25 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
 
 void ValveWorkbench::on_modelCheck_stateChanged(int arg1)
 {
-    if (modelledCurves != nullptr) {
-        modelledCurves->setVisible(ui->modelCheck->isChecked());
+    const bool wantVisible = ui->modelCheck->isChecked();
+    if (!wantVisible) {
+        if (modelledCurves) modelledCurves->setVisible(false);
+        return;
+    }
+    // If toggled on and no model curves yet, try to plot from current device
+    if (!modelledCurves && currentDevice) {
+        plot.remove(modelledCurves);
+        modelledCurves = currentDevice->anodePlot(&plot);
+        if (modelledCurves) plot.add(modelledCurves);
+    }
+    if (modelledCurves) modelledCurves->setVisible(true);
+}
+
+void ValveWorkbench::on_designerCheck_stateChanged(int arg1)
+{
+    const bool visible = (arg1 != 0);
+    for (Circuit *c : circuits) {
+        if (c) c->setOverlaysVisible(visible);
     }
 }
 
@@ -2894,4 +3037,99 @@ void ValveWorkbench::on_heaterButton_clicked()
 {
     // No-op: heater control is not used; heaters are fixed in hardware
     Q_UNUSED(this);
+}
+
+void ValveWorkbench::exportFittedModelToDevices()
+{
+    // Determine a model to export: prefer the currently selected model item in the project tree
+    Model *toExport = nullptr;
+    if (currentModelItem != nullptr) {
+        toExport = static_cast<Model *>(currentModelItem->data(0, Qt::UserRole).value<void *>());
+    }
+    if (!toExport && model) {
+        toExport = model; // fallback to last fitted model pointer
+    }
+    if (!toExport) {
+        QMessageBox::warning(this, tr("Export to Devices"), tr("No model available to export."));
+        return;
+    }
+
+    // Ask for device name to use in the preset file
+    const QString suggested = ui && ui->deviceName ? ui->deviceName->text() : toExport->getName();
+    bool ok = false;
+    QString deviceName = QInputDialog::getText(this, tr("Export to Devices"), tr("Device name:"), QLineEdit::Normal, suggested, &ok);
+    if (!ok || deviceName.trimmed().isEmpty()) {
+        return;
+    }
+    deviceName = deviceName.trimmed();
+
+    // Build device preset JSON
+    QJsonObject root;
+    root["name"] = deviceName;
+
+    // Use current analyser limits if available; otherwise sensible defaults
+    double vaMaxOut = 300.0;
+    double iaMaxOut = 5.0;
+    double paMaxOut = 1.125;
+    if (std::isfinite(anodeStop) && anodeStop > 0.0) vaMaxOut = anodeStop;
+    if (std::isfinite(iaMax) && iaMax > 0.0) iaMaxOut = iaMax;
+    if (std::isfinite(pMax) && pMax > 0.0) paMaxOut = pMax;
+    root["vaMax"] = vaMaxOut;
+    if (deviceType == TRIODE) {
+        root["vg1Max"] = 5.0;
+    }
+    root["iaMax"] = iaMaxOut;
+    root["paMax"] = paMaxOut;
+
+    QJsonObject modelObj;
+    toExport->toJson(modelObj);
+    root["model"] = modelObj;
+
+    // Resolve models directory to MATCH loadDevices() search
+    QStringList possiblePaths = {
+        QCoreApplication::applicationDirPath() + "/../../../../../models",
+        QCoreApplication::applicationDirPath() + "/../../../../models",
+        QCoreApplication::applicationDirPath() + "/../../../models",
+        QCoreApplication::applicationDirPath() + "/../models",
+        QCoreApplication::applicationDirPath() + "/models",
+        QDir::currentPath() + "/models",
+        QDir::currentPath() + "/../models",
+        QDir::currentPath() + "/../../models",
+        QDir::currentPath() + "/../../../models"
+    };
+
+    QString exportPath;
+    for (const QString &p : possiblePaths) {
+        QDir d(p);
+        if (d.exists()) { exportPath = d.absolutePath(); break; }
+    }
+    if (exportPath.isEmpty()) {
+        exportPath = QDir::cleanPath(QDir::currentPath() + "/models");
+        QDir().mkpath(exportPath);
+    }
+    QDir modelsDir(exportPath);
+    qInfo("Export to Devices: using models dir %s", modelsDir.absolutePath().toUtf8().constData());
+
+    // Sanitize filename
+    QString base = deviceName;
+    base.replace(QRegularExpression("[^A-Za-z0-9._ -]"), "_");
+    if (base.isEmpty()) base = "FittedModel";
+    QString outPath = modelsDir.filePath(base + ".json");
+
+    QFile outFile(outPath);
+    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Export to Devices"), tr("Could not write to %1").arg(outPath));
+        return;
+    }
+    outFile.write(QJsonDocument(root).toJson());
+    outFile.close();
+
+    // Refresh devices and repopulate dropdowns
+    for (Device *d : devices) { delete d; }
+    devices.clear();
+    loadDevices();
+    buildStdDeviceSelection(ui->stdDeviceSelection, deviceType == 0 ? TRIODE : deviceType);
+    buildStdDeviceSelection(ui->stdDeviceSelection2, -1);
+
+    QMessageBox::information(this, tr("Export to Devices"), tr("Exported to %1 and refreshed device list.").arg(outPath));
 }

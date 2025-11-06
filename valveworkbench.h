@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QThread>
 #include <QCoreApplication>
+#include <QCheckBox>
 
 #include "valvemodel/data/project.h"
 #include "valvemodel/model/estimate.h"
@@ -128,6 +129,7 @@ private slots:
     void on_measureCheck_stateChanged(int arg1);
 
     void on_modelCheck_stateChanged(int arg1);
+    void on_designerCheck_stateChanged(int arg1);
 
     void on_properties_itemChanged(QTableWidgetItem *item);
 
@@ -151,12 +153,15 @@ private slots:
 
     void on_actionExport_Model_triggered();
 
+    void exportFittedModelToDevices();
+
     // Analyser tab: Template buttons (Load/Save Template)
     void on_pushButton_3_clicked();
     void on_pushButton_4_clicked();
 
 private:
     Ui::ValveWorkbench *ui;
+    QCheckBox *designerCheck = nullptr;
 
     // UI related member variables
     QLineEdit *circuitValues[16];

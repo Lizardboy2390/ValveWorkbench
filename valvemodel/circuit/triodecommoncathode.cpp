@@ -8,19 +8,15 @@ TriodeCommonCathode::TriodeCommonCathode()
     parameter[TRI_CC_RA] = new Parameter("Anode resistor (Ω)", 100000.0);   // Anode load resistor
     parameter[TRI_CC_RL] = new Parameter("Load impedance (Ω)", 1000000.0);  // Speaker/load impedance
 
-    // Calculated/display parameters (read-only)
-    parameter[TRI_CC_VK] = new Parameter("Bias voltage (V)", 0.0, true);   // Vk = Ia * Rk
-    parameter[TRI_CC_VA] = new Parameter("Anode voltage (V)", 0.0, true);   // Va = Vb - Ia * Ra
-    parameter[TRI_CC_IA] = new Parameter("Anode current (mA)", 0.0, true);  // Operating current
-    parameter[TRI_CC_AR] = new Parameter("Internal resistance (Ω)", 0.0, true); // Small signal ra
-    parameter[TRI_CC_GAIN] = new Parameter("Gain (unbypassed)", 0.0, true); // Voltage gain
-    parameter[TRI_CC_GAIN_B] = new Parameter("Gain (bypassed)", 0.0, true); // Voltage gain with bypassed cathode
+    // Calculated/display parameters
+    parameter[TRI_CC_VK] = new Parameter("Bias voltage (V)", 0.0);   // Vk = Ia * Rk
+    parameter[TRI_CC_VA] = new Parameter("Anode voltage (V)", 0.0);   // Va = Vb - Ia * Ra
+    parameter[TRI_CC_IA] = new Parameter("Anode current (mA)", 0.0);  // Operating current
+    parameter[TRI_CC_AR] = new Parameter("Internal resistance (Ω)", 0.0); // Small signal ra
+    parameter[TRI_CC_GAIN] = new Parameter("Gain (unbypassed)", 0.0); // Voltage gain
+    parameter[TRI_CC_GAIN_B] = new Parameter("Gain (bypassed)", 0.0); // Voltage gain with bypassed cathode
 }
 
-TriodeCommonCathode::~TriodeCommonCathode()
-{
-    // Parameters are managed by base class
-}
 
 void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
 {
@@ -86,6 +82,8 @@ void TriodeCommonCathode::calculateAnodeLoadLine()
     anodeLoadLineData.clear();
     anodeLoadLineData.push_back(QPointF(0.0, iaMax));
     anodeLoadLineData.push_back(QPointF(vb, 0.0));
+
+    qInfo("Designer: Anode line Ia_max=%.2f mA at Va=0, Vb=%.2f V, points=%d", iaMax, vb, anodeLoadLineData.size());
 }
 
 void TriodeCommonCathode::calculateCathodeLoadLine()
@@ -94,31 +92,49 @@ void TriodeCommonCathode::calculateCathodeLoadLine()
         return;  // No device selected
     }
 
-    double rk = parameter[TRI_CC_RK]->getValue();  // Cathode resistor
-    // Use device's grid range, constrained to a sensible Designer range
-    double vgMax = device1->getVg1Max();
-    if (!std::isfinite(vgMax) || vgMax <= 0.0) {
-        vgMax = 4.0;
-    }
-    // Clamp to [2V, 6V] typical for small-signal triodes to avoid extreme flat regions
-    if (vgMax < 2.0) vgMax = 2.0;
-    if (vgMax > 6.0) vgMax = 6.0;
-    int steps = 50;       // Number of steps for cathode load line
+    double rk = parameter[TRI_CC_RK]->getValue();  // Cathode resistor (Ohms)
+    double vb = parameter[TRI_CC_VB]->getValue();  // Supply (V)
+    double ra = parameter[TRI_CC_RA]->getValue();  // Anode resistor (Ohms)
 
+    // Sweep anode current from 0 to the DC load-line max current
+    // For a self-bias cathode: Vg = -Ik*Rk ≈ -Ia*Rk (grid at 0V, cathode positive)
+    const int steps = 60;
     cathodeLoadLineData.clear();
 
-    for (int i = 0; i <= steps; i++) {
-        double vg = (vgMax * i) / steps;  // Grid voltage from 0 to vgMax (will be negated for model)
+    double iaMaxA = 0.05; // fallback 50 mA
+    if (std::isfinite(vb) && std::isfinite(ra) && std::isfinite(rk) && (ra + rk) > 0.0) {
+        iaMaxA = vb / (ra + rk); // Amps
+    }
 
-        // Required anode current for this grid voltage: Ia = Vg / Rk
-        double iaRequired = (vg / rk) * 1000.0;  // Convert to mA
+    for (int i = 0; i <= steps; ++i) {
+        double iaA = iaMaxA * (static_cast<double>(i) / steps); // Amps
+        double vg = -iaA * rk; // Volts, strictly non-positive
 
-        // Find anode voltage that gives this anode current for the given grid voltage
-        double va = device1->anodeVoltage(iaRequired / 1000.0, -vg);  // Convert back to A for model
+        // Solve for anode voltage that gives this current at this grid bias
+        // Model expects Ia in mA to match anodeCurrent units
+        double va = device1->anodeVoltage(iaA * 1000.0, vg);
 
-        if (va > 0.0) {  // Only add valid points
-            cathodeLoadLineData.push_back(QPointF(va, iaRequired));
+        // Keep points within non-negative plotting domain (Va>=0, Ia>=0)
+        if (std::isfinite(va) && va >= 0.0 && iaA >= 0.0) {
+            cathodeLoadLineData.push_back(QPointF(va, iaA * 1000.0)); // store current in mA for plotting
         }
+    }
+
+    // Debug: log cathode line stats
+    if (!cathodeLoadLineData.isEmpty()) {
+        double minVa = cathodeLoadLineData.first().x();
+        double maxVa = cathodeLoadLineData.first().x();
+        double minIa = cathodeLoadLineData.first().y();
+        double maxIa = cathodeLoadLineData.first().y();
+        for (const auto &p : cathodeLoadLineData) {
+            if (p.x() < minVa) minVa = p.x();
+            if (p.x() > maxVa) maxVa = p.x();
+            if (p.y() < minIa) minIa = p.y();
+            if (p.y() > maxIa) maxIa = p.y();
+        }
+        qInfo("Designer: Cathode line points=%d Va[%.2f..%.2f] Ia(mA)[%.2f..%.2f]", cathodeLoadLineData.size(), minVa, maxVa, minIa, maxIa);
+    } else {
+        qInfo("Designer: Cathode line has 0 points (check device selection and parameter values)");
     }
 }
 
@@ -129,6 +145,8 @@ QPointF TriodeCommonCathode::findOperatingPoint()
 
     if (anodeLoadLineData.size() < 2 || cathodeLoadLineData.empty()) {
         // Not enough data for intersection calculation
+        qInfo("Designer: OP: insufficient data (anode pts=%d, cathode pts=%d) - using simple estimate",
+              anodeLoadLineData.size(), cathodeLoadLineData.size());
         return findOperatingPointSimple();
     }
 
@@ -145,12 +163,15 @@ QPointF TriodeCommonCathode::findOperatingPoint()
             QPointF intersection = findLineIntersection(anodeStart, anodeEnd, cathodeStart, cathodeEnd);
             if (intersection.x() >= 0 && intersection.y() >= 0) {
                 // Valid intersection point found
+                qInfo("Designer: OP: found intersection at Va=%.2f V, Ia=%.2f mA (seg a%d/c%d)",
+                      intersection.x(), intersection.y(), i, j);
                 return intersection;
             }
         }
     }
 
     // If no intersection found, fall back to simple estimation
+    qInfo("Designer: OP: no intersection found - using simple estimate");
     return findOperatingPointSimple();
 }
 
@@ -196,6 +217,7 @@ QPointF TriodeCommonCathode::findOperatingPointSimple()
     double va = vb / 2.0;
     double ia = (vb / (2.0 * (ra + rk))) * 1000.0;
 
+    qInfo("Designer: OP simple estimate Va=%.2f V, Ia=%.2f mA", va, ia);
     return QPointF(va, ia);
 }
 
@@ -235,6 +257,10 @@ void TriodeCommonCathode::calculateOperatingPoint()
     double gain_unbypassed = mu * rl / (rl + ra + (mu + 1) * rk);
     double gain_bypassed = mu * rl / (rl + ra + ra_internal);
 
+    parameter[TRI_CC_GAIN]->setValue(gain_unbypassed);
+    parameter[TRI_CC_GAIN_B]->setValue(gain_bypassed);
+}
+
 void TriodeCommonCathode::update(int index)
 {
     // When parameters change, recalculate the circuit
@@ -248,7 +274,13 @@ void TriodeCommonCathode::update(int index)
 
 void TriodeCommonCathode::plot(Plot *plot)
 {
-    // Clear any existing circuit plots
+    qInfo("Designer: plot() start. Device=%s, Vb=%.2f, Ra=%.0f, Rk=%.0f, RL=%.0f",
+          device1 ? device1->getName().toStdString().c_str() : "<none>",
+          parameter[TRI_CC_VB]->getValue(),
+          parameter[TRI_CC_RA]->getValue(),
+          parameter[TRI_CC_RK]->getValue(),
+          parameter[TRI_CC_RL]->getValue());
+    // Clear any existing circuit overlays (Designer-only)
     if (anodeLoadLine != nullptr) {
         plot->getScene()->removeItem(anodeLoadLine);
         delete anodeLoadLine;
@@ -259,6 +291,18 @@ void TriodeCommonCathode::plot(Plot *plot)
         plot->getScene()->removeItem(cathodeLoadLine);
         delete cathodeLoadLine;
         cathodeLoadLine = nullptr;
+    }
+
+    if (acSignalLine != nullptr) {
+        plot->getScene()->removeItem(acSignalLine);
+        delete acSignalLine;
+        acSignalLine = nullptr;
+    }
+
+    if (opMarker != nullptr) {
+        plot->getScene()->removeItem(opMarker);
+        delete opMarker;
+        opMarker = nullptr;
     }
 
     // Check if we have a device selected
@@ -272,19 +316,25 @@ void TriodeCommonCathode::plot(Plot *plot)
     calculateCathodeLoadLine();
     QPointF op = findOperatingPoint();
 
-    // Set axes appropriate for Designer before drawing so segments are in-bounds
+    qInfo("Designer: Operating point estimate Va=%.2f V, Ia=%.2f mA", op.x(), op.y());
+
+    // Set axes strictly to device limits to match model plot size
     double vb = parameter[TRI_CC_VB]->getValue();
     double ra = parameter[TRI_CC_RA]->getValue();
     double rk = parameter[TRI_CC_RK]->getValue();
-    double iaMax = (ra + rk) > 0.0 ? (vb / (ra + rk)) * 1000.0 : 50.0; // mA
-    if (iaMax <= 0.0 || !std::isfinite(iaMax)) {
-        iaMax = 50.0;
+
+    double iaDevice = (device1 ? device1->getIaMax() : 5.0);    // mA
+    double vaDevice = (device1 ? device1->getVaMax() : vb);     // V
+
+    double yStop = iaDevice;
+    double xStop = vaDevice;
+    double yMajor = std::max(0.5, yStop / 10.0);
+    double xMajor = std::max(5.0, xStop / 10.0);
+
+    // Preserve existing axes if other plots are already drawn
+    if (plot->getScene()->items().isEmpty()) {
+        plot->setAxes(0.0, xStop, xMajor, 0.0, yStop, yMajor);
     }
-    double yStop = std::max(iaMax, 50.0);
-    double yMajor = yStop / 10.0;
-    if (yMajor <= 0.0) yMajor = 5.0;
-    double xMajor = vb > 0.0 ? vb / 10.0 : 25.0;
-    plot->setAxes(0.0, std::max(10.0, vb), xMajor, 0.0, yStop, yMajor);
 
     // Plot anode load line (green)
     if (anodeLoadLineData.size() >= 2) {
@@ -297,6 +347,11 @@ void TriodeCommonCathode::plot(Plot *plot)
         for (int i = 0; i < anodeLoadLineData.size() - 1; i++) {
             QPointF start = anodeLoadLineData[i];
             QPointF end = anodeLoadLineData[i + 1];
+            // Clamp within device limits
+            start.setX(std::clamp(start.x(), 0.0, xStop));
+            end.setX(std::clamp(end.x(), 0.0, xStop));
+            start.setY(std::clamp(start.y(), 0.0, yStop));
+            end.setY(std::clamp(end.y(), 0.0, yStop));
 
             QGraphicsLineItem *segment = plot->createSegment(start.x(), start.y(), end.x(), end.y(), anodePen);
             if (segment) {
@@ -305,6 +360,8 @@ void TriodeCommonCathode::plot(Plot *plot)
         }
 
         plot->getScene()->addItem(anodeLoadLine);
+    } else {
+        qInfo("Designer: anode line has insufficient points: %d", anodeLoadLineData.size());
     }
 
     // Plot cathode load line (blue) - only if we have valid data
@@ -318,6 +375,11 @@ void TriodeCommonCathode::plot(Plot *plot)
         for (int i = 0; i < cathodeLoadLineData.size() - 1; i++) {
             QPointF start = cathodeLoadLineData[i];
             QPointF end = cathodeLoadLineData[i + 1];
+            // Clamp within device limits
+            start.setX(std::clamp(start.x(), 0.0, xStop));
+            end.setX(std::clamp(end.x(), 0.0, xStop));
+            start.setY(std::clamp(start.y(), 0.0, yStop));
+            end.setY(std::clamp(end.y(), 0.0, yStop));
 
             QGraphicsLineItem *segment = plot->createSegment(start.x(), start.y(), end.x(), end.y(), cathodePen);
             if (segment) {
@@ -326,21 +388,63 @@ void TriodeCommonCathode::plot(Plot *plot)
         }
 
         plot->getScene()->addItem(cathodeLoadLine);
+    } else {
+        qInfo("Designer: cathode line has insufficient points: %d", cathodeLoadLineData.size());
     }
 
-    // Mark operating point (red circle) - only if we have valid data
-    if (op.x() >= 0 && op.y() >= 0 && cathodeLoadLineData.size() >= 2) {
+    // Mark operating point (red crosshair)
+    if (op.x() >= 0.0 && op.y() >= 0.0) {
         QPen opPen;
         opPen.setColor(QColor::fromRgb(255, 0, 0));  // Red for operating point
-        opPen.setWidth(3);
+        opPen.setWidth(2);
 
-        QGraphicsEllipseItem *opMarker = new QGraphicsEllipseItem(
-            op.x() - 5, op.y() - 5, 10, 10);  // 10x10 circle centered on point
+        const double d = 5.0; // small span in data units
+        opMarker = new QGraphicsItemGroup();
+        QGraphicsLineItem *h = plot->createSegment(op.x() - d, op.y(), op.x() + d, op.y(), opPen);
+        QGraphicsLineItem *v = plot->createSegment(op.x(), op.y() - d, op.x(), op.y() + d, opPen);
+        if (h) opMarker->addToGroup(h);
+        if (v) opMarker->addToGroup(v);
+        if (!opMarker->childItems().isEmpty()) {
+            plot->getScene()->addItem(opMarker);
+        } else {
+            delete opMarker; opMarker = nullptr;
+        }
+    }
 
-        opMarker->setPen(opPen);
-        opMarker->setBrush(QBrush(QColor::fromRgb(255, 0, 0, 128)));  // Semi-transparent red fill
+    // Plot small-signal AC load line (yellow) around operating point
+    if (op.x() >= 0 && op.y() >= 0) {
+        double ra = parameter[TRI_CC_RA]->getValue();
+        double rl = parameter[TRI_CC_RL]->getValue();
+        double rpar = (ra > 0.0 && rl > 0.0) ? (ra * rl) / (ra + rl) : ra > 0.0 ? ra : rl;
+        if (rpar > 0.0 && std::isfinite(rpar)) {
+            // slope in mA/V is -1000 / R_parallel
+            double slope = -1000.0 / rpar;
 
-        plot->getScene()->addItem(opMarker);
+            QPen acPen;
+            acPen.setColor(QColor::fromRgb(255, 215, 0));  // Yellow for AC line
+            acPen.setWidth(2);
+
+            // Span around OP: take 20% of x range but not beyond OP to 0/xStop excessively
+            double dx = 0.2 * xStop;
+            dx = std::min(dx, op.x());            // keep left end >= 0
+            dx = std::min(dx, xStop - op.x());    // keep right end <= xStop
+            if (dx > 0.0) {
+                double x1 = op.x() - dx;
+                double x2 = op.x() + dx;
+                double y1 = op.y() + slope * (x1 - op.x());
+                double y2 = op.y() + slope * (x2 - op.x());
+
+                // Create a group so it can be cleared on next replot
+                acSignalLine = new QGraphicsItemGroup();
+                QGraphicsItem *segment = plot->createSegment(x1, y1, x2, y2, acPen);
+                if (segment) acSignalLine->addToGroup(segment);
+                if (!acSignalLine->childItems().isEmpty()) {
+                    plot->getScene()->addItem(acSignalLine);
+                } else {
+                    delete acSignalLine; acSignalLine = nullptr;
+                }
+            }
+        }
     }
 }
 

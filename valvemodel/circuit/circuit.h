@@ -35,6 +35,8 @@ public:
     virtual void plot(Plot *plot) = 0;
     virtual int getDeviceType(int index) = 0;
 
+    void setOverlaysVisible(bool visible);
+
     void setParameter(int index, double value);
     double getParameter(int index);
 
@@ -46,6 +48,8 @@ protected:
     Parameter *parameter[16];
     QGraphicsItemGroup *anodeLoadLine = nullptr;
     QGraphicsItemGroup *cathodeLoadLine = nullptr;
+    QGraphicsItemGroup *acSignalLine = nullptr;
+    QGraphicsItemGroup *opMarker = nullptr;
 
     Device *device1;
     Device *device2;

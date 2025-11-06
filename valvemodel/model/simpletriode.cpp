@@ -26,9 +26,10 @@ SimpleTriode::SimpleTriode()
 
 void SimpleTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
+    double vg1n = -std::fabs(vg1);
     anodeProblem.AddResidualBlock(
         new AutoDiffCostFunction<SimpleTriodeResidual, 1, 1, 1, 1, 1>(
-            new SimpleTriodeResidual(va, vg1, ia)),
+            new SimpleTriodeResidual(va, vg1n, ia)),
         NULL,
         parameter[PAR_KG1]->getPointer(),
         parameter[PAR_VCT]->getPointer(),

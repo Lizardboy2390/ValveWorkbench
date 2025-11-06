@@ -1,14 +1,41 @@
 #include "cohenhelietriode.h"
+#include <algorithm>
 
 struct CohenHelieTriodeResidual {
     CohenHelieTriodeResidual(double va, double vg, double ia) : va_(va), vg_(vg), ia_(ia) {}
 
     template <typename T>
     bool operator()(const T* const kg, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, T* residual) const {
-        T epk = log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg_ + vct[0]) / sqrt(kvb[0] + va_ * va_ + kvb1[0] * va_))));
-        T ia = pow((va_ / kp[0]) * epk, x[0]) / kg[0];
-        residual[0] = ia_ - ia;
-        return !(isnan(ia) || isinf(ia));
+        // Robust guards to avoid NaN/Inf and evaluation failures
+        const T eps = T(1e-12);
+
+        // Safe denominator and sqrt argument
+        T kp_safe = kp[0];
+        if (kp_safe <= eps) kp_safe = eps;
+
+        T sqrt_arg = kvb[0] + T(va_) * T(va_) + kvb1[0] * T(va_);
+        if (sqrt_arg <= eps) sqrt_arg = eps;
+        T f = sqrt(sqrt_arg);
+
+        // Exponent input
+        T y = kp[0] * (T(1.0) / std::max(mu[0], eps) + (T(vg_) + vct[0]) / f);
+        // Cap exponent to avoid overflow
+        if (y > T(50.0)) y = T(50.0);
+        if (y < T(-50.0)) y = T(-50.0);
+
+        // Stable log(1+exp(y))
+        T log1pexp = log(T(1.0) + exp(y));
+        T epk = (T(va_) / kp_safe) * log1pexp;
+
+        // Ensure positive base for pow
+        if (epk <= eps) epk = eps;
+
+        // Ensure positive kg to avoid division by zero
+        T kg_safe = std::max(kg[0], eps);
+
+        T ia = pow(epk, x[0]) / kg_safe;
+        residual[0] = T(ia_) - ia;
+        return true; // Never fail evaluation; residual remains finite due to guards
     }
 
 private:
@@ -24,9 +51,10 @@ CohenHelieTriode::CohenHelieTriode()
 
 void CohenHelieTriode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
+    double vg1n = -std::fabs(vg1);
     anodeProblem.AddResidualBlock(
         new AutoDiffCostFunction<CohenHelieTriodeResidual, 1, 1, 1, 1, 1, 1, 1, 1>(
-            new CohenHelieTriodeResidual(va, vg1, ia)),
+            new CohenHelieTriodeResidual(va, vg1n, ia)),
         NULL,
         parameter[PAR_KG1]->getPointer(),
         parameter[PAR_KP]->getPointer(),

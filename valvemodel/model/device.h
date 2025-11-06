@@ -64,6 +64,7 @@ public:
     void setDeviceType(int newDeviceType);
 
     QString getName();
+    void setName(const QString &newName);
 
     virtual QTreeWidgetItem *buildTree(QTreeWidgetItem *parent);
 

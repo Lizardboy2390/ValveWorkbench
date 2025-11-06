@@ -1,4 +1,5 @@
 #include "device.h"
+#include <QGraphicsTextItem>
 
 Device::Device(int _modelDeviceType) : deviceType(_modelDeviceType)
 {
@@ -60,28 +61,39 @@ Device::Device(QJsonDocument modelDocument)
                 }
             }
 
-            if (modelObject.contains("type") && modelObject["type"].isString()) {
-                QString modelType = modelObject["type"].toString();
-                qInfo("Model type: %s", modelType.toStdString().c_str());
+            QString modelTypeStr = modelObject.value("type").toString();
+            if (!modelTypeStr.isEmpty()) {
+                qInfo("Model type: %s", modelTypeStr.toStdString().c_str());
+            }
 
-                if (modelType == "simple") {
-                    model = new SimpleTriode();
-                } else if (modelType == "koren") {
-                    model = new KorenTriode();
-                } else if (modelType == "cohenHelie") {
+            // Choose model class: prefer explicit type, otherwise infer from keys
+            if (modelTypeStr == "simple") {
+                model = new SimpleTriode();
+            } else if (modelTypeStr == "koren") {
+                model = new KorenTriode();
+            } else if (modelTypeStr == "cohenHelie") {
+                model = new CohenHelieTriode();
+            } else if (modelTypeStr == "reefman") {
+                model = new ReefmanPentode();
+            } else if (modelTypeStr == "gardiner") {
+                model = new GardinerPentode();
+            } else {
+                // Infer triode model from present keys
+                if (modelObject.contains("kvb1")) {
                     model = new CohenHelieTriode();
-                } else if (modelType == "reefman") {
-                    model = new ReefmanPentode();
-                } else if (modelType == "gardiner") {
-                    model = new GardinerPentode();
-                }
-
-                if (model != nullptr) {
-                    model->fromJson(modelObject);
-                    qInfo("Model created and initialized");
+                    qInfo("Inferred model: Cohen-Helie (kvb1 present)");
+                } else if (modelObject.contains("kp") || modelObject.contains("kvb")) {
+                    model = new KorenTriode();
+                    qInfo("Inferred model: Koren (kp/kvb present)");
                 } else {
-                    qInfo("Model type not recognized: %s", modelType.toStdString().c_str());
+                    model = new SimpleTriode();
+                    qInfo("Inferred model: Simple (fallback)");
                 }
+            }
+
+            if (model != nullptr) {
+                model->fromJson(modelObject);
+                qInfo("Model created and initialized");
             }
         } else {
             qInfo("No model object found in JSON");
@@ -139,7 +151,7 @@ void Device::transferAxes(Plot *plot)
 
 QGraphicsItemGroup *Device::anodePlot(Plot *plot)
 {
-    QList<QGraphicsItem *> segments;
+    QList<QGraphicsItem *> items;
 
     QPen modelPen;
     modelPen.setColor(QColor::fromRgb(255, 0, 0));
@@ -147,24 +159,54 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
     double vgInterval = interval(vg1Max);
 
     double vg1 = -vg1Max;
+    int vgIndex = 0; // used to stagger labels to avoid overlap
 
     while (vg1 <= 0.0) {
+        const double vgLabel = vg1; // preserve for label text
         double va = 0.0;
         double ia = model->anodeCurrent(va, vg1);
 
         for (int j = 1; j < 61; j++) {
             double vaNext = (vaMax * j) / 60.0;
             double iaNext = model->anodeCurrent(vaNext, vg1);
-            segments.append(plot->createSegment(va, ia, vaNext, iaNext, modelPen));
+            items.append(plot->createSegment(va, ia, vaNext, iaNext, modelPen));
 
             va = vaNext;
             ia = iaNext;
         }
 
+        // Add a label at the curve's intersection with the plot edge
+        // Prefer right edge (x = vaMax); if current exceeds iaMax there, use top edge (y = iaMax)
+        const double epsX = std::max(0.5, vaMax * 0.01);   // 1% inset or 0.5V minimum
+        const double epsY = std::max(0.05, iaMax * 0.01);  // 1% inset or 0.05mA minimum
+
+        double x = vaMax - epsX;
+        double yAtRight = model->anodeCurrent(vaMax, vg1);
+        double y;
+        if (std::isfinite(yAtRight) && yAtRight <= iaMax) {
+            // Right edge intersection
+            y = std::min(iaMax - epsY, std::max(0.0, yAtRight));
+        } else {
+            // Use top edge intersection: find Va at Ia = iaMax (mA)
+            double xTop = model->anodeVoltage(iaMax, vg1);
+            if (!std::isfinite(xTop)) xTop = vaMax;
+            x = std::min(vaMax - epsX, std::max(epsX, xTop - epsX));
+            y = iaMax - epsY;
+        }
+        QGraphicsTextItem *label = plot->createLabel(x, y, vgLabel, QColor::fromRgb(255, 0, 0));
+        if (label) {
+            label->setPlainText(QString("%1V").arg(vgLabel, 0, 'f', 1));
+            QFont f = label->font();
+            f.setPointSizeF(std::max(7.0, f.pointSizeF()));
+            label->setFont(f);
+            items.append(label);
+        }
+
         vg1 += vgInterval;
+        ++vgIndex;
     }
 
-    return plot->getScene()->createItemGroup(segments);
+    return plot->getScene()->createItemGroup(items);
 }
 
 QGraphicsItemGroup *Device::transferPlot(Plot *plot)
@@ -261,4 +303,9 @@ double Device::getVg2Max() const
 double Device::getPaMax() const
 {
     return paMax;
+}
+
+void Device::setName(const QString &newName)
+{
+    name = newName;
 }

@@ -28,7 +28,6 @@ SOURCES += \
     projectdialog.cpp \
     comparedialog.cpp \
     project.cpp \
-    triodecommoncathode.cpp \
     valveworkbench.cpp \
     valvemodel/circuit/circuit.cpp \
     valvemodel/circuit/triodeaccathodefollower.cpp \
@@ -71,7 +70,6 @@ HEADERS += \
     projectdialog.h \
     comparedialog.h \
     project.h \
-    triodecommoncathode.h \
     valveworkbench.h \
     valvemodel/circuit/circuit.h \
     valvemodel/circuit/triodeaccathodefollower.h \

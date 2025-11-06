@@ -3,11 +3,11 @@
 	"vaMax": 300.0,
 	"vg1Max": 5.0,
 	"iaMax": 5.0,
-	"paMax": 1.25,
+	"paMax": 1.125,
 	"model": {
 		"device": "triode",
 		"type": "cohenHelie",
-		"kg1": .899682072661792,
+		"kg1": 0.899682072661792,
 		"mu": 100,
 		"x": 1.52,
 		"kp": 806,
