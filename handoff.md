@@ -9,6 +9,7 @@ Last updated: 2025-11-06
 
 ## Recent Focus
 - Designer plotting improvements (anode/cathode load lines, OP, AC small-signal line).
+- AC Cathode Follower parity with web version (UI, plotting, swing, labels).
 - Visibility toggles for measured/modelled plots on Designer.
 - Ensure model fitting always uses non-positive grid voltages (single and double triode).
 
@@ -48,6 +49,7 @@ Last updated: 2025-11-06
 - Canonical slots kept:
   - `on_measureCheck_stateChanged(int)` toggles measured curves (and secondary) on scene.
   - `on_modelCheck_stateChanged(int)` toggles model curves (`modelPlot`, modelled/estimated groups).
+- Guard: when enabling model curves, initialize axes from current device limits before calling `anodePlot` (prevents crash when axes uninitialized).
 - Removed duplicate earlier definitions to fix C2084.
 - Checkboxes made visible on Designer via `on_tabWidget_currentChanged`.
 - New: Programmatic insertion of Designer checkbox was replaced by stable UI-based placement; where necessary, code ensures it sits after Model checkbox.
@@ -57,7 +59,8 @@ Last updated: 2025-11-06
 - `Plot::createSegment` uses Liang–Barsky clipping against axes in data space to avoid null segments.
 
 ## Current Behaviour
-- Green anode line renders.
+- Triode CC: green anode line renders and overlays present.
+- ACCF: follower-specific AC line, cathode locus, and overlays present; green anode DC line is intentionally suppressed.
 - Designer checkboxes (Measured, Model) visible and functional (toggling overlays).
 - Some user runs still show only green line; new diagnostics added to pinpoint cause for missing blue/OP/AC.
 
@@ -86,6 +89,15 @@ Additional (2025-11-05):
 - Cathode self-bias sweep yields Va values outside current axes; need dynamic scaling.
 - Device `anodeVoltage(Ia,Vg)` under strongly negative Vg returns invalid/edge values → few/no cathode points.
 
+## 2025-11-06 Summary (AC Cathode Follower)
+- Circuit selection stabilized (abstract method implemented; lazy construction by enum index).
+- Device dropdown populated (getDeviceType returns triode for device 1).
+- UI: Inputs Vb, Rk, Ra/RL/Rg (kΩ display); Outputs Vk, Va, Ia, single Gain (K-bypass driven), μ, ra (int), gm (2dp), Zin/Zo (kΩ), Input sensitivity (Vpp).
+- Plot: OP from Va = Vb − Ia·(Ra+Rk), Vgk = −Ia·Rk. AC line slope = −(Ra + (Rk || RL)) through OP. RA=0 supported.
+- Overlays: Brown (max) and light blue (sym) rows with labels; Pa dashed red enters within visible range; purple cathode locus clipped left/right.
+- Toggles: Max Sym Swing and K bypass wired to ACCF (replot + UI refresh).
+- Model: axes initialized before `anodePlot` to prevent crashes; red family visible with Model toggle.
+
 ## Next Steps (Recommended)
 1) Add a "Calculate" button (Designer) to explicitly recompute and draw without relying on editingFinished.
    - UI: Add QPushButton under the 16 parameter lines (Designer tab).
@@ -105,6 +117,8 @@ Additional (2025-11-05):
    - Keep only one implementation of measure/model slot handlers.
 
 5) Verify Modeller negative-grid logs in single and double triode runs (max of range must be ≤ 0).
+6) Finalize ACCF label order/wording to exactly mirror the web page; hide unused rows.
+7) Apply ACCF patterns to DC Cathode Follower next.
 
 ## Test Checklist
 - Designer: Triode CC, Device: 12AX7, Params: Vb=250, Ra=100k, Rk=1.5k, RL=1M.
