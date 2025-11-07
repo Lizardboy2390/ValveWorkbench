@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-05
+Last updated: 2025-11-06
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -18,6 +18,7 @@ Last updated: 2025-11-05
 - Auto-plot model curves in Designer when a device is selected (if Show Fitted Model is checked) so red model families appear without a measurement.
 - Clamped Designer axes to device limits (`vaMax`, `iaMax`) so overlay lines do not exceed model plot extent.
 - Ensured Designer overlays are cleared before replot (no stacking) and do not interfere with measurement/model visibility.
+- gm vs bypass semantics: gm is an intrinsic device parameter at OP and does not change with bypass; cathode bypass only removes local degeneration so stage gain increases (effective gm toward gm as Zk_ac→0).
 
 ## Key Code Changes
 

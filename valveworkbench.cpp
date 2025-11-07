@@ -610,6 +610,53 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
             designerCheck = found;
             QObject::connect(designerCheck, &QCheckBox::stateChanged, this, &ValveWorkbench::on_designerCheck_stateChanged, Qt::UniqueConnection);
         }
+
+        // Add Sym Swing, Input Sensitivity, and Gain Mode toggles if missing
+        auto ensureToggle = [&](QCheckBox *&ref, const char *objName, const QString &label, auto slot){
+            // Try to find existing by objectName
+            for (int i = 0; i < ui->horizontalLayout_9->count(); ++i) {
+                QWidget *w = ui->horizontalLayout_9->itemAt(i) ? ui->horizontalLayout_9->itemAt(i)->widget() : nullptr;
+                if (w && w->objectName() == QLatin1String(objName)) { ref = qobject_cast<QCheckBox*>(w); break; }
+            }
+            if (!ref) {
+                ref = new QCheckBox(label, this);
+                ref->setObjectName(objName);
+                if (strcmp(objName, "useBypassedGainCheck") == 0) ref->setChecked(true); else ref->setChecked(true);
+                ui->horizontalLayout_9->addWidget(ref);
+                QObject::connect(ref, &QCheckBox::stateChanged, this, slot, Qt::UniqueConnection);
+            } else {
+                ref->setText(label);
+                QObject::connect(ref, &QCheckBox::stateChanged, this, slot, Qt::UniqueConnection);
+            }
+        };
+
+        ensureToggle(symSwingCheck, "symSwingCheck", tr("Max Sym Swing"), &ValveWorkbench::on_symSwingCheck_stateChanged);
+        ensureToggle(useBypassedGainCheck, "useBypassedGainCheck", tr("K bypass"), &ValveWorkbench::on_useBypassedGainCheck_stateChanged);
+        if (symSwingCheck) {
+            symSwingCheck->setStyleSheet("color: rgb(100,149,237);");
+        }
+    }
+
+    // Move the three Designer-related checkboxes into a new row below the Input sensitivity row (cir12)
+    if (ui->verticalLayout && ui->horizontalLayout_19) {
+        // Remove from bottom toggle row if present
+        auto removeIfIn = [&](QCheckBox *w){ if (!w) return; if (ui->horizontalLayout_9 && ui->horizontalLayout_9->indexOf(w) >= 0) { ui->horizontalLayout_9->removeWidget(w); } };
+        removeIfIn(symSwingCheck);
+        removeIfIn(useBypassedGainCheck);
+
+        // Create a new row layout and insert it right after horizontalLayout_19 (which holds cir12)
+        QHBoxLayout *designerTogglesRow = new QHBoxLayout();
+        designerTogglesRow->addStretch();
+        if (symSwingCheck) designerTogglesRow->addWidget(symSwingCheck);
+        if (useBypassedGainCheck) designerTogglesRow->addWidget(useBypassedGainCheck);
+        designerTogglesRow->addStretch();
+
+        int idx = ui->verticalLayout->indexOf(ui->horizontalLayout_19);
+        if (idx >= 0) {
+            ui->verticalLayout->insertLayout(idx + 1, designerTogglesRow);
+        } else {
+            ui->verticalLayout->addLayout(designerTogglesRow);
+        }
     }
 
     // Ensure Modeller tab has an Export to Devices button
@@ -999,7 +1046,21 @@ void ValveWorkbench::updateCircuitParameter(int index)
     double value = checkDoubleValue(circuitValues[index], circuit->getParameter(index));
 
     updateDoubleValue(circuitValues[index], value);
-    circuit->setParameter(index, value);
+
+    // If this is the Triode Common Cathode circuit, treat RA and RL inputs as kΩ in the UI
+    {
+        // Safe downcast only if header is available
+        #include "valvemodel/circuit/triodecommoncathode.h"
+        if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
+            if (index == TRI_CC_RA || index == TRI_CC_RL) {
+                circuit->setParameter(index, value * 1000.0); // convert kΩ → Ω for storage/calculation
+            } else {
+                circuit->setParameter(index, value);
+            }
+        } else {
+            circuit->setParameter(index, value);
+        }
+    }
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
@@ -2867,7 +2928,48 @@ void ValveWorkbench::on_designerCheck_stateChanged(int arg1)
 {
     const bool visible = (arg1 != 0);
     for (Circuit *c : circuits) {
-        if (c) c->setOverlaysVisible(visible);
+        if (!c) continue;
+        c->setOverlaysVisible(visible);
+        // If this is the TriodeCommonCathode, also toggle its extra overlay groups
+        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
+            t->setDesignerOverlaysVisible(visible);
+        }
+    }
+}
+
+void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
+{
+    const bool enabled = (arg1 != 0);
+    for (Circuit *c : circuits) {
+        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
+            t->setSymSwingEnabled(enabled);
+            t->plot(&plot);
+            t->updateUI(circuitLabels, circuitValues);
+        }
+    }
+}
+
+void ValveWorkbench::on_inputSensitivityCheck_stateChanged(int arg1)
+{
+    const bool enabled = (arg1 != 0);
+    for (Circuit *c : circuits) {
+        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
+            t->setInputSensitivityEnabled(enabled);
+            t->plot(&plot);
+        }
+    }
+}
+
+void ValveWorkbench::on_useBypassedGainCheck_stateChanged(int arg1)
+{
+    const bool useBypassed = (arg1 != 0);
+    for (Circuit *c : circuits) {
+        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
+            t->setSensitivityGainMode(useBypassed ? 1 : 0);
+            t->plot(&plot);
+            // Refresh Designer panel values (Input sensitivity depends on gain mode)
+            t->updateUI(circuitLabels, circuitValues);
+        }
     }
 }
 

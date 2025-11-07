@@ -15,6 +15,8 @@ TriodeCommonCathode::TriodeCommonCathode()
     parameter[TRI_CC_AR] = new Parameter("Internal resistance (Ω)", 0.0); // Small signal ra
     parameter[TRI_CC_GAIN] = new Parameter("Gain (unbypassed)", 0.0); // Voltage gain
     parameter[TRI_CC_GAIN_B] = new Parameter("Gain (bypassed)", 0.0); // Voltage gain with bypassed cathode
+    parameter[TRI_CC_MU] = new Parameter("Mu (unitless)", 0.0); // Small-signal mu at OP
+    parameter[TRI_CC_GM] = new Parameter("Transconductance (mA/V)", 0.0); // gm at OP
 }
 
 
@@ -23,15 +25,23 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
     // Input parameters (editable) - first 4
     for (int i = 0; i < 4; i++) {
         if (parameter[i] && labels[i] && values[i]) {
-            labels[i]->setText(parameter[i]->getName());
-            values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 1));
+            if (i == TRI_CC_RA) {
+                labels[i]->setText("Anode resistor (kΩ)");
+                values[i]->setText(QString::number(parameter[i]->getValue() / 1000.0, 'f', 1));
+            } else if (i == TRI_CC_RL) {
+                labels[i]->setText("Load impedance (kΩ)");
+                values[i]->setText(QString::number(parameter[i]->getValue() / 1000.0, 'f', 1));
+            } else {
+                labels[i]->setText(parameter[i]->getName());
+                values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 1));
+            }
             labels[i]->setVisible(true);
             values[i]->setVisible(true);
         }
     }
 
-    // Output parameters (read-only) - next 6
-    for (int i = 4; i < 10; i++) {
+    // Output parameters (read-only) - next 8 (including mu and gm)
+    for (int i = 4; i < 12; i++) {
         if (parameter[i] && labels[i] && values[i]) {
             QString labelText;
             switch (i) {
@@ -39,19 +49,70 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
                 case 5: labelText = "Anode voltage Va (V):"; break;
                 case 6: labelText = "Anode current Ia (mA):"; break;
                 case 7: labelText = "Internal resistance ra (Ω):"; break;
-                case 8: labelText = "Gain (unbypassed):"; break;
-                case 9: labelText = "Gain (bypassed):"; break;
+                case 8: labelText = "Gain:"; break;
+                case 9: labelText = ""; break;
+                case 10: labelText = "Mu (unitless):"; break;
+                case 11: labelText = "gm (mA/V):"; break;
             }
-            labels[i]->setText(labelText);
-            values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 1));
-            labels[i]->setVisible(true);
-            values[i]->setVisible(true);
-            values[i]->setReadOnly(true);  // Make output parameters read-only
+            if (i == 9) {
+                // Hide the second gain box in favor of a single mode-dependent Gain
+                labels[i]->setVisible(false);
+                values[i]->setVisible(false);
+            } else {
+                labels[i]->setText(labelText);
+                if (device1 == nullptr) {
+                    values[i]->setText("N/A");
+                } else {
+                    if (i == 8) {
+                        // Single Gain value chosen by K bypass toggle
+                        double gain = (sensitivityGainMode == 1) ? parameter[TRI_CC_GAIN_B]->getValue() : parameter[TRI_CC_GAIN]->getValue();
+                        values[i]->setText(QString::number(gain, 'f', 1));
+                    } else if (i == 7) {
+                        // Internal resistance ra: no decimal places
+                        values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 0));
+                    } else if (i == 11) {
+                        // gm (mA/V): two decimal places
+                        values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 2));
+                    } else {
+                        values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 1));
+                    }
+                }
+                // Ensure internal resistance value box is wide enough for large numbers
+                if (i == 7) {
+                    values[i]->setMinimumWidth(80);
+                    values[i]->setMaximumWidth(110);
+                }
+                labels[i]->setVisible(true);
+                values[i]->setVisible(true);
+                values[i]->setReadOnly(true);  // Make output parameters read-only
+            }
         }
     }
 
+    // Input sensitivity (Vpp) as an extra Designer value in row 12 (populated only when Max Sym Swing is enabled)
+    if (labels[12] && values[12]) {
+        labels[12]->setText("Input sensitivity (Vpp):");
+        if (device1 == nullptr) {
+            values[12]->setText("N/A");
+        } else {
+            if (showSymSwing && lastSymVpp > 0.0) {
+                // choose gain based on toggle: 1=bypassed, 0=unbypassed
+                double gain = (sensitivityGainMode == 1) ? parameter[TRI_CC_GAIN_B]->getValue() : parameter[TRI_CC_GAIN]->getValue();
+                double vpp_in = (std::isfinite(gain) && std::abs(gain) > 1e-12) ? (lastSymVpp / std::abs(gain)) : 0.0;
+                values[12]->setText(QString::number(vpp_in, 'f', 1));
+            } else {
+                values[12]->setText("");
+            }
+        }
+        // Color the box value light blue to match the plot accents
+        values[12]->setStyleSheet("color: rgb(100,149,237);");
+        labels[12]->setVisible(true);
+        values[12]->setVisible(true);
+        values[12]->setReadOnly(true);
+    }
+
     // Hide unused parameters
-    for (int i = 10; i < 16; i++) {
+    for (int i = 13; i < 16; i++) {
         if (labels[i] && values[i]) {
             labels[i]->setVisible(false);
             values[i]->setVisible(false);
@@ -248,6 +309,7 @@ void TriodeCommonCathode::calculateOperatingPoint()
     // Calculate small-signal parameters from device at OP using finite differences
     double mu = 0.0;
     double ra_internal = 0.0;  // Ohms
+    double gm_mA_per_V = 0.0;  // mA/V
 
     if (device1 && std::isfinite(va) && std::isfinite(ia)) {
         // Operating point quantities
@@ -278,6 +340,14 @@ void TriodeCommonCathode::calculateOperatingPoint()
             double dVa_dVg = (va_plusVg - va_minusVg) / (vgPlus - vgMinus);
             mu = -dVa_dVg;
         }
+
+        // gm = dIa/dVg at constant Va (use model's anodeCurrent). Units mA/V directly
+        const double va_hold = va; // hold at OP anode voltage
+        double ia_plusVg_mA = device1->anodeCurrent(va_hold, vgPlus);
+        double ia_minusVg_mA = device1->anodeCurrent(va_hold, vgMinus);
+        if (std::isfinite(ia_plusVg_mA) && std::isfinite(ia_minusVg_mA) && (vgPlus - vgMinus) != 0.0) {
+            gm_mA_per_V = (ia_plusVg_mA - ia_minusVg_mA) / (vgPlus - vgMinus); // mA/V
+        }
     }
 
     // Fallbacks if derivatives failed
@@ -285,11 +355,15 @@ void TriodeCommonCathode::calculateOperatingPoint()
     if (!std::isfinite(ra_internal) || ra_internal <= 0.0) ra_internal = 1000.0;
 
     parameter[TRI_CC_AR]->setValue(ra_internal);
+    parameter[TRI_CC_MU]->setValue(mu);
+    parameter[TRI_CC_GM]->setValue(gm_mA_per_V);
 
     // Calculate gains using device-derived mu and ra
     double rl = parameter[TRI_CC_RL]->getValue();
-    double gain_unbypassed = mu * rl / (rl + ra + (mu + 1.0) * rk);
-    double gain_bypassed = mu * rl / (rl + ra + ra_internal);
+    // Effective AC anode load is the parallel of external anode resistor and external load
+    double r_ac = (ra > 0.0 && rl > 0.0) ? (ra * rl) / (ra + rl) : (ra > 0.0 ? ra : rl);
+    double gain_unbypassed = mu * r_ac / (r_ac + ra_internal + (mu + 1.0) * rk);
+    double gain_bypassed = mu * r_ac / (r_ac + ra_internal);
 
     if (!std::isfinite(gain_unbypassed)) gain_unbypassed = 0.0;
     if (!std::isfinite(gain_bypassed)) gain_bypassed = 0.0;
@@ -318,6 +392,7 @@ void TriodeCommonCathode::plot(Plot *plot)
           parameter[TRI_CC_RK]->getValue(),
           parameter[TRI_CC_RL]->getValue());
     // Clear any existing circuit overlays (Designer-only)
+    lastSymVpp = 0.0;
     if (anodeLoadLine != nullptr) {
         plot->getScene()->removeItem(anodeLoadLine);
         delete anodeLoadLine;
@@ -340,6 +415,21 @@ void TriodeCommonCathode::plot(Plot *plot)
         plot->getScene()->removeItem(opMarker);
         delete opMarker;
         opMarker = nullptr;
+    }
+    if (symSwingGroup != nullptr) {
+        plot->getScene()->removeItem(symSwingGroup);
+        delete symSwingGroup;
+        symSwingGroup = nullptr;
+    }
+    if (sensitivityGroup != nullptr) {
+        plot->getScene()->removeItem(sensitivityGroup);
+        delete sensitivityGroup;
+        sensitivityGroup = nullptr;
+    }
+    if (paLimitGroup != nullptr) {
+        plot->getScene()->removeItem(paLimitGroup);
+        delete paLimitGroup;
+        paLimitGroup = nullptr;
     }
 
     // Check if we have a device selected
@@ -401,22 +491,49 @@ void TriodeCommonCathode::plot(Plot *plot)
         qInfo("Designer: anode line has insufficient points: %d", anodeLoadLineData.size());
     }
 
-    // Plot cathode load line (blue) - only if we have valid data
+    // Plot cathode load line (purple) - only if we have valid data
     if (cathodeLoadLineData.size() >= 2) {
         cathodeLoadLine = new QGraphicsItemGroup();
 
         QPen cathodePen;
-        cathodePen.setColor(QColor::fromRgb(0, 0, 128));  // Blue for cathode load line
+        cathodePen.setColor(QColor::fromRgb(128, 0, 128));  // Blue for cathode load line
         cathodePen.setWidth(2);
 
+        // Left/right margins to avoid hugging the plot frame visually
+        const double leftClipX = std::max(5.0, xStop * 0.03);  // ~3% of width or 5V
+        const double rightClipX = std::max(leftClipX + 1.0, xStop - std::max(5.0, xStop * 0.03));
+
         for (int i = 0; i < cathodeLoadLineData.size() - 1; i++) {
-            QPointF start = cathodeLoadLineData[i];
-            QPointF end = cathodeLoadLineData[i + 1];
+            QPointF s0 = cathodeLoadLineData[i];
+            QPointF e0 = cathodeLoadLineData[i + 1];
+            // Skip segments entirely left of left margin or entirely right of right margin
+            if ((s0.x() < leftClipX && e0.x() < leftClipX) || (s0.x() > rightClipX && e0.x() > rightClipX)) continue;
+
+            // If the segment crosses the margin from left to right, interpolate start at leftClipX
+            QPointF start = s0;
+            QPointF end = e0;
+            if (start.x() < leftClipX && end.x() > leftClipX && (end.x() - start.x()) != 0.0) {
+                double t = (leftClipX - start.x()) / (end.x() - start.x());
+                double yAtClip = start.y() + t * (end.y() - start.y());
+                start.setX(leftClipX);
+                start.setY(yAtClip);
+            }
+            // If the segment crosses the right margin from left to right, interpolate end at rightClipX
+            if (start.x() < rightClipX && end.x() > rightClipX && (end.x() - start.x()) != 0.0) {
+                double t = (rightClipX - start.x()) / (end.x() - start.x());
+                double yAtClip = start.y() + t * (end.y() - start.y());
+                end.setX(rightClipX);
+                end.setY(yAtClip);
+            }
+
             // Clamp within device limits
             start.setX(std::clamp(start.x(), 0.0, xStop));
             end.setX(std::clamp(end.x(), 0.0, xStop));
             start.setY(std::clamp(start.y(), 0.0, yStop));
             end.setY(std::clamp(end.y(), 0.0, yStop));
+
+            // Ensure we still have a drawable span
+            if (end.x() <= leftClipX || start.x() >= rightClipX) continue;
 
             QGraphicsLineItem *segment = plot->createSegment(start.x(), start.y(), end.x(), end.y(), cathodePen);
             if (segment) {
@@ -461,25 +578,278 @@ void TriodeCommonCathode::plot(Plot *plot)
             acPen.setColor(QColor::fromRgb(255, 215, 0));  // Yellow for AC line
             acPen.setWidth(2);
 
-            // Span around OP: take 20% of x range but not beyond OP to 0/xStop excessively
-            double dx = 0.2 * xStop;
-            dx = std::min(dx, op.x());            // keep left end >= 0
-            dx = std::min(dx, xStop - op.x());    // keep right end <= xStop
-            if (dx > 0.0) {
-                double x1 = op.x() - dx;
-                double x2 = op.x() + dx;
-                double y1 = op.y() + slope * (x1 - op.x());
-                double y2 = op.y() + slope * (x2 - op.x());
+            // Span full graph width from 0 to xStop, passing through OP
+            double x1 = 0.0;
+            double x2 = xStop;
+            double y1 = op.y() + slope * (x1 - op.x());
+            double y2 = op.y() + slope * (x2 - op.x());
 
-                // Create a group so it can be cleared on next replot
-                acSignalLine = new QGraphicsItemGroup();
-                QGraphicsItem *segment = plot->createSegment(x1, y1, x2, y2, acPen);
-                if (segment) acSignalLine->addToGroup(segment);
-                if (!acSignalLine->childItems().isEmpty()) {
-                    plot->getScene()->addItem(acSignalLine);
-                } else {
-                    delete acSignalLine; acSignalLine = nullptr;
+            // Create a group so it can be cleared on next replot
+            acSignalLine = new QGraphicsItemGroup();
+            QGraphicsItem *segment = plot->createSegment(x1, y1, x2, y2, acPen);
+            if (segment) acSignalLine->addToGroup(segment);
+            if (!acSignalLine->childItems().isEmpty()) {
+                plot->getScene()->addItem(acSignalLine);
+            } else {
+                delete acSignalLine; acSignalLine = nullptr;
+            }
+
+            // Remove previous swing annotations
+            if (swingGroup) {
+                plot->getScene()->removeItem(swingGroup);
+                delete swingGroup;
+                swingGroup = nullptr;
+            }
+
+            // Compute intersection with Vg=0 model curve (prefer left of OP): scan from OP.x() downwards
+            double vaMax = xStop;
+            double vaCut = -1.0;
+            double yAtCut = 0.0;
+            auto f = [&](double va){
+                // anodeCurrent returns mA; slope is in mA/V; op.y() is in mA
+                double ia_curve_mA = device1->anodeCurrent(va, 0.0);
+                double ia_line_mA = op.y() + slope * (va - op.x());
+                return ia_curve_mA - ia_line_mA;
+            };
+            const int samples = 600;
+            double lastVa = op.x();
+            lastVa = std::clamp(lastVa, 0.0, vaMax);
+            double lastF = f(lastVa);
+            for (int i = 1; i <= samples; ++i) {
+                double va = op.x() * (1.0 - static_cast<double>(i) / samples); // decreasing from OP to 0
+                va = std::max(va, 0.0);
+                double curF = f(va);
+                if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                    double denom = (curF - lastF);
+                    double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                    t = std::clamp(t, 0.0, 1.0);
+                    vaCut = lastVa + t * (va - lastVa);
+                    yAtCut = op.y() + slope * (vaCut - op.x());
+                    break;
                 }
+                lastVa = va;
+                lastF = curF;
+            }
+            // If no sign change found, fall back to closest match away from boundary
+            if (vaCut < 0.0) {
+                double bestVa = -1.0;
+                double bestAbs = std::numeric_limits<double>::infinity();
+                for (int i = 0; i <= samples; ++i) {
+                    double va = op.x() * (static_cast<double>(i) / samples);
+                    double curF = f(va);
+                    double absF = std::abs(curF);
+                    if (absF < bestAbs && va > 1.0 && va < vaMax - 1.0) {
+                        bestAbs = absF;
+                        bestVa = va;
+                    }
+                }
+                if (bestVa >= 0.0) {
+                    vaCut = bestVa;
+                    yAtCut = op.y() + slope * (vaCut - op.x());
+                }
+            }
+
+            // Intersection with Ia = 0 (x-axis)
+            double vaZero = op.x() - op.y() / slope;
+            vaZero = std::clamp(vaZero, 0.0, xStop);
+
+            // Draw annotations if valid (vertical cutoff line + labels)
+            swingGroup = new QGraphicsItemGroup();
+            QPen swingPen(QColor::fromRgb(165, 42, 42)); // brown cutoff line
+            swingPen.setWidth(2);
+            if (vaCut >= 0.0) {
+                QGraphicsLineItem *vline = plot->createSegment(vaCut, 0.0, vaCut, yAtCut, swingPen);
+                if (vline) swingGroup->addToGroup(vline);
+                QGraphicsTextItem *labelCut = plot->createLabel(vaCut, -yMajor * 1.8, vaCut, QColor::fromRgb(165,42,42));
+                if (labelCut) {
+                    // Center horizontally at vaCut
+                    QPointF p = labelCut->pos();
+                    double w = labelCut->boundingRect().width();
+                    labelCut->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    swingGroup->addToGroup(labelCut);
+                }
+            }
+            QGraphicsTextItem *labelZero = plot->createLabel(vaZero, -yMajor * 1.8, vaZero, QColor::fromRgb(165,42,42));
+            if (labelZero) {
+                QPointF pz = labelZero->pos();
+                double wz = labelZero->boundingRect().width();
+                labelZero->setPos(pz.x() - 5.0 - wz / 2.0, pz.y());
+                swingGroup->addToGroup(labelZero);
+            }
+            if (vaCut >= 0.0) {
+                double swing = std::abs(vaZero - vaCut);
+                double mid = 0.5 * (vaZero + vaCut);
+                QGraphicsTextItem *labelSwing = plot->createLabel(mid, -yMajor * 1.8, swing, QColor::fromRgb(165,42,42));
+                if (labelSwing) {
+                    QPointF ps = labelSwing->pos();
+                    double ws = labelSwing->boundingRect().width();
+                    labelSwing->setPos(ps.x() - 5.0 - ws / 2.0, ps.y());
+                    swingGroup->addToGroup(labelSwing);
+                }
+            }
+            if (!swingGroup->childItems().isEmpty()) {
+                plot->getScene()->addItem(swingGroup);
+            } else {
+                delete swingGroup; swingGroup = nullptr;
+            }
+        }
+    }
+
+    // Draw maximum dissipation limit (Pa = constant) as dashed line
+    if (device1) {
+        const double paMaxW = device1->getPaMax(); // Watts
+        if (paMaxW > 0.0) {
+            paLimitGroup = new QGraphicsItemGroup();
+            QPen paPen(QColor::fromRgb(180, 0, 0));
+            paPen.setStyle(Qt::DashLine);
+            paPen.setWidth(2);
+
+            // Start where the Pa curve enters the visible y-range to avoid hugging the top-left edge
+            const double xEnter = std::max(1e-6, std::min(xStop, (yStop > 0.0 ? (1000.0 * paMaxW / yStop) : xStop)));
+            const int segs = 60;
+            double prevX = xEnter;
+            double prevY = std::min(yStop, 1000.0 * paMaxW / prevX);
+            for (int i = 1; i <= segs; ++i) {
+                double t = static_cast<double>(i) / segs;
+                double x = xEnter + (xStop - xEnter) * t;
+                double y = (x > 0.0) ? std::min(yStop, 1000.0 * paMaxW / x) : yStop;
+                QGraphicsLineItem *seg = plot->createSegment(prevX, prevY, x, y, paPen);
+                if (seg) paLimitGroup->addToGroup(seg);
+                prevX = x;
+                prevY = y;
+            }
+            if (!paLimitGroup->childItems().isEmpty()) {
+                plot->getScene()->addItem(paLimitGroup);
+            } else {
+                delete paLimitGroup; paLimitGroup = nullptr;
+            }
+        }
+    }
+
+    // Symmetrical swing helper and input sensitivity (Vpp), conditional
+    if (op.x() >= 0.0 && op.y() >= 0.0 && device1) {
+        double ra = parameter[TRI_CC_RA]->getValue();
+        double rl = parameter[TRI_CC_RL]->getValue();
+        double rpar = (ra > 0.0 && rl > 0.0) ? (ra * rl) / (ra + rl) : ra > 0.0 ? ra : rl;
+        if (rpar > 0.0 && std::isfinite(rpar)) {
+            const double slope = -1000.0 / rpar; // mA/V
+            // Compute left cutoff again
+            auto f_vg0 = [&](double va){
+                double ia_curve_mA = device1->anodeCurrent(va, 0.0);
+                double ia_line_mA = op.y() + slope * (va - op.x());
+                return ia_curve_mA - ia_line_mA;
+            };
+            double vaCut = -1.0; double yAtCut = 0.0;
+            {
+                const int samples = 400;
+                double lastVa = std::clamp(op.x(), 0.0, xStop);
+                double lastF = f_vg0(lastVa);
+                for (int i = 1; i <= samples; ++i) {
+                    double va = op.x() * (1.0 - static_cast<double>(i) / samples);
+                    va = std::max(va, 0.0);
+                    double curF = f_vg0(va);
+                    if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                        double denom = (curF - lastF);
+                        double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                        t = std::clamp(t, 0.0, 1.0);
+                        vaCut = lastVa + t * (va - lastVa);
+                        yAtCut = op.y() + slope * (vaCut - op.x());
+                        break;
+                    }
+                    lastVa = va; lastF = curF;
+                }
+            }
+            // Right Ia=0 intercept
+            double vaZero = op.x() - op.y() / slope;
+            vaZero = std::clamp(vaZero, 0.0, xStop);
+            // Right Pa limit
+            double vaPa = xStop + 1.0;
+            if (device1->getPaMax() > 0.0) {
+                auto g_pa = [&](double va){
+                    if (va <= 0.0) return 1e9;
+                    double ia_line_mA = op.y() + slope * (va - op.x());
+                    double ia_pa_mA = 1000.0 * device1->getPaMax() / va;
+                    return ia_line_mA - ia_pa_mA;
+                };
+                const int samples = 400;
+                double lastVa = std::max(op.x(), 1e-3);
+                double lastF = g_pa(lastVa);
+                for (int i = 1; i <= samples; ++i) {
+                    double va = op.x() + (xStop - op.x()) * (static_cast<double>(i) / samples);
+                    double curF = g_pa(va);
+                    if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                        double denom = (curF - lastF);
+                        double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                        t = std::clamp(t, 0.0, 1.0);
+                        vaPa = lastVa + t * (va - lastVa);
+                        break;
+                    }
+                    lastVa = va; lastF = curF;
+                }
+            }
+            const double vaRight = std::min(vaZero, vaPa);
+
+            if (showSymSwing && vaCut >= 0.0 && vaRight > op.x() && vaCut < op.x()) {
+                const double vpk = std::min(op.x() - vaCut, vaRight - op.x());
+                const double leftX = op.x() - vpk;
+                const double rightX = op.x() + vpk;
+                symSwingGroup = new QGraphicsItemGroup();
+                QPen tickPenLeft(QColor::fromRgb(100, 149, 237));  // light blue
+                tickPenLeft.setWidth(2);
+                QPen tickPenRight(QColor::fromRgb(100, 149, 237)); // light blue
+                tickPenRight.setWidth(2);
+                // vertical ticks to x-axis
+                if (leftX >= 0.0) {
+                    if (auto *lt = plot->createSegment(leftX, 0.0, leftX, op.y() + slope * (leftX - op.x()), tickPenLeft)) symSwingGroup->addToGroup(lt);
+                }
+                if (rightX <= xStop) {
+                    if (auto *rt = plot->createSegment(rightX, 0.0, rightX, op.y() + slope * (rightX - op.x()), tickPenRight)) symSwingGroup->addToGroup(rt);
+                }
+                // Labels at the tick positions (light blue), same row as center label
+                {
+                    const QColor tickLabelColor = QColor::fromRgb(100, 149, 237);
+                    if (leftX >= 0.0) {
+                        QGraphicsTextItem *lLbl = plot->createLabel(leftX, -yMajor * 2.4, leftX, tickLabelColor);
+                        if (lLbl) {
+                            QPointF pl = lLbl->pos();
+                            double wl = lLbl->boundingRect().width();
+                            lLbl->setPos(pl.x() - 5.0 - wl / 2.0, pl.y());
+                            symSwingGroup->addToGroup(lLbl);
+                        }
+                    }
+                    if (rightX <= xStop) {
+                        QGraphicsTextItem *rLbl = plot->createLabel(rightX, -yMajor * 2.4, rightX, tickLabelColor);
+                        if (rLbl) {
+                            QPointF pr = rLbl->pos();
+                            double wr = rLbl->boundingRect().width();
+                            rLbl->setPos(pr.x() - 5.0 - wr / 2.0, pr.y());
+                            symSwingGroup->addToGroup(rLbl);
+                        }
+                    }
+                }
+                // centered Vpp label (grey, one row below x-axis labels)
+                const double vpp = 2.0 * vpk;
+                lastSymVpp = vpp;
+                QGraphicsTextItem *lbl = plot->createLabel(op.x(), -yMajor * 2.4, vpp, QColor::fromRgb(100,149,237));
+                if (lbl) {
+                    QPointF p = lbl->pos();
+                    double w = lbl->boundingRect().width();
+                    lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    symSwingGroup->addToGroup(lbl);
+                }
+                if (!symSwingGroup->childItems().isEmpty()) plot->getScene()->addItem(symSwingGroup);
+                else { delete symSwingGroup; symSwingGroup = nullptr; }
+            }
+
+            // Always update lastSymVpp so Designer box can use it, even if we don't draw an overlay
+            {
+                double vpk;
+                if (vaCut >= 0.0 && vaRight > op.x() && vaCut < op.x()) {
+                    vpk = std::min(op.x() - vaCut, vaRight - op.x());
+                } else {
+                    vpk = std::max(0.0, std::min(op.x(), vaRight - op.x()));
+                }
+                lastSymVpp = 2.0 * vpk;
             }
         }
     }

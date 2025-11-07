@@ -130,6 +130,9 @@ private slots:
 
     void on_modelCheck_stateChanged(int arg1);
     void on_designerCheck_stateChanged(int arg1);
+    void on_symSwingCheck_stateChanged(int arg1);
+    void on_inputSensitivityCheck_stateChanged(int arg1);
+    void on_useBypassedGainCheck_stateChanged(int arg1);
 
     void on_properties_itemChanged(QTableWidgetItem *item);
 
@@ -162,6 +165,9 @@ private slots:
 private:
     Ui::ValveWorkbench *ui;
     QCheckBox *designerCheck = nullptr;
+    QCheckBox *symSwingCheck = nullptr;
+    QCheckBox *inputSensitivityCheck = nullptr;
+    QCheckBox *useBypassedGainCheck = nullptr;
 
     // UI related member variables
     QLineEdit *circuitValues[16];
