@@ -38,6 +38,7 @@
 #include "valvemodel/data/sweep.h"
 #include "valvemodel/circuit/circuit.h"
 #include "valvemodel/circuit/triodecommoncathode.h"
+#include "valvemodel/circuit/triodeaccathodefollower.h"
 #include "ledindicator/ledindicator.h"
 #include "preferencesdialog.h"
 #include "projectdialog.h"
@@ -793,7 +794,12 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     buildCircuitParameters();
     buildCircuitSelection();
 
-    circuits.append(new TriodeCommonCathode());
+    // Populate circuits by enum index to avoid out-of-range crashes on selection
+    circuits.clear();
+    circuits.resize(TEST_CALCULATOR + 1);
+    circuits[TRIODE_COMMON_CATHODE] = new TriodeCommonCathode();
+    circuits[AC_CATHODE_FOLLOWER] = new TriodeACCathodeFollower();
+    // Other circuit types can be added similarly as they are implemented
 }
 
 ValveWorkbench::~ValveWorkbench()
@@ -928,6 +934,25 @@ void ValveWorkbench::selectCircuit(int circuitType)
         return;
     }
 
+    // Ensure the circuits vector can serve this index and construct lazily if needed
+    if (circuitType < 0) return;
+    if (circuitType >= circuits.size()) {
+        circuits.resize(circuitType + 1);
+    }
+    if (circuits.at(circuitType) == nullptr) {
+        switch (circuitType) {
+            case TRIODE_COMMON_CATHODE:
+                circuits[circuitType] = new TriodeCommonCathode();
+                break;
+            case AC_CATHODE_FOLLOWER:
+                circuits[circuitType] = new TriodeACCathodeFollower();
+                break;
+            default:
+                // Unsupported yet; avoid crash
+                qWarning("Circuit type %d not implemented; aborting selection", circuitType);
+                return;
+        }
+    }
     Circuit *circuit = circuits.at(circuitType);
     qInfo("Circuit class: %s", typeid(*circuit).name());
 
@@ -1047,13 +1072,21 @@ void ValveWorkbench::updateCircuitParameter(int index)
 
     updateDoubleValue(circuitValues[index], value);
 
-    // If this is the Triode Common Cathode circuit, treat RA and RL inputs as kΩ in the UI
+    // Treat RA and RL inputs as kΩ in the UI for supported circuits (Triode CC, AC Cathode Follower)
     {
         // Safe downcast only if header is available
         #include "valvemodel/circuit/triodecommoncathode.h"
+        #include "valvemodel/circuit/triodeaccathodefollower.h"
         if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
             if (index == TRI_CC_RA || index == TRI_CC_RL) {
                 circuit->setParameter(index, value * 1000.0); // convert kΩ → Ω for storage/calculation
+            } else {
+                circuit->setParameter(index, value);
+            }
+        } else if (auto accf = dynamic_cast<TriodeACCathodeFollower*>(circuit)) {
+            // ACCF inputs RA, RL, RG are indices 2,3,4 (kΩ in UI)
+            if (index == 2 || index == 3 || index == 4) {
+                circuit->setParameter(index, value * 1000.0);
             } else {
                 circuit->setParameter(index, value);
             }
@@ -2917,6 +2950,12 @@ void ValveWorkbench::on_modelCheck_stateChanged(int arg1)
     }
     // If toggled on and no model curves yet, try to plot from current device
     if (!modelledCurves && currentDevice) {
+        // Ensure plot axes are initialized to device limits to avoid API misuse inside anodePlot
+        double xStop = std::max(10.0, currentDevice->getVaMax());
+        double yStop = std::max(1.0, currentDevice->getIaMax());
+        double xMajor = std::max(1.0, xStop / 10.0);
+        double yMajor = std::max(0.1, yStop / 10.0);
+        plot.setAxes(0.0, xStop, xMajor, 0.0, yStop, yMajor);
         plot.remove(modelledCurves);
         modelledCurves = currentDevice->anodePlot(&plot);
         if (modelledCurves) plot.add(modelledCurves);
@@ -2941,11 +2980,18 @@ void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
 {
     const bool enabled = (arg1 != 0);
     for (Circuit *c : circuits) {
-        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
-            t->setSymSwingEnabled(enabled);
-            t->plot(&plot);
-            t->updateUI(circuitLabels, circuitValues);
+        if (!c) continue;
+        // Apply if circuit supports it
+        {
+            #include "valvemodel/circuit/triodecommoncathode.h"
+            if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) { t->setSymSwingEnabled(enabled); }
         }
+        {
+            #include "valvemodel/circuit/triodeaccathodefollower.h"
+            if (auto *a = dynamic_cast<TriodeACCathodeFollower*>(c)) { a->setSymSwingEnabled(enabled); }
+        }
+        c->plot(&plot);
+        c->updateUI(circuitLabels, circuitValues);
     }
 }
 
@@ -2964,12 +3010,17 @@ void ValveWorkbench::on_useBypassedGainCheck_stateChanged(int arg1)
 {
     const bool useBypassed = (arg1 != 0);
     for (Circuit *c : circuits) {
-        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
-            t->setSensitivityGainMode(useBypassed ? 1 : 0);
-            t->plot(&plot);
-            // Refresh Designer panel values (Input sensitivity depends on gain mode)
-            t->updateUI(circuitLabels, circuitValues);
+        if (!c) continue;
+        {
+            #include "valvemodel/circuit/triodecommoncathode.h"
+            if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) { t->setSensitivityGainMode(useBypassed ? 1 : 0); }
         }
+        {
+            #include "valvemodel/circuit/triodeaccathodefollower.h"
+            if (auto *a = dynamic_cast<TriodeACCathodeFollower*>(c)) { a->setSensitivityGainMode(useBypassed ? 1 : 0); }
+        }
+        c->plot(&plot);
+        c->updateUI(circuitLabels, circuitValues);
     }
 }
 
