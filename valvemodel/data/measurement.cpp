@@ -581,10 +581,31 @@ void Measurement::anodeAxes(Plot *plot)
 {
     plot->clear();
 
-    double vaInterval = interval(anodeStop);
-    double iaInterval = interval(iaMax);
+    // Determine Y-axis (Ia) upper bound from observed data with fallback to iaMax
+    double maxIaObs = 0.0;
+    for (int i = 0; i < sweeps.size(); ++i) {
+        Sweep *sw = sweeps.at(i);
+        if (!sw) continue;
+        for (int j = 0; j < sw->count(); ++j) {
+            Sample *s = sw->at(j);
+            if (!s) continue;
+            const double ia = s->getIa();
+            if (ia > maxIaObs) maxIaObs = ia;
+        }
+    }
 
-    plot->setAxes(0.0, anodeStop, vaInterval, 0.0, iaMax, iaInterval, 2, 1);
+    double yStop = (maxIaObs > 0.0) ? (maxIaObs * 1.05) : iaMax;
+    if (yStop <= 0.0) {
+        yStop = 0.01; // minimal visible range
+    }
+    if (iaMax > 0.0 && yStop > iaMax) {
+        yStop = iaMax;
+    }
+
+    double vaInterval = interval(anodeStop);
+    double iaInterval = interval(yStop);
+
+    plot->setAxes(0.0, anodeStop, vaInterval, 0.0, yStop, iaInterval, 2, 1);
 }
 
 void Measurement::transferAxes(Plot *plot)

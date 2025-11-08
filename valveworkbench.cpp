@@ -2979,49 +2979,54 @@ void ValveWorkbench::on_designerCheck_stateChanged(int arg1)
 void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
 {
     const bool enabled = (arg1 != 0);
-    for (Circuit *c : circuits) {
-        if (!c) continue;
-        // Apply if circuit supports it
-        {
-            #include "valvemodel/circuit/triodecommoncathode.h"
-            if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) { t->setSymSwingEnabled(enabled); }
-        }
-        {
-            #include "valvemodel/circuit/triodeaccathodefollower.h"
-            if (auto *a = dynamic_cast<TriodeACCathodeFollower*>(c)) { a->setSymSwingEnabled(enabled); }
-        }
-        c->plot(&plot);
-        c->updateUI(circuitLabels, circuitValues);
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) return;
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) return;
+    {
+        #include "valvemodel/circuit/triodecommoncathode.h"
+        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) { t->setSymSwingEnabled(enabled); }
     }
+    {
+        #include "valvemodel/circuit/triodeaccathodefollower.h"
+        if (auto *a = dynamic_cast<TriodeACCathodeFollower*>(c)) { a->setSymSwingEnabled(enabled); }
+    }
+    c->plot(&plot);
+    c->updateUI(circuitLabels, circuitValues);
 }
 
 void ValveWorkbench::on_inputSensitivityCheck_stateChanged(int arg1)
 {
     const bool enabled = (arg1 != 0);
-    for (Circuit *c : circuits) {
-        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
-            t->setInputSensitivityEnabled(enabled);
-            t->plot(&plot);
-        }
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) return;
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) return;
+    #include "valvemodel/circuit/triodecommoncathode.h"
+    if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
+        t->setInputSensitivityEnabled(enabled);
+        c->plot(&plot);
+        c->updateUI(circuitLabels, circuitValues);
     }
 }
 
 void ValveWorkbench::on_useBypassedGainCheck_stateChanged(int arg1)
 {
     const bool useBypassed = (arg1 != 0);
-    for (Circuit *c : circuits) {
-        if (!c) continue;
-        {
-            #include "valvemodel/circuit/triodecommoncathode.h"
-            if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) { t->setSensitivityGainMode(useBypassed ? 1 : 0); }
-        }
-        {
-            #include "valvemodel/circuit/triodeaccathodefollower.h"
-            if (auto *a = dynamic_cast<TriodeACCathodeFollower*>(c)) { a->setSensitivityGainMode(useBypassed ? 1 : 0); }
-        }
-        c->plot(&plot);
-        c->updateUI(circuitLabels, circuitValues);
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) return;
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) return;
+    {
+        #include "valvemodel/circuit/triodecommoncathode.h"
+        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) { t->setSensitivityGainMode(useBypassed ? 1 : 0); }
     }
+    {
+        #include "valvemodel/circuit/triodeaccathodefollower.h"
+        if (auto *a = dynamic_cast<TriodeACCathodeFollower*>(c)) { a->setSensitivityGainMode(useBypassed ? 1 : 0); }
+    }
+    c->plot(&plot);
+    c->updateUI(circuitLabels, circuitValues);
 }
 
 
