@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-07
+Last updated: 2025-11-06
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -134,11 +134,11 @@ Additional (2025-11-05):
 - `valveworkbench.cpp`
 
 ## Open Items
-- [x] Add "Calculate" button to Designer and wire to recompute/plot. (Cleared per user request on 2025-11-07)
-- [x] Axis auto-scaling incorporating cathode line ranges. (Cleared per user request on 2025-11-07)
-- [x] If needed, clamp cathode sweep (e.g., limit |Vg| to device range) to avoid solver edge-cases. (Cleared per user request on 2025-11-07)
-- [x] Validate UI update pathway to ensure OP/gain outputs refresh on Calculate. (Cleared per user request on 2025-11-07)
-- [x] Finalize model grid-family labeling (Vg labels) strictly for visible families; ensure zero regression errors across compilers. (Cleared per user request on 2025-11-07)
+- [ ] Add "Calculate" button to Designer and wire to recompute/plot.
+- [ ] Axis auto-scaling incorporating cathode line ranges.
+- [ ] If needed, clamp cathode sweep (e.g., limit |Vg| to device range) to avoid solver edge-cases.
+- [ ] Validate UI update pathway to ensure OP/gain outputs refresh on Calculate.
+- [ ] Finalize model grid-family labeling (Vg labels) strictly for visible families; ensure zero regression errors across compilers.
 
 ## Environment Notes
 - Qt 6.9.3 (moc output seen), MSVC 2022 64-bit build config present.

@@ -160,22 +160,18 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
         value = (((double) current) / 1023 / 0.22 * vRefSlave);
         value += 0.045; // apparent 45mA offset (i.e. 0.011v across R sense)
         break;
-    case ANODE: {
-        bool useLow = (preferLowRangeWhenPresent && currentLo > 0) || (currentHi != 0) || (current >= 1000 && currentLo > 0);
-        if (useLow) {
-            value = ((double) currentLo) * vRefMaster / 1023 / anodeLowDivisor;
-        } else {
-            value = ((double) current) * vRefMaster / 1023 / anodeHighDivisor;
-        }
-        value *= iaScaleFactor;
-        break;
-    }
+    case ANODE:
     case SCREEN: {
-        bool useLow = (preferLowRangeWhenPresent && currentLo > 0) || (currentHi != 0) || (current >= 1000 && currentLo > 0);
-        if (useLow) {
-            value = ((double) currentLo) * vRefMaster / 1023 / screenLowDivisor;
+        const double highRangeDivisor = 2.0 * 30.0;
+        const double lowRangeDivisor = 2.0 * 3.333333;
+
+        bool highRangeSaturated = current >= 1000;
+        if (highRangeSaturated && currentLo > 0) {
+            value = ((double) currentLo) * vRefMaster / 1023 / lowRangeDivisor;
+            // qInfo("Using low range: %f mA", value * 1000);
         } else {
-            value = ((double) current) * vRefMaster / 1023 / screenHighDivisor;
+            value = ((double) current) * vRefMaster / 1023 / highRangeDivisor;
+            // qInfo("Using high range: %f mA", value * 1000);
         }
         break;
     }
@@ -959,21 +955,17 @@ void Analyser::steppedSweep(double sweepStart, double sweepStop, double stepStar
     sweepIndex = 0;
 
     // Ensure we generate at least one step
-    int maxSteps = (int)(fabs(stepStop - stepStart) / fabs(step)) + 1;
+    int maxSteps = fabs((stepStop - stepStart) / step) + 1;
     int stepCount = 0;
 
     while (((isDescending && stepVoltage >= endCondition) || (!isDescending && stepVoltage <= endCondition)) && stepCount < maxSteps) {
-        // For GRID steps, hardware DAC expects a positive magnitude command that produces negative grid bias.
-        // We store negative values for plotting, but send positive magnitude to the converter.
         if (stepType == GRID) {
-            double commandV = fabs(stepVoltage);
-            double plottedV = -fabs(stepVoltage);
-            stepValue.append(plottedV);                              // negative Vg1 for display/labels
-            stepParameter.append(convertTargetVoltage(stepType, commandV)); // positive code to DAC
+            stepValue.append(-stepVoltage);  // Store the actual negative voltage for grid
         } else {
             stepValue.append(stepVoltage);
-            stepParameter.append(convertTargetVoltage(stepType, stepVoltage));
         }
+
+        stepParameter.append(convertTargetVoltage(stepType, stepVoltage));
 
         QList<int> thisSweep;
         double sweep = 0.0;

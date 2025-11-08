@@ -80,25 +80,9 @@ public:
 
     void setPreferences(PreferencesDialog *newPreferences);
 
-    // Reversible calibration controls (no-UI) for external hardware
-    void setIaScaleFactor(double factor) { iaScaleFactor = factor; }
-    void setCurrentDivisors(double anodeHigh, double anodeLow, double screenHigh, double screenLow) {
-        anodeHighDivisor = anodeHigh; anodeLowDivisor = anodeLow;
-        screenHighDivisor = screenHigh; screenLowDivisor = screenLow;
-    }
-    void setPreferLowRangeWhenPresent(bool prefer) { preferLowRangeWhenPresent = prefer; }
-
 private:
     double vRefMaster = 4.1;
     double vRefSlave = 4.1;
-
-    // Configurable current conversion (reversible patch)
-    double anodeHighDivisor = 2.0 * 30.0;
-    double anodeLowDivisor  = 2.0 * 3.333333;
-    double screenHighDivisor = 2.0 * 30.0;
-    double screenLowDivisor  = 2.0 * 3.333333;
-    double iaScaleFactor = 10.0; // Optional multiplier if external model reads ~10x low (reversible)
-    bool preferLowRangeWhenPresent = true; // If any low-range code present, prefer low scaling (reversible)
 
     double heaterVoltage;
     double aveHeaterVoltage = 6.3;

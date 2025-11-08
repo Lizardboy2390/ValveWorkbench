@@ -54,7 +54,6 @@ void TriodeACCathodeFollower::updateUI(QLabel *labels[], QLineEdit *values[])
             }
             labels[i]->setVisible(true);
             values[i]->setVisible(true);
-            values[i]->setReadOnly(false); // ensure inputs (including Rg) are editable
         }
     }
 
