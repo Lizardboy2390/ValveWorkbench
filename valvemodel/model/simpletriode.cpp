@@ -102,6 +102,7 @@ void SimpleTriode::fromJson(QJsonObject source)
 void SimpleTriode::toJson(QJsonObject &model)
 {
     model["kg1"] = parameter[PAR_KG1]->getValue() * 1000.0;
+    model["mu"] = parameter[PAR_MU]->getValue();
     model["x"] = parameter[PAR_X]->getValue();
     model["vct"] = parameter[PAR_VCT]->getValue();
 

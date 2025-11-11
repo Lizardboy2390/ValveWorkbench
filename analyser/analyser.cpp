@@ -6,6 +6,7 @@
 #include "../valvemodel/data/sample.h"
 
 #include <QDebug>
+#include <cmath>
 
 QRegularExpression *Analyser::sampleMatcher = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
 QRegularExpression *Analyser::sampleMatcher2 = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
@@ -53,12 +54,12 @@ Sample *Analyser::createSample(QString response)
         va2 = convertMeasuredVoltage(ANODE, match.captured(8).toInt());         // Secondary anode sense channel
         ia2 = convertMeasuredCurrent(ANODE, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
 
-        qInfo("Sample (double triode): vg1(set)=%.3f vg3(set)=%.3f va=%.3f va2=%.3f ia=%.3f ia2=%.3f",
+        qInfo("Sample (double triode): vg1(set)=%.3f vg3(set)=%.3f va=%.3f va2=%.3f ia=%.3f ia2(pre)=%.4f",
               vg1, vg3, va, va2, ia, ia2);
         qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
               match.captured(5).toInt(), match.captured(6).toInt(), ia);
-        qInfo("Raw ADC secondary: HI=%d LO=%d (%.3fmA)",
-              match.captured(9).toInt(), match.captured(10).toInt(), ia2);
+        qInfo("Raw ADC secondary: HI=%d LO=%d HI2=%d -> raw=%.4fmA",\
+              match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt(), ia2);
     } else {
         vg2 = convertMeasuredVoltage(SCREEN, match.captured(8).toInt());
         ig2 = convertMeasuredCurrent(SCREEN, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
@@ -87,6 +88,7 @@ Sample *Analyser::createSample(QString response)
     }
 
     // Apply the same correction for the second triode section
+   
     ia2 = ia2 - va2 / 1419.4;
     if (ia2 < 0.0) {
         ia2 = 0.0;
@@ -102,7 +104,7 @@ Sample *Analyser::createSample(QString response)
 
     Sample *sample = new Sample(vg1, va, ia, vg2, ig2, vh, ih, vg3, va2, ia2);
 
-    // qInfo("Converted values - Va: %.3fV, Ia: %.3fmA, Vg1: %.3fV, Vg2: %.3fV", va, ia, vg1, vg2);
+     qInfo("Converted values - Va: %.3fV, Ia: %.3fmA, Vg1: %.3fV, Vg2: %.3fV", va, ia, vg1, vg2);
 
     return sample;
 }
@@ -162,7 +164,7 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
         break;
     case ANODE:
     case SCREEN: {
-        const double highRangeDivisor = 2.0 * 30.0;
+        const double highRangeDivisor = 2.0 * 33.0;
         const double lowRangeDivisor = 2.0 * 3.333333;
 
         bool highRangeSaturated = current >= 1000;
@@ -173,6 +175,9 @@ double Analyser::convertMeasuredCurrent(int electrode, int current, int currentL
             value = ((double) current) * vRefMaster / 1023 / highRangeDivisor;
             // qInfo("Using high range: %f mA", value * 1000);
         }
+        // Clamp to hardware maximum measurable current: 50 mA = 0.05 A
+        if (value < 0.0) value = 0.0;
+        if (value > 0.05) value = 0.05;
         break;
     }
     case GRID:
@@ -326,7 +331,7 @@ void Analyser::startTest()
 
         if (isDoubleTriode) {
             steppedSweep(secondAnodeStart, secondAnodeStop, secondGridStart, secondGridStop, secondGridStep);
-            sweepCommandPrefix = "S7 ";
+            sweepCommandPrefix = "S3 ";
             stepCommandPrefix = "S6 ";
             stepType = GRID;
             sweepType = ANODE;
@@ -545,7 +550,7 @@ void Analyser::nextSample() {
         qInfo("Command: %s (primary sweep)", primaryCommand.toStdString().c_str());
         sendCommand(primaryCommand);
         if (isDoubleTriode) {
-            QString secondaryCommand = buildSetCommand("S3 ", sweepValue);
+            QString secondaryCommand = buildSetCommand("S7 ", sweepValue);
             qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
             sendCommand(secondaryCommand);
         }
@@ -673,7 +678,8 @@ void Analyser::sendCommand(QString command)
         // qDebug("Sending command: %s", command.toStdString().c_str());
     }
 
-    if (command.startsWith("S3") || command.startsWith("M2")) {
+    // Track ACKs for primary anode (S3), secondary anode/screen (S7), and measurement (M2)
+    if (command.startsWith("S3") || command.startsWith("S7") || command.startsWith("M2")) {
         expectedResponses++;
         // qInfo("Incremented expectedResponses to: %d", expectedResponses);
     }
@@ -809,7 +815,7 @@ void Analyser::checkResponse(QString response)
                     // qInfo("Sending first actual sample after verification: %s", resumeCommand.toStdString().c_str());
                     sendCommand(resumeCommand);
                     if (isDoubleTriode) {
-                        sendCommand(buildSetCommand("S3 ", firstSampleValue));
+                        sendCommand(buildSetCommand("S7 ", firstSampleValue));
                     }
                     sendCommand("M2");
                 } else {
@@ -850,6 +856,11 @@ void Analyser::checkResponse(QString response)
                 }
             } else {
                 // Normal sample processing
+                // Hard limit: if either channel reaches 50 mA or more, end this sweep
+                if (ia >= 50.0 || ia2 >= 50.0) {
+                    isEndSweep = true;
+                }
+
                 double power1 = ia * va / 1000.0;
                 double power2 = ia2 * va2 / 1000.0;
                 if (ia > iaMax || ia2 > iaMax || power1 > pMax || power2 > pMax) {
@@ -928,6 +939,60 @@ void Analyser::handleCommandTimeout()
 void Analyser::setPreferences(PreferencesDialog *newPreferences)
 {
     preferences = newPreferences;
+}
+
+void Analyser::applyGridReferenceBoth(double commandVoltage, bool enabled)
+{
+    // commandVoltage is the magnitude (e.g., 5 or 60). For grids, hardware expects a positive DAC code
+    // to generate a negative grid potential, consistent with convertTargetVoltage(GRID, +magnitude).
+    qInfo("applyGridReferenceBoth: cmd=%.3f enabled=%d portOpen=%d isTestRunning=%d awaitingResponse=%d",
+          commandVoltage, enabled ? 1 : 0,
+          (serialPort && serialPort->isOpen()) ? 1 : 0,
+          isTestRunning ? 1 : 0,
+          awaitingResponse ? 1 : 0);
+
+    if (!serialPort || !serialPort->isOpen()) {
+        qWarning("Grid reference requested but serial port is not open");
+        return;
+    }
+
+    QString cmdPrimary;
+    QString cmdSecondary;
+    if (enabled) {
+        // Desired actual grid potentials are negative of the magnitude
+        const double desiredV = -commandVoltage;
+        double cmdVg1 = desiredV;
+        double cmdVg2 = desiredV;
+        if (preferences) {
+            // Preferences provide linear mapping based on measured low/high entries
+            cmdVg1 = preferences->grid1CommandForDesired(desiredV);
+            cmdVg2 = preferences->grid2CommandForDesired(desiredV);
+        }
+        // Hardware expects positive magnitude for DAC conversion
+        int codeVg1 = convertTargetVoltage(GRID, std::fabs(cmdVg1));
+        int codeVg2 = convertTargetVoltage(GRID, std::fabs(cmdVg2));
+        cmdPrimary = buildSetCommand("S2 ", codeVg1);
+        cmdSecondary = buildSetCommand("S6 ", codeVg2);
+        qInfo("Grid ref (calibrated): desired=%.3f cmdVg1=%.3f cmdVg2=%.3f codes=(%d,%d)",
+              desiredV, cmdVg1, cmdVg2, codeVg1, codeVg2);
+    } else {
+        cmdPrimary = "S2 0";
+        cmdSecondary = "S6 0";
+    }
+
+    // If idle (no test running and not awaiting a response), write immediately without engaging
+    // the test command pipeline. Otherwise, enqueue via sendCommand to preserve sequencing.
+    if (!isTestRunning && !awaitingResponse) {
+        serialPort->write(cmdPrimary.toLatin1());
+        serialPort->write("\r\n");
+        serialPort->write(cmdSecondary.toLatin1());
+        serialPort->write("\r\n");
+        // Do not start timeout or set awaitingResponse for these calibration nudges
+        qInfo("Grid ref (immediate): %s, %s", cmdPrimary.toStdString().c_str(), cmdSecondary.toStdString().c_str());
+    } else {
+        sendCommand(cmdPrimary);
+        sendCommand(cmdSecondary);
+    }
 }
 
 void Analyser::handleError(QSerialPort::SerialPortError error)

@@ -6,6 +6,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <cmath>
+#include <QSettings>
 
 PreferencesDialog::PreferencesDialog(QWidget *parent) :
     QDialog(parent),
@@ -83,6 +84,73 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
     grid2MeasuredHighSpinBox->setValue(-PreferencesDialog::GRID_CAL_HIGH_REF);
     gridCalibrationLayout->addWidget(grid1MeasuredHighSpinBox, 2, 1);
     gridCalibrationLayout->addWidget(grid2MeasuredHighSpinBox, 2, 2);
+
+    // Apply reference to both grids controls
+    applyLowRefBothCheckBox = new QCheckBox(tr("Apply −5 V command to both grids"), this);
+    applyHighRefBothCheckBox = new QCheckBox(tr("Apply −60 V command to both grids"), this);
+    gridCalibrationLayout->addWidget(applyLowRefBothCheckBox, 3, 0, 1, 3);
+    gridCalibrationLayout->addWidget(applyHighRefBothCheckBox, 4, 0, 1, 3);
+
+    // Mutually exclusive behavior for the two checkboxes
+    connect(applyLowRefBothCheckBox, &QCheckBox::toggled, this, [this](bool checked){
+        if (checked) {
+            // Uncheck the other without re-triggering its handler
+            QSignalBlocker b(applyHighRefBothCheckBox);
+            applyHighRefBothCheckBox->setChecked(false);
+            emit applyGridRefRequested(PreferencesDialog::GRID_CAL_LOW_REF, true);
+        } else {
+            // If neither is checked after this change, turn grids off
+            if (!applyHighRefBothCheckBox->isChecked()) {
+                emit applyGridRefRequested(0.0, false);
+            }
+        }
+    });
+    connect(applyHighRefBothCheckBox, &QCheckBox::toggled, this, [this](bool checked){
+        if (checked) {
+            QSignalBlocker b(applyLowRefBothCheckBox);
+            applyLowRefBothCheckBox->setChecked(false);
+            emit applyGridRefRequested(PreferencesDialog::GRID_CAL_HIGH_REF, true);
+        } else {
+            if (!applyLowRefBothCheckBox->isChecked()) {
+                emit applyGridRefRequested(0.0, false);
+            }
+        }
+    });
+
+    // When measured values change:
+    // - Normalize to negative (user can type 5.005 and we store -5.005)
+    // - If cleared or near zero, reset to default reference for that row
+    // - If a reference checkbox is active, re-emit to immediately reapply with new calibration
+    auto onMeasuredChanged = [this](QDoubleSpinBox *spin, double defaultRef){
+        QObject::connect(spin, qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this, spin, defaultRef](double v){
+            // Treat near-zero or cleared as reset to default
+            if (std::fabs(v) < GRID_CAL_EPSILON) {
+                QSignalBlocker blocker(spin);
+                spin->setValue(-defaultRef);
+                v = -defaultRef;
+            }
+            // Normalize positive entries to negative
+            if (v > 0.0) {
+                QSignalBlocker blocker(spin);
+                spin->setValue(-v);
+                v = -v;
+            }
+            Q_UNUSED(v);
+            if (applyLowRefBothCheckBox->isChecked()) {
+                emit applyGridRefRequested(PreferencesDialog::GRID_CAL_LOW_REF, true);
+            } else if (applyHighRefBothCheckBox->isChecked()) {
+                emit applyGridRefRequested(PreferencesDialog::GRID_CAL_HIGH_REF, true);
+            }
+        });
+    };
+
+    onMeasuredChanged(grid1MeasuredLowSpinBox, PreferencesDialog::GRID_CAL_LOW_REF);
+    onMeasuredChanged(grid1MeasuredHighSpinBox, PreferencesDialog::GRID_CAL_HIGH_REF);
+    onMeasuredChanged(grid2MeasuredLowSpinBox, PreferencesDialog::GRID_CAL_LOW_REF);
+    onMeasuredChanged(grid2MeasuredHighSpinBox, PreferencesDialog::GRID_CAL_HIGH_REF);
+
+    // Load persisted settings (port, model options, calibration, measured references)
+    loadFromSettings();
 
     QWidget *scrollContents = new QWidget(this);
     auto *scrollContentsLayout = new QVBoxLayout(scrollContents);
@@ -220,4 +288,70 @@ double PreferencesDialog::gridCommandForDesired(double desiredVoltage, double me
 
     const double offset = measuredLow - slope * commandLow;
     return (desiredVoltage - offset) / slope;
+}
+
+double PreferencesDialog::getGrid1MeasuredLow() const { return grid1MeasuredLowSpinBox->value(); }
+double PreferencesDialog::getGrid1MeasuredHigh() const { return grid1MeasuredHighSpinBox->value(); }
+double PreferencesDialog::getGrid2MeasuredLow() const { return grid2MeasuredLowSpinBox->value(); }
+double PreferencesDialog::getGrid2MeasuredHigh() const { return grid2MeasuredHighSpinBox->value(); }
+
+void PreferencesDialog::loadFromSettings()
+{
+    QSettings s("ValveWorkbench", "ValveWorkbench");
+
+    // Port and model/sampling options
+    QString savedPort = s.value("preferences/port", "").toString();
+    if (!savedPort.isEmpty()) setPort(savedPort);
+    int savedPentodeFit = s.value("preferences/pentodeFit", GARDINER_PENTODE).toInt();
+    int idxFit = ui->pentodeFit->findData(savedPentodeFit);
+    if (idxFit >= 0) ui->pentodeFit->setCurrentIndex(idxFit);
+    int savedSampling = s.value("preferences/sampling", SMP_LINEAR).toInt();
+    int idxSamp = ui->sampling->findData(savedSampling);
+    if (idxSamp >= 0) ui->sampling->setCurrentIndex(idxSamp);
+
+    ui->checkScreenCurrent->setChecked(s.value("preferences/showScreenCurrent", true).toBool());
+    ui->checkRemodel->setChecked(s.value("preferences/useRemodelling", false).toBool());
+    ui->checkSecondary->setChecked(s.value("preferences/useSecondaryEmission", true).toBool());
+    ui->checkFixTriode->setChecked(s.value("preferences/fixTriodeParameters", true).toBool());
+    ui->checkFixSecondary->setChecked(s.value("preferences/fixSecondaryEmission", true).toBool());
+
+    // Calibration offsets
+    anodeVoltageSpinBox->setValue(s.value("cal/anodeVoltage", 0.0).toDouble());
+    anodeCurrentSpinBox->setValue(s.value("cal/anodeCurrent", 0.0).toDouble());
+    screenVoltageSpinBox->setValue(s.value("cal/screenVoltage", 0.0).toDouble());
+    screenCurrentSpinBox->setValue(s.value("cal/screenCurrent", 0.0).toDouble());
+    grid1VoltageSpinBox->setValue(s.value("cal/grid1Voltage", 0.0).toDouble());
+    grid2VoltageSpinBox->setValue(s.value("cal/grid2Voltage", 0.0).toDouble());
+
+    // Measured grid references
+    grid1MeasuredLowSpinBox->setValue(s.value("gridCal/g1Low", -PreferencesDialog::GRID_CAL_LOW_REF).toDouble());
+    grid1MeasuredHighSpinBox->setValue(s.value("gridCal/g1High", -PreferencesDialog::GRID_CAL_HIGH_REF).toDouble());
+    grid2MeasuredLowSpinBox->setValue(s.value("gridCal/g2Low", -PreferencesDialog::GRID_CAL_LOW_REF).toDouble());
+    grid2MeasuredHighSpinBox->setValue(s.value("gridCal/g2High", -PreferencesDialog::GRID_CAL_HIGH_REF).toDouble());
+}
+
+void PreferencesDialog::saveToSettings() const
+{
+    QSettings s("ValveWorkbench", "ValveWorkbench");
+
+    s.setValue("preferences/port", ui->portSelect->currentText());
+    s.setValue("preferences/pentodeFit", ui->pentodeFit->currentData().toInt());
+    s.setValue("preferences/sampling", ui->sampling->currentData().toInt());
+    s.setValue("preferences/showScreenCurrent", ui->checkScreenCurrent->isChecked());
+    s.setValue("preferences/useRemodelling", ui->checkRemodel->isChecked());
+    s.setValue("preferences/useSecondaryEmission", ui->checkSecondary->isChecked());
+    s.setValue("preferences/fixTriodeParameters", ui->checkFixTriode->isChecked());
+    s.setValue("preferences/fixSecondaryEmission", ui->checkFixSecondary->isChecked());
+
+    s.setValue("cal/anodeVoltage", anodeVoltageSpinBox->value());
+    s.setValue("cal/anodeCurrent", anodeCurrentSpinBox->value());
+    s.setValue("cal/screenVoltage", screenVoltageSpinBox->value());
+    s.setValue("cal/screenCurrent", screenCurrentSpinBox->value());
+    s.setValue("cal/grid1Voltage", grid1VoltageSpinBox->value());
+    s.setValue("cal/grid2Voltage", grid2VoltageSpinBox->value());
+
+    s.setValue("gridCal/g1Low", grid1MeasuredLowSpinBox->value());
+    s.setValue("gridCal/g1High", grid1MeasuredHighSpinBox->value());
+    s.setValue("gridCal/g2Low", grid2MeasuredLowSpinBox->value());
+    s.setValue("gridCal/g2High", grid2MeasuredHighSpinBox->value());
 }

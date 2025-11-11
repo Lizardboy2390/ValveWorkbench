@@ -80,6 +80,9 @@ public:
 
     void setPreferences(PreferencesDialog *newPreferences);
 
+    // Apply grid reference (command magnitude in volts, e.g. 5 or 60) to both grids (S2 and S6)
+    void applyGridReferenceBoth(double commandVoltage, bool enabled);
+
 private:
     double vRefMaster = 4.1;
     double vRefSlave = 4.1;

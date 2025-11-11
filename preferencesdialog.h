@@ -7,6 +7,7 @@
 #include <QGroupBox>
 #include <QFormLayout>
 #include <QScrollArea>
+#include <QCheckBox>
 
 namespace Ui {
 class PreferencesDialog;
@@ -44,6 +45,12 @@ public:
     double getGrid2MeasuredLow() const;
     double getGrid2MeasuredHigh() const;
 
+    void loadFromSettings();
+    void saveToSettings() const;
+
+signals:
+    void applyGridRefRequested(double commandVoltage, bool enabled);
+
 private slots:
 
 private:
@@ -63,6 +70,8 @@ private:
     QDoubleSpinBox *grid1MeasuredHighSpinBox;
     QDoubleSpinBox *grid2MeasuredLowSpinBox;
     QDoubleSpinBox *grid2MeasuredHighSpinBox;
+    QCheckBox *applyLowRefBothCheckBox;
+    QCheckBox *applyHighRefBothCheckBox;
 
     double gridCommandForDesired(double desiredVoltage, double measuredLow, double measuredHigh) const;
 };

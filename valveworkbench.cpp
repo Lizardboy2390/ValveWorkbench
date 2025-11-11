@@ -166,6 +166,30 @@ void ValveWorkbench::on_pushButton_3_clicked()
             iaMax = lim.value("iaMax").toDouble(iaMax);
             pMax = lim.value("pMax").toDouble(pMax);
         }
+
+        // Apply double-triode flag for triode devices (overrides TRI vs DOUBLE_TRIODE selection)
+        if (deviceType == TRIODE && defs.contains("doubleTriode")) {
+            const bool dbl = defs.value("doubleTriode").toBool(false);
+            if (ui && ui->deviceType) {
+                // indices: 0=Triode, 1=Pentode, 2=Double Triode (per earlier usage)
+                ui->deviceType->setCurrentIndex(dbl ? 2 : 0);
+                on_deviceType_currentIndexChanged(ui->deviceType->currentIndex());
+            }
+        }
+
+        // Apply saved test type if present
+        if (defs.contains("testType") && ui && ui->testType) {
+            const int savedTestType = defs.value("testType").toInt(testType);
+            // Find the combo index whose itemData matches savedTestType
+            int matchIndex = -1;
+            for (int i = 0; i < ui->testType->count(); ++i) {
+                if (ui->testType->itemData(i).toInt() == savedTestType) { matchIndex = i; break; }
+            }
+            if (matchIndex >= 0) {
+                ui->testType->setCurrentIndex(matchIndex);
+                on_testType_currentIndexChanged(matchIndex);
+            }
+        }
     }
 
     // Optionally apply model parameters to the active model if present in template
@@ -214,6 +238,9 @@ void ValveWorkbench::on_pushButton_4_clicked()
     defs.insert("anode", makeRange(anodeStart, anodeStop, anodeStep));
     defs.insert("grid", makeRange(gridStart, gridStop, gridStep));
     defs.insert("screen", makeRange(screenStart, screenStop, screenStep));
+    // Save default test type and double-triode mode
+    defs.insert("testType", testType);
+    defs.insert("doubleTriode", isDoubleTriode);
     QJsonObject lim; lim.insert("iaMax", iaMax); lim.insert("pMax", pMax); defs.insert("limits", lim);
     obj.insert("analyserDefaults", defs);
 
@@ -348,17 +375,18 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
                 maxVa = std::max(maxVa, va2);
             }
 
+            // Map Triode B data into primary fields: vg1 <- vg3, va <- va2, ia <- ia2
             Sample *cloneSample = new Sample(
-                vg3,                    // Triode B grid voltage -> primary Vg1
-                va2,                    // Triode B anode voltage -> primary Va
-                ia2,                    // Triode B anode current -> primary Ia
-                0.0,                    // No screen voltage for Triode B
-                0.0,
-                sourceSample->getVh(),
-                sourceSample->getIh(),
-                0.0,
-                0.0,
-                0.0);
+                vg3,                    // primary Vg1 <- Triode B grid voltage
+                va2,                    // primary Va  <- Triode B anode voltage
+                ia2,                    // primary Ia  <- Triode B anode current
+                0.0,                    // primary Vg2 (not used)
+                0.0,                    // primary Ig2 (not used)
+                sourceSample->getVh(),  // heater voltage preserved
+                sourceSample->getIh(),  // heater current preserved
+                0.0,                    // secondary Vg3 cleared in clone
+                0.0,                    // secondary Va2 cleared in clone
+                0.0);                   // secondary Ia2 cleared in clone
 
             bufferedSamples.append(cloneSample);
             qInfo("Triode B clone sample buffered: vg3=%.6f, va2=%.6f, ia2=%.6f",
@@ -427,6 +455,13 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
 
     qInfo("Triode B clone summary: sweeps=%d, iaMax=%.6f, pMax=%.6f",
           clone->count(), clone->getIaMax(), clone->getPMax());
+
+    // If no sweeps were added to the clone, do not proceed with a secondary fit
+    if (clone->count() == 0) {
+        qInfo("Triode B clone has zero sweeps - discarding clone and skipping secondary fit");
+        deleteMeasurementClone(clone);
+        return nullptr;
+    }
 
     return clone;
 }
@@ -589,6 +624,32 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     loadDevices();
 
     ui->setupUi(this);
+
+    // Create analyser instance and wire preferences for grid calibration references
+    // This allows PreferencesDialog checkboxes to immediately command grid DACs
+    analyser = new Analyser(this, &serialPort, &timeoutTimer);
+    analyser->setPreferences(&preferencesDialog);
+    QObject::connect(&preferencesDialog, &PreferencesDialog::applyGridRefRequested,
+                     this, [this](double commandVoltage, bool enabled){
+                         qInfo("Preferences applyGridRefRequested: cmd=%.3f enabled=%d", commandVoltage, enabled ? 1 : 0);
+                         // Ensure serial port is open before attempting to send S2/S6
+                         if (!serialPort.isOpen()) {
+                             QString selected = preferencesDialog.getPort();
+                             if (!selected.isEmpty()) {
+                                 qInfo("Opening serial port from Preferences selection: %s", selected.toStdString().c_str());
+                                 setSerialPort(selected);
+                             } else if (!port.isEmpty()) {
+                                 qInfo("Opening serial port from cached port: %s", port.toStdString().c_str());
+                                 setSerialPort(port);
+                             } else {
+                                 qInfo("No port selected; attempting auto-detect via checkComPorts()");
+                                 checkComPorts();
+                             }
+                         }
+                         if (analyser) {
+                             analyser->applyGridReferenceBoth(commandVoltage, enabled);
+                         }
+                     });
 
     // Ensure a Designer checkbox exists in the bottom toggle row, positioned after the Model checkbox
     if (ui->horizontalLayout_9) {
@@ -773,13 +834,6 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     connect(&timeoutTimer, &QTimer::timeout, this, &ValveWorkbench::handleTimeout);
     connect(ui->runButton, &QPushButton::clicked, this, &ValveWorkbench::on_runButton_clicked);
 
-    checkComPorts();
-
-    analyser = new Analyser(this, &serialPort, &timeoutTimer);
-    analyser->setPreferences(&preferencesDialog);
-
-    // Removed duplicate ui->graphicsView->setScene(plot.getScene());
-
     int count = ui->properties->rowCount();
     for (int i = 0; i < count; i++) {
         ui->properties->removeRow(0);
@@ -799,6 +853,10 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 ValveWorkbench::~ValveWorkbench()
 {
     delete ui;
+    if (analyser) {
+        delete analyser;
+        analyser = nullptr;
+    }
 }
 
 void ValveWorkbench::buildCircuitParameters()
@@ -1783,6 +1841,9 @@ void ValveWorkbench::on_actionOptions_triggered()
     preferencesDialog.setPort(port);
 
     if (preferencesDialog.exec() == 1) {
+        // Persist preferences and calibration values
+        preferencesDialog.saveToSettings();
+
         setSerialPort(preferencesDialog.getPort());
 
         pentodeModelType = preferencesDialog.getPentodeModelType();
@@ -2564,6 +2625,11 @@ void ValveWorkbench::on_btnAddToProject_clicked()
 }
 void ValveWorkbench::on_fitTriodeButton_clicked()
 {
+    if (currentProject == nullptr) {
+        QMessageBox::warning(this, tr("Model Triode"), tr("No project is selected."));
+        return;
+    }
+
     modelProject = currentProject;
     ui->fitPentodeButton->setEnabled(false); // Prevent any further modelling invocations
     ui->fitTriodeButton->setEnabled(false);
@@ -2607,7 +2673,7 @@ void ValveWorkbench::modelTriode()
 
     if (isDoubleTriode && measurementHasTriodeBData(measurement)) {
         Measurement *clone = createTriodeBMeasurementClone(measurement);
-        if (clone != nullptr) {
+        if (clone != nullptr && measurementHasValidSamples(clone)) {
             qInfo("Triode B clone created: source sweeps=%d, clone sweeps=%d", measurement->count(), clone->count());
             triodeBClones.append(clone);
             triodeMeasurementSecondary = clone;
@@ -2616,7 +2682,12 @@ void ValveWorkbench::modelTriode()
             }
             triodeBFitPending = true;
         } else {
-            qInfo("Triode B clone creation returned null");
+            if (clone != nullptr) {
+                qInfo("Triode B clone has no valid samples - discarding and skipping secondary fit");
+                deleteMeasurementClone(clone);
+            } else {
+                qInfo("Triode B clone creation returned null");
+            }
         }
     }
 
@@ -2645,6 +2716,12 @@ void ValveWorkbench::loadModel()
 {
     thread->quit();
     thread = nullptr;
+
+    if (modelProject == nullptr) {
+        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+        ui->fitTriodeButton->setEnabled(true);
+        return;
+    }
 
     if (!model->isConverged()) {
         QMessageBox message;
@@ -2683,20 +2760,29 @@ void ValveWorkbench::loadModel()
 
     if (!triodeBClones.isEmpty() && triodeBFitPending && !runningTriodeBFit) {
         Measurement *clone = triodeBClones.takeFirst();
-        triodeMeasurementSecondary = clone;
+        if (clone != nullptr && measurementHasValidSamples(clone)) {
+            triodeMeasurementSecondary = clone;
 
-        Estimate secondaryEstimate;
-        secondaryEstimate.estimateTriode(clone);
+            Estimate secondaryEstimate;
+            secondaryEstimate.estimateTriode(clone);
 
-        triodeModelSecondary = ModelFactory::createModel(COHEN_HELIE_TRIODE);
-        triodeModelSecondary->setEstimate(&secondaryEstimate);
-        triodeModelSecondary->setPlotColor(QColor::fromRgb(0, 128, 0));
-        triodeModelSecondary->addMeasurement(clone);
+            triodeModelSecondary = ModelFactory::createModel(COHEN_HELIE_TRIODE);
+            triodeModelSecondary->setEstimate(&secondaryEstimate);
+            triodeModelSecondary->setPlotColor(QColor::fromRgb(0, 128, 0));
+            triodeModelSecondary->addMeasurement(clone);
 
-        triodeBFitPending = !triodeBClones.isEmpty();
-        runningTriodeBFit = true;
-        queueTriodeModelRun(triodeModelSecondary);
-        return;
+            triodeBFitPending = !triodeBClones.isEmpty();
+            runningTriodeBFit = true;
+            queueTriodeModelRun(triodeModelSecondary);
+            return;
+        } else {
+            qInfo("Skipped Triode B fit: clone has no valid samples");
+            if (clone) {
+                deleteMeasurementClone(clone);
+            }
+            triodeBFitPending = !triodeBClones.isEmpty();
+            // Fall through to finalize if nothing else pending
+        }
     }
 
     if (doPentodeModel) {
@@ -2720,13 +2806,12 @@ void ValveWorkbench::loadModel()
             measuredCurves->setVisible(ui->measureCheck->isChecked());
         }
     }
-
-    if (triodeMeasurementSecondary != nullptr && triodeMeasurementPrimary != nullptr) {
+    if (triodeMeasurementSecondary != nullptr) {
         if (measuredCurvesSecondary != nullptr) {
             plot.remove(measuredCurvesSecondary);
             measuredCurvesSecondary = nullptr;
         }
-
+        // Plot secondary without axes to avoid re-drawing axes twice
         measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
         if (measuredCurvesSecondary != nullptr) {
             plot.add(measuredCurvesSecondary);
@@ -2872,6 +2957,11 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
         ui->modelCheck->setVisible(true);
         if (currentProject != nullptr) {
             Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+            if (project == nullptr) {
+                ui->fitTriodeButton->setVisible(false);
+                ui->fitPentodeButton->setVisible(false);
+                break;
+            }
             if (project->getDeviceType() == TRIODE) {
                 ui->fitTriodeButton->setVisible(true);
                 ui->fitPentodeButton->setVisible(false);
@@ -2882,6 +2972,9 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
             } else if (project->getDeviceType() == PENTODE) {
                 ui->fitTriodeButton->setVisible(false);
                 ui->fitPentodeButton->setVisible(true);
+            } else {
+                ui->fitTriodeButton->setVisible(false);
+                ui->fitPentodeButton->setVisible(false);
             }
         } else {
             ui->fitTriodeButton->setVisible(false);
