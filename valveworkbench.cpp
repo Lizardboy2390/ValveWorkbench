@@ -2535,21 +2535,6 @@ void ValveWorkbench::on_runButton_clicked()
 
     log("Run Test button clicked");
 
-    // Ensure serial port is open before configuring analyser or sending any commands
-    if (!serialPort.isOpen()) {
-        if (!port.isEmpty()) {
-            qInfo("Run: opening cached port: %s", port.toStdString().c_str());
-            setSerialPort(port);
-        } else {
-            qInfo("Run: attempting auto-detect via checkComPorts()");
-            checkComPorts();
-        }
-        if (!serialPort.isOpen()) {
-            QMessageBox::warning(this, tr("Run Test"), tr("Serial port is not open. Please select a port in Options."));
-            return;
-        }
-    }
-
     if (analyser == nullptr) {
         log("Error: Analyser is null");
         QMessageBox::warning(this, "Error", "Analyser not initialized");
