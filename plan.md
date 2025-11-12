@@ -48,6 +48,7 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
 - Then: Add explicit "Calculate" button in Designer; screenshot update for README
 
 ## Change log (highlights)
+- 2025‑11‑12: Preferences grid calibration finalized (−5/−60 V to both grids), calibration persistence via QSettings, test run auto‑opens serial port, immediate vs queued grid ref handling (immediate when idle, pipelined during tests); docs updated (handover.md)
 - 2025‑11‑06: Designer (Triode CC) overlays complete (Max Swing brown / Max Sym Swing blue); Input sensitivity into Designer; K bypass + single Gain; gm/ra formatting; cathode line clipping; Pa‑max entry fix; docs updated
 - 2025‑11‑05: Export to Devices (Modeller); Designer overlays toggle; auto model plotting; axes clamped; docs updated
 - 2025‑11‑02: Always prompt for project name before save; modelling guard for positive Vg

@@ -28,54 +28,63 @@ void Analyser::setDeviceType(int newDeviceType)
 
 Sample *Analyser::createSample(QString response)
 {
-    QRegularExpressionMatch match = sampleMatcher2->match(response);
-
-    if (!match.hasMatch()) {
-        qWarning("Failed to parse Mode(2) response: %s", response.toStdString().c_str());
-        return nullptr;
+    QRegularExpressionMatch match12 = sampleMatcher2->match(response);
+    QRegularExpressionMatch match10;
+    bool use12 = match12.hasMatch();
+    if (!use12) {
+        match10 = sampleMatcher->match(response);
+        if (!match10.hasMatch()) {
+            qWarning("Failed to parse Mode(2) response: %s", response.toStdString().c_str());
+            return nullptr;
+        }
     }
 
-    qInfo("Raw capture: vh=%d ih=%d vg1=%d va1=%d ia1=%d ia1_lo=%d vg3=%d va2=%d ia2=%d ia2_lo=%d ia_hi=%d ig2_hi=%d",
-          match.captured(1).toInt(), match.captured(2).toInt(), match.captured(3).toInt(), match.captured(4).toInt(),
-          match.captured(5).toInt(), match.captured(6).toInt(), match.captured(7).toInt(), match.captured(8).toInt(),
-          match.captured(9).toInt(), match.captured(10).toInt(), match.captured(11).toInt(), match.captured(12).toInt());
+    if (use12) {
+        qInfo("Raw capture: vh=%d ih=%d vg1=%d va1=%d ia1=%d ia1_lo=%d vg3=%d va2=%d ia2=%d ia2_lo=%d ia_hi=%d ig2_hi=%d",
+              match12.captured(1).toInt(), match12.captured(2).toInt(), match12.captured(3).toInt(), match12.captured(4).toInt(),
+              match12.captured(5).toInt(), match12.captured(6).toInt(), match12.captured(7).toInt(), match12.captured(8).toInt(),
+              match12.captured(9).toInt(), match12.captured(10).toInt(), match12.captured(11).toInt(), match12.captured(12).toInt());
+    } else {
+        qInfo("Raw capture(10): vh=%d ih=%d vg1=%d va1=%d ia1=%d ia1_lo=%d va2=%d ia2=%d ia_hi=%d ig2_hi=%d",
+              match10.captured(1).toInt(), match10.captured(2).toInt(), match10.captured(3).toInt(), match10.captured(4).toInt(),
+              match10.captured(5).toInt(), match10.captured(6).toInt(), match10.captured(7).toInt(), match10.captured(8).toInt(),
+              match10.captured(9).toInt(), match10.captured(10).toInt());
+    }
 
-    double vg1 = convertMeasuredVoltage(GRID, match.captured(3).toInt());       // Commanded grid bias (not sensed)
-    double va = convertMeasuredVoltage(ANODE, match.captured(4).toInt());        // Primary anode voltage
-    double ia = convertMeasuredCurrent(ANODE, match.captured(5).toInt(), match.captured(6).toInt(), match.captured(11).toInt()) * 1000;
-    double vg2 = 0.0;                                                           // Screen grid (pentode) or unused
+    double vg1 = convertMeasuredVoltage(GRID, (use12 ? match12.captured(3).toInt() : match10.captured(3).toInt()));
+    double va = convertMeasuredVoltage(ANODE, (use12 ? match12.captured(4).toInt() : match10.captured(4).toInt()));
+    int ia_hi = (use12 ? match12.captured(11).toInt() : match10.captured(9).toInt());
+    double ia = convertMeasuredCurrent(ANODE, (use12 ? match12.captured(5).toInt() : match10.captured(5).toInt()),
+                                       (use12 ? match12.captured(6).toInt() : match10.captured(6).toInt()), ia_hi) * 1000;
+    double vg2 = 0.0;
     double ig2 = 0.0;
-    double vg3 = 0.0;                                                           // Commanded grid bias for secondary triode
-    double va2 = 0.0;                                                           // Secondary anode voltage
+    double vg3 = 0.0;
+    double va2 = 0.0;
     double ia2 = 0.0;
 
-    if (isDoubleTriode) {
-        vg3 = convertMeasuredVoltage(GRID, match.captured(7).toInt());          // Commanded secondary grid bias
-        va2 = convertMeasuredVoltage(ANODE, match.captured(8).toInt());         // Secondary anode sense channel
-        ia2 = convertMeasuredCurrent(ANODE, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
-
-        qInfo("Sample (double triode): vg1(set)=%.3f vg3(set)=%.3f va=%.3f va2=%.3f ia=%.3f ia2(pre)=%.4f",
-              vg1, vg3, va, va2, ia, ia2);
-        qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
-              match.captured(5).toInt(), match.captured(6).toInt(), ia);
-        qInfo("Raw ADC secondary: HI=%d LO=%d HI2=%d -> raw=%.4fmA",\
-              match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt(), ia2);
-    } else {
-        vg2 = convertMeasuredVoltage(SCREEN, match.captured(8).toInt());
-        ig2 = convertMeasuredCurrent(SCREEN, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
-
-        qInfo("Sample (single channel): vg1(set)=%.3f vg2=%.3f va=%.3f ia=%.3f ig2=%.3f",
-              vg1, vg2, va, ia, ig2);
-        qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
-              match.captured(5).toInt(), match.captured(6).toInt(), ia);
+    if (isDoubleTriode && use12) {
+        vg3 = convertMeasuredVoltage(GRID, match12.captured(7).toInt());
+        va2 = convertMeasuredVoltage(ANODE, match12.captured(8).toInt());
+        int ia2_hi = match12.captured(12).toInt();
+        ia2 = convertMeasuredCurrent(ANODE, match12.captured(9).toInt(), match12.captured(10).toInt(), ia2_hi) * 1000;
+        qInfo("Sample (double triode): vg1(set)=%.3f vg3(set)=%.3f va=%.3f va2=%.3f ia=%.3f ia2(pre)=%.4f", vg1, vg3, va, va2, ia, ia2);
+        qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)", (use12 ? match12.captured(5).toInt() : match10.captured(5).toInt()), (use12 ? match12.captured(6).toInt() : match10.captured(6).toInt()), ia);
+        qInfo("Raw ADC secondary: HI=%d LO=%d HI2=%d -> raw=%.4fmA", match12.captured(9).toInt(), match12.captured(10).toInt(), match12.captured(12).toInt(), ia2);
+    } else if (!isDoubleTriode) {
+        if (use12) {
+            vg2 = convertMeasuredVoltage(SCREEN, match12.captured(8).toInt());
+            ig2 = convertMeasuredCurrent(SCREEN, match12.captured(9).toInt(), match12.captured(10).toInt(), match12.captured(12).toInt()) * 1000;
+        }
+        qInfo("Sample (single channel): vg1(set)=%.3f vg2=%.3f va=%.3f ia=%.3f ig2=%.3f", vg1, vg2, va, ia, ig2);
+        qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)", (use12 ? match12.captured(5).toInt() : match10.captured(5).toInt()), (use12 ? match12.captured(6).toInt() : match10.captured(6).toInt()), ia);
     }
-    double vh = convertMeasuredVoltage(HEATER, match.captured(1).toInt());
-    double ih = convertMeasuredCurrent(HEATER, match.captured(2).toInt());
+    double vh = convertMeasuredVoltage(HEATER, (use12 ? match12.captured(1).toInt() : match10.captured(1).toInt()));
+    double ih = convertMeasuredCurrent(HEATER, (use12 ? match12.captured(2).toInt() : match10.captured(2).toInt()));
 
     // Debug raw ADC values
-    int rawCurrent = match.captured(5).toInt();
-    int rawCurrentLo = match.captured(6).toInt();
-    int rawCurrentHi = match.captured(11).toInt();
+    int rawCurrent = (use12 ? match12.captured(5).toInt() : match10.captured(5).toInt());
+    int rawCurrentLo = (use12 ? match12.captured(6).toInt() : match10.captured(6).toInt());
+    int rawCurrentHi = (use12 ? match12.captured(11).toInt() : match10.captured(9).toInt());
 
     // qInfo("Raw ADC values - Current: %d, CurrentLo: %d, CurrentHi: %d", rawCurrent, rawCurrentLo, rawCurrentHi);
 
@@ -436,21 +445,49 @@ void Analyser::startTest()
             steppedSweep(gridStop, gridStart, screenStart, screenStop, screenStep); // Sweep is reversed to finish on low (absolute) value
 
             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-        } else if (isDoubleTriode) { // First and second anode stepped with same values, Second grid swept, Main grid 0
-            stepType = GRID;
-            stepCommandPrefix = "S6 ";
+        } else if (isDoubleTriode) { // Double triode transfer: step both anodes, sweep both grids together
+            // Pre-flight: ensure hardware is in a clean state before starting first sweep
+            // Discharge, force both anodes to 0V, and take a dummy measurement
+            sendCommand("M1");
+            sendCommand("S3 0");
+            sendCommand("S7 0");
+            sendCommand("M2");
+
+            // Step both anodes (A and B) per step; sweep both grids (A=S2, B=S6) per point
+            stepType = ANODE;
+            stepCommandPrefix = "S3 ";
+            sweepType = GRID;
+            sweepCommandPrefix = "S2 ";
 
             result->setAnodeStart(anodeStart);
             result->setAnodeStop(anodeStop);
             result->setAnodeStep(anodeStep);
             result->nextSweep(anodeStart);
 
-            steppedSweep(secondGridStop, secondGridStart, anodeStart, anodeStop, anodeStep); // Sweep is reversed to finish on low (absolute) value
+            // Sweep grids from gridStop down to gridStart so we finish near 0V (UI uses magnitudes)
+            steppedSweep(gridStop, gridStart, anodeStart, anodeStop, anodeStep);
 
-            sendCommand(buildSetCommand("S2 ", 0)); // Set main grid to 0V
-            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-            sendCommand(buildSetCommand("S6 ", convertTargetVoltage(GRID, secondGridStart)));
-            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
+            // Initialize: first assert both anodes, then set starting grid sweep value for both grids
+            {
+                int codeS3 = convertTargetVoltage(ANODE, anodeStart);
+                int codeS7 = convertTargetVoltage(ANODE, anodeStart);
+                int codeS2 = convertTargetVoltage(GRID, gridStop);
+                int codeS6 = convertTargetVoltage(GRID, gridStop);
+                qInfo("Init (DT Transfer): S3 %d (anode A start)", codeS3);
+                sendCommand(buildSetCommand("S3 ", codeS3));
+                qInfo("Init (DT Transfer): S7 %d (anode B start)", codeS7);
+                sendCommand(buildSetCommand("S7 ", codeS7));
+                qInfo("Init (DT Transfer): S2 %d (grid A start)", codeS2);
+                sendCommand(buildSetCommand("S2 ", codeS2));
+                qInfo("Init (DT Transfer): S6 %d (grid B start)", codeS6);
+                sendCommand(buildSetCommand("S6 ", codeS6));
+            }
+
+            // Explicitly queue first step anode command like later steps
+            if (!stepParameter.isEmpty()) {
+                qInfo("Init (DT Transfer): S3 first step code=%d", stepParameter.at(0));
+                sendCommand(buildSetCommand("S3 ", stepParameter.at(0)));
+            }
         } else { // Anode stepped, Grid swept
             stepType = ANODE;
             stepCommandPrefix = "S3 ";
@@ -463,7 +500,10 @@ void Analyser::startTest()
             // Ensure anode is set to starting voltage before beginning grid sweep
             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
         }
-        sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
+        // Initialize first step only for branches that have not already explicitly set it
+        if (deviceType == PENTODE || (isDoubleTriode && stepCommandPrefix != "S3 ")) {
+            sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
+        }
 
         nextSample();
         break;
@@ -550,9 +590,17 @@ void Analyser::nextSample() {
         qInfo("Command: %s (primary sweep)", primaryCommand.toStdString().c_str());
         sendCommand(primaryCommand);
         if (isDoubleTriode) {
-            QString secondaryCommand = buildSetCommand("S7 ", sweepValue);
-            qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
-            sendCommand(secondaryCommand);
+            if (sweepCommandPrefix == "S3 ") {
+                // Sweeping anode: track secondary anode (S7)
+                QString secondaryCommand = buildSetCommand("S7 ", sweepValue);
+                qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
+                sendCommand(secondaryCommand);
+            } else if (sweepCommandPrefix == "S2 ") {
+                // Sweeping grid: track secondary grid (S6)
+                QString secondaryGridCommand = buildSetCommand("S6 ", sweepValue);
+                qInfo("Command: %s (secondary grid tracking)", secondaryGridCommand.toStdString().c_str());
+                sendCommand(secondaryGridCommand);
+            }
         }
         if (testType == TRANSFER_CHARACTERISTICS) {
             // Refire each point
@@ -791,14 +839,23 @@ void Analyser::checkResponse(QString response)
 
                     // Now send the first actual sample
                     int firstSampleValue = sweepParameter.at(stepIndex).at(0);
-                    // Ensure anode is asserted for Transfer mode before first actual sample
+                    // Ensure anodes are asserted for Transfer mode before first actual sample
                     if (testType == TRANSFER_CHARACTERISTICS) {
                         if (stepType == ANODE) {
                             if (stepIndex < stepParameter.length()) {
-                                sendCommand(buildSetCommand("S3 ", stepParameter.at(stepIndex)));
+                                int anodeCode = stepParameter.at(stepIndex);
+                                sendCommand(buildSetCommand("S3 ", anodeCode));
+                                if (isDoubleTriode) {
+                                    // Keep secondary anode matched to primary for this step
+                                    sendCommand(buildSetCommand("S7 ", anodeCode));
+                                }
                             }
                         } else {
-                            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+                            int anodeCode = convertTargetVoltage(ANODE, anodeStart);
+                            sendCommand(buildSetCommand("S3 ", anodeCode));
+                            if (isDoubleTriode) {
+                                sendCommand(buildSetCommand("S7 ", anodeCode));
+                            }
                         }
                     }
                     // One-line fix for Anode Characteristics: re-assert grid (S2) after verification PASS
@@ -820,7 +877,6 @@ void Analyser::checkResponse(QString response)
                     sendCommand("M2");
                 } else {
                     verificationAttempts++;
-                    // qInfo("Verification FAILED - attempt %d/%d", verificationAttempts, MAX_VERIFICATION_ATTEMPTS);
 
                     if (verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
                         qWarning("Verification failed after %d attempts - aborting sweep", MAX_VERIFICATION_ATTEMPTS);
@@ -829,28 +885,12 @@ void Analyser::checkResponse(QString response)
                         isEndSweep = true;
                         return;
                     } else {
-                        // qInfo("Retrying hardware reset...");
-                        // Retry the reset sequence
+                        // Retry: discharge, force both anodes and grids to 0V, then verify at 0/0/0/0
                         sendCommand("M1");
-                        if (isDoubleTriode) {
-                            const int primaryGrid = stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()
-                                                    ? stepParameter.at(stepIndex)
-                                                    : convertTargetVoltage(GRID, gridStart);
-                            sendCommand(buildSetCommand("S2 ", primaryGrid));
-                            sendCommand(buildSetCommand("S6 ", stepParameter.at(stepIndex)));
-                            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-                            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
-                        } else {
-                            // TRANSFER (single triode): set S2 to the first GRID sweep value, not an anode step code
-                            int firstGridCode = 0;
-                            if (stepIndex < sweepParameter.length() && !sweepParameter.at(stepIndex).isEmpty()) {
-                                firstGridCode = sweepParameter.at(stepIndex).at(0);
-                            } else {
-                                firstGridCode = convertTargetVoltage(GRID, gridStart);
-                            }
-                            sendCommand(buildSetCommand("S2 ", firstGridCode));
-                            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-                        }
+                        sendCommand("S3 0");
+                        if (isDoubleTriode) sendCommand("S7 0");
+                        sendCommand("S2 0");
+                        if (isDoubleTriode) sendCommand("S6 0");
                         sendCommand("M2");
                     }
                 }
