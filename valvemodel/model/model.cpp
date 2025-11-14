@@ -232,8 +232,8 @@ void Model::setEstimate(Estimate *estimate)
 
     // Hard guardrails for solver stability
     const std::pair<int, std::pair<double, double>> bounds[] = {
-        {PAR_KG1, {0.05, 5.0}},
-        {PAR_KP, {20.0, 400.0}},
+        {PAR_KG1, {0.20, 5.0}},
+        {PAR_KP, {60.0, 400.0}},
         {PAR_KVB, {50.0, 800.0}},
         {PAR_KVB1, {1.0, 80.0}},
         {PAR_VCT, {0.0, 5.0}},
@@ -248,7 +248,7 @@ void Model::setEstimate(Estimate *estimate)
         {PAR_OMEGA, {0.0, 1000.0}},
         {PAR_LAMBDA, {0.0, 300.0}},
         {PAR_NU, {0.0, 150.0}},
-        {PAR_S, {0.0, 1.0}},
+        {PAR_S, {0.0, 0.4}},
         {PAR_AP, {0.0, 0.2}}
     };
     for (const auto &entry : bounds) {
