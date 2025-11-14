@@ -51,6 +51,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 ## Features
 - Double‑triode workflow with A/B overlays and color‑coded labels
 - Robust fitting with multiple model families (Triode/Pentode)
+- Pentode support via the legacy Gardiner/Reefman models, plus a new **Simple Manual Pentode** path: backend implemented with a web-style `epk` anode-current formula (matching the web modeller), with UI sliders/manual control still under development.
 - Real‑time plotting and responsive UI
 - SPICE netlist export
 
@@ -60,6 +61,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - Empty plots in Designer: Select a device model first
 - No model curves in Designer: Ensure a device is selected and "Show Fitted Model" is checked
 - Designer overlays extend beyond model curves: Axes are clamped to device `vaMax`/`iaMax`; ensure your device preset has correct limits
+- Pentode fits look flatter than datasheets: this is expected with the current Gardiner/Reefman auto-fit; a Simple Manual Pentode modeller (with web-style `epk` already implemented and pending UI sliders) is being added as an alternative path.
 
 ## Change log (highlights)
 - 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only

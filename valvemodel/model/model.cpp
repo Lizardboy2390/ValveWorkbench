@@ -20,6 +20,20 @@
  * anode current given the specified grid voltages. This is provided to enable the accurate
  * determination of a cathode load line.
  */
+namespace {
+void logParameterSet(const char *stage, Parameter *const params[], int count)
+{
+    qInfo("PENTODE SOLVER %s:", stage);
+    for (int i = 0; i < count; ++i) {
+        if (!params[i]) {
+            continue;
+        }
+        const QString name = params[i]->getName();
+        qInfo("  [%02d] %-10s = %.12f", i, name.toUtf8().constData(), params[i]->getValue());
+    }
+}
+} // namespace
+
 Model::Model()
 {
     parameter[PAR_KG1] = new Parameter("Kg:", 0.7);
@@ -100,14 +114,15 @@ void Model::addMeasurement(Measurement *measurement)
         Sweep *sweep = measurement->at(s);
 
         // Filter out incomplete/limit-hit sweeps (likely ended early due to limits)
-        const int minPoints = 60; // expected full sweep size from UI config
+        const int minPoints = 20; // accept coarser sweeps exported from web/datasheet sources
         if (sweep == nullptr || sweep->count() < minPoints) {
             qInfo("MODEL INPUT: skipping sweep %d (only %d points, need >= %d)", s, sweep ? sweep->count() : 0, minPoints);
             continue;
         }
         Sample *last = sweep->at(sweep->count() - 1);
-        if (last == nullptr || last->getVa() < 0.9 * measurement->getAnodeStop()) {
-            qInfo("MODEL INPUT: skipping sweep %d (end Va %.3f < 0.9*Va_stop %.3f)", s,
+        const double minEndVa = 0.75 * measurement->getAnodeStop();
+        if (last == nullptr || last->getVa() < minEndVa) {
+            qInfo("MODEL INPUT: skipping sweep %d (end Va %.3f < 0.75*Va_stop %.3f)", s,
                   last ? last->getVa() : -1.0, measurement->getAnodeStop());
             continue;
         }
@@ -151,7 +166,8 @@ void Model::addMeasurement(Measurement *measurement)
                 usedNominal = true;
             }
             // Apply per-sweep sign decision; once decided for the sweep, it stays consistent
-            const double vg1Corrected = flipVg1 ? -vg1raw : vg1raw;
+            const double vg1Effective = flipVg1 ? -vg1raw : vg1raw;
+            const double vg1Corrected = -std::fabs(vg1Effective);
 
             if (!loggedFirstVg && std::isfinite(vg1Corrected) && std::fabs(vg1Corrected) > 1e-9) {
                 qInfo("MODEL INPUT: sweep=%d first vg1 used=%.6f (%s)", s, vg1Corrected, usedNominal ? "nominal" : "sample");
@@ -164,6 +180,7 @@ void Model::addMeasurement(Measurement *measurement)
             }
 
             addSample(va, ia, vg1Corrected, vg2, ig2);
+            applyAllPendingBounds();
         }
         if (std::isfinite(minVgUsed) && std::isfinite(maxVgUsed)) {
             qInfo("MODEL INPUT: sweep=%d vg1 range used [%.6f, %.6f] (should be <= 0)", s, minVgUsed, maxVgUsed);
@@ -212,6 +229,34 @@ void Model::setEstimate(Estimate *estimate)
     parameter[PAR_LAMBDA]->setValue(estimate->getLambda());
     parameter[PAR_S]->setValue(estimate->getS());
     parameter[PAR_AP]->setValue(estimate->getAp());
+
+    // Hard guardrails for solver stability
+    const std::pair<int, std::pair<double, double>> bounds[] = {
+        {PAR_KG1, {0.05, 5.0}},
+        {PAR_KP, {20.0, 400.0}},
+        {PAR_KVB, {50.0, 800.0}},
+        {PAR_KVB1, {1.0, 80.0}},
+        {PAR_VCT, {0.0, 5.0}},
+        {PAR_X, {1.0, 2.0}},
+        {PAR_MU, {1.0, 50.0}},
+        {PAR_KG2, {0.1, 25.0}},
+        {PAR_A, {0.0, 0.1}},
+        {PAR_ALPHA, {0.0, 0.6}},
+        {PAR_BETA, {0.0, 0.6}},
+        {PAR_GAMMA, {0.3, 3.0}},
+        {PAR_PSI, {0.0, 10.0}},
+        {PAR_OMEGA, {0.0, 1000.0}},
+        {PAR_LAMBDA, {0.0, 300.0}},
+        {PAR_NU, {0.0, 150.0}},
+        {PAR_S, {0.0, 1.0}},
+        {PAR_AP, {0.0, 0.2}}
+    };
+    for (const auto &entry : bounds) {
+        int idx = entry.first;
+        if (parameter[idx]) {
+            setLimits(parameter[idx], entry.second.first, entry.second.second);
+        }
+    }
 }
 
 void Model::solve()
@@ -219,6 +264,9 @@ void Model::solve()
     converged = false;
 
     setOptions();
+    applyAllPendingBounds();
+
+    logParameterSet("START", parameter, 24);
 
     Solver::Summary summary;
 
@@ -231,6 +279,13 @@ void Model::solve()
     }
 
     converged = summary.termination_type == ceres::CONVERGENCE;
+
+    qInfo("PENTODE SOLVER RESULT: termination=%d, message=%s, initial_cost=%.6f, final_cost=%.6f",
+          summary.termination_type,
+          summary.message.c_str(),
+          summary.initial_cost,
+          summary.final_cost);
+    logParameterSet("AFTER", parameter, 24);
 
     // qInfo(summary.FullReport().c_str());
     }
@@ -240,6 +295,9 @@ void Model::solveThreaded()
     converged = false;
 
     setOptions();
+    applyAllPendingBounds();
+
+    logParameterSet("THREAD START", parameter, 24);
 
     Solver::Summary summary;
 
@@ -252,6 +310,13 @@ void Model::solveThreaded()
     }
 
     converged = summary.termination_type == ceres::CONVERGENCE;
+
+    qInfo("PENTODE SOLVER RESULT (threaded): termination=%d, message=%s, initial_cost=%.6f, final_cost=%.6f",
+          summary.termination_type,
+          summary.message.c_str(),
+          summary.initial_cost,
+          summary.final_cost);
+    logParameterSet("THREAD AFTER", parameter, 24);
 
     // qInfo(summary.FullReport().c_str());
 
@@ -560,92 +625,17 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             // Y-axis max for clamping plotted model currents
             const double yMaxAxis = measurement->getIaMax();
 
-            // Plotting-only curvature calibration: save and set shaping parameters
+            // Plotting-only curvature calibration (legacy): keep current fitted shaping parameters
+            // so that plotting reflects the actual model state rather than overriding A/Beta/Gamma.
             double aSaved = parameter[PAR_A]->getValue();
             double betaSaved = parameter[PAR_BETA]->getValue();
             double gammaSaved = parameter[PAR_GAMMA]->getValue();
-            parameter[PAR_A]->setValue(0.002);
-            parameter[PAR_BETA]->setValue(0.15);
-            parameter[PAR_GAMMA]->setValue(1.2);
 
-            // Measurement-driven kg1 calibration using the -20V family at mid Va
-            // Find the sweep closest to -20V (family value is negative magnitude)
+            // Measurement-driven kg1 calibration using the -20V family at mid Va (legacy).
+            // Disabled for now so that plotting uses the fitted Kg1 directly and avoids
+            // aggressive re-scaling of Ia.
             double iaScale = 1.0; // display-only scaling to match measurement units/axis
-            {
-                const double targetFam = -20.0;
-                const double famTol = 1e-3;
-                Sweep *calSweep = nullptr;
-                for (int si = 0; si < measurement->count(); ++si) {
-                    double nomV = measurement->at(si)->getVg1Nominal();
-                    double famV = -std::fabs(nomV);
-                    if (std::fabs(famV - targetFam) <= famTol) { calSweep = measurement->at(si); break; }
-                }
-                if (calSweep && calSweep->count() >= 3) {
-                    auto pickVg2 = [&](Sample *samp) {
-                        double v = samp->getVg2();
-                        if (!std::isfinite(v) || v <= 1.0) v = calSweep->getVg2Nominal();
-                        if (!std::isfinite(v) || v <= 1.0) v = vg2;
-                        return v;
-                    };
-                    int midIdx = calSweep->count() / 2;
-                    Sample *sm = calSweep->at(midIdx);
-                    double vaCal = sm->getVa();
-                    double vg1Cal = targetFam;
-                    double vg2Cal = pickVg2(sm);
-                    double iaTarget = sm->getIa(); // mA
-
-                    // Current kg1 and its reciprocal
-                    double kg1Saved = parameter[PAR_KG1]->getValue();
-                    double y = (kg1Saved > 1e-12) ? 1.0 / kg1Saved : 1e6;
-
-                    // Evaluate Ia at current y and at y+dy to estimate sensitivity s = dIa/dy
-                    auto evalIa = [&](double yrecip) {
-                        double kg1cand = (yrecip > 1e-12) ? 1.0 / yrecip : 1e12;
-                        parameter[PAR_KG1]->setValue(kg1cand);
-                        return anodeCurrent(vaCal, vg1Cal, vg2Cal);
-                    };
-                    double dy = std::max(1e-6, y * 0.1);
-                    double ia1 = evalIa(y);
-                    double ia2 = evalIa(y + dy);
-                    double s = (ia2 - ia1) / dy; // mA per unit of y
-                    // Restore baseline kg1 before solving
-                    parameter[PAR_KG1]->setValue(kg1Saved);
-
-                    if (std::isfinite(s) && std::fabs(s) > 1e-9) {
-                        double c = ia1 - s * y;
-                        double yTarget = (iaTarget - c) / s;
-                        // Bounds to keep kg1 positive and reasonable
-                        if (std::isfinite(yTarget) && yTarget > 1e-9 && yTarget < 1e9) {
-                            double kg1New = 1.0 / yTarget;
-                            // Constrain kg1New within a practical range relative to saved
-                            double lo = kg1Saved * 0.05;
-                            double hi = kg1Saved * 20.0;
-                            if (!std::isfinite(lo) || lo <= 0.0) lo = 1e-6;
-                            if (!std::isfinite(hi) || hi <= lo) hi = lo * 1e6;
-                            kg1New = std::min(hi, std::max(lo, kg1New));
-                            parameter[PAR_KG1]->setValue(kg1New);
-                            // Compute display scale so model aligns with measured at anchor
-                            double iaModelAnchor = anodeCurrent(vaCal, vg1Cal, vg2Cal);
-                            if (std::isfinite(iaModelAnchor) && iaModelAnchor > 1e-9) {
-                                iaScale = iaTarget / iaModelAnchor;
-                                // keep within sensible bounds
-                                if (!std::isfinite(iaScale) || iaScale <= 0.0) iaScale = 1.0;
-                                iaScale = std::min(100.0, std::max(0.01, iaScale));
-                            } else {
-                                iaScale = 1.0;
-                            }
-                            qInfo("PENTODE KG1 CAL: va=%.3f vg1=%.3f vg2=%.3f iaTarget=%.3f ia1=%.3f s=%.6f kg1Saved=%.6f -> kg1New=%.6f, iaScale=%.4f",
-                                  vaCal, vg1Cal, vg2Cal, iaTarget, ia1, s, kg1Saved, kg1New, iaScale);
-                        } else {
-                            qInfo("PENTODE KG1 CAL: yTarget invalid (%.6f), skipping calibration", yTarget);
-                        }
-                    } else {
-                        qInfo("PENTODE KG1 CAL: sensitivity too small (s=%.6f), skipping calibration", s);
-                    }
-                } else {
-                    qInfo("PENTODE KG1 CAL: -20V family not found or insufficient samples; skipping");
-                }
-            }
+            qInfo("PENTODE KG1 CAL: disabled plotting-only calibration; using fitted Kg1 and iaScale=1.0");
 
             int curveCount = 0;
             for (double vg1 : vgFamilies) {
@@ -737,10 +727,10 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                         vaPrev = va;
                         iaPrev = ia;
                     }
-                    // If the entire family computes ~zero current, skip plotting this curve to avoid flat zero lines
+                    // If the entire family computes ~zero current, still plot it so the user can
+                    // see that the model predicts negligible conduction for this bias.
                     if (iaMax < 1e-3) {
-                        qInfo("PENTODE: Skipping vg1=%.3f curve due to near-zero Ia across sweep (iaMax=%.6f)", vg1, iaMax);
-                        continue;
+                        qInfo("PENTODE: iaMax=%.6f for vg1=%.3f (near-zero Ia); plotting curve anyway", iaMax, vg1);
                     }
                     if (std::isfinite(iaMax) && iaMax > yMaxAxis * 5.0) {
                         qInfo("PENTODE: Skipping vg1=%.3f due to extreme Ia (iaMax=%.3f > %.3f)", vg1, iaMax, yMaxAxis * 5.0);
@@ -854,18 +844,94 @@ QColor Model::getPlotColor() const
     return plotColor;
 }
 
-void Model::setLowerBound(Parameter* parameter, double lowerBound)
+namespace {
+bool applyBoundIfConfigurable(ceres::Problem &problem, double *block, double lowerBound, double upperBound)
 {
-    anodeProblem.SetParameterLowerBound(parameter->getPointer(), 0, lowerBound);
+    if (!block) {
+        return false;
+    }
+    if (!problem.HasParameterBlock(block)) {
+        return false;
+    }
+    if (problem.IsParameterBlockConstant(block)) {
+        return true;
+    }
+    if (std::isfinite(lowerBound)) {
+        problem.SetParameterLowerBound(block, 0, lowerBound);
+    }
+    if (std::isfinite(upperBound)) {
+        problem.SetParameterUpperBound(block, 0, upperBound);
+    }
+    return true;
+}
 }
 
-void Model::setUpperBound(Parameter* parameter, double upperBound)
+bool Model::applyBound(Parameter *parameter, double lowerBound, double upperBound)
 {
-    anodeProblem.SetParameterUpperBound(parameter->getPointer(), 0, upperBound);
+    if (!parameter) {
+        return false;
+    }
+    double *block = parameter->getPointer();
+    bool applied = false;
+    applied |= applyBoundIfConfigurable(anodeProblem, block, lowerBound, upperBound);
+    applied |= applyBoundIfConfigurable(anodeRemodelProblem, block, lowerBound, upperBound);
+    applied |= applyBoundIfConfigurable(screenProblem, block, lowerBound, upperBound);
+    return applied;
 }
 
-void Model::setLimits(Parameter* parameter, double lowerBound, double upperBound)
+void Model::applyAllPendingBounds()
 {
-    anodeProblem.SetParameterLowerBound(parameter->getPointer(), 0, lowerBound);
-    anodeProblem.SetParameterUpperBound(parameter->getPointer(), 0, upperBound);
+    for (auto it = pendingBounds.begin(); it != pendingBounds.end();) {
+        double *block = it->first;
+        const PendingBound &pb = it->second;
+        bool applied = false;
+        applied |= applyBoundIfConfigurable(anodeProblem, block, pb.lower, pb.upper);
+        applied |= applyBoundIfConfigurable(anodeRemodelProblem, block, pb.lower, pb.upper);
+        applied |= applyBoundIfConfigurable(screenProblem, block, pb.lower, pb.upper);
+        if (applied) {
+            it = pendingBounds.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void Model::setLowerBound(Parameter *parameter, double lowerBound)
+{
+    if (!parameter) {
+        return;
+    }
+    if (!applyBound(parameter, lowerBound, std::numeric_limits<double>::quiet_NaN())) {
+        pendingBounds[parameter->getPointer()].lower = lowerBound;
+        pendingBounds[parameter->getPointer()].upper = pendingBounds[parameter->getPointer()].upper;
+        qInfo("BOUND GUARD: Deferring lower bound for %s (parameter block not yet registered)",
+              parameter->getName().toUtf8().constData());
+    }
+}
+
+void Model::setUpperBound(Parameter *parameter, double upperBound)
+{
+    if (!parameter) {
+        return;
+    }
+    if (!applyBound(parameter, std::numeric_limits<double>::quiet_NaN(), upperBound)) {
+        PendingBound &pb = pendingBounds[parameter->getPointer()];
+        pb.upper = upperBound;
+        qInfo("BOUND GUARD: Deferring upper bound for %s (parameter block not yet registered)",
+              parameter->getName().toUtf8().constData());
+    }
+}
+
+void Model::setLimits(Parameter *parameter, double lowerBound, double upperBound)
+{
+    if (!parameter) {
+        return;
+    }
+    if (!applyBound(parameter, lowerBound, upperBound)) {
+        PendingBound &pb = pendingBounds[parameter->getPointer()];
+        pb.lower = lowerBound;
+        pb.upper = upperBound;
+        qInfo("BOUND GUARD: Deferring limits for %s (parameter block not yet registered)",
+              parameter->getName().toUtf8().constData());
+    }
 }

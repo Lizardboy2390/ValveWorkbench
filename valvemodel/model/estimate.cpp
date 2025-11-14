@@ -5,6 +5,8 @@
 #include "quadraticsolver.h"
 
 #include <cmath>
+#include <algorithm>
+#include <vector>
 #include <limits>
 
 Estimate::Estimate()
@@ -17,54 +19,159 @@ void Estimate::estimateTriode(Measurement *measurement) {
     estimateKg1X(measurement);
     estimateKp(measurement);
     estimateKvbKvb1(measurement);
-    // There does not appear to be a meangingful way of estimating Vct, Kvb or Kvb1 and so fixed values will be used
-    //estimateKvbKvb1(measurement);
 }
 
+namespace {
+struct SweepStats {
+    double vg1Nominal = 0.0;
+    double vg2Nominal = 0.0;
+    double vaLast = 0.0;
+    double iaLast = 0.0;
+    double ig2Last = 0.0;
+};
+
+std::vector<SweepStats> collectSweepStats(Measurement *measurement)
+{
+    std::vector<SweepStats> stats;
+    if (!measurement) {
+        return stats;
+    }
+    stats.reserve(measurement->count());
+    for (int sw = 0; sw < measurement->count(); ++sw) {
+        Sweep *s = measurement->at(sw);
+        if (!s || s->count() == 0) {
+            continue;
+        }
+        SweepStats info;
+        info.vg1Nominal = s->getVg1Nominal();
+        info.vg2Nominal = s->getVg2Nominal();
+        Sample *tail = s->at(s->count() - 1);
+        if (tail) {
+            info.vaLast = tail->getVa();
+            info.iaLast = tail->getIa();
+            info.ig2Last = tail->getIg2();
+        }
+        stats.push_back(info);
+    }
+    return stats;
+}
+
+double median(const std::vector<double> &values)
+{
+    if (values.empty()) {
+        return 0.0;
+    }
+    std::vector<double> copy = values;
+    std::nth_element(copy.begin(), copy.begin() + copy.size() / 2, copy.end());
+    return copy[copy.size() / 2];
+}
+
+double clampToRange(double value, double lower, double upper)
+{
+    if (upper < lower) {
+        std::swap(lower, upper);
+    }
+    if (value < lower) {
+        return lower;
+    }
+    if (value > upper) {
+        return upper;
+    }
+    return value;
+}
+
+double fallbackIfInvalid(double value, double fallback)
+{
+    if (!std::isfinite(value)) {
+        return fallback;
+    }
+    return value;
+}
+} // namespace
 
 void Estimate::estimatePentode(Measurement *measurement, CohenHelieTriode *triodeModel, int modelType, bool secondaryEmission)
 {
-    if (triodeModel == nullptr) {
-        // Fallback: derive a coarse initial estimate directly from measurement
-        // JS-style base seeds suitable for 6L6-class pentodes
-        mu = 11.0;
-        x = 1.4;
-        kg1 = 0.6;          // triode-like scaling
-        kp = 1.0 + 0.5 * (mu * 10.0); // ≈ 56
-        kvb = 250.0;
-        kvb1 = 12.0;
-        vct = 0.1;
+    const std::vector<SweepStats> stats = collectSweepStats(measurement);
 
-        // Try to set kg2 from high-Va screen current if available; else use heuristic
-        double kg2Accum = 0.0;
-        int kg2Count = 0;
-        const int sweeps = measurement->count();
-        for (int sw = 0; sw < sweeps; ++sw) {
-            Sweep *s = measurement->at(sw);
-            if (!s || s->count() < 2) continue;
-            Sample *end = s->at(s->count() - 1);
-            if (!end) continue;
-            const double ig2mA = end->getIg2();
-            const double vaV = end->getVa();
-            const double vg2V = s->getVg2Nominal();
-            if (ig2mA > 0.05 && vaV > 0.8 * measurement->getAnodeStop()) {
-                // Simple proportional scaling (units absorbed into model constants)
-                kg2Accum += (vaV + std::max(0.0, vg2V));
-                kg2Count++;
+    auto pickReferenceVg2 = [&]() -> double {
+        std::vector<double> v;
+        v.reserve(stats.size());
+        for (const auto &s : stats) {
+            if (std::isfinite(s.vg2Nominal) && s.vg2Nominal > 0.0) {
+                v.push_back(s.vg2Nominal);
             }
         }
-        if (kg2Count > 0) {
-            kg2 = std::max(1.0, (kg2Accum / kg2Count) / 50.0);
+        return v.empty() ? 250.0 : median(v);
+    };
+
+    auto pickMostNegativeVg1 = [&]() -> double {
+        double minVg1 = 0.0;
+        bool found = false;
+        for (const auto &s : stats) {
+            if (!std::isfinite(s.vg1Nominal)) {
+                continue;
+            }
+            double candidate = -std::fabs(s.vg1Nominal);
+            if (!found || candidate < minVg1) {
+                minVg1 = candidate;
+                found = true;
+            }
+        }
+        return found ? minVg1 : -20.0;
+    };
+
+    auto sampleHighVaCurrent = [&](double *iaOut, double *ig2Out) {
+        double bestVa = -std::numeric_limits<double>::infinity();
+        double iaCandidate = 0.0;
+        double ig2Candidate = 0.0;
+        for (const auto &s : stats) {
+            if (s.vaLast > bestVa) {
+                bestVa = s.vaLast;
+                iaCandidate = s.iaLast;
+                ig2Candidate = s.ig2Last;
+            }
+        }
+        if (bestVa > -std::numeric_limits<double>::infinity()) {
+            if (iaOut) *iaOut = iaCandidate;
+            if (ig2Out) *ig2Out = ig2Candidate;
+            return true;
+        }
+        return false;
+    };
+
+    double iaHigh = 0.0;
+    double ig2High = 0.0;
+    const bool haveHighVa = sampleHighVaCurrent(&iaHigh, &ig2High);
+
+    if (triodeModel == nullptr) {
+        mu = clampToRange(std::fabs(pickMostNegativeVg1()) * 0.6 + 6.0, 5.0, 18.0);
+        x = clampToRange(1.3 + 0.02 * std::fabs(pickMostNegativeVg1()), 1.2, 1.6);
+        kg1 = clampToRange((std::fabs(pickMostNegativeVg1()) + 3.0) * 0.08, 0.2, 1.5);
+        kp = clampToRange(pickReferenceVg2() * 0.7, 40.0, 300.0);
+        kvb = clampToRange(pickReferenceVg2(), 60.0, 400.0);
+        kvb1 = clampToRange(pickReferenceVg2() / 20.0, 4.0, 25.0);
+        vct = clampToRange(pickMostNegativeVg1() * -0.01, 0.0, 1.0);
+
+        if (haveHighVa && ig2High > 1e-6) {
+            const double vg2Nom = pickReferenceVg2();
+            const double targetRatio = iaHigh / std::max(ig2High, 1e-6);
+            kg2 = clampToRange(targetRatio * 0.5, 0.1, 15.0);
         } else {
-            kg2 = 4.5 * kg1; // heuristic consistent with existing estimator fallback
+            kg2 = clampToRange(kg1 * 5.0, 0.1, 15.0);
         }
 
-        // Preserve existing conservative defaults for low-voltage shaping
-        a = 0.0;
-        beta = 0.1;
-        gamma = 1.0;
-
-        // Secondary emission parameters left at defaults when not requested
+        a = clampToRange(0.005 + 0.001 * std::fabs(pickMostNegativeVg1()), 0.0, 0.05);
+        beta = clampToRange(0.08 + 0.002 * std::fabs(pickMostNegativeVg1()), 0.02, 0.25);
+        gamma = clampToRange(1.2 - 0.01 * std::fabs(pickMostNegativeVg1()), 0.7, 1.5);
+        psi = clampToRange(haveHighVa ? ig2High / std::max(iaHigh, 1e-6) : 3.0, 0.5, 6.0);
+        omega = 200.0;
+        lambda = 50.0;
+        nu = 20.0;
+        s = clampToRange((haveHighVa ? (iaHigh - ig2High) : 5.0) * 0.002, 0.0, 0.5);
+        ap = clampToRange(0.015, 0.005, 0.05);
+        qInfo("PENTODE SEED (MEAS): vg2Ref=%.3f, vg1Min=%.3f, iaHigh=%.3f, ig2High=%.3f", pickReferenceVg2(), pickMostNegativeVg1(), iaHigh, ig2High);
+        qInfo("PENTODE SEED (MEAS): mu=%.3f x=%.3f kg1=%.3f kg2=%.3f kp=%.3f kvb=%.3f kvb1=%.3f vct=%.3f", mu, x, kg1, kg2, kp, kvb, kvb1, vct);
+        qInfo("PENTODE SEED (MEAS): a=%.4f beta=%.4f gamma=%.3f psi=%.3f s=%.3f ap=%.3f", a, beta, gamma, psi, s, ap);
         return;
     }
 
@@ -81,9 +188,70 @@ void Estimate::estimatePentode(Measurement *measurement, CohenHelieTriode *triod
     estimateA(measurement, triodeModel);
     estimateBetaGamma(measurement, triodeModel);
     //estimateAlphaBeta(measurement, triodeModel, modelType);
-    if (secondaryEmission) {
-        // Estimate S, ap, omega, nu and lambda
+    // Derive kg2 by comparing fitted triode epk to screen current at high Va.
+    {
+        double kg2Numerator = 0.0;
+        double kg2Denominator = 0.0;
+        for (const auto &s : stats) {
+            if (s.vaLast < 0.8 * measurement->getAnodeStop()) {
+                continue;
+            }
+            double epk = triodeModel->cohenHelieEpk(s.vg2Nominal, s.vg1Nominal);
+            if (std::isfinite(epk) && epk > 1e-9 && std::isfinite(s.ig2Last) && s.ig2Last > 1e-6) {
+                kg2Numerator += epk;
+                kg2Denominator += s.ig2Last;
+            }
+        }
+        if (kg2Denominator > 1e-6) {
+            kg2 = clampToRange(kg2Numerator / kg2Denominator, 0.1, 15.0);
+        } else {
+            kg2 = clampToRange(triodeModel->getParameter(PAR_KG1) * 5.0, 0.1, 15.0);
+        }
     }
+
+    if (secondaryEmission) {
+        double meanRise = 0.0;
+        int riseCount = 0;
+        for (const auto &s : stats) {
+            if (s.vaLast < measurement->getAnodeStop() * 0.3) {
+                continue;
+            }
+            if (std::isfinite(s.ig2Last) && std::isfinite(s.iaLast)) {
+                double total = s.iaLast + s.ig2Last;
+                if (total > 1e-6) {
+                    meanRise += s.ig2Last / total;
+                    riseCount++;
+                }
+            }
+        }
+        const double ratio = (riseCount > 0) ? (meanRise / riseCount) : 0.02;
+        s = clampToRange(ratio * 0.5, 0.0, 0.5);
+        ap = clampToRange(0.01 + ratio * 0.02, 0.005, 0.05);
+        omega = clampToRange(150.0 + ratio * 400.0, 50.0, 600.0);
+        lambda = clampToRange(40.0 + ratio * 120.0, 10.0, 200.0);
+        nu = clampToRange(15.0 + ratio * 40.0, 5.0, 80.0);
+    }
+
+    mu = clampToRange(mu, 3.0, 25.0);
+    x = clampToRange(x, 1.1, 1.8);
+    kg1 = clampToRange(kg1, 0.05, 5.0);
+    kp = clampToRange(kp, 20.0, 400.0);
+    kvb = clampToRange(kvb, 50.0, 600.0);
+    kvb1 = clampToRange(kvb1, 1.0, 40.0);
+    vct = clampToRange(vct, 0.0, 3.0);
+    kg2 = clampToRange(kg2, 0.1, 20.0);
+    a = clampToRange(a, 0.0, 0.05);
+    beta = clampToRange(beta, 0.01, 0.3);
+    gamma = clampToRange(gamma, 0.5, 2.0);
+    psi = clampToRange(psi, 0.5, 8.0);
+    omega = clampToRange(omega, 10.0, 800.0);
+    lambda = clampToRange(lambda, 5.0, 250.0);
+    nu = clampToRange(nu, 0.0, 120.0);
+    s = clampToRange(s, 0.0, 1.0);
+    ap = clampToRange(ap, 0.0, 0.2);
+    qInfo("PENTODE SEED (TRI): vg2Ref=%.3f, vg1Min=%.3f, iaHigh=%.3f, ig2High=%.3f", pickReferenceVg2(), pickMostNegativeVg1(), iaHigh, ig2High);
+    qInfo("PENTODE SEED (TRI): mu=%.3f x=%.3f kg1=%.3f kg2=%.3f kp=%.3f kvb=%.3f kvb1=%.3f vct=%.3f", mu, x, kg1, kg2, kp, kvb, kvb1, vct);
+    qInfo("PENTODE SEED (TRI): a=%.4f beta=%.4f gamma=%.3f psi=%.3f s=%.3f ap=%.3f", a, beta, gamma, psi, s, ap);
 }
 
 double Estimate::anodeCurrent(double va, double vg1)

@@ -24,6 +24,7 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
     ui->pentodeFit->addItem("Gardiner", GARDINER_PENTODE);
     ui->pentodeFit->addItem("Reefman (Derk)", REEFMAN_DERK_PENTODE);
     ui->pentodeFit->addItem("Reefman (DerkE)", REEFMAN_DERK_E_PENTODE);
+    ui->pentodeFit->addItem("Simple Manual Pentode", SIMPLE_MANUAL_PENTODE);
 
     ui->sampling->addItem("Simple", SMP_LINEAR);
     ui->sampling->addItem("Optimised", SMP_LOGARITHMIC);

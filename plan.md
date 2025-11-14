@@ -47,11 +47,10 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
 - Next: Apply overlay clearing/axes clamp pattern to remaining circuits
 - Then: Add explicit "Calculate" button in Designer; screenshot update for README
 
-### Pentode Modelling (upcoming)
-- Add a **Simple Manual Pentode** model to the existing Modeller pentode model list, matching the web `pentodemodeller.js` behaviour.
-  - Backend: web-style pentode formula using `mu, kp, kg1, kg2, alpha, beta, gamma, a` with no auto-fitting initially.
-  - UI: sliders / numeric fields for these parameters on the Modeller tab, replotting curves live over measured pentode data.
-- Once the manual model visually matches the web tool for key tubes (e.g. 6L6, EL34), design a small, robust auto-fit on top of it (fitting only a subset of parameters) as a later step.
+### Pentode Modelling (in progress)
+- **Simple Manual Pentode** model has been added to the existing Modeller pentode model list and now uses the web `pentodemodeller.js`‑style `epk` backend formula (`mu, kp, kg1, kg2, alpha, beta, gamma, a`, no auto‑fitting yet).
+- Next: add UI sliders / numeric fields for these parameters on the Modeller tab and replot curves live over measured pentode data when sliders move.
+- Later: once the manual model visually matches the web tool for key tubes (e.g. 6L6, EL34), design a small, robust auto‑fit on top of it (fitting only a subset of parameters) as a later step.
 
 ## Change log (highlights)
 - 2025‑11‑06: Designer (Triode CC) overlays complete (Max Swing brown / Max Sym Swing blue); Input sensitivity into Designer; K bypass + single Gain; gm/ra formatting; cathode line clipping; Pa‑max entry fix; docs updated

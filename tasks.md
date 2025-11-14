@@ -3,22 +3,17 @@
 Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Active tasks (end‑user focused)
-- [ ] Show Fitted Model: route checkbox to Model::plotModel for pentode (use measured Vg2, kg1 anchor, curvature)
-- [ ] Curvature refinement: estimate beta/gamma from low‑Va region (plotting‑only) for better bend
-- [ ] Scale robustness: remove temporary iaScale once units are consistently mA end‑to‑end
-- [ ] Designer: ensure device selection auto‑replots and axes clamp to device limits
-- [ ] README: add “Pentode plotting troubleshooting” (units, families, checkbox)
+- [ ] Modeller UI: add sliders / numeric fields for Simple Manual Pentode parameters (`mu, kp, kg1, kg2, alpha, beta, gamma, a`) and replot curves live over measured pentode data.
+- [ ] Optional: once Simple Manual Pentode matches the web tool visually for key tubes, add a small auto-fit layer on top (fit a subset of parameters only).
+- [ ] Designer: ensure device selection auto‑replots and axes clamp to device limits.
+- [ ] README: briefly describe Simple Manual Pentode and note that legacy Gardiner/Reefman pentode fits are unchanged.
 
 ## Recently completed
-- [x] Pentode plotting uses 3‑arg current with measured Vg2 (no triode fallback)
-- [x] Vg1 family units fixed (use measurement −20…−60 V; no mV→V conversion)
-- [x] Muted Cohen‑Helie debug logs when called from pentode
-- [x] First‑pass kg1 calibration from −20 V family mid‑point
-- [x] Plot guards: clamp Ia to axis, skip extreme/zero families, avoid verticals
-- [x] Initial plotting‑only curvature parameters (a/beta/gamma)
+- [x] Restored analyser and pentode modeller to baseline behaviour after experimental kg1/curvature changes.
+- [x] Added backend **SimpleManualPentode** model type, wired it into ModelFactory / Options, and updated it to use a web-style `epk` anode-current formula (no sliders or auto-fitting yet).
 
 ## Change log (highlights)
-- 2025‑11‑13: Pentode plotting path corrected; kg1 anchor + curvature; unit fixes; checkbox wiring pending
+- 2025‑11‑13: Pentode plotting experiments (kg1 anchor/curvature) tried and reverted; SimpleManualPentode backend added as a new, manual model path; UI work pending.
 - 2025‑11‑02: Save‑to‑Project dialog prompts every time; modelling grid‑polarity guard
 - 2025‑10‑21: Model plot loop fixed (correct grid stepping and bounds)
 

@@ -94,8 +94,10 @@ Additional (2025-11-05):
    - Backend: web-style `epk` and anode-current function using `mu, kp, kg1, kg2, alpha, beta, gamma, a`, no Ceres auto-fit initially.
    - UI: sliders / numeric fields on the existing Modeller pentode tab for these parameters, replotting curves live over measured pentode data.
    - Selection: add "Simple Manual Pentode" as a model type alongside Gardiner/Reefman in the existing pentode model selection.
-3) Once the Simple Manual Pentode behaves like the web modeller for representative tubes (e.g. 6L6, EL34), design a **minimal auto-fit layer** on top of it (fit only a small subset of parameters) and wire it in as an optional step.
-4) After Simple Manual Pentode is stable, reassess whether Gardiner/Reefman pentode fitting needs further work or can be left as-is.
+3) Current status: `SimpleManualPentode` backend is implemented with a web-style `epk` anode-current function and is selectable as a pentode model type via the Options dialog; it does not add Ceres residuals and is intended for manual/slider control first.
+4) Next: add Modeller UI sliders / numeric fields for Simple Manual Pentode parameters and wire them to update the model parameters and replot curves live over measured pentode data.
+5) Once the Simple Manual Pentode behaves like the web modeller for representative tubes (e.g. 6L6, EL34), design a **minimal auto-fit layer** on top of it (fit only a small subset of parameters) and wire it in as an optional step.
+6) After Simple Manual Pentode is stable, reassess whether Gardiner/Reefman pentode fitting needs further work or can be left as-is.
 
 ## Test Checklist
 - Designer: Triode CC, Device: 12AX7, Params: Vb=250, Ra=100k, Rk=1.5k, RL=1M.

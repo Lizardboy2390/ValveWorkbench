@@ -200,7 +200,8 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
 {
     // Filter out degenerate points that destabilize residual evaluation
     const double eps = 1e-9;
-    if (vg2 <= eps) {
+    const double vg2Normalized = (std::fabs(vg2) < 5.0 ? vg2 * 1000.0 : vg2);
+    if (vg2Normalized <= eps) {
         return; // screen effectively off / discharge transient
     }
     if (va <= eps && std::abs(ia) <= eps && std::abs(ig2) <= eps) {

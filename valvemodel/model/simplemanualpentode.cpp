@@ -16,30 +16,55 @@ SimpleManualPentode::SimpleManualPentode()
 
 void SimpleManualPentode::setOptions()
 {
-    // Reuse CohenHelieTriode options for now (bounds, solver options).
-    CohenHelieTriode::setOptions();
+    // Do NOT call CohenHelieTriode::setOptions here, because that attempts
+    // to set parameter bounds on Ceres parameter blocks that this model
+    // does not add (addSample is a no-op for now). Instead, configure only
+    // basic solver options so an empty problem is still valid.
+
+    options.max_num_iterations = 1;
+    options.max_num_consecutive_invalid_steps = 1;
+    options.linear_solver_type = ceres::DENSE_QR;
 }
 
-// Simplified pentode anode current using Cohen-Helie epk helper.
-// This is intentionally conservative and will be refined later.
+// Web-style Simple Manual Pentode anode current.
+// epk follows pentodemodeller.js:
+//   epk = (vg2 / kp * log(1 + exp(kp * (1/mu - vg1/vg2))))^1.5
+// Knee / tail use the same Reefman-style form (alpha, beta, gamma, A).
 
 double SimpleManualPentode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     Q_UNUSED(secondaryEmission);
 
-    // Use Cohen-Helie epk helper from base class; vg2, vg1 in volts.
-    double epk = cohenHelieEpk(vg2, vg1);
-
-    double kg1 = parameter[PAR_KG1]->getValue();
-    double kg2 = parameter[PAR_KG2]->getValue();
+    double mu    = parameter[PAR_MU]->getValue();
+    double kg1   = parameter[PAR_KG1]->getValue();
+    double kg2   = parameter[PAR_KG2]->getValue();
+    double kp    = parameter[PAR_KP]->getValue();
     double alpha = parameter[PAR_ALPHA]->getValue();
     double beta  = parameter[PAR_BETA]->getValue();
     double gamma = parameter[PAR_GAMMA]->getValue();
     double A     = parameter[PAR_A]->getValue();
 
-    if (kg1 <= 0.0 || kg2 <= 0.0) {
+    // Basic guards to avoid degenerate or explosive values
+    if (vg2 == 0.0 || std::fabs(vg2) < 1e-6) {
         return 0.0;
     }
+    if (mu <= 0.0 || kp <= 0.0 || kg1 <= 0.0 || kg2 <= 0.0) {
+        return 0.0;
+    }
+
+    // Web-style epk: clamp exponent to keep exp() numerically stable
+    double inner = kp * (1.0 / mu - vg1 / vg2);
+    const double innerClamp = 60.0; // exp(±60) is already extreme
+    if (inner > innerClamp)  inner = innerClamp;
+    if (inner < -innerClamp) inner = -innerClamp;
+
+    double expInner = std::exp(inner);
+    double logTerm  = std::log1p(expInner); // log(1 + exp(inner))
+    double base     = (vg2 / kp) * logTerm;
+    if (!(std::isfinite(base)) || base <= 0.0) {
+        return 0.0;
+    }
+    double epk = std::pow(base, 1.5);
 
     double k     = 1.0 / kg1 - 1.0 / kg2;
     double shift = beta * (1.0 - alpha * vg1);
@@ -47,6 +72,9 @@ double SimpleManualPentode::anodeCurrent(double va, double vg1, double vg2, bool
     double scale = 1.0 - g;
 
     double ia    = epk * (k * scale + A * va / kg1);
+    if (!std::isfinite(ia) || ia < 0.0) {
+        return 0.0;
+    }
     return ia;
 }
 
@@ -107,8 +135,18 @@ int SimpleManualPentode::getType()
 
 void SimpleManualPentode::updateUI(QLabel *labels[], QLineEdit *values[])
 {
-    // Reuse CohenHelieTriode UI mapping for now.
-    CohenHelieTriode::updateUI(labels, values);
+    int i = 0;
+
+    // Core Simple Manual Pentode parameters exposed in a compact set:
+    // mu, kp, kg1, kg2, alpha, beta, gamma, a
+    updateParameter(labels[i], values[i], parameter[PAR_MU]);    i++;
+    updateParameter(labels[i], values[i], parameter[PAR_KP]);    i++;
+    updateParameter(labels[i], values[i], parameter[PAR_KG1]);   i++;
+    updateParameter(labels[i], values[i], parameter[PAR_KG2]);   i++;
+    updateParameter(labels[i], values[i], parameter[PAR_ALPHA]); i++;
+    updateParameter(labels[i], values[i], parameter[PAR_BETA]);  i++;
+    updateParameter(labels[i], values[i], parameter[PAR_GAMMA]); i++;
+    updateParameter(labels[i], values[i], parameter[PAR_A]);     i++;
 }
 
 void SimpleManualPentode::updateProperties(QTableWidget *properties)

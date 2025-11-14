@@ -5,6 +5,9 @@
 #include <QString>
 #include <QObject>
 #include <QColor>
+#include <unordered_map>
+#include <vector>
+#include <limits>
 
 #include "ceres/ceres.h"
 #include "glog/logging.h"
@@ -174,7 +177,7 @@ protected:
     /**
      * @brief parameter The array of 16 model Parameters linked to the UI
      */
-    Parameter *parameter[24];
+    Parameter *parameter[24] = {};
     /**
      * @brief options The options to be used by Ceres for solving the model approximation
      */
@@ -196,6 +199,19 @@ protected:
 
     QColor plotColor;
 
+    struct PendingBound {
+        double lower;
+        double upper;
+        PendingBound()
+            : lower(std::numeric_limits<double>::quiet_NaN()),
+              upper(std::numeric_limits<double>::quiet_NaN())
+        {
+        }
+    };
+    std::unordered_map<double*, PendingBound> pendingBounds;
+
+    void applyAllPendingBounds();
+    bool applyBound(Parameter *parameter, double lowerBound, double upperBound);
     void setLowerBound(Parameter* parameter, double lowerBound);
     void setUpperBound(Parameter* parameter, double upperBound);
     void setLimits(Parameter* parameter, double lowerBound, double upperBound);
