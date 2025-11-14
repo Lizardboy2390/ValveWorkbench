@@ -3179,7 +3179,8 @@ void ValveWorkbench::modelPentode()
     thread = new QThread;
 
     model->moveToThread(thread);
-    connect(model, &Model::modelReady, this, &ValveWorkbench::modelScreen);
+    disconnect(model, nullptr, this, nullptr);
+    connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
 
     thread->start();
