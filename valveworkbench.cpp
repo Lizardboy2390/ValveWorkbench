@@ -12,6 +12,10 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QDebug>
+#include <QPushButton>
+#include <QAction>
+#include <QMenu>
+#include <QMenuBar>
 #include <QDir>
 #include <QFileInfo>
 #include <QCoreApplication>
@@ -51,13 +55,17 @@ int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
     return 0;
 }
 
+ 
+
 // (Removed duplicate checkbox handlers; using the canonical implementations below.)
 
 void ValveWorkbench::on_pushButton_3_clicked()
 {
     // Load Template...
-    QString baseDir = QDir::cleanPath(QDir::currentPath() + "/models");
-    QString startDir = QDir(baseDir).exists() ? baseDir : QCoreApplication::applicationDirPath();
+    QString baseDir = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                      + "/ValveWorkbench/templates");
+    if (!QDir(baseDir).exists()) QDir().mkpath(baseDir);
+    QString startDir = baseDir;
     QString fileName = QFileDialog::getOpenFileName(this, tr("Load Template"), startDir, tr("JSON Files (*.json)"));
     if (fileName.isEmpty()) return;
 
@@ -246,7 +254,8 @@ void ValveWorkbench::on_pushButton_4_clicked()
 
     QJsonDocument out(obj);
 
-    QString baseDir = QDir::cleanPath(QDir::currentPath() + "/models");
+    QString baseDir = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                      + "/ValveWorkbench/templates");
     QDir().mkpath(baseDir);
     QString suggested = baseDir + "/" + obj.value("name").toString("Device").replace(' ', '_') + ".json";
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save Template"), suggested, tr("JSON Files (*.json)"));
@@ -512,6 +521,24 @@ void ValveWorkbench::cleanupTriodeBResources()
     }
 }
 
+void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
+{
+    const bool show = (arg1 != 0);
+    // Apply to latest measurement and refresh the measured plot
+    if (currentMeasurement != nullptr) {
+        currentMeasurement->setShowScreen(show);
+        if (measuredCurves != nullptr) {
+            plot.remove(measuredCurves);
+            measuredCurves = nullptr;
+        }
+        measuredCurves = currentMeasurement->updatePlot(&plot);
+        if (measuredCurves) {
+            plot.add(measuredCurves);
+            measuredCurves->setVisible(ui->measureCheck->isChecked());
+        }
+    }
+}
+
 void ValveWorkbench::startTriodeBFit()
 {
     if (triodeMeasurementSecondary == nullptr || triodeModelSecondary == nullptr) {
@@ -624,6 +651,31 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     loadDevices();
 
     ui->setupUi(this);
+
+    // Auto-open a serial port at startup using central routine
+    checkComPorts();
+
+    // Add Import menu action only (no Modeller button)
+    {
+        QAction *importModelAction = new QAction(tr("Import Model to Project..."), this);
+        connect(importModelAction, &QAction::triggered, this, &ValveWorkbench::on_actionLoad_Model_triggered);
+        if (QMenu *fileMenu = this->findChild<QMenu*>("menuFile")) {
+            fileMenu->addAction(importModelAction);
+        } else if (QMenuBar *mb = this->menuBar()) {
+            mb->addAction(importModelAction);
+        }
+    }
+
+    // Re-check and open a port when Analyser tab is selected
+    if (ui->tabWidget) {
+        QObject::connect(ui->tabWidget, &QTabWidget::currentChanged, this, [this](int idx){
+            if (ui->tabWidget->tabText(idx) == QLatin1String("Analyser")) {
+                if (!serialPort.isOpen()) {
+                    checkComPorts();
+                }
+            }
+        });
+    }
 
     // Create analyser instance and wire preferences for grid calibration references
     // This allows PreferencesDialog checkboxes to immediately command grid DACs
@@ -1155,6 +1207,10 @@ void ValveWorkbench::testFinished()
     ui->btnAddToProject->setEnabled(true);
 
     currentMeasurement = analyser->getResult();
+    if (currentMeasurement) {
+        // Apply current checkbox state to measurement so screen overlay can be drawn
+        currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+    }
     measuredCurves = currentMeasurement->updatePlot(&plot);
     plot.add(measuredCurves);
 
@@ -1164,7 +1220,7 @@ void ValveWorkbench::testFinished()
     }
     ui->measureCheck->setChecked(true);
 
-    // Populate data table with dual rows per sweep (Va and Ia)
+    // Populate data table with rows per sweep
     if (currentMeasurement && dataTable) {
         dataTable->clearContents();
         int numSweeps = currentMeasurement->count();
@@ -1174,8 +1230,19 @@ void ValveWorkbench::testFinished()
             return;
         }
 
-        // Set up table: 6 rows per sweep for double triode (Va, Ia, Vg1, Vg3, Va2, Ia2), 4 for regular (Va, Ia, Vg1, Vg3)
-        int rowsPerSweep = isDoubleTriode ? 6 : 4;
+        // Determine rows per sweep based on device type
+        const int measDeviceType = currentMeasurement->getDeviceType();
+        // Pentode: Va, Ia, Vg1, Vg2, Ig2 (5 rows)
+        // Double triode: Va, Ia, Vg1, Vg3, Va2, Ia2 (6 rows)
+        // Single triode: Va, Ia, Vg1 (and optional Vg3 if present) - keep legacy 4 rows for compatibility
+        int rowsPerSweep = 4;
+        if (measDeviceType == PENTODE) {
+            rowsPerSweep = 5;
+        } else if (isDoubleTriode) {
+            rowsPerSweep = 6;
+        } else {
+            rowsPerSweep = 4;
+        }
         dataTable->setRowCount(numSweeps * rowsPerSweep);
 
         // Set column headers for the 62 Va points
@@ -1186,7 +1253,7 @@ void ValveWorkbench::testFinished()
         }
         dataTable->setHorizontalHeaderLabels(headers);
 
-        qInfo("Populating table with %d sweeps (2 rows each)", numSweeps);
+        qInfo("Populating table with %d sweeps (%d rows each)", numSweeps, rowsPerSweep);
 
         for (int sweepIdx = 0; sweepIdx < numSweeps; ++sweepIdx) {
             Sweep *sweep = currentMeasurement->at(sweepIdx);
@@ -1215,15 +1282,28 @@ void ValveWorkbench::testFinished()
             QString vg1RowHeader = gridVoltage + " (Vg1)";
             dataTable->setVerticalHeaderItem(vg1Row, new QTableWidgetItem(vg1RowHeader));
 
-            // Row for second grid voltage values (Vg3)
-            int vg3Row = sweepIdx * rowsPerSweep + 3;
-            QString vg3RowHeader = gridVoltage + " (Vg3)";
-            dataTable->setVerticalHeaderItem(vg3Row, new QTableWidgetItem(vg3RowHeader));
-
+            // Either add Vg3 (double triode) or Vg2/Ig2 (pentode)
+            int vg3Row = -1;
+            int vg2Row = -1;
+            int ig2Row = -1;
             int va2Row = -1;
             int ia2Row = -1;
 
-            if (isDoubleTriode) {
+            if (measDeviceType == PENTODE) {
+                // Row for screen voltage values (Vg2)
+                vg2Row = sweepIdx * rowsPerSweep + 3;
+                QString vg2RowHeader = gridVoltage + " (Vg2)";
+                dataTable->setVerticalHeaderItem(vg2Row, new QTableWidgetItem(vg2RowHeader));
+
+                // Row for screen current values (Ig2)
+                ig2Row = sweepIdx * rowsPerSweep + 4;
+                QString ig2RowHeader = gridVoltage + " (Ig2)";
+                dataTable->setVerticalHeaderItem(ig2Row, new QTableWidgetItem(ig2RowHeader));
+            } else if (isDoubleTriode) {
+                // Row for second grid voltage values (Vg3)
+                vg3Row = sweepIdx * rowsPerSweep + 3;
+                QString vg3RowHeader = gridVoltage + " (Vg3)";
+                dataTable->setVerticalHeaderItem(vg3Row, new QTableWidgetItem(vg3RowHeader));
                 // Row for second anode voltage values (Va2)
                 va2Row = sweepIdx * rowsPerSweep + 4;
                 QString va2RowHeader = gridVoltage + " (Va2)";
@@ -1268,15 +1348,39 @@ void ValveWorkbench::testFinished()
                 dataTable->setItem(vg1Row, col, vg1Item);
             }
 
-            // Populate Vg3 row (fourth row per sweep)
-            for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                Sample *sample = sweep->at(col);
-                double vg3 = sample->getVg3();
-                if (col < 3) { // Log first few Vg3 values for debugging
-                    qInfo("Sweep %d, Vg3_%d = %f", sweepIdx, col + 1, vg3);
+            // Populate Vg3 row for double triode
+            if (isDoubleTriode) {
+                for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                    Sample *sample = sweep->at(col);
+                    double vg3 = sample->getVg3();
+                    if (col < 3) {
+                        qInfo("Sweep %d, Vg3_%d = %f", sweepIdx, col + 1, vg3);
+                    }
+                    QTableWidgetItem *vg3Item = new QTableWidgetItem(QString::number(vg3, 'f', 2));
+                    dataTable->setItem(vg3Row, col, vg3Item);
                 }
-                QTableWidgetItem *vg3Item = new QTableWidgetItem(QString::number(vg3, 'f', 2));
-                dataTable->setItem(vg3Row, col, vg3Item);
+            }
+
+            // Populate Vg2 and Ig2 rows for pentode
+            if (measDeviceType == PENTODE) {
+                for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                    Sample *sample = sweep->at(col);
+                    double vg2 = sample->getVg2();
+                    if (col < 3) {
+                        qInfo("Sweep %d, Vg2_%d = %f", sweepIdx, col + 1, vg2);
+                    }
+                    QTableWidgetItem *vg2Item = new QTableWidgetItem(QString::number(vg2, 'f', 2));
+                    dataTable->setItem(vg2Row, col, vg2Item);
+                }
+                for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                    Sample *sample = sweep->at(col);
+                    double ig2 = sample->getIg2();
+                    if (col < 3) {
+                        qInfo("Sweep %d, Ig2_%d = %f", sweepIdx, col + 1, ig2);
+                    }
+                    QTableWidgetItem *ig2Item = new QTableWidgetItem(QString::number(ig2, 'f', 3));
+                    dataTable->setItem(ig2Row, col, ig2Item);
+                }
             }
 
             if (isDoubleTriode) {
@@ -1329,15 +1433,36 @@ void ValveWorkbench::testAborted()
 void ValveWorkbench::checkComPorts() {
     serialPorts = QSerialPortInfo::availablePorts();
 
-    for (const QSerialPortInfo &serialPortInfo : serialPorts) {
-        if (serialPortInfo.vendorIdentifier() == 0x1a86 && serialPortInfo.productIdentifier() == 0x7523) {
-            port = serialPortInfo.portName();
+    qInfo("Found %d serial ports:", serialPorts.size());
+    for (const QSerialPortInfo &info : serialPorts) {
+        qInfo("  Port=%s, VID=0x%04x, PID=0x%04x, Mfg=%s, Desc=%s",
+              info.portName().toStdString().c_str(),
+              info.hasVendorIdentifier() ? info.vendorIdentifier() : 0,
+              info.hasProductIdentifier() ? info.productIdentifier() : 0,
+              info.manufacturer().toStdString().c_str(),
+              info.description().toStdString().c_str());
+    }
 
+    // Prefer CH340 (0x1a86:0x7523) when present
+    for (const QSerialPortInfo &info : serialPorts) {
+        if (info.hasVendorIdentifier() && info.hasProductIdentifier() &&
+            info.vendorIdentifier() == 0x1a86 && info.productIdentifier() == 0x7523) {
+            port = info.portName();
+            qInfo("Auto-selecting CH340 device: %s", port.toStdString().c_str());
             setSerialPort(port);
             return;
         }
     }
 
+    // Fallback: pick first available port if preferred VID/PID not found
+    if (!serialPorts.isEmpty()) {
+        port = serialPorts.first().portName();
+        qInfo("No preferred VID/PID found; falling back to first available port: %s", port.toStdString().c_str());
+        setSerialPort(port);
+        return;
+    }
+
+    qWarning("No serial ports detected. Disabling Analyser tab.");
     ui->tab_3->setEnabled(false);
 }
 
@@ -1357,8 +1482,15 @@ void ValveWorkbench::setSerialPort(QString portName)
     serialPort.setParity(QSerialPort::NoParity);
     serialPort.setStopBits(QSerialPort::OneStop);
     serialPort.setBaudRate(QSerialPort::Baud115200);
-    serialPort.open(QSerialPort::ReadWrite);
+    if (!serialPort.open(QSerialPort::ReadWrite)) {
+        qWarning("Failed to open serial port %s: %s",
+                 portName.toStdString().c_str(),
+                 serialPort.errorString().toStdString().c_str());
+        ui->tab_3->setEnabled(false);
+        return;
+    }
 
+    qInfo("Serial port opened: %s", portName.toStdString().c_str());
     ui->tab_3->setEnabled(true);
 }
 
@@ -1856,7 +1988,10 @@ void ValveWorkbench::on_actionOptions_triggered()
 
 void ValveWorkbench::on_actionLoad_Model_triggered()
 {
-    QString modelName = QFileDialog::getOpenFileName(this, "Open model", "", "*.json");
+    QString baseDir = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                      + "/ValveWorkbench/templates");
+    if (!QDir(baseDir).exists()) QDir().mkpath(baseDir);
+    QString modelName = QFileDialog::getOpenFileName(this, "Import Model to Project", baseDir, "JSON Files (*.json)");
 
     if (modelName.isNull()) {
         return;
@@ -1865,11 +2000,98 @@ void ValveWorkbench::on_actionLoad_Model_triggered()
     QFile modelFile(modelName);
 
     if (!modelFile.open(QIODevice::ReadOnly)) {
-        qWarning("Couldn't open config file.");
-    } else {
-        QByteArray modelData = modelFile.readAll();
-        currentDevice = new Device(QJsonDocument::fromJson(modelData));
+        qWarning("Couldn't open model file.");
+        return;
     }
+
+    QByteArray modelData = modelFile.readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(modelData);
+    if (!doc.isObject()) {
+        QMessageBox::warning(this, tr("Import Model"), tr("Invalid model JSON."));
+        return;
+    }
+
+    QJsonObject root = doc.object();
+    QJsonObject modelObj = root.contains("model") && root.value("model").isObject()
+                           ? root.value("model").toObject()
+                           : root;
+
+    // Determine model type (support multiple field names and inference)
+    int desiredType = -1;
+    QString mtype = modelObj.value("type").toString();
+    if (mtype.isEmpty()) mtype = modelObj.value("modelType").toString();
+    if (mtype.isEmpty()) mtype = modelObj.value("deviceType").toString();
+
+    auto toUC = [](const QString &s){ return s.trimmed().toUpper(); };
+    const QString mt = toUC(mtype);
+    if (mt == "COHEN_HELIE_TRIODE" || mt == "TRIODE") {
+        desiredType = COHEN_HELIE_TRIODE;
+    } else if (mt == "KOREN_TRIODE") {
+        desiredType = KOREN_TRIODE;
+    } else if (mt == "SIMPLE_TRIODE") {
+        desiredType = SIMPLE_TRIODE;
+    } else if (mt == "GARDINER_PENTODE" || mt == "PENTODE") {
+        desiredType = GARDINER_PENTODE;
+    } else if (mt == "REEFMAN_DERK_PENTODE" || mt == "REEFMAN_PENTODE") {
+        desiredType = REEFMAN_DERK_PENTODE;
+    }
+
+    // If no explicit type, infer from parameter keys
+    if (desiredType == -1) {
+        const bool hasTriodeKeys = modelObj.contains("mu") && modelObj.contains("kg1") && modelObj.contains("x");
+        const bool hasPentodeKeys = modelObj.contains("kg2") || modelObj.contains("beta") || modelObj.contains("gamma") || modelObj.contains("a");
+        if (hasTriodeKeys && !hasPentodeKeys) {
+            desiredType = COHEN_HELIE_TRIODE;
+        } else if (hasPentodeKeys) {
+            // Default to Gardiner when pentode-like keys present
+            desiredType = GARDINER_PENTODE;
+        }
+    }
+
+    // As last resort, ask the user
+    if (desiredType == -1) {
+        QStringList options;
+        options << "COHEN_HELIE_TRIODE" << "KOREN_TRIODE" << "SIMPLE_TRIODE" << "GARDINER_PENTODE" << "REEFMAN_DERK_PENTODE";
+        bool ok = false;
+        QString chosen = QInputDialog::getItem(this, tr("Select Model Type"), tr("Model type not found in JSON. Select type:"), options, 0, false, &ok);
+        if (!ok || chosen.isEmpty()) {
+            QMessageBox::warning(this, tr("Import Model"), tr("Unrecognized or missing model type."));
+            return;
+        }
+        const QString ch = toUC(chosen);
+        if (ch == "COHEN_HELIE_TRIODE") desiredType = COHEN_HELIE_TRIODE;
+        else if (ch == "KOREN_TRIODE") desiredType = KOREN_TRIODE;
+        else if (ch == "SIMPLE_TRIODE") desiredType = SIMPLE_TRIODE;
+        else if (ch == "GARDINER_PENTODE") desiredType = GARDINER_PENTODE;
+        else if (ch == "REEFMAN_DERK_PENTODE") desiredType = REEFMAN_DERK_PENTODE;
+    }
+
+    if (desiredType == -1) {
+        QMessageBox::warning(this, tr("Import Model"), tr("Unrecognized or missing model type."));
+        return;
+    }
+
+    if (!currentProject) {
+        QMessageBox::warning(this, tr("Import Model"), tr("No project selected. Create or open a project first."));
+        return;
+    }
+
+    Model *m = ModelFactory::createModel(desiredType);
+    if (!m) {
+        QMessageBox::warning(this, tr("Import Model"), tr("Could not create model instance."));
+        return;
+    }
+    m->fromJson(modelObj);
+
+    Project *proj = static_cast<Project *>(currentProject->data(0, Qt::UserRole).value<void *>());
+    if (!proj) {
+        QMessageBox::warning(this, tr("Import Model"), tr("Invalid project node."));
+        delete m;
+        return;
+    }
+    proj->addModel(m);
+    m->buildTree(currentProject);
+    setSelectedTreeItem(currentProject, true);
 }
 
 void ValveWorkbench::on_actionNew_Project_triggered()
@@ -2003,6 +2225,10 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
     //ui->estimateButton->setEnabled(false);
     //ui->fitButton->setEnabled(false);
 
+    if (current == nullptr) {
+        return;
+    }
+
     void *data = current->data(0, Qt::UserRole).value<void *>();
 
     bool showScreen = preferencesDialog.showScreenCurrent();
@@ -2014,7 +2240,9 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
         currentProject = current;
         setSelectedTreeItem(currentProject, true);
         setFitButtons();
-        ((Project *)data)->updateProperties(ui->properties);
+        if (data != nullptr) {
+            ((Project *)data)->updateProperties(ui->properties);
+        }
         break;
     case TYP_MEASUREMENT: {
             qInfo("=== PROJECT TREE: TYP_MEASUREMENT case triggered ===");
@@ -2022,6 +2250,11 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             currentMeasurementItem = current;
             setSelectedTreeItem(currentMeasurementItem, true);
             currentMeasurement = (Measurement *) data;
+            if (currentMeasurement == nullptr) {
+                qWarning("Measurement data is null; aborting selection handling");
+                setFitButtons();
+                break;
+            }
 
             setSelectedTreeItem(currentProject, false);
             currentProject = getProject(current);
@@ -2035,7 +2268,9 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             qInfo("=== BEFORE MEASUREMENT PLOT - Scene items count: %d ===", plot.getScene()->items().count());
             measuredCurves = currentMeasurement->updatePlot(&plot);
             qInfo("=== AFTER MEASUREMENT PLOT - measuredCurves items: %d, Scene items: %d ===", measuredCurves ? measuredCurves->childItems().count() : 0, plot.getScene()->items().count());
-            plot.add(measuredCurves);
+            if (measuredCurves != nullptr) {
+                plot.add(measuredCurves);
+            }
 
             if (isDoubleTriode && triodeMeasurementSecondary != nullptr && triodeMeasurementSecondary->count() > 0) {
                 if (measuredCurvesSecondary != nullptr) {
@@ -2069,8 +2304,13 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
             QTreeWidgetItem *m = getParent(currentMeasurementItem, TYP_MEASUREMENT);
 
-            if (m != nullptr) {
+            if (m != nullptr && m->data(0, Qt::UserRole).value<void *>() != nullptr) {
                 currentMeasurement = (Measurement *) m->data(0, Qt::UserRole).value<void *>();
+                if (currentMeasurement == nullptr) {
+                    qWarning("Parent measurement is null; aborting sweep selection handling");
+                    setFitButtons();
+                    break;
+                }
 
                 setSelectedTreeItem(currentProject, false);
                 currentProject = getProject(current);
@@ -2206,8 +2446,37 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                     (currentMeasurement->getDeviceType() == PENTODE && model->getType() == GARDINER_PENTODE)) {
                     qInfo("Type check PASSED - proceeding with model plotting");
                     plot.remove(modelledCurves);
-                    model->setShowScreen(showScreen);
-                    modelledCurves = model->plotModel(&plot, currentMeasurement, sweep);
+                    QGraphicsItemGroup *plotted = nullptr;
+                    // Prefer a pentode model instance for pentode measurements to avoid triode evaluation clamps
+                    if (currentMeasurement->getDeviceType() == PENTODE) {
+                        qInfo("PENTODE: Using temporary pentode model for plotting to match measurement device type");
+                        Estimate quick;
+                        // Use any available triode model as seed if present; otherwise nullptr is fine
+                        CohenHelieTriode *seedTriode = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
+                        quick.estimatePentode(currentMeasurement, seedTriode, pentodeModelType, false);
+
+                        std::unique_ptr<Model> temp(ModelFactory::createModel(pentodeModelType));
+                        if (temp) {
+                            temp->setEstimate(&quick);
+                            temp->setPreferences(&preferencesDialog);
+                            temp->setShowScreen(showScreen);
+                            // Add data to the temporary model before solving
+                            temp->addMeasurement(currentMeasurement);
+                            // Solve anode (NORMAL_MODE) quickly so parameters are reasonable before plotting
+                            temp->setMode(NORMAL_MODE);
+                            temp->solve();
+                            plotted = temp->plotModel(&plot, currentMeasurement, sweep);
+                        } else {
+                            qWarning("PENTODE: Failed to create temporary pentode model; falling back to current model instance");
+                        }
+                    }
+
+                    if (!plotted) {
+                        model->setShowScreen(showScreen);
+                        plotted = model->plotModel(&plot, currentMeasurement, sweep);
+                    }
+
+                    modelledCurves = plotted;
                     plot.add(modelledCurves);
                     qInfo("Model plotting completed");
                 } else {
@@ -2330,18 +2599,39 @@ void ValveWorkbench::setSelectedTreeItem(QTreeWidgetItem *item, bool selected)
 
 void ValveWorkbench::setFitButtons()
 {
-    if (currentProject == nullptr) {
+    // Resolve the root project from the current selection
+    if (!currentProject) {
         ui->fitTriodeButton->setVisible(false);
         ui->fitPentodeButton->setVisible(false);
+        return;
+    }
+
+    QTreeWidgetItem *rootProject = currentProject;
+    if (rootProject->type() != TYP_PROJECT) {
+        rootProject = getParent(rootProject, TYP_PROJECT);
+    }
+    if (!rootProject) {
+        ui->fitTriodeButton->setVisible(false);
+        ui->fitPentodeButton->setVisible(false);
+        return;
+    }
+
+    Project *project = static_cast<Project *>(rootProject->data(0, Qt::UserRole).value<void *>());
+    if (!project) {
+        ui->fitTriodeButton->setVisible(false);
+        ui->fitPentodeButton->setVisible(false);
+        return;
+    }
+
+    if (project->getDeviceType() == TRIODE) {
+        ui->fitTriodeButton->setVisible(true);
+        ui->fitPentodeButton->setVisible(false);
+    } else if (project->getDeviceType() == PENTODE) {
+        ui->fitTriodeButton->setVisible(false);
+        ui->fitPentodeButton->setVisible(true);
     } else {
-        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-        if (project->getDeviceType() == TRIODE) {
-            ui->fitTriodeButton->setVisible(true);
-            ui->fitPentodeButton->setVisible(false);
-        } else {
-            ui->fitTriodeButton->setVisible(false);
-            ui->fitPentodeButton->setVisible(true);
-        }
+        ui->fitTriodeButton->setVisible(false);
+        ui->fitPentodeButton->setVisible(false);
     }
 }
 
@@ -2840,13 +3130,7 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
     ui->fitTriodeButton->setEnabled(false);
     doPentodeModel = true;
 
-    CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
-
-    if (triodeModel == nullptr) {
-        modelTriode();
-    } else {
-        modelPentode();
-    }
+    modelPentode();
 
 }
 
@@ -2856,11 +3140,8 @@ void ValveWorkbench::modelPentode()
 
     CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
 
-    if (triodeModel == nullptr) { // Any error message will have already been displayed
-        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
-        ui->fitTriodeButton->setEnabled(true);
-
-        return;
+    if (triodeModel == nullptr) {
+        qWarning("No triode model found in project - proceeding with gradient-based seed for pentode fit");
     }
 
     Measurement *measurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
@@ -2956,8 +3237,18 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
         ui->measureCheck->setVisible(true);
         ui->modelCheck->setVisible(true);
         if (currentProject != nullptr) {
-            Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
-            if (project == nullptr) {
+            // Resolve root project from current selection
+            QTreeWidgetItem *rootProject = currentProject;
+            if (rootProject->type() != TYP_PROJECT) {
+                rootProject = getParent(rootProject, TYP_PROJECT);
+            }
+            if (!rootProject) {
+                ui->fitTriodeButton->setVisible(false);
+                ui->fitPentodeButton->setVisible(false);
+                break;
+            }
+            Project *project = static_cast<Project *>(rootProject->data(0, Qt::UserRole).value<void *>());
+            if (!project) {
                 ui->fitTriodeButton->setVisible(false);
                 ui->fitPentodeButton->setVisible(false);
                 break;

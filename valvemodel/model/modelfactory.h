@@ -5,6 +5,7 @@
 #include "cohenhelietriode.h"
 #include "reefmanpentode.h"
 #include "gardinerpentode.h"
+#include "simplemanualpentode.h"
 
 class ModelFactory
 {

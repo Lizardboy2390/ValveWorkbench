@@ -3,6 +3,7 @@
 #include <QMainWindow>
 #include <QFileDialog>
 #include <QDir>
+#include <QStandardPaths>
 #include <QList>
 #include <QJsonDocument>
 #include <QTreeWidget>
@@ -129,6 +130,7 @@ private slots:
     void on_measureCheck_stateChanged(int arg1);
 
     void on_modelCheck_stateChanged(int arg1);
+    void on_screenCheck_stateChanged(int arg1);
     void on_designerCheck_stateChanged(int arg1);
     void on_symSwingCheck_stateChanged(int arg1);
     void on_inputSensitivityCheck_stateChanged(int arg1);

@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-06
+Last updated: 2025-11-13 (end of pentode fitting experiments)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -8,17 +8,15 @@ Last updated: 2025-11-06
 - Models: Cohen-Helie Triode et al. Solver: Ceres.
 
 ## Recent Focus
-- Designer plotting improvements (anode/cathode load lines, OP, AC small-signal line).
-- Visibility toggles for measured/modelled plots on Designer.
-- Ensure model fitting always uses non-positive grid voltages (single and double triode).
+- Pentode plotting and model overlay correctness for GardinerPentode.
+- Remove confusing Cohen-Helie logs during pentode plotting.
+- Ensure Vg1 families for plotting come directly from measurement (−20…−60 V).
+- Restore analyser to baseline regarding first-sample and limit-clamp (measurement integrity).
 
-### 2025-11-05 Summary
-- Added an Export to Devices button on Modeller to save the fitted model JSON to `models/` and refresh Designer device dropdowns.
-- Added a Designer overlays checkbox (Show Designer Overlays) alongside existing toggles; manages anode/cathode/AC/OP overlays without affecting measurement/model plots.
-- Auto-plot model curves in Designer when a device is selected (if Show Fitted Model is checked) so red model families appear without a measurement.
-- Clamped Designer axes to device limits (`vaMax`, `iaMax`) so overlay lines do not exceed model plot extent.
-- Ensured Designer overlays are cleared before replot (no stacking) and do not interfere with measurement/model visibility.
-- gm vs bypass semantics: gm is an intrinsic device parameter at OP and does not change with bypass; cathode bypass only removes local degeneration so stage gain increases (effective gm toward gm as Zk_ac→0).
+### 2025-11-13 Summary (Pentode)
+- Multiple experiments were run to improve Gardiner/Reefman pentode fitting (kg1 calibration, plotting‑only A/beta/gamma, estimator tweaks, SimplePentode prototype).
+- These changes caused unstable or non‑physical behaviour (vertical lines, extreme Ia, wrong slopes), so **all experimental pentode changes were reverted**; code is back to the original baseline.
+- Triode modelling remains solid; pentode modelling is usable but still flatter than desired.
 
 ## Key Code Changes
 
@@ -47,7 +45,8 @@ Last updated: 2025-11-06
 - File: `valveworkbench.cpp`
 - Canonical slots kept:
   - `on_measureCheck_stateChanged(int)` toggles measured curves (and secondary) on scene.
-  - `on_modelCheck_stateChanged(int)` toggles model curves (`modelPlot`, modelled/estimated groups).
+  - `on_modelCheck_stateChanged(int)` currently toggles model curves via `currentDevice->anodePlot`.
+- Recommended: for pentode with a measurement, route checkbox to `Model::plotModel(&plot, currentMeasurement, sweep)` so overlay uses pentode path (Vg2 measured, kg1 anchor, curvature). This is pending.
 - Removed duplicate earlier definitions to fix C2084.
 - Checkboxes made visible on Designer via `on_tabWidget_currentChanged`.
 - New: Programmatic insertion of Designer checkbox was replaced by stable UI-based placement; where necessary, code ensures it sits after Model checkbox.
@@ -57,9 +56,12 @@ Last updated: 2025-11-06
 - `Plot::createSegment` uses Liang–Barsky clipping against axes in data space to avoid null segments.
 
 ## Current Behaviour
-- Green anode line renders.
-- Designer checkboxes (Measured, Model) visible and functional (toggling overlays).
-- Some user runs still show only green line; new diagnostics added to pinpoint cause for missing blue/OP/AC.
+- Red pentode model overlays now appear with correct families; scale aligns at −20 V; curvature present.
+- Cohen‑Helie logs suppressed during pentode plotting.
+- “Show fitted model” toggles visibility, but replot path should be updated to use `Model::plotModel` (pending).
+
+### Status Note
+- Model fitting and plotting are not yet successful end‑to‑end. Pentode overlay uses interim plotting‑only calibration (kg1 anchor and curvature) and requires finalization. Checkbox routing and low‑Va curvature fit are pending.
 
 Additional (2025-11-05):
 - Selecting a device auto-plots model curves (red) if Show Fitted Model is enabled.
@@ -87,24 +89,13 @@ Additional (2025-11-05):
 - Device `anodeVoltage(Ia,Vg)` under strongly negative Vg returns invalid/edge values → few/no cathode points.
 
 ## Next Steps (Recommended)
-1) Add a "Calculate" button (Designer) to explicitly recompute and draw without relying on editingFinished.
-   - UI: Add QPushButton under the 16 parameter lines (Designer tab).
-   - Slot `on_calculateButton_clicked()`:
-     - Get current circuit: `auto cType = ui->circuitSelection->currentData().toInt();`
-     - `circuits.at(cType)->plot(&plot);`
-     - `circuits.at(cType)->updateUI(circuitLabels, circuitValues);`
-
-2) Improve Designer axis scaling for cathode line:
-   - After generating cathode points, compute min/max Ia and Va and expand axes accordingly (e.g., yStop = max(yStop, maxIa+margin)).
-
-3) Validate device solver call for cathode sweep:
-   - Confirm `device1->anodeVoltage(Ia, Vg)` expects Vg relative to ground (negative for bias).
-   - If solver expects different sign/reference, adjust mapping (e.g., ensure `Vg <= 0`).
-
-4) Confirm checkbox handling is consistent across tabs:
-   - Keep only one implementation of measure/model slot handlers.
-
-5) Verify Modeller negative-grid logs in single and double triode runs (max of range must be ≤ 0).
+1) **Do not modify the existing Gardiner/Reefman pentode estimator or plotting until a new path is working.** Baseline behaviour is restored and should be treated as reference.
+2) Implement a new **Simple Manual Pentode** model that mirrors the web `pentodemodeller.js` equations:
+   - Backend: web-style `epk` and anode-current function using `mu, kp, kg1, kg2, alpha, beta, gamma, a`, no Ceres auto-fit initially.
+   - UI: sliders / numeric fields on the existing Modeller pentode tab for these parameters, replotting curves live over measured pentode data.
+   - Selection: add "Simple Manual Pentode" as a model type alongside Gardiner/Reefman in the existing pentode model selection.
+3) Once the Simple Manual Pentode behaves like the web modeller for representative tubes (e.g. 6L6, EL34), design a **minimal auto-fit layer** on top of it (fit only a small subset of parameters) and wire it in as an optional step.
+4) After Simple Manual Pentode is stable, reassess whether Gardiner/Reefman pentode fitting needs further work or can be left as-is.
 
 ## Test Checklist
 - Designer: Triode CC, Device: 12AX7, Params: Vb=250, Ra=100k, Rk=1.5k, RL=1M.
@@ -114,10 +105,10 @@ Additional (2025-11-05):
 - Modeller fit: logs show `vg1 range used [...] (should be <= 0)` with max ≤ 0 for both triodes.
 
 ## Files Modified (recent)
-- `valvemodel/model/model.cpp`
-- `valvemodel/circuit/circuit.h`
-- `valvemodel/circuit/triodecommoncathode.cpp`
-- `valveworkbench.cpp`
+- `valvemodel/model/model.cpp` (pentode plotting path, kg1/curvature/guards)
+- `valvemodel/model/device.cpp` (pentode plot calls use 3‑arg with measured Vg2)
+- `valvemodel/model/cohenhelietriode.cpp` (muted logs)
+- `valveworkbench.cpp` (checkbox handlers; compare path)
 
 ## Open Items
 - [ ] Add "Calculate" button to Designer and wire to recompute/plot.

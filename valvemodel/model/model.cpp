@@ -6,6 +6,8 @@
 #include <cmath>
 #include <limits>
 #include <vector>
+#include <set>
+#include <optional>
 
 /**
  * @brief Model::anodeVoltage
@@ -34,7 +36,7 @@ Model::Model()
     parameter[PAR_ALPHA] = new Parameter("Alpha:", 0.0);
     parameter[PAR_BETA] = new Parameter("Beta:", 0.0);
     parameter[PAR_GAMMA] = new Parameter("Gamma:", 1.0);
-    parameter[PAR_OS] = new Parameter("Os:", 0.01);
+    parameter[PAR_OS] = new Parameter("Os:", 0.0);
 
     parameter[PAR_TAU] = new Parameter("Tau:", 0.1);
     parameter[PAR_RHO] = new Parameter("Rho:", 0.1);
@@ -48,6 +50,9 @@ Model::Model()
     parameter[PAR_AP] = new Parameter("Ap:", 0.0);
 
     plotColor = QColor::fromRgb(255, 0, 0);
+
+    // Diagnostic: report default Os on model construction
+    qInfo("MODEL INIT: default Os=%.6f", parameter[PAR_OS]->getValue());
 }
 
 double Model::anodeVoltage(double ia, double vg1, double vg2, bool secondaryEmission)
@@ -94,21 +99,32 @@ void Model::addMeasurement(Measurement *measurement)
     for (int s = 0; s < sweeps; s++) {
         Sweep *sweep = measurement->at(s);
 
-        // Determine if this sweep's grid values (Vg1) are incorrectly positive.
-        // If the first meaningful (finite, non-zero) Vg1 sample is > 0, we flip
-        // the sign of Vg1 for all samples when adding to the solver. This does
-        // not mutate the Measurement; it only corrects the data fed to the model.
+        // Filter out incomplete/limit-hit sweeps (likely ended early due to limits)
+        const int minPoints = 60; // expected full sweep size from UI config
+        if (sweep == nullptr || sweep->count() < minPoints) {
+            qInfo("MODEL INPUT: skipping sweep %d (only %d points, need >= %d)", s, sweep ? sweep->count() : 0, minPoints);
+            continue;
+        }
+        Sample *last = sweep->at(sweep->count() - 1);
+        if (last == nullptr || last->getVa() < 0.9 * measurement->getAnodeStop()) {
+            qInfo("MODEL INPUT: skipping sweep %d (end Va %.3f < 0.9*Va_stop %.3f)", s,
+                  last ? last->getVa() : -1.0, measurement->getAnodeStop());
+            continue;
+        }
+
+        // Determine if this sweep's grid values (Vg1) require a sign flip.
+        // If the first meaningful Vg1 is positive, flip all Vg1 for this sweep.
         bool flipVg1 = false;
         {
+            const double eps = 1e-6;
             int probeCount = sweep->count();
             for (int pi = 0; pi < probeCount; ++pi) {
                 Sample *probe = sweep->at(pi);
                 double vgProbe = probe->getVg1();
-                // If per-sample vg is unavailable or ~0, use the sweep's nominal grid for flip detection
-                if (!std::isfinite(vgProbe) || std::fabs(vgProbe) <= 1e-9) {
+                if (!std::isfinite(vgProbe) || std::fabs(vgProbe) <= eps) {
                     vgProbe = sweep->getVg1Nominal();
                 }
-                if (std::isfinite(vgProbe) && std::fabs(vgProbe) > 1e-9) {
+                if (std::isfinite(vgProbe) && std::fabs(vgProbe) > eps) {
                     flipVg1 = (vgProbe > 0.0);
                     break;
                 }
@@ -127,16 +143,15 @@ void Model::addMeasurement(Measurement *measurement)
             const double vg2 = sample->getVg2();
             const double ig2 = sample->getIg2();
 
-            // Use sample vg1 when available; otherwise fall back to the sweep's nominal grid
+            // Use sample Vg1 when available; otherwise fall back to the sweep's nominal grid
             double vg1raw = sample->getVg1();
             bool usedNominal = false;
             if (!std::isfinite(vg1raw) || std::fabs(vg1raw) < 1e-6) {
                 vg1raw = sweep->getVg1Nominal();
                 usedNominal = true;
             }
-
-            // Force strictly non-positive for solver: treat any stored magnitude as negative bias
-            const double vg1Corrected = -std::fabs(vg1raw);
+            // Apply per-sweep sign decision; once decided for the sweep, it stays consistent
+            const double vg1Corrected = flipVg1 ? -vg1raw : vg1raw;
 
             if (!loggedFirstVg && std::isfinite(vg1Corrected) && std::fabs(vg1Corrected) > 1e-9) {
                 qInfo("MODEL INPUT: sweep=%d first vg1 used=%.6f (%s)", s, vg1Corrected, usedNominal ? "nominal" : "sample");
@@ -184,7 +199,9 @@ void Model::setEstimate(Estimate *estimate)
     parameter[PAR_ALPHA]->setValue(estimate->getAlpha());
     parameter[PAR_BETA]->setValue(estimate->getBeta());
     parameter[PAR_GAMMA]->setValue(estimate->getGamma());
-    //parameter[PAR_OS]->setValue(estimate->getOs());
+    // parameter[PAR_OS] remains at default (0.0); Estimate has no getOs()
+    // Temporarily force Os to 0.0 to prevent constant-current floor in plotted overlays
+    parameter[PAR_OS]->setValue(0.0);
     //parameter[PAR_TAU]->setValue(estimate->getPsi());
     //parameter[PAR_RHO]->setValue(estimate->getPsi());
     //parameter[PAR_THETA]->setValue(estimate->getPsi());
@@ -285,6 +302,9 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 qInfo("Measurement has %d sweeps", measurement->count());
 
                 auto deriveGridRangeFromSweeps = [measurement]() -> std::pair<double, double> {
+                    auto scaleVg = [](double vg) {
+                        return (std::isfinite(vg) && std::fabs(vg) > 50.0) ? (vg / 1000.0) : vg;
+                    };
                     double minVg = std::numeric_limits<double>::infinity();
                     double maxVg = -std::numeric_limits<double>::infinity();
                     bool sawValidSample = false;
@@ -305,7 +325,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                             if (sample == nullptr) {
                                 continue;
                             }
-                            double vg = sample->getVg1();
+                            double vg = scaleVg(sample->getVg1());
                             if (!std::isfinite(vg)) {
                                 continue;
                             }
@@ -322,7 +342,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
                         // Fallback to nominal if no samples were available.
                         if (!sawValidSample) {
-                            double vgNominal = sweep->getVg1Nominal();
+                            double vgNominal = scaleVg(sweep->getVg1Nominal());
                             if (std::isfinite(vgNominal)) {
                                 if (vgNominal >= zeroClampLower && vgNominal <= zeroClampUpper) {
                                     qInfo("GRID RANGE: nominal vg=%.3f within [%0.1f, %0.1f], clamping to 0V", vgNominal, zeroClampLower, zeroClampUpper);
@@ -391,14 +411,18 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                         const double candidateVg = measurement->at(sweepIndex)->getVg1Nominal();
                         double diff = std::numeric_limits<double>::quiet_NaN();
                         if (std::isfinite(candidateVg) && std::isfinite(firstVg)) {
-                            diff = std::fabs(candidateVg - firstVg);
+                            double a = (std::fabs(firstVg) > 50.0) ? firstVg / 1000.0 : firstVg;
+                            double b = (std::fabs(candidateVg) > 50.0) ? candidateVg / 1000.0 : candidateVg;
+                            diff = std::fabs(b - a);
                         }
                         qInfo("GRID STEP FALLBACK: comparing sweep %d Vg1Nominal=%.6f (diff vs sweep 0 = %.6f)",
                               sweepIndex, candidateVg, diff);
                         if (!std::isfinite(candidateVg)) {
                             continue;
                         }
-                        const double stepCandidate = std::fabs(candidateVg - firstVg);
+                        const double stepCandidate = (std::fabs(candidateVg) > 50.0 || std::fabs(firstVg) > 50.0)
+                                                     ? std::fabs(candidateVg/1000.0 - firstVg/1000.0)
+                                                     : std::fabs(candidateVg - firstVg);
                         if (stepCandidate > 0.0 && stepCandidate < 10.0) {
                             calculatedStep = stepCandidate;
                             qInfo("GRID STEP FALLBACK: accepting sweep %d diff %.6f as grid step",
@@ -420,8 +444,10 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
             if (sweep != nullptr) {
                 double nominal = sweep->getVg1Nominal();
-                vgStart = -std::fabs(nominal);
-                vgStop = -std::fabs(nominal);
+                if (std::fabs(nominal) > 50.0) nominal /= 1000.0;
+                nominal = -std::fabs(nominal);
+                vgStart = nominal;
+                vgStop = nominal;
             }
 
             if (vgStart > vgStop) {
@@ -444,42 +470,33 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             qInfo("Final grid voltage range: start=%.3f, stop=%.3f, step=%.3f", vgStart, vgStop, vgStep);
             qInfo("Screen voltage: %.3f", vg2);
 
-            // Set axes only if scene is empty to preserve existing measurement/Designer overlays
-            double vaStart = measurement->getAnodeStart();
-            double vaStop = measurement->getAnodeStop();
-            if (!std::isfinite(vaStart)) vaStart = 0.0;
-            if (!std::isfinite(vaStop) || vaStop <= vaStart) vaStop = std::max(vaStart + 10.0, 250.0);
-            if (plot->getScene()->items().isEmpty()) {
-                // Estimate max current at 0V grid (least negative) and highest anode voltage
-                double iaEst_mA = anodeCurrent(vaStop, 0.0, vg2) * 1000.0;
-                if (!std::isfinite(iaEst_mA) || iaEst_mA <= 0.0) iaEst_mA = 50.0;
-                double yStop = std::max(50.0, iaEst_mA * 1.1);
-                double xMajor = std::max(10.0, (vaStop - vaStart) / 10.0);
-                double yMajor = std::max(5.0, yStop / 10.0);
-                plot->setAxes(0.0, vaStop, xMajor, 0.0, yStop, yMajor);
-            }
+            // Do not set axes here; measurement defines axes
 
             double vg1 = vgStart;
             int curveCount = 0;
+            const double yMaxAxis = measurement->getIaMax();
+            // Do not set axes here; measurement defines axes
             while ( vg1 <= vgStop) {
                 qInfo("TRIODE LOOP: vg1=%.3f, vgStart=%.3f, vgStop=%.3f, vgStep=%.3f, condition (%.3f <= %.3f) = %s",
                       vg1, vgStart, vgStop, vgStep, vg1, vgStop, (vg1 <= vgStop) ? "true" : "false");
 
                 qInfo("Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
-                vaStart = measurement->getAnodeStart();
-                vaStop = measurement->getAnodeStop();
+                double vaStart = measurement->getAnodeStart();
+                double vaStop = measurement->getAnodeStop();
                 double vaInc = (vaStop - vaStart) / 50;
 
                 qInfo("Anode voltage range: start=%.1f, stop=%.1f, inc=%.3f", vaStart, vaStop, vaInc);
 
                 double vaPrev = vaStart;
-                double iaPrev = anodeCurrent(vaStart, vg1, vg2);
+                double vgPhys = -std::fabs(vg1);
+                double iaPrev = anodeCurrent(vaStart, vgPhys, vg2);
 
                 double va = vaStart + vaInc;
                 int segmentCount = 0;
                 while (va < vaStop) {
                     qInfo("TRIODE: Calculating current for va=%.3f, vg1=%.3f", va, vg1);
-                    double ia = anodeCurrent(va, vg1, vg2);
+                    double vgPhysSeg = -std::fabs(vg1);
+                    double ia = anodeCurrent(va, vgPhysSeg, vg2);
                     qInfo("TRIODE: Current result ia=%.3f mA", ia);
 
                     QGraphicsItem *segment = plot->createSegment(vaPrev, iaPrev, va, ia, anodePen);
@@ -509,145 +526,272 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
         }
     } else if (deviceType == PENTODE) {
         if (testType == ANODE_CHARACTERISTICS) {
-            double vgStart = measurement->getGridStart();
-            double vgStop = measurement->getGridStop();
-            double vgStep = measurement->getGridStep();
-
-            qInfo("PENTODE STORED VALUES: vgStart=%.3f, vgStop=%.3f, vgStep=%.3f", vgStart, vgStop, vgStep);
             qInfo("PENTODE: Measurement has %d sweeps", measurement->count());
 
-            // If range is invalid or we're plotting all sweeps, calculate from actual sweep data
-            if ((vgStart == 0.0 && vgStop == 0.0) || sweep == nullptr) {
-                if (measurement->count() > 0) {
-                    // Find the actual min and max grid voltages from sweeps
-                    double minVg = 0.0;
-                    double maxVg = 0.0;
-                    bool first = true;
-                    bool validData = false;
-
-                    for (int i = 0; i < measurement->count(); i++) {
-                        double sweepVg = -measurement->at(i)->getVg1Nominal();
-                        qInfo("PENTODE Sweep %d: Vg1Nominal=%.3f, negated=%.3f", i, measurement->at(i)->getVg1Nominal(), sweepVg);
-
-                        // Skip invalid voltage values (outside reasonable range)
-                        if (sweepVg >= -10.0 && sweepVg <= 10.0) {
-                            if (first || sweepVg < minVg) minVg = sweepVg;
-                            if (first || sweepVg > maxVg) maxVg = sweepVg;
-                            first = false;
-                            validData = true;
-                        }
-                    }
-
-                    qInfo("PENTODE: After scanning: minVg=%.3f, maxVg=%.3f, validData=%s", minVg, maxVg, validData ? "true" : "false");
-
-                    if (validData && (maxVg - minVg) <= 10.0) {
-                        vgStart = minVg;
-                        vgStop = maxVg;
-                        qInfo("PENTODE: Calculated grid range from sweep data: start=%.3f, stop=%.3f", vgStart, vgStop);
-                    } else {
-                        // Fallback to reasonable defaults
-                        vgStart = 0.0;
-                        vgStop = -4.0;
-                        qInfo("PENTODE: No valid sweep data found, using defaults: start=%.3f, stop=%.3f", vgStart, vgStop);
-                    }
+            // Build unique sorted Vg family list from measurement sweeps' Vg1Nominal (volts),
+            // converted to negative magnitudes to match model convention. No unit conversion.
+            std::set<double> familySet;
+            for (int i = 0; i < measurement->count(); ++i) {
+                double vgNom = measurement->at(i)->getVg1Nominal(); // volts
+                if (!std::isfinite(vgNom)) continue;
+                double fam = -std::fabs(vgNom);
+                // Ignore nearly-zero families (should not happen for pentode grids)
+                if (std::fabs(fam) < 0.5) {
+                    qInfo("PENTODE: Skipping tiny-magnitude Vg family %.3fV (likely unit mismatch)", fam);
+                    continue;
                 }
+                familySet.insert(fam);
+                qInfo("PENTODE: Sweep %d Vg1Nominal=%.3fV -> family %.3fV", i, measurement->at(i)->getVg1Nominal(), fam);
             }
 
-            // If step is 0 or invalid, calculate from actual sweep data
-            if (vgStep == 0.0 || vgStep > (vgStop - vgStart)) {
-                if (measurement->count() > 1) {
-                    double firstVg = measurement->at(0)->getVg1Nominal();  // Already negated
-                    double secondVg = measurement->at(1)->getVg1Nominal(); // Already negated
+            std::vector<double> vgFamilies;
+            vgFamilies.reserve(familySet.size());
+            for (double v : familySet) vgFamilies.push_back(v);
+            std::sort(vgFamilies.begin(), vgFamilies.end()); // ascending: most negative -> least negative (towards 0)
 
-                    qInfo("PENTODE: First sweep Vg1Nominal=%.3f", measurement->at(0)->getVg1Nominal());
-                    qInfo("PENTODE: Second sweep Vg1Nominal=%.3f", measurement->at(1)->getVg1Nominal());
+            qInfo("PENTODE: Using %zu Vg families from measurement", vgFamilies.size());
 
-                    // Calculate step - ensure it's positive for ascending loop
-                    double calculatedStep = fabs(secondVg - firstVg);
-                    qInfo("PENTODE: Calculated step: %.3f", calculatedStep);
+            const double vg2 = measurement->getScreenStart();
+            const bool drawScreen = false; // Temporarily disable screen overlay per debugging plan
 
-                    if (calculatedStep > 0.0 && calculatedStep < 10.0 && calculatedStep != 0.0) {
-                        vgStep = calculatedStep;
-                        qInfo("PENTODE: Using calculated grid step: %.3f", vgStep);
+            // Temporarily force Os to zero during plotting to avoid constant-current floor from JSON/defaults
+            double osSavedForPlot = parameter[PAR_OS]->getValue();
+            parameter[PAR_OS]->setValue(0.0);
+            // Y-axis max for clamping plotted model currents
+            const double yMaxAxis = measurement->getIaMax();
+
+            // Plotting-only curvature calibration: save and set shaping parameters
+            double aSaved = parameter[PAR_A]->getValue();
+            double betaSaved = parameter[PAR_BETA]->getValue();
+            double gammaSaved = parameter[PAR_GAMMA]->getValue();
+            parameter[PAR_A]->setValue(0.002);
+            parameter[PAR_BETA]->setValue(0.15);
+            parameter[PAR_GAMMA]->setValue(1.2);
+
+            // Measurement-driven kg1 calibration using the -20V family at mid Va
+            // Find the sweep closest to -20V (family value is negative magnitude)
+            double iaScale = 1.0; // display-only scaling to match measurement units/axis
+            {
+                const double targetFam = -20.0;
+                const double famTol = 1e-3;
+                Sweep *calSweep = nullptr;
+                for (int si = 0; si < measurement->count(); ++si) {
+                    double nomV = measurement->at(si)->getVg1Nominal();
+                    double famV = -std::fabs(nomV);
+                    if (std::fabs(famV - targetFam) <= famTol) { calSweep = measurement->at(si); break; }
+                }
+                if (calSweep && calSweep->count() >= 3) {
+                    auto pickVg2 = [&](Sample *samp) {
+                        double v = samp->getVg2();
+                        if (!std::isfinite(v) || v <= 1.0) v = calSweep->getVg2Nominal();
+                        if (!std::isfinite(v) || v <= 1.0) v = vg2;
+                        return v;
+                    };
+                    int midIdx = calSweep->count() / 2;
+                    Sample *sm = calSweep->at(midIdx);
+                    double vaCal = sm->getVa();
+                    double vg1Cal = targetFam;
+                    double vg2Cal = pickVg2(sm);
+                    double iaTarget = sm->getIa(); // mA
+
+                    // Current kg1 and its reciprocal
+                    double kg1Saved = parameter[PAR_KG1]->getValue();
+                    double y = (kg1Saved > 1e-12) ? 1.0 / kg1Saved : 1e6;
+
+                    // Evaluate Ia at current y and at y+dy to estimate sensitivity s = dIa/dy
+                    auto evalIa = [&](double yrecip) {
+                        double kg1cand = (yrecip > 1e-12) ? 1.0 / yrecip : 1e12;
+                        parameter[PAR_KG1]->setValue(kg1cand);
+                        return anodeCurrent(vaCal, vg1Cal, vg2Cal);
+                    };
+                    double dy = std::max(1e-6, y * 0.1);
+                    double ia1 = evalIa(y);
+                    double ia2 = evalIa(y + dy);
+                    double s = (ia2 - ia1) / dy; // mA per unit of y
+                    // Restore baseline kg1 before solving
+                    parameter[PAR_KG1]->setValue(kg1Saved);
+
+                    if (std::isfinite(s) && std::fabs(s) > 1e-9) {
+                        double c = ia1 - s * y;
+                        double yTarget = (iaTarget - c) / s;
+                        // Bounds to keep kg1 positive and reasonable
+                        if (std::isfinite(yTarget) && yTarget > 1e-9 && yTarget < 1e9) {
+                            double kg1New = 1.0 / yTarget;
+                            // Constrain kg1New within a practical range relative to saved
+                            double lo = kg1Saved * 0.05;
+                            double hi = kg1Saved * 20.0;
+                            if (!std::isfinite(lo) || lo <= 0.0) lo = 1e-6;
+                            if (!std::isfinite(hi) || hi <= lo) hi = lo * 1e6;
+                            kg1New = std::min(hi, std::max(lo, kg1New));
+                            parameter[PAR_KG1]->setValue(kg1New);
+                            // Compute display scale so model aligns with measured at anchor
+                            double iaModelAnchor = anodeCurrent(vaCal, vg1Cal, vg2Cal);
+                            if (std::isfinite(iaModelAnchor) && iaModelAnchor > 1e-9) {
+                                iaScale = iaTarget / iaModelAnchor;
+                                // keep within sensible bounds
+                                if (!std::isfinite(iaScale) || iaScale <= 0.0) iaScale = 1.0;
+                                iaScale = std::min(100.0, std::max(0.01, iaScale));
+                            } else {
+                                iaScale = 1.0;
+                            }
+                            qInfo("PENTODE KG1 CAL: va=%.3f vg1=%.3f vg2=%.3f iaTarget=%.3f ia1=%.3f s=%.6f kg1Saved=%.6f -> kg1New=%.6f, iaScale=%.4f",
+                                  vaCal, vg1Cal, vg2Cal, iaTarget, ia1, s, kg1Saved, kg1New, iaScale);
+                        } else {
+                            qInfo("PENTODE KG1 CAL: yTarget invalid (%.6f), skipping calibration", yTarget);
+                        }
                     } else {
-                        vgStep = 0.5; // Default fallback for positive steps
-                        qInfo("PENTODE: Invalid calculated step (%.3f), using default: %.3f", calculatedStep, vgStep);
+                        qInfo("PENTODE KG1 CAL: sensitivity too small (s=%.6f), skipping calibration", s);
                     }
                 } else {
-                    vgStep = 0.5; // Default fallback
-                    qInfo("PENTODE: Using default grid step: %.3f", vgStep);
+                    qInfo("PENTODE KG1 CAL: -20V family not found or insufficient samples; skipping");
                 }
             }
 
-            if (sweep != nullptr) {
-                vgStart = -sweep->getVg1Nominal();
-                vgStop = -sweep->getVg1Nominal();
-            }
-
-            double vg2 = measurement->getScreenStart();
-
-            qInfo("PENTODE: Final grid voltage range: start=%.3f, stop=%.3f, step=%.3f", vgStart, vgStop, vgStep);
-            qInfo("PENTODE: Screen voltage: %.3f", vg2);
-
-            double vg1 = vgStart;
             int curveCount = 0;
-            while ( vg1 <= vgStop) {
+            for (double vg1 : vgFamilies) {
                 qInfo("PENTODE: Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
-                double vaStart = measurement->getAnodeStart();
-                double vaStop = measurement->getAnodeStop();
-                double vaInc = (vaStop - vaStart) / 50;
+                // Find a representative sweep whose Vg1Nominal matches this family (within tolerance)
+                const double kTol = 1e-3; // volts
+                Sweep *famSweep = nullptr;
+                for (int si = 0; si < measurement->count(); ++si) {
+                    double nomV = measurement->at(si)->getVg1Nominal(); // volts
+                    double famV = -std::fabs(nomV);
+                    if (std::fabs(famV - vg1) <= kTol) { famSweep = measurement->at(si); break; }
+                }
 
-                double vaPrev = vaStart;
-                double iaPrev = anodeCurrent(vaStart, vg1, vg2);
-
-                double va = vaStart + vaInc;
                 int segmentCount = 0;
-                while (va < vaStop) {
-                    double ia = anodeCurrent(va, vg1, vg2);
-                    QGraphicsItem *segment = plot->createSegment(vaPrev, iaPrev, va, ia, anodePen);
-
-                    if (segment != nullptr) {
-                        group->addToGroup(segment);
-                        segmentCount++;
-                    } else {
-                        qWarning("PENTODE: Failed to create segment for va=%.3f, ia=%.3f", va, ia);
+                double endVa = std::numeric_limits<double>::quiet_NaN();
+                double endIa = std::numeric_limits<double>::quiet_NaN();
+                if (famSweep && famSweep->count() >= 2) {
+                    Sample *s0 = famSweep->at(0);
+                    // Determine family screen voltage (prefer sweep nominal; use raw volts)
+                    double vg2Family = famSweep->getVg2Nominal();
+                    if (!std::isfinite(vg2Family)) {
+                        vg2Family = vg2; // fall back to measurement default if nominal missing
                     }
 
-                    vaPrev = va;
-                    iaPrev = ia;
+                    // Helper to get per-sample screen voltage with robust fallback to a "meaningful" value
+                    // Preference order: measured per-sample > family nominal > measurement default
+                    // Treat values <= 1V as not meaningful for model overlays to avoid collapsing to 0V screen
+                    auto sampleVg2 = [&](Sample *samp) -> double {
+                        constexpr double kVg2Min = 1.0; // volts
+                        auto pickIfMeaningful = [&](double v) -> std::optional<double> {
+                            if (std::isfinite(v) && v > kVg2Min) return v;
+                            return std::nullopt;
+                        };
 
-                    va += vaInc;
-                }
+                        if (auto s = pickIfMeaningful(samp->getVg2()))       return *s;
+                        if (auto n = pickIfMeaningful(vg2Family))            return *n;
+                        if (auto m = pickIfMeaningful(vg2))                  return *m;
+                        // Last resort: return vg2 (even if small) to avoid NaN
+                        return std::isfinite(vg2) ? vg2 : 0.0;
+                    };
 
-                if (showScreen) {
-                    vaPrev = vaStart;
-                    double ig2Prev = screenCurrent(vaStart, vg1, vg2); // assume same unit convention
+                    // Diagnostics: report OS parameter and the effective screen voltage used for this family
+                    double osParam = parameter[PAR_OS]->getValue();
+                    double v2First = sampleVg2(s0);
+                    qInfo("PENTODE OS: os=%.6f, vg1=%.3f, vg2(effective first)=%.3f", osParam, vg1, v2First);
 
-                    va = vaStart + vaInc;
-                    while (va < vaStop) {
-                        double ig2 = screenCurrent(va, vg1, vg2);
-                        QGraphicsItem *segment = plot->createSegment(vaPrev, ig2Prev, va, ig2, screenPen);
+                    double vaPrev = s0->getVa();
+                    double iaPrev = anodeCurrent(vaPrev, vg1, sampleVg2(s0)) * iaScale;
 
-                        if (segment != nullptr) {
-                            group->addToGroup(segment);
-                        } else {
-                            qWarning("PENTODE: Failed to create screen segment for va=%.3f, ig2=%.3f", va, ig2);
+                    // Diagnostics: evaluate Ia at first/mid/last Va points and track min/max
+                    const int nSamp = famSweep->count();
+                    const int midIdx = nSamp / 2;
+                    Sample *sf = famSweep->at(0);
+                    Sample *sm = famSweep->at(midIdx);
+                    Sample *sl = famSweep->at(nSamp - 1);
+                    double vaFirst = sf->getVa();
+                    double vaMid   = sm->getVa();
+                    double vaLast  = sl->getVa();
+                    double iaFirst = anodeCurrent(vaFirst, vg1, sampleVg2(sf)) * iaScale;
+                    double iaMid   = anodeCurrent(vaMid,   vg1, sampleVg2(sm)) * iaScale;
+                    double iaLast  = anodeCurrent(vaLast,  vg1, sampleVg2(sl)) * iaScale;
+                    double iaMin   = iaFirst;
+                    double iaMax   = iaFirst;
+
+                    for (int j = 1; j < famSweep->count(); ++j) {
+                        Sample *sj = famSweep->at(j);
+                        double va = sj->getVa();
+                        double ia = anodeCurrent(va, vg1, sampleVg2(sj)) * iaScale;
+
+                        // Skip zero-ΔVa to avoid vertical lines
+                        if (std::fabs(va - vaPrev) < 1e-12) {
+                            vaPrev = va;
+                            iaPrev = ia;
+                            continue;
                         }
 
+                        double y1 = std::min(yMaxAxis, std::max(0.0, iaPrev));
+                        double y2 = std::min(yMaxAxis, std::max(0.0, ia));
+                        QGraphicsItem *segment = plot->createSegment(vaPrev, y1, va, y2, anodePen);
+                        if (segment != nullptr) {
+                            group->addToGroup(segment);
+                            segmentCount++;
+                        }
+                        // Update min/max diagnostics
+                        if (std::isfinite(ia)) {
+                            iaMin = std::min(iaMin, ia);
+                            iaMax = std::max(iaMax, ia);
+                        }
                         vaPrev = va;
-                        ig2Prev = ig2;
+                        iaPrev = ia;
+                    }
+                    // If the entire family computes ~zero current, skip plotting this curve to avoid flat zero lines
+                    if (iaMax < 1e-3) {
+                        qInfo("PENTODE: Skipping vg1=%.3f curve due to near-zero Ia across sweep (iaMax=%.6f)", vg1, iaMax);
+                        continue;
+                    }
+                    if (std::isfinite(iaMax) && iaMax > yMaxAxis * 5.0) {
+                        qInfo("PENTODE: Skipping vg1=%.3f due to extreme Ia (iaMax=%.3f > %.3f)", vg1, iaMax, yMaxAxis * 5.0);
+                        continue;
+                    }
+                    endVa = vaPrev;
+                    endIa = iaPrev;
+                    qInfo("PENTODE DIAG: vg1=%.3f, vg2=%.3f, Va[first/mid/last]=[%.3f, %.3f, %.3f], Ia[first/mid/last]=[%.3f, %.3f, %.3f], Ia[min/max]=[%.3f, %.3f]",
+                          vg1, vg2, vaFirst, vaMid, vaLast, iaFirst, iaMid, iaLast, iaMin, iaMax);
+                } else {
+                    qWarning("PENTODE: Skipping family vg1=%.3f (no representative sweep or insufficient samples)", vg1);
+                }
 
-                        va += vaInc;
+                // Add a label at the end of the curve to show the family Vg value for visibility
+                if (std::isfinite(endVa) && std::isfinite(endIa)) {
+                    QGraphicsItem *label = plot->createLabel(endVa, endIa, vg1, anodePen.color());
+                    if (label) {
+                        group->addToGroup(label);
                     }
                 }
 
-                qInfo("PENTODE: Curve %d completed: %d anode segments, %s screen segments",
-                      curveCount + 1, segmentCount, showScreen ? "with" : "without");
-                vg1 += vgStep;
+                if (drawScreen && showScreen && famSweep && famSweep->count() >= 2) {
+                    Sample *s0s = famSweep->at(0);
+                    double vaPrevS = s0s->getVa();
+                    double ig2Prev = screenCurrent(vaPrevS, vg1, vg2);
+                    for (int j = 1; j < famSweep->count(); ++j) {
+                        Sample *sj = famSweep->at(j);
+                        double vaS = sj->getVa();
+                        double ig2 = screenCurrent(vaS, vg1, vg2);
+                        double ig2Prev_mA = std::max(0.0, ig2Prev);
+                        double ig2_mA = std::max(0.0, ig2);
+                        // Skip zero-ΔVa to avoid vertical lines
+                        if (std::fabs(vaS - vaPrevS) >= 1e-12) {
+                            QGraphicsItem *segment = plot->createSegment(vaPrevS, ig2Prev_mA, vaS, ig2_mA, screenPen);
+                            if (segment != nullptr) {
+                                group->addToGroup(segment);
+                            }
+                        }
+                        vaPrevS = vaS;
+                        ig2Prev = ig2;
+                    }
+                }
+
+                qInfo("PENTODE: Curve %d completed: %d anode segments", curveCount + 1, segmentCount);
                 curveCount++;
             }
 
             qInfo("PENTODE: Total curves created: %d", curveCount);
+
+            // Restore original Os after plotting
+            parameter[PAR_OS]->setValue(osSavedForPlot);
         }
     }
 

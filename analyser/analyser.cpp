@@ -4,6 +4,7 @@
 #include <QTimer>
 
 #include "../valvemodel/data/sample.h"
+#include "../valvemodel/data/sweep.h"
 
 #include <QDebug>
 #include <cmath>
@@ -389,7 +390,17 @@ void Analyser::startTest()
         if (deviceType == PENTODE) { // Anode swept, Grid stepped, Screen fixed
             result->setScreenStart(screenStart);
 
-            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
+            // Generate sweep/step parameters: anode sweep, grid step
+            steppedSweep(anodeStart, anodeStop, gridStart, gridStop, gridStep);
+
+            // Initial hardware verification at 0V before the very first sample to avoid Ig2 spike with Va~0
+            // Sequence: S7 0, M1 discharge, S3 0, M2 verify -> checkResponse will handle PASS and reassert S7 and proceed
+            sendCommand("S7 0");
+            sendCommand("M1");
+            sendCommand(buildSetCommand("S3 ", 0));
+            sendCommand("M2");
+            isVerifyingHardware = true;
+            verificationAttempts = 0;
         } else if (isDoubleTriode) { // First and second anode swept with same values, Second grid stepped, Main grid 0
             result->setAnodeStart(anodeStart);
 
@@ -410,10 +421,17 @@ void Analyser::startTest()
                 double gridV = stepValue.isEmpty() ? 0.0 : stepValue.at(0);
                 qInfo("AnodeChar set S2 (initial): code=%d grid=%.3fV", stepParameter.at(0), gridV);
             }
-            sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
+            // For pentode anode characteristics, S2 will be reasserted after verification PASS in checkResponse()
+            if (!(deviceType == PENTODE && testType == ANODE_CHARACTERISTICS && stepCommandPrefix == "S2 ")) {
+                sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(0)));
+            }
         }
 
-        nextSample();
+        // If we initiated verification (pentode anode characteristics), do not advance to nextSample yet.
+        // The verification Mode(2) will drive the PASS path that asserts S7 and sends the first real sample.
+        if (!(deviceType == PENTODE && testType == ANODE_CHARACTERISTICS)) {
+            nextSample();
+        }
         break;
     case TRANSFER_CHARACTERISTICS:
         sweepType = GRID;
@@ -436,21 +454,28 @@ void Analyser::startTest()
             steppedSweep(gridStop, gridStart, screenStart, screenStop, screenStep); // Sweep is reversed to finish on low (absolute) value
 
             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-        } else if (isDoubleTriode) { // First and second anode stepped with same values, Second grid swept, Main grid 0
-            stepType = GRID;
-            stepCommandPrefix = "S6 ";
+        } else if (isDoubleTriode) { // Both anodes step, both grids sweep together
+            // Step both anodes together, sweep both grids together (same sweep values)
+            stepType = ANODE;
+            stepCommandPrefix = "S3 ";
+            sweepType = GRID;
+            sweepCommandPrefix = "S2 ";
 
             result->setAnodeStart(anodeStart);
             result->setAnodeStop(anodeStop);
             result->setAnodeStep(anodeStep);
             result->nextSweep(anodeStart);
 
-            steppedSweep(secondGridStop, secondGridStart, anodeStart, anodeStop, anodeStep); // Sweep is reversed to finish on low (absolute) value
+            // Sweep grids from stop -> start (finish on lower absolute magnitude)
+            steppedSweep(gridStop, gridStart, anodeStart, anodeStop, anodeStep);
 
-            sendCommand(buildSetCommand("S2 ", 0)); // Set main grid to 0V
-            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-            sendCommand(buildSetCommand("S6 ", convertTargetVoltage(GRID, secondGridStart)));
-            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
+            const int anodeStartCode = convertTargetVoltage(ANODE, anodeStart);
+            const int gridStartCode  = convertTargetVoltage(GRID, gridStart);
+            // Initialize both anodes to start and both grids to start
+            sendCommand(buildSetCommand("S3 ", anodeStartCode)); // primary anode
+            sendCommand(buildSetCommand("S7 ", anodeStartCode)); // secondary anode
+            sendCommand(buildSetCommand("S2 ", gridStartCode));  // primary grid
+            sendCommand(buildSetCommand("S6 ", gridStartCode));  // secondary grid
         } else { // Anode stepped, Grid swept
             stepType = ANODE;
             stepCommandPrefix = "S3 ";
@@ -526,18 +551,30 @@ void Analyser::nextSample() {
             if (sweepValue > codeHi) sweepValue = codeHi;
         }
 
-        // For Transfer mode: discharge and reassert anode only at the first point of each sweep
-        if (testType == TRANSFER_CHARACTERISTICS && sweepIndex == 0) {
-            sendCommand("M1");
-            // Reassert anode after discharge at start of sweep
-            if (stepType == ANODE) {
-                // Triode transfer: anode is stepped per stepIndex
-                if (stepIndex < stepParameter.length()) {
-                    sendCommand(buildSetCommand("S3 ", stepParameter.at(stepIndex)));
+        // Discharge capacitors at the first point of each sweep
+        if (sweepIndex == 0) {
+            if (testType == TRANSFER_CHARACTERISTICS) {
+                // Transfer: discharge and reassert anode before first grid point
+                sendCommand("M1");
+                if (stepType == ANODE) {
+                    if (stepIndex < stepParameter.length()) {
+                        sendCommand(buildSetCommand("S3 ", stepParameter.at(stepIndex)));
+                    }
+                } else {
+                    sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                 }
-            } else {
-                // Pentode transfer: anode fixed at anodeStart
-                sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
+            } else if (testType == ANODE_CHARACTERISTICS) {
+                // Anode Characteristics: discharge before first anode point
+                // Bring screen to 0 V for verification in pentode mode, then re-assert screen voltage
+                if (deviceType == PENTODE) {
+                    sendCommand("S7 0");
+                }
+                sendCommand("M1");
+                if (deviceType == PENTODE) {
+                    // Re-apply intended screen voltage so the sweep runs at the test setting
+                    sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
+                }
+                // No need to reassert anode here; the next sweep command will set S3
             }
         }
 
@@ -546,15 +583,27 @@ void Analyser::nextSample() {
             sendCommand(buildSetCommand("S2 ", primaryGrid));
         }
 
-        QString primaryCommand = buildSetCommand(sweepCommandPrefix, sweepValue);
-        qInfo("Command: %s (primary sweep)", primaryCommand.toStdString().c_str());
-        sendCommand(primaryCommand);
-        if (isDoubleTriode) {
-            QString secondaryCommand = buildSetCommand("S7 ", sweepValue);
-            qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
-            sendCommand(secondaryCommand);
+        if (isDoubleTriode && sweepType == GRID) {
+            // TRANSFER (double triode): sweep both grids together (S2 and S6)
+            QString cmdS2 = buildSetCommand("S2 ", sweepValue);
+            QString cmdS6 = buildSetCommand("S6 ", sweepValue);
+            qInfo("Command: %s (primary grid sweep)", cmdS2.toStdString().c_str());
+            sendCommand(cmdS2);
+            qInfo("Command: %s (secondary grid sweep)", cmdS6.toStdString().c_str());
+            sendCommand(cmdS6);
+        } else {
+            // Single triode or anode sweep cases
+            QString primaryCommand = buildSetCommand(sweepCommandPrefix, sweepValue);
+            qInfo("Command: %s (primary sweep)", primaryCommand.toStdString().c_str());
+            sendCommand(primaryCommand);
+            if (isDoubleTriode && sweepType == ANODE) {
+                // Only track anode sweep to secondary anode when sweeping ANODE
+                QString secondaryCommand = buildSetCommand("S7 ", sweepValue);
+                qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
+                sendCommand(secondaryCommand);
+            }
         }
-        if (testType == TRANSFER_CHARACTERISTICS) {
+        if (testType == TRANSFER_CHARACTERISTICS || testType == ANODE_CHARACTERISTICS) {
             // Refire each point
             sendCommand("M6");
         }
@@ -589,6 +638,10 @@ void Analyser::nextSample() {
 
             // Verify hardware is at safe 0V state before starting sweep
             // qInfo("=== HARDWARE VERIFICATION ===");
+            if (deviceType == PENTODE && testType == ANODE_CHARACTERISTICS) {
+                // For pentode anode characteristics, ensure screen is at 0V during verification
+                sendCommand("S7 0");
+            }
             sendCommand("M1"); // Discharge capacitors
 
             // Set grid voltage for new step
@@ -596,9 +649,10 @@ void Analyser::nextSample() {
             if (isDoubleTriode && stepCommandPrefix == "S6 ") {
                 qInfo("Command: S6 %d (secondary grid step)", stepParameter.at(stepIndex));
             }
-            if (isDoubleTriode && stepCommandPrefix == "S6 ") {
-                sendCommand("S2 0");
-                sendCommand(buildSetCommand("S6 ", stepParameter.at(stepIndex)));
+            if (isDoubleTriode && stepType == ANODE) {
+                // Double-triode TRANSFER: set both anodes to the new step code
+                sendCommand(buildSetCommand("S3 ", stepParameter.at(stepIndex))); // primary anode step
+                sendCommand(buildSetCommand("S7 ", stepParameter.at(stepIndex))); // secondary anode step
             } else {
                 // Log S2 setting at the start of each new sweep (Anode Characteristics)
                 if (stepCommandPrefix == "S2 ") {
@@ -789,6 +843,10 @@ void Analyser::checkResponse(QString response)
                     isVerifyingHardware = false;
                     verificationAttempts = 0;
 
+                    // Reassert fixed screen voltage for pentode anode characteristics
+                    if (deviceType == PENTODE && testType == ANODE_CHARACTERISTICS) {
+                        sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
+                    }
                     // Now send the first actual sample
                     int firstSampleValue = sweepParameter.at(stepIndex).at(0);
                     // Ensure anode is asserted for Transfer mode before first actual sample
@@ -817,6 +875,10 @@ void Analyser::checkResponse(QString response)
                     if (isDoubleTriode) {
                         sendCommand(buildSetCommand("S7 ", firstSampleValue));
                     }
+                    // Important: refire before measuring the first actual point to allow DACs to settle
+                    if (testType == TRANSFER_CHARACTERISTICS || testType == ANODE_CHARACTERISTICS) {
+                        sendCommand("M6");
+                    }
                     sendCommand("M2");
                 } else {
                     verificationAttempts++;
@@ -839,7 +901,7 @@ void Analyser::checkResponse(QString response)
                             sendCommand(buildSetCommand("S2 ", primaryGrid));
                             sendCommand(buildSetCommand("S6 ", stepParameter.at(stepIndex)));
                             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-                            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
+                            sendCommand(buildSetCommand("S7 ", 0)); // Set S7 to 0V during verification
                         } else {
                             // TRANSFER (single triode): set S2 to the first GRID sweep value, not an anode step code
                             int firstGridCode = 0;
@@ -851,6 +913,10 @@ void Analyser::checkResponse(QString response)
                             sendCommand(buildSetCommand("S2 ", firstGridCode));
                             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                         }
+                        if (deviceType == PENTODE && testType == ANODE_CHARACTERISTICS) {
+                            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
+                        }
+
                         sendCommand("M2");
                     }
                 }
@@ -864,8 +930,10 @@ void Analyser::checkResponse(QString response)
                 double power1 = ia * va / 1000.0;
                 double power2 = ia2 * va2 / 1000.0;
                 if (ia > iaMax || ia2 > iaMax || power1 > pMax || power2 > pMax) {
+                    // Mark end-of-sweep; keep the measured sample as-is for storage
+                    qInfo("AN LIMIT: end sweep on limit (va=%.3f ia=%.3f va2=%.3f ia2=%.3f p1=%.3f p2=%.3f)",
+                          va, ia, va2, ia2, power1, power2);
                     isEndSweep = true;
-                    // qInfo("SWEEP LIMIT: ia=%.3fmA va=%.1fV (limits: %.1fmA %.3fW)", ia, va, iaMax, pMax);
                 }
 
                 result->addSample(sample);

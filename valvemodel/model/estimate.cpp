@@ -24,6 +24,51 @@ void Estimate::estimateTriode(Measurement *measurement) {
 
 void Estimate::estimatePentode(Measurement *measurement, CohenHelieTriode *triodeModel, int modelType, bool secondaryEmission)
 {
+    if (triodeModel == nullptr) {
+        // Fallback: derive a coarse initial estimate directly from measurement
+        // JS-style base seeds suitable for 6L6-class pentodes
+        mu = 11.0;
+        x = 1.4;
+        kg1 = 0.6;          // triode-like scaling
+        kp = 1.0 + 0.5 * (mu * 10.0); // ≈ 56
+        kvb = 250.0;
+        kvb1 = 12.0;
+        vct = 0.1;
+
+        // Try to set kg2 from high-Va screen current if available; else use heuristic
+        double kg2Accum = 0.0;
+        int kg2Count = 0;
+        const int sweeps = measurement->count();
+        for (int sw = 0; sw < sweeps; ++sw) {
+            Sweep *s = measurement->at(sw);
+            if (!s || s->count() < 2) continue;
+            Sample *end = s->at(s->count() - 1);
+            if (!end) continue;
+            const double ig2mA = end->getIg2();
+            const double vaV = end->getVa();
+            const double vg2V = s->getVg2Nominal();
+            if (ig2mA > 0.05 && vaV > 0.8 * measurement->getAnodeStop()) {
+                // Simple proportional scaling (units absorbed into model constants)
+                kg2Accum += (vaV + std::max(0.0, vg2V));
+                kg2Count++;
+            }
+        }
+        if (kg2Count > 0) {
+            kg2 = std::max(1.0, (kg2Accum / kg2Count) / 50.0);
+        } else {
+            kg2 = 4.5 * kg1; // heuristic consistent with existing estimator fallback
+        }
+
+        // Preserve existing conservative defaults for low-voltage shaping
+        a = 0.0;
+        beta = 0.1;
+        gamma = 1.0;
+
+        // Secondary emission parameters left at defaults when not requested
+        return;
+    }
+
+    // Normal path seeded from an existing triode model
     mu = triodeModel->getParameter(PAR_MU);
     x = triodeModel->getParameter(PAR_X);
     kg1 = triodeModel->getParameter(PAR_KG1);

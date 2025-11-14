@@ -164,11 +164,21 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
     while (vg1 <= 0.0) {
         const double vgLabel = vg1; // preserve for label text
         double va = 0.0;
-        double ia = model->anodeCurrent(va, vg1);
+        double ia = 0.0;
+        if (deviceType == PENTODE) {
+            ia = model->anodeCurrent(va, vg1, vg2Max);
+        } else {
+            ia = model->anodeCurrent(va, vg1);
+        }
 
         for (int j = 1; j < 61; j++) {
             double vaNext = (vaMax * j) / 60.0;
-            double iaNext = model->anodeCurrent(vaNext, vg1);
+            double iaNext = 0.0;
+            if (deviceType == PENTODE) {
+                iaNext = model->anodeCurrent(vaNext, vg1, vg2Max);
+            } else {
+                iaNext = model->anodeCurrent(vaNext, vg1);
+            }
             items.append(plot->createSegment(va, ia, vaNext, iaNext, modelPen));
 
             va = vaNext;
@@ -181,14 +191,24 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
         const double epsY = std::max(0.05, iaMax * 0.01);  // 1% inset or 0.05mA minimum
 
         double x = vaMax - epsX;
-        double yAtRight = model->anodeCurrent(vaMax, vg1);
+        double yAtRight = 0.0;
+        if (deviceType == PENTODE) {
+            yAtRight = model->anodeCurrent(vaMax, vg1, vg2Max);
+        } else {
+            yAtRight = model->anodeCurrent(vaMax, vg1);
+        }
         double y;
         if (std::isfinite(yAtRight) && yAtRight <= iaMax) {
             // Right edge intersection
             y = std::min(iaMax - epsY, std::max(0.0, yAtRight));
         } else {
             // Use top edge intersection: find Va at Ia = iaMax (mA)
-            double xTop = model->anodeVoltage(iaMax, vg1);
+            double xTop = 0.0;
+            if (deviceType == PENTODE) {
+                xTop = model->anodeVoltage(iaMax, vg1, vg2Max);
+            } else {
+                xTop = model->anodeVoltage(iaMax, vg1);
+            }
             if (!std::isfinite(xTop)) xTop = vaMax;
             x = std::min(vaMax - epsX, std::max(epsX, xTop - epsX));
             y = iaMax - epsY;

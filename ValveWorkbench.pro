@@ -42,6 +42,7 @@ SOURCES += \
     valvemodel/model/device.cpp \
     valvemodel/model/estimate.cpp \
     valvemodel/model/gardinerpentode.cpp \
+    valvemodel/model/simplemanualpentode.cpp \
     valvemodel/model/linearsolver.cpp \
     valvemodel/model/model.cpp \
     valvemodel/model/modelfactory.cpp \

@@ -16,10 +16,9 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
 
     QList<QSerialPortInfo> serialPorts = QSerialPortInfo::availablePorts();
 
+    // Populate with all available ports (do not restrict to specific VID/PID)
     for (const QSerialPortInfo &serialPort : serialPorts) {
-        if (serialPort.vendorIdentifier() == 0x1a86 && serialPort.productIdentifier() == 0x7523) {
-            ui->portSelect->addItem(serialPort.portName());
-        }
+        ui->portSelect->addItem(serialPort.portName());
     }
 
     ui->pentodeFit->addItem("Gardiner", GARDINER_PENTODE);
@@ -301,7 +300,17 @@ void PreferencesDialog::loadFromSettings()
 
     // Port and model/sampling options
     QString savedPort = s.value("preferences/port", "").toString();
-    if (!savedPort.isEmpty()) setPort(savedPort);
+    if (!savedPort.isEmpty()) {
+        // Ensure the saved port is present even if not currently detected
+        bool found = false;
+        for (int i = 0; i < ui->portSelect->count(); ++i) {
+            if (ui->portSelect->itemText(i) == savedPort) { found = true; break; }
+        }
+        if (!found) {
+            ui->portSelect->addItem(savedPort);
+        }
+        setPort(savedPort);
+    }
     int savedPentodeFit = s.value("preferences/pentodeFit", GARDINER_PENTODE).toInt();
     int idxFit = ui->pentodeFit->findData(savedPentodeFit);
     if (idxFit >= 0) ui->pentodeFit->setCurrentIndex(idxFit);

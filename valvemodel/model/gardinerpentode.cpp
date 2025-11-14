@@ -2,29 +2,55 @@
 
 //#include <cmath>
 
+// Numerically stable helpers for AutoDiff types
+template <typename T>
+inline T softplus_stable(const T& z) {
+    // Stable, branchless softplus: log(1+exp(-|z|)) + max(z,0)
+    // Use max(z,0) = (z + |z|)/2 to avoid ceres::max and branching on Jets
+    T az = ceres::abs(z);
+    T maxz0 = (z + az) * T(0.5);
+    return ceres::log(1.0 + ceres::exp(-az)) + maxz0;
+}
+
+// Jet-friendly max without relying on ceres::max (not provided)
+template <typename T>
+inline T tmax(const T& a, const T& b) {
+    return (a > b) ? a : b;
+}
+
+template <typename T>
+inline T tmin(const T& a, const T& b) {
+    return (a < b) ? a : b;
+}
+
+// Smooth max to keep derivatives well-defined: smax(a,b) ≈ max(a,b)
+template <typename T>
+inline T smax(const T& a, const T& b) {
+    T d = a - b;
+    return T(0.5) * (a + b + ceres::sqrt(d * d + T(1e-12)));
+}
+
+template <typename T>
+inline T safe_div(const T& num, const T& den, double eps = 1e-9) {
+    return num / (den + T(eps));
+}
+
 struct UnifiedPentodeIaResidual {
     UnifiedPentodeIaResidual(double va, double vg1, double ia, double vg2, double ig2) : va_(va), vg1_(vg1), ia_(ia), vg2_(vg2), ig2_(ig2) {}
 
     template <typename T>
     bool operator()(const T* const kg1, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg2, const T* const a, const T* const alpha, const T* const beta, const T* const gamma, const T* const os, T* residual) const {
-        T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
-        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
+        T f = ceres::sqrt(smax(kvb[0] + kvb1[0] * T(vg2_) + T(vg2_) * T(vg2_), T(1e-12)));
+        T z = kp[0] * (safe_div(T(1.0), mu[0]) + (T(vg1_) + vct[0]) / (f + T(1e-12)));
+        z = tmax(tmin(z, T(100)), T(-100));
+        T base = T(vg2_) * softplus_stable(z) / (kp[0] + T(1e-12));
+        base = smax(base, T(1e-6)); // ensure stable pow/log jacobians
+        T epk = ceres::exp(x[0] * ceres::log(base));
         T shift = beta[0] * (1.0 - alpha[0] * vg1_);
-        T g = exp(-pow(shift * va_, gamma[0]));
-        //T g = 1.0 / (1.0 + pow(shift * va_, gamma[0]));
-        if (isnan(g)) { // Should only happen if Va is 0 and this is a better test than == 0.0
-            g = mu[0] / mu[0];
-        }
+        T g = ceres::exp(-ceres::pow(ceres::abs(shift * T(va_)) + T(1e-12), gamma[0]));
         T scale = 1.0 - g;
-        T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * scale + a[0] * va_ / kg2[0]) + os[0] * vg2_;
-
-        //double w = exp(va_/ 250.0);
-        if (!(isnan(ia) || isinf(ia))) {
-            //residual[0] = (ia_ - ia) * w;
-            residual[0] = (ia_ - ia);
-        } else {
-            return false;
-        }
+        T ia = epk * ((safe_div(T(1.0), kg1[0]) - safe_div(T(1.0), kg2[0])) * scale + a[0] * T(va_) * safe_div(T(1.0), kg2[0])) + os[0] * T(vg2_);
+        residual[0] = (T(ia_) - ia);
         return true;
     }
 
@@ -35,32 +61,26 @@ private:
     const double vg2_;
     const double ig2_;
 };
+
 
 struct UnifiedPentodeIaSEResidual {
     UnifiedPentodeIaSEResidual(double va, double vg1, double ia, double vg2, double ig2) : va_(va), vg1_(vg1), ia_(ia), vg2_(vg2), ig2_(ig2) {}
 
     template <typename T>
     bool operator()(const T* const kg1, const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg2, const T* const a, const T* const alpha, const T* const beta, const T* const gamma, const T* const os, const T* const omega, const T* const lambda, const T* const nu, const T* const s, const T* const ap, T* residual) const {
-        T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
-        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
+        T f = ceres::sqrt(tmax(kvb[0] + kvb1[0] * T(vg2_) + T(vg2_) * T(vg2_), T(1e-12)));
+        T z = kp[0] * (safe_div(T(1.0), mu[0]) + (T(vg1_) + vct[0]) / (f + T(1e-12)));
+        z = tmax(tmin(z, T(100)), T(-100));
+        T base = T(vg2_) * softplus_stable(z) / (kp[0] + T(1e-12));
+        base = smax(base, T(1e-6));
+        T epk = ceres::exp(x[0] * ceres::log(base));
         T shift = beta[0] * (1.0 - alpha[0] * vg1_);
-        T g = exp(-pow(shift * va_, gamma[0]));
-        //T g = 1.0 / (1.0 + pow(shift * va_, gamma[0]));
-        if (isnan(g)) { // Should only happen if Va is 0 and this is a better test than == 0.0
-            g = mu[0] / mu[0];
-        }
+        T g = ceres::exp(-ceres::pow(ceres::abs(shift * T(va_)) + T(1e-12), gamma[0]));
         T scale = 1.0 - g;
-        T vco = vg2_ / lambda[0] - vg1_ * nu[0] - omega[0];
-        T psec = s[0] * va_ * (1.0 + tanh(-ap[0] * (va_ - vco)));
-        T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * scale + a[0] * va_ / kg2[0] - psec / kg2[0]) + os[0] * vg2_;
-
-        //double w = exp(va_/ 250.0);
-        if (!(isnan(ia) || isinf(ia))) {
-            //residual[0] = (ia_ - ia) * w;
-            residual[0] = (ia_ - ia);
-        } else {
-            return false;
-        }
+        T vco = T(vg2_) / (lambda[0] + T(1e-12)) - T(vg1_) * nu[0] - omega[0];
+        T psec = s[0] * T(va_) * (1.0 + ceres::tanh(-ap[0] * (T(va_) - vco)));
+        T ia = epk * ((safe_div(T(1.0), kg1[0]) - safe_div(T(1.0), kg2[0])) * scale + a[0] * T(va_) * safe_div(T(1.0), kg2[0]) - psec * safe_div(T(1.0), kg2[0])) + os[0] * T(vg2_);
+        residual[0] = (T(ia_) - ia);
         return true;
     }
 
@@ -72,29 +92,22 @@ private:
     const double ig2_;
 };
 
+
 struct UnifiedPentodeIg2Residual {
     UnifiedPentodeIg2Residual(double va, double vg1, double ia, double vg2, double ig2) : va_(va), vg1_(vg1), ia_(ia), vg2_(vg2), ig2_(ig2) {}
 
     template <typename T>
     bool operator()(const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg3, const T* const a, const T* const tau, const T* const rho, const T* const theta, const T* const psi, T* residual) const {
-        T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
-        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
+        T f = ceres::sqrt(tmax(kvb[0] + kvb1[0] * T(vg2_) + T(vg2_) * T(vg2_), T(1e-12)));
+        T z = kp[0] * (safe_div(T(1.0), mu[0]) + (T(vg1_) + vct[0]) / (f + T(1e-12)));
+        z = tmax(tmin(z, T(100)), T(-100));
+        T base = T(vg2_) * softplus_stable(z) / (kp[0] + T(1e-12));
+        base = tmax(base, T(1e-6));
+        T epk = ceres::exp(x[0] * ceres::log(base));
         T shift = rho[0] * (1.0 - tau[0] * vg1_);
-        T h = exp(-pow(shift * va_, theta[0]));
-        //T h = 1.0 / (1.0 + pow(shift * va_, theta[0]));
-        if (isnan(h)) { // Should only happen if Va is 0 and this is a better test than == 0.0
-            h = mu[0] / mu[0];
-        }
-        T ig2 = epk * (1.0 + psi[0] * h) / kg3[0] - epk * a[0] * va_ / kg3[0];
-        //T ig2 = epk * (1.0 + psi[0] * h) / kg3[0];
-
-        //double w = exp(va_/ 250.0);
-        if (!(isnan(ig2) || isinf(ig2))) {
-            //residual[0] = (ig2_ - ig2) * w;
-            residual[0] = (ig2_ - ig2);
-        } else {
-            return false;
-        }
+        T h = ceres::exp(-ceres::pow(ceres::abs(shift * T(va_)) + T(1e-12), theta[0]));
+        T ig2 = epk * (1.0 + psi[0] * h) * safe_div(T(1.0), kg3[0]) - epk * a[0] * T(va_) * safe_div(T(1.0), kg3[0]);
+        residual[0] = (T(ig2_) - ig2);
         return true;
     }
 
@@ -112,27 +125,18 @@ struct UnifiedPentodeIg2SEResidual {
     template <typename T>
     bool operator()(const T* const kp, const T* const kvb, const T* const kvb1, const T* const vct, const T* const x, const T* const mu, const T* const kg3, const T* const a, const T* const tau, const T* const rho, const T* const theta, const T* const psi, const T* const omega, const T* const lambda, const T* const nu, const T* const s,
                     const T* const ap, T* residual) const {
-        T f = sqrt(kvb[0] + kvb1[0] * vg2_ + vg2_ * vg2_);
-        T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
+        T f = ceres::sqrt(tmax(kvb[0] + kvb1[0] * T(vg2_) + T(vg2_) * T(vg2_), T(1e-12)));
+        T z = kp[0] * (safe_div(T(1.0), mu[0]) + (T(vg1_) + vct[0]) / (f + T(1e-12)));
+        z = tmax(tmin(z, T(100)), T(-100));
+        T base = T(vg2_) * softplus_stable(z) / (kp[0] + T(1e-12));
+        base = tmax(base, T(1e-6));
+        T epk = ceres::exp(x[0] * ceres::log(base));
         T shift = rho[0] * (1.0 - tau[0] * vg1_);
-        T h = exp(-pow(shift * va_, theta[0]));
-        //T h = 1.0 / (1.0 + pow(shift * va_, theta[0]));
-        if (isnan(h)) { // Should only happen if Va is 0 and this is a better test than == 0.0
-            h = mu[0] / mu[0];
-        }
-        T vco = vg2_ / lambda[0] - vg1_ * nu[0] - omega[0];
-        T psec = s[0] * va_ * (1.0 + tanh(-ap[0] * (va_ - vco)));
-
-        T ig2 = epk * (1.0 + psi[0] * h + psec) / kg3[0] - epk * a[0] * va_ / kg3[0];
-        //T ig2 = epk * (1.0 + psi[0] * h + psec) / kg3[0];
-
-        //double w = exp(va_/ 250.0);
-        if (!(isnan(ig2) || isinf(ig2))) {
-            //residual[0] = (ig2_ - ig2) * w;
-            residual[0] = (ig2_ - ig2);
-        } else {
-            return false;
-        }
+        T h = ceres::exp(-ceres::pow(ceres::abs(shift * T(va_)) + T(1e-12), theta[0]));
+        T vco = T(vg2_) / (lambda[0] + T(1e-12)) - T(vg1_) * nu[0] - omega[0];
+        T psec = s[0] * T(va_) * (1.0 + ceres::tanh(-ap[0] * (T(va_) - vco)));
+        T ig2 = epk * (1.0 + psi[0] * h + psec) * safe_div(T(1.0), kg3[0]) - epk * a[0] * T(va_) * safe_div(T(1.0), kg3[0]);
+        residual[0] = (T(ig2_) - ig2);
         return true;
     }
 
@@ -146,7 +150,11 @@ private:
 
 double GardinerPentode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
-    double epk = cohenHelieEpk(vg2, vg1);
+    // Normalize screen voltage to volts for Epk helper (measurement may be kV like 0.250)
+    double v2_for_epk = (std::fabs(vg2) < 5.0 ? vg2 * 1000.0 : vg2);
+    double epk = cohenHelieEpk(v2_for_epk, vg1);
+    // Runtime stability: prevent hard-zero collapse at strong -Vg1 during plotting
+    epk = std::max(epk, 1e-6);
     double k = 1.0 / parameter[PAR_KG1]->getValue() - 1.0 / parameter[PAR_KG2]->getValue();
     double shift = parameter[PAR_BETA]->getValue() * (1.0 - parameter[PAR_ALPHA]->getValue() * vg1);
     double g = exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
@@ -160,12 +168,15 @@ double GardinerPentode::anodeCurrent(double va, double vg1, double vg2, bool sec
         ia = ia - epk * psec / parameter[PAR_KG2]->getValue();
     }
 
-    return ia;
+    // Keep plotted Ia non-negative to avoid tiny negative spikes near Va≈0
+    return std::max(0.0, ia);
 }
 
 double GardinerPentode::screenCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
-    double epk = cohenHelieEpk(vg2, vg1);
+    // Normalize screen voltage to volts for Epk helper
+    double v2_for_epk = (std::fabs(vg2) < 5.0 ? vg2 * 1000.0 : vg2);
+    double epk = cohenHelieEpk(v2_for_epk, vg1);
     double shift = parameter[PAR_RHO]->getValue() * (1.0 - parameter[PAR_TAU]->getValue() * vg1);
     double h = exp(-pow(shift * va, parameter[PAR_THETA]->getValue() * 0.9));
     double vco = vg2 / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
@@ -187,6 +198,15 @@ GardinerPentode::GardinerPentode()
 
 void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
+    // Filter out degenerate points that destabilize residual evaluation
+    const double eps = 1e-9;
+    if (vg2 <= eps) {
+        return; // screen effectively off / discharge transient
+    }
+    if (va <= eps && std::abs(ia) <= eps && std::abs(ig2) <= eps) {
+        return; // dead origin sample provides no information
+    }
+
     if (!preferences->useSecondaryEmission()) {
         anodeProblem.AddResidualBlock(
             new AutoDiffCostFunction<UnifiedPentodeIaResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
@@ -240,6 +260,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
             parameter[PAR_RHO]->getPointer(),
             parameter[PAR_THETA]->getPointer(),
             parameter[PAR_PSI]->getPointer());
+
     } else {
         anodeProblem.AddResidualBlock(
             new AutoDiffCostFunction<UnifiedPentodeIaSEResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
@@ -308,6 +329,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
             parameter[PAR_NU]->getPointer(),
             parameter[PAR_S]->getPointer(),
             parameter[PAR_AP]->getPointer());
+
     }
 }
 
@@ -516,6 +538,7 @@ void GardinerPentode::setOptions()
         anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.0);
         anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.0);
         anodeProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_OS]->getPointer(), 0, 0.01);
 
         if (preferences->useSecondaryEmission()) {
             anodeProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 2.0 * parameter[PAR_MU]->getValue());
@@ -535,6 +558,52 @@ void GardinerPentode::setOptions()
 
         //problem.SetParameterUpperBound(parameter[PAR_KG2]->getPointer(), 0, parameter[PAR_KG1]->getValue() * 6.0);
 
+        // Enforce strictly positive minima for denominators involved in residuals
+        anodeProblem.SetParameterLowerBound(parameter[PAR_KG2]->getPointer(), 0, 1e-6);
+        screenProblem.SetParameterLowerBound(parameter[PAR_KG2A]->getPointer(), 0, 1e-6);
+        // Reasonable upper bounds to avoid runaway
+        anodeProblem.SetParameterUpperBound(parameter[PAR_KG2]->getPointer(), 0, 30.0);
+        screenProblem.SetParameterUpperBound(parameter[PAR_KG2A]->getPointer(), 0, 30.0);
+
+        // Global bounds (wide) derived from web models to stabilize search
+        anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_ALPHA]->getPointer(), 0, 1.0);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.00001);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_BETA]->getPointer(), 0, 1.0);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.5);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 3.0);
+
+        // A (slope) small
+        anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_A]->getPointer(), 0, 0.02);
+
+        // Screen-shaping parameters
+        screenProblem.SetParameterLowerBound(parameter[PAR_TAU]->getPointer(), 0, 0.02);
+        screenProblem.SetParameterUpperBound(parameter[PAR_TAU]->getPointer(), 0, 0.5);
+        screenProblem.SetParameterLowerBound(parameter[PAR_RHO]->getPointer(), 0, 0.01);
+        screenProblem.SetParameterUpperBound(parameter[PAR_RHO]->getPointer(), 0, 0.2);
+        screenProblem.SetParameterLowerBound(parameter[PAR_THETA]->getPointer(), 0, 0.8);
+        screenProblem.SetParameterUpperBound(parameter[PAR_THETA]->getPointer(), 0, 3.0);
+        screenProblem.SetParameterLowerBound(parameter[PAR_PSI]->getPointer(), 0, 0.0);
+        screenProblem.SetParameterUpperBound(parameter[PAR_PSI]->getPointer(), 0, 10.0);
+
+        // Secondary emission geometry only exists in problems when SE is enabled
+        if (preferences->useSecondaryEmission()) {
+            anodeProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 0.0);
+            anodeProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 30.0);
+            anodeProblem.SetParameterLowerBound(parameter[PAR_NU]->getPointer(), 0, 0.0);
+            anodeProblem.SetParameterUpperBound(parameter[PAR_NU]->getPointer(), 0, 8.0);
+            anodeProblem.SetParameterLowerBound(parameter[PAR_OMEGA]->getPointer(), 0, 0.0);
+            anodeProblem.SetParameterUpperBound(parameter[PAR_OMEGA]->getPointer(), 0, 300.0);
+
+            screenProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 0.0);
+            screenProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 30.0);
+            screenProblem.SetParameterLowerBound(parameter[PAR_NU]->getPointer(), 0, 0.0);
+            screenProblem.SetParameterUpperBound(parameter[PAR_NU]->getPointer(), 0, 8.0);
+            screenProblem.SetParameterLowerBound(parameter[PAR_OMEGA]->getPointer(), 0, 0.0);
+            screenProblem.SetParameterUpperBound(parameter[PAR_OMEGA]->getPointer(), 0, 300.0);
+        }
+
         options.max_num_iterations = 400;
         options.max_num_consecutive_invalid_steps = 20;
         //options.use_inner_iterations = true;
@@ -546,6 +615,7 @@ void GardinerPentode::setOptions()
         //options.preconditioner_type = ceres::JACOBI;
         //options.preconditioner_type = ceres::SUBSET;
     } else if (mode == SCREEN_MODE) {
+
         parameter[PAR_TAU]->setValue(parameter[PAR_ALPHA]->getValue());
         parameter[PAR_RHO]->setValue(parameter[PAR_BETA]->getValue());
         parameter[PAR_THETA]->setValue(parameter[PAR_GAMMA]->getValue());
@@ -564,8 +634,14 @@ void GardinerPentode::setOptions()
             }
         }
 
-        screenProblem.SetParameterLowerBound(parameter[PAR_TAU]->getPointer(), 0, 0.0);
-        screenProblem.SetParameterLowerBound(parameter[PAR_RHO]->getPointer(), 0, 0.00001);
+        screenProblem.SetParameterLowerBound(parameter[PAR_TAU]->getPointer(), 0, 0.02);
+        screenProblem.SetParameterUpperBound(parameter[PAR_TAU]->getPointer(), 0, 0.5);
+        screenProblem.SetParameterLowerBound(parameter[PAR_RHO]->getPointer(), 0, 0.01);
+        screenProblem.SetParameterUpperBound(parameter[PAR_RHO]->getPointer(), 0, 0.2);
+        screenProblem.SetParameterLowerBound(parameter[PAR_THETA]->getPointer(), 0, 0.8);
+        screenProblem.SetParameterUpperBound(parameter[PAR_THETA]->getPointer(), 0, 3.0);
+        screenProblem.SetParameterLowerBound(parameter[PAR_PSI]->getPointer(), 0, 0.0);
+        screenProblem.SetParameterUpperBound(parameter[PAR_PSI]->getPointer(), 0, 10.0);
     } else if (mode == ANODE_REMODEL_MODE) {
         anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
         //anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());

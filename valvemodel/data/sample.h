@@ -9,7 +9,7 @@
 class Sample : DataSet
 {
 public:
-    Sample(double va_ = 0.0, double vg1_ = 0.0, double vg2_ = 0.0, double ia_ = 0.0, double ig2_ = 0.0, double vh_ = 0.0, double ih_ = 0.0, double vg3_ = 0.0, double va2_ = 0.0, double ia2_ = 0.0);
+    Sample(double vg1_ = 0.0, double va_ = 0.0, double ia_ = 0.0, double vg2_ = 0.0, double ig2_ = 0.0, double vh_ = 0.0, double ih_ = 0.0, double vg3_ = 0.0, double va2_ = 0.0, double ia2_ = 0.0);
 
     double getVa() const;
     double getVg1() const;
