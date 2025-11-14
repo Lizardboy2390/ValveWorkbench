@@ -5,20 +5,14 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 ## Purpose
 Deliver a stable, end‑user application for measuring, modeling, and designing vacuum‑tube circuits with clear workflows for Single and Double Triode devices.
 
-## Current state (high level)
-- Analyser: Automated sweeps working; Save to Project prompts every time
-- Modeller: Fitting stable; guard flips positive grid voltages to negative
-- Designer: Triode Common Cathode enhancements completed (2025‑11‑06):
-  - Max swing (upper row, brown) and Max Sym Swing (lower row, blue) overlays
-  - Input sensitivity (Vpp) moved to Designer values; depends on Max Sym Swing; updates with K bypass
-  - Single Gain box driven by K bypass; gm/ra formatting (gm 2dp, ra integer)
-  - Cathode line now purple and clipped from left/right margins; Pa‑max line starts inside y‑range
-  - Overlays clear on replot; axes clamped to device limits
+- Modeller: Pentode fitting now logs cleanly and overlays align with measurements after parameter-array initialization fix
+- Modeller threading: Bounds now applied to anode, screen, and remodel passes; no "parameter block not found" crashes observed
+- Analyser: Automated sweeps remain stable; Save to Project prompts every time
+- Designer: Triode Common Cathode enhancements completed (2025‑11‑06): axes clamp, overlays cleared, gain/swing UI refreshed
 
-## Goals (near‑term)
-- Reliability: Validate measurement → save → model → compare workflow
-- Double‑Triode UX: Clear A/B overlays, colors, and labels throughout
-- Documentation: End‑user README, concise tasks, visible change log (updated 2025‑11‑06)
+- Reliability: Verify full measurement → save → pentode fit → overlay workflow with new logging/bounds
+- Pentode UX: surface manual/automatic fitting options (Simple Manual Pentode sliders TBD)
+- Documentation: End‑user README, plan, tasks, handoff kept current with pentode progress
 
 ## Milestones
 - M1: Workflow baseline (complete)
@@ -42,15 +36,15 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
 - Fit convergence issues → Initial parameter hints and Vg guard (done)
 - UI confusion → Consistent colours/labels (A=red, B=green) and prompts
 
-## Roadmap (rolling)
-- Tomorrow: Implement minimal, safe Vg label gating (labels only if family has >0 mA segment in-bounds); place labels at edge intersection; compile and test
-- Next: Apply overlay clearing/axes clamp pattern to remaining circuits
-- Then: Add explicit "Calculate" button in Designer; screenshot update for README
+- Immediate: Add Simple Manual Pentode UI controls for manual curve alignment, preserving stable Gardiner/Reefman baseline
+- Next: Evaluate Vg label gating (labels only if family has >0 mA segment in bounds); keep overlay clearing/axes clamp pattern for remaining circuits
+- Later: Add explicit "Calculate" button in Designer; refresh README screenshots once pentode UI finalizes
 
 ### Pentode Modelling (in progress)
-- **Simple Manual Pentode** model has been added to the existing Modeller pentode model list and now uses the web `pentodemodeller.js`‑style `epk` backend formula (`mu, kp, kg1, kg2, alpha, beta, gamma, a`, no auto‑fitting yet).
-- Next: add UI sliders / numeric fields for these parameters on the Modeller tab and replot curves live over measured pentode data when sliders move.
-- Later: once the manual model visually matches the web tool for key tubes (e.g. 6L6, EL34), design a small, robust auto‑fit on top of it (fitting only a subset of parameters) as a later step.
+- Gardiner/Reefman path: parameter bounds now applied across solve stages, logging cleaned up, overlays match measurement families
+- **Simple Manual Pentode** backend exists (web-style `epk` formula, no auto-fit yet)
+- Next: expose manual parameters in UI (sliders / numeric inputs) and replot live over measured data
+- Later: once manual path mirrors web tool for representative tubes (6L6, EL34), prototype minimal auto-fit over a subset of parameters
 
 ## Change log (highlights)
 - 2025‑11‑06: Designer (Triode CC) overlays complete (Max Swing brown / Max Sym Swing blue); Input sensitivity into Designer; K bypass + single Gain; gm/ra formatting; cathode line clipping; Pa‑max entry fix; docs updated

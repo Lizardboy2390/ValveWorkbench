@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-13 (end of pentode fitting experiments)
+Last updated: 2025-11-13 (pentode solver bounds/logging stabilised)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -14,19 +14,20 @@ Last updated: 2025-11-13 (end of pentode fitting experiments)
 - Restore analyser to baseline regarding first-sample and limit-clamp (measurement integrity).
 
 ### 2025-11-13 Summary (Pentode)
-- Multiple experiments were run to improve Gardiner/Reefman pentode fitting (kg1 calibration, plotting‑only A/beta/gamma, estimator tweaks, SimplePentode prototype).
-- These changes caused unstable or non‑physical behaviour (vertical lines, extreme Ia, wrong slopes), so **all experimental pentode changes were reverted**; code is back to the original baseline.
-- Triode modelling remains solid; pentode modelling is usable but still flatter than desired.
+- Gardiner/Reefman fitting stabilised by reapplying deferred bounds to all solve stages (anode, screen, remodel) and null-initialising the shared parameter array before logging.
+- Logging remains verbose (MODEL INPUT / PENTODE SOLVER START) but runs without crashes; solver overlays now align closely with measured sweeps.
+- Triode modelling continues to behave as before; Simple Manual Pentode backend still awaits UI controls.
 
 ## Key Code Changes
 
-### 1) Modeller: Force negative grid to solver
+### 1) Modeller: Pentode input/solve guards
 - File: `valvemodel/model/model.cpp`
 - Method: `Model::addMeasurement`
-- Change: Always use `vg1Corrected = -std::fabs(vg1raw)`; fallback to sweep nominal when sample invalid.
-- Added logs per sweep:
-  - `MODEL INPUT: sweep=<s> first vg1 used=...`
-  - `MODEL INPUT: sweep=<s> vg1 range used [min, max] (should be <= 0)`
+- Changes:
+  - Always use `vg1Corrected = -std::fabs(vg1raw)`; fallback to sweep nominal when sample invalid (existing).
+  - Reapply deferred parameter bounds immediately after each sample and prior to every solve.
+  - Parameter array now zero-initialised to avoid logging garbage pointers in `logParameterSet`.
+  - Logs per sweep remain: `MODEL INPUT: sweep=<s> first vg1 used=...` and `vg1 range used [...]`.
 
 ### 2) Designer: Triode Common Cathode plotting
 - Files:
@@ -56,8 +57,9 @@ Last updated: 2025-11-13 (end of pentode fitting experiments)
 - `Plot::createSegment` uses Liang–Barsky clipping against axes in data space to avoid null segments.
 
 ## Current Behaviour
-- Red pentode model overlays now appear with correct families; scale aligns at −20 V; curvature present.
-- Cohen‑Helie logs suppressed during pentode plotting.
+- Gardiner/Reefman pentode fit runs through threaded solve stages without "parameter block not found" or QByteArray crashes.
+- Overlays (red) track measured sweeps closely; logging clearly shows solver START/AFTER sets.
+- Cohen-Helie logs remain suppressed during pentode plotting.
 - “Show fitted model” toggles visibility, but replot path should be updated to use `Model::plotModel` (pending).
 
 ### Status Note
@@ -112,7 +114,7 @@ Additional (2025-11-05):
 - `valvemodel/model/cohenhelietriode.cpp` (muted logs)
 - `valveworkbench.cpp` (checkbox handlers; compare path)
 
-## Open Items
+- [ ] Capture before/after plots showing pentode overlay alignment for documentation.
 - [ ] Add "Calculate" button to Designer and wire to recompute/plot.
 - [ ] Axis auto-scaling incorporating cathode line ranges.
 - [ ] If needed, clamp cathode sweep (e.g., limit |Vg| to device range) to avoid solver edge-cases.
