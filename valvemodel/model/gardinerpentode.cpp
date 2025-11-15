@@ -566,17 +566,29 @@ void GardinerPentode::setOptions()
         anodeProblem.SetParameterUpperBound(parameter[PAR_KG2]->getPointer(), 0, 30.0);
         screenProblem.SetParameterUpperBound(parameter[PAR_KG2A]->getPointer(), 0, 30.0);
 
+        // Gardiner-specific guardrails: keep Kg1 and Mu in realistic ranges
+        // so the fit cannot collapse to Mu~1 with extreme Kg1.
+        anodeProblem.SetParameterLowerBound(parameter[PAR_KG1]->getPointer(), 0, 0.05);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_KG1]->getPointer(), 0, 2.0);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_MU]->getPointer(), 0, 3.0);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_MU]->getPointer(), 0, 25.0);
+
         // Global bounds (wide) derived from web models to stabilize search
         anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_ALPHA]->getPointer(), 0, 1.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.00001);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_BETA]->getPointer(), 0, 1.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.5);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 3.0);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.6);
+        // Prevent the knee shaping from vanishing (Beta≈0) or becoming
+        // excessively steep/flat (Gamma << 1 or >> 3), which leads to
+        // near-zero or diagonal curves.
+        anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.02);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_BETA]->getPointer(), 0, 0.6);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.7);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.5);
 
         // A (slope) small
-        anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_A]->getPointer(), 0, 0.02);
+        // Keep A (slope term) small but non-zero to avoid flat, 
+        // diagonal-like behaviour with collapsed curvature.
+        anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.001);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_A]->getPointer(), 0, 0.05);
 
         // Screen-shaping parameters
         screenProblem.SetParameterLowerBound(parameter[PAR_TAU]->getPointer(), 0, 0.02);

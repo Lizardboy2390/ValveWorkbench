@@ -3227,6 +3227,17 @@ void ValveWorkbench::modelPentode()
         // follow the same heuristics as the main fitted model.
         estimate.estimatePentode(measurement, triodeModel, GARDINER_PENTODE, false);
 
+        // Run a single Ceres fit using a temporary GardinerPentode so we get the
+        // same "estimate + one solve" behaviour as the main fitted pentode model.
+        std::unique_ptr<Model> tempGardiner(ModelFactory::createModel(GARDINER_PENTODE));
+        if (tempGardiner) {
+            tempGardiner->setEstimate(&estimate);
+            tempGardiner->setMode(NORMAL_MODE);
+            tempGardiner->setPreferences(&preferencesDialog);
+            tempGardiner->addMeasurement(measurement);
+            tempGardiner->solve();
+        }
+
         model = ModelFactory::createModel(SIMPLE_MANUAL_PENTODE);
         if (!model) {
             qWarning("Failed to create SimpleManualPentode model");
@@ -3236,15 +3247,51 @@ void ValveWorkbench::modelPentode()
         }
 
         if (auto *manual = dynamic_cast<SimpleManualPentode *>(model)) {
-            // Map overlapping Estimate fields into the manual model's parameters.
-            if (auto *p = manual->getParameterObject(PAR_MU))    p->setValue(estimate.getMu());
-            if (auto *p = manual->getParameterObject(PAR_KG1))   p->setValue(estimate.getKg1());
-            if (auto *p = manual->getParameterObject(PAR_KG2))   p->setValue(estimate.getKg2());
-            if (auto *p = manual->getParameterObject(PAR_KP))    p->setValue(estimate.getKp());
-            if (auto *p = manual->getParameterObject(PAR_A))     p->setValue(estimate.getA());
-            if (auto *p = manual->getParameterObject(PAR_ALPHA)) p->setValue(estimate.getAlpha());
-            if (auto *p = manual->getParameterObject(PAR_BETA))  p->setValue(estimate.getBeta());
-            if (auto *p = manual->getParameterObject(PAR_GAMMA)) p->setValue(estimate.getGamma());
+            // If the temporary Gardiner model was created and solved, copy the
+            // fitted parameters into the manual sliders. Otherwise fall back
+            // to using the raw Estimate seed values.
+            if (tempGardiner) {
+                // Copy both the triode/epk base parameters and the Gardiner
+                // pentode shaping parameters so Simple Manual Pentode starts
+                // as close as possible to the Gardiner fit before manual tweaks.
+                if (auto *p = manual->getParameterObject(PAR_MU))    p->setValue(tempGardiner->getParameter(PAR_MU));
+                if (auto *p = manual->getParameterObject(PAR_X))     p->setValue(tempGardiner->getParameter(PAR_X));
+                if (auto *p = manual->getParameterObject(PAR_KP))    p->setValue(tempGardiner->getParameter(PAR_KP));
+                if (auto *p = manual->getParameterObject(PAR_KVB))   p->setValue(tempGardiner->getParameter(PAR_KVB));
+                if (auto *p = manual->getParameterObject(PAR_KVB1))  p->setValue(tempGardiner->getParameter(PAR_KVB1));
+                if (auto *p = manual->getParameterObject(PAR_VCT))   p->setValue(tempGardiner->getParameter(PAR_VCT));
+
+                if (auto *p = manual->getParameterObject(PAR_KG1))   p->setValue(tempGardiner->getParameter(PAR_KG1));
+                if (auto *p = manual->getParameterObject(PAR_KG2))   p->setValue(tempGardiner->getParameter(PAR_KG2));
+                if (auto *p = manual->getParameterObject(PAR_A))     p->setValue(tempGardiner->getParameter(PAR_A));
+                if (auto *p = manual->getParameterObject(PAR_ALPHA)) p->setValue(tempGardiner->getParameter(PAR_ALPHA));
+                if (auto *p = manual->getParameterObject(PAR_BETA))  p->setValue(tempGardiner->getParameter(PAR_BETA));
+                if (auto *p = manual->getParameterObject(PAR_GAMMA)) p->setValue(tempGardiner->getParameter(PAR_GAMMA));
+
+                // Copy Os so any fitted offset floor is preserved in the
+                // manual model. This affects low-current behaviour.
+                if (auto *p = manual->getParameterObject(PAR_OS))    p->setValue(tempGardiner->getParameter(PAR_OS));
+
+                // If secondary emission is enabled globally, also copy the
+                // secondary-emission geometry so the knee/tail region matches.
+                if (preferencesDialog.useSecondaryEmission()) {
+                    if (auto *p = manual->getParameterObject(PAR_OMEGA))  p->setValue(tempGardiner->getParameter(PAR_OMEGA));
+                    if (auto *p = manual->getParameterObject(PAR_LAMBDA)) p->setValue(tempGardiner->getParameter(PAR_LAMBDA));
+                    if (auto *p = manual->getParameterObject(PAR_NU))     p->setValue(tempGardiner->getParameter(PAR_NU));
+                    if (auto *p = manual->getParameterObject(PAR_S))      p->setValue(tempGardiner->getParameter(PAR_S));
+                    if (auto *p = manual->getParameterObject(PAR_AP))     p->setValue(tempGardiner->getParameter(PAR_AP));
+                }
+            } else {
+                // Map overlapping Estimate fields into the manual model's parameters.
+                if (auto *p = manual->getParameterObject(PAR_MU))    p->setValue(estimate.getMu());
+                if (auto *p = manual->getParameterObject(PAR_KG1))   p->setValue(estimate.getKg1());
+                if (auto *p = manual->getParameterObject(PAR_KG2))   p->setValue(estimate.getKg2());
+                if (auto *p = manual->getParameterObject(PAR_KP))    p->setValue(estimate.getKp());
+                if (auto *p = manual->getParameterObject(PAR_A))     p->setValue(estimate.getA());
+                if (auto *p = manual->getParameterObject(PAR_ALPHA)) p->setValue(estimate.getAlpha());
+                if (auto *p = manual->getParameterObject(PAR_BETA))  p->setValue(estimate.getBeta());
+                if (auto *p = manual->getParameterObject(PAR_GAMMA)) p->setValue(estimate.getGamma());
+            }
         } else {
             qWarning("Created pentode model is not a SimpleManualPentode instance");
         }

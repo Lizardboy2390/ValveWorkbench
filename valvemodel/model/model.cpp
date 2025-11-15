@@ -200,11 +200,9 @@ void Model::setEstimate(Estimate *estimate)
     this->estimate = estimate;
 
     parameter[PAR_MU]->setValue(estimate->getMu());
-    double estimateKg1 = estimate->getKg1();
-    if (estimateKg1 > 0.01) {
-        estimateKg1 /= 1000.0;
-    }
-    parameter[PAR_KG1]->setValue(estimateKg1);
+    // Use Kg1 from Estimate directly; pentode seeds are already in a
+    // sensible 0–5 range, so no milliscale /1000 adjustment.
+    parameter[PAR_KG1]->setValue(estimate->getKg1());
     parameter[PAR_X]->setValue(estimate->getX());
     parameter[PAR_KP]->setValue(estimate->getKp());
     parameter[PAR_KVB]->setValue(estimate->getKvb());

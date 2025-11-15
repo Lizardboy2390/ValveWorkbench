@@ -36,60 +36,47 @@ void SimpleManualPentode::setOptions()
     options.linear_solver_type = ceres::DENSE_QR;
 }
 
-// Web-style Simple Manual Pentode anode current.
-// epk follows pentodemodeller.js:
-//   epk = (vg2 / kp * log(1 + exp(kp * (1/mu - vg1/vg2))))^1.5
-// Knee / tail use the same Reefman-style form (alpha, beta, gamma, A).
+// Gardiner-style anode current so Simple Manual Pentode tracks
+// the same behaviour as the main GardinerPentode model.
 
 double SimpleManualPentode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
-    Q_UNUSED(secondaryEmission);
+    // Normalize screen voltage to volts for Epk helper (measurement
+    // may be kV-like, e.g. 0.250).
+    double v2_for_epk = (std::fabs(vg2) < 5.0 ? vg2 * 1000.0 : vg2);
+    double epk = cohenHelieEpk(v2_for_epk, vg1);
+    // Runtime stability: prevent hard-zero collapse at strong -Vg1
+    // during plotting.
+    epk = std::max(epk, 1e-6);
 
-    double mu    = parameter[PAR_MU]->getValue();
     double kg1   = parameter[PAR_KG1]->getValue();
     double kg2   = parameter[PAR_KG2]->getValue();
-    double kp    = parameter[PAR_KP]->getValue();
     double alpha = parameter[PAR_ALPHA]->getValue();
     double beta  = parameter[PAR_BETA]->getValue();
     double gamma = parameter[PAR_GAMMA]->getValue();
     double A     = parameter[PAR_A]->getValue();
 
-    // Basic guards to avoid degenerate or explosive values
-    if (vg2 == 0.0 || std::fabs(vg2) < 1e-6) {
+    if (kg1 <= 0.0 || kg2 <= 0.0) {
         return 0.0;
     }
-    if (mu <= 0.0 || kp <= 0.0 || kg1 <= 0.0 || kg2 <= 0.0) {
-        return 0.0;
-    }
-
-    // Web-style epk: clamp exponent to keep exp() numerically stable
-    double inner = kp * (1.0 / mu - vg1 / vg2);
-    const double innerClamp = 60.0; // exp(±60) is already extreme
-    if (inner > innerClamp)  inner = innerClamp;
-    if (inner < -innerClamp) inner = -innerClamp;
-
-    double expInner = std::exp(inner);
-    double logTerm  = std::log1p(expInner); // log(1 + exp(inner))
-    double base     = (vg2 / kp) * logTerm;
-    if (!(std::isfinite(base)) || base <= 0.0) {
-        return 0.0;
-    }
-    double epk = std::pow(base, 1.5);
 
     double k     = 1.0 / kg1 - 1.0 / kg2;
     double shift = beta * (1.0 - alpha * vg1);
-    double g     = 1.0 / (1.0 + std::pow(shift * va, gamma));
+    double g     = std::exp(-std::pow(shift * va, gamma));
     double scale = 1.0 - g;
 
-    double ia    = epk * (k * scale + A * va / kg1);
+    double vco = vg2 / parameter[PAR_LAMBDA]->getValue()
+                 - vg1 * parameter[PAR_NU]->getValue()
+                 - parameter[PAR_OMEGA]->getValue();
+    double psec = parameter[PAR_S]->getValue() * va
+                  * (1.0 + std::tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
 
-    // Empirical scaling: the raw epk expression yields currents several
-    // orders of magnitude larger than typical pentode measurements in mA.
-    // Based on previous iaMax diagnostics (~4.7e6 vs ~20–40 mA), use
-    // a smaller global scale factor so the manual model starts in a
-    // realistic tens-of-mA range for 6L6-like tubes.
-    const double scaleIa = 5e-6; // ~1/2e5; adjust if future tubes need a tweak
-    ia *= scaleIa;
+    double ia = epk * (k * scale + A * va / kg2)
+                + parameter[PAR_OS]->getValue() * vg2;
+
+    if (secondaryEmission) {
+        ia = ia - epk * psec / kg2;
+    }
 
     if (!std::isfinite(ia) || ia < 0.0) {
         return 0.0;

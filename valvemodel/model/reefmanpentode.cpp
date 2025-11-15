@@ -46,14 +46,53 @@ private:
 
 double ReefmanPentode::anodeCurrent(double va, double vg1, double vg2)
 {
-    double epk = cohenHelieEpk(vg2, vg1);
-    double k = 1.0 / parameter[PAR_KG1]->getValue() - 1.0 / parameter[PAR_KG2]->getValue();
-    double shift = parameter[PAR_BETA]->getValue() * (1.0 - parameter[PAR_ALPHA]->getValue() * vg1);
-    //double g = exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
-    double g = 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
-    double scale = 1.0 - g;
-    double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG1]->getValue());
+    // Treat cohenHelieEpk as the Koren-style current IP,Koren(Vg2, Vg1).
+    // Follow GardinerPentode in how we interpret screen voltage units for epk.
+    double v2_for_epk = (std::fabs(vg2) < 5.0 ? vg2 * 1000.0 : vg2);
+    double IP = cohenHelieEpk(v2_for_epk, vg1);
 
+    if (!std::isfinite(IP) || IP <= 0.0) {
+        return 0.0;
+    }
+
+    const double kg1   = parameter[PAR_KG1]->getValue();
+    const double kg2   = parameter[PAR_KG2]->getValue();
+    const double A     = parameter[PAR_A]->getValue();
+    const double betaS = parameter[PAR_BETA]->getValue();   // βs in Theory.pdf
+    const double phi   = parameter[PAR_ALPHA]->getValue();   // φ in Theory.pdf
+
+    if (kg1 <= 0.0 || kg2 <= 0.0 || !std::isfinite(phi)) {
+        return 0.0;
+    }
+
+    // β = 1 − (kg1/kg2) * (1 + βs)
+    const double beta = 1.0 - (kg1 / kg2) * (1.0 + betaS);
+    const double common = beta / kg1 + betaS / kg2;
+
+    // Base term shared by Derk and DerkE: 1/kg1 − 1/kg2 + A * Va / kg1
+    double base = (1.0 / kg1 - 1.0 / kg2) + (A * va / kg1);
+
+    if (modelType == DERK) {
+        // Derk model (Eq. 25 in Theory.pdf): subtract common / (1 + φ Va)
+        double denom = 1.0 + phi * va;
+        if (denom < 1e-9) {
+            denom = 1e-9;
+        }
+        base -= common / denom;
+    } else {
+        // DerkE model (Eq. 30): subtract e^{-(φ Va)^{3/2}} * common
+        double t = phi * va;
+        if (t < 0.0) {
+            t = 0.0;
+        }
+        double decay = std::exp(-std::pow(t, 1.5));
+        base -= decay * common;
+    }
+
+    double ia = IP * base;
+    if (!std::isfinite(ia) || ia <= 0.0) {
+        return 0.0;
+    }
     return ia;
 }
 
