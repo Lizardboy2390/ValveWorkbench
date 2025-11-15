@@ -85,6 +85,22 @@ template <typename T> int sgn(T val) {
 
 class Estimate;
 
+struct SmallSignalResult
+{
+    double gm;   // mA/V
+    double ra;   // kΩ (V/mA)
+    double mu;   // dimensionless
+    bool   valid;
+
+    SmallSignalResult()
+        : gm(std::numeric_limits<double>::quiet_NaN()),
+          ra(std::numeric_limits<double>::quiet_NaN()),
+          mu(std::numeric_limits<double>::quiet_NaN()),
+          valid(false)
+    {
+    }
+};
+
 /**
  * @brief The Model class
  *
@@ -127,6 +143,7 @@ public:
     virtual double anodeCurrent(double va, double vg1, double vg2 = 0.0, bool secondaryEmission = true) = 0;
     virtual double anodeVoltage(double ia, double vg1, double vg2 = 0.0, bool secondaryEmission = true);
     virtual double screenCurrent(double va, double vg1, double vg2, bool secondaryEmission = true);
+    SmallSignalResult computeSmallSignal(double va0, double vg1_0, double vg2_0 = 0.0, bool secondaryEmission = true);
     virtual QString getName() = 0;
     virtual int getType() = 0;
 

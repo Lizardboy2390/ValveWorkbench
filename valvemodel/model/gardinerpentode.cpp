@@ -467,7 +467,7 @@ void GardinerPentode::updateUI(QLabel *labels[], QLineEdit *values[])
 
 QString GardinerPentode::getName()
 {
-    return "Cohen Helie Pentode";
+    return "Gardiner Pentode";
 }
 
 int GardinerPentode::getType()
