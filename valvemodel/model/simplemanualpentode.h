@@ -26,6 +26,9 @@ public:
     virtual int getType() override;
     virtual void updateProperties(QTableWidget *properties) override;
 
+    // Helper for UI layers (e.g. SimpleManualPentodeDialog) to access Parameter objects
+    Parameter *getParameterObject(int index) { return parameter[index]; }
+
 protected:
     void setOptions() override;
 };

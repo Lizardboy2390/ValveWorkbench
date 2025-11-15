@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-13 (pentode solver bounds/logging stabilised)
+Last updated: 2025-11-14 (pentode experiments reverted; baseline restored; Simple Manual Pentode UI wired)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -16,7 +16,13 @@ Last updated: 2025-11-13 (pentode solver bounds/logging stabilised)
 ### 2025-11-13 Summary (Pentode)
 - Gardiner/Reefman fitting stabilised by reapplying deferred bounds to all solve stages (anode, screen, remodel) and null-initialising the shared parameter array before logging.
 - Logging remains verbose (MODEL INPUT / PENTODE SOLVER START) but runs without crashes; solver overlays now align closely with measured sweeps.
-- Triode modelling continues to behave as before; Simple Manual Pentode backend still awaits UI controls.
+- Triode modelling continues to behave as before; Simple Manual Pentode backend is now implemented and wired to a popup dialog, seeded from Estimate, but its current scaling is not yet calibrated.
+
+### 2025-11-14 Note (Reefman / plotting regressions)
+- Experimental changes to Reefman pentode bounds, defaults, and shared pentode plotting were found to destabilise all pentode model plots (diagonal / vertical families and inconsistent re-plots when toggling tree items).
+- These experiments were fully reverted via version control; the current baseline is the pre-experiment commit where Gardiner pentode overlays behaved correctly.
+- Gardiner remains the reference Ceres-based pentode fit; Reefman pentode models are still non-convergent on current measurements and should be treated as experimental until a new branch is created for further work.
+- Any future Reefman/uTracer or plotting work must be done on an isolated branch with aggressive before/after visual checks, and must not change Gardiner behaviour in the mainline without explicit approval.
 
 ## Key Code Changes
 
@@ -91,15 +97,38 @@ Additional (2025-11-05):
 - Device `anodeVoltage(Ia,Vg)` under strongly negative Vg returns invalid/edge values → few/no cathode points.
 
 ## Next Steps (Recommended)
-1) **Do not modify the existing Gardiner/Reefman pentode estimator or plotting until a new path is working.** Baseline behaviour is restored and should be treated as reference.
-2) Implement a new **Simple Manual Pentode** model that mirrors the web `pentodemodeller.js` equations:
-   - Backend: web-style `epk` and anode-current function using `mu, kp, kg1, kg2, alpha, beta, gamma, a`, no Ceres auto-fit initially.
-   - UI: sliders / numeric fields on the existing Modeller pentode tab for these parameters, replotting curves live over measured pentode data.
-   - Selection: add "Simple Manual Pentode" as a model type alongside Gardiner/Reefman in the existing pentode model selection.
-3) Current status: `SimpleManualPentode` backend is implemented with a web-style `epk` anode-current function and is selectable as a pentode model type via the Options dialog; it does not add Ceres residuals and is intended for manual/slider control first.
-4) Next: add Modeller UI sliders / numeric fields for Simple Manual Pentode parameters and wire them to update the model parameters and replot curves live over measured pentode data.
-5) Once the Simple Manual Pentode behaves like the web modeller for representative tubes (e.g. 6L6, EL34), design a **minimal auto-fit layer** on top of it (fit only a small subset of parameters) and wire it in as an optional step.
-6) After Simple Manual Pentode is stable, reassess whether Gardiner/Reefman pentode fitting needs further work or can be left as-is.
+1) **Protect the current baseline**
+   - Do not modify the existing Gardiner/Reefman pentode estimator or plotting in `main` until a new path is working and visually validated.
+   - Treat Gardiner as the **reference Ceres-based pentode fit** for all regression checks.
+
+2) **Simple Manual Pentode – manual slider modeller**
+- Intent: Simple Manual Pentode is a *purely manual* modeller, driven by UI controls rather than Ceres, but **seeded** from the same `Estimate::estimatePentode` used for Gardiner so the initial curve family is in the right general shape/scale.
+- Backend: web-style `epk` anode-current function using `mu, kp, kg1, kg2, alpha, beta, gamma, a` (and related shaping parameters), matching the existing web tool.
+- UI (implemented):
+  - Non-modal popup dialog on the Modeller tab with sliders / numeric fields for `mu, kp, kg1, kg2, alpha, beta, gamma, a`.
+  - When Simple Manual Pentode is selected as the pentode fit mode and **Fit Pentode…** is pressed, a new `SimpleManualPentode` is created, seeded from `Estimate`, plotted over the current pentode measurement, and bound to the popup controls.
+  - Re-selecting the Simple Manual Pentode node in the project tree uses the **saved model instance** for plotting rather than a temporary Estimate model, so manual tweaks persist.
+- Current limitation:
+  - `SimpleManualPentode::anodeCurrent` scaling is not yet fully calibrated to the global mA convention or to Gardiner’s unified Ia expression. For the same numeric parameters, Simple Manual can be tens–hundreds of times off in magnitude, and the current empirical `scaleIa` factor is only a stopgap. Manual curves are therefore not yet production-quality; Gardiner remains the reference fit.
+- Behavioural contract (target):
+  - No Ceres fitting in the manual path; the user is in full control of parameter values once seeded.
+  - No shared mutable state with Gardiner/Reefman fitting beyond reading the same Measurement; changing sliders must not affect Gardiner in any way.
+
+3) **Reefman Pentode – alignment with ExtractModel_3p0 (experimental branch only)**
+   - Goal: Bring the `ReefmanPentode` model’s static Ia/Ig2 behaviour closer to Derk Reefman’s ExtractModel tool located at `C:\Users\lizar\Documents\ExtractModel_3p0` for representative tubes.
+   - Process (high level):
+     - Create a dedicated branch (e.g. `feature/reefman-extractmodel`) and keep all Reefman/uTracer work isolated there.
+     - For a chosen tube, take a trusted parameter set from ExtractModel_3p0 and record Ia/Ig2 values at a small grid of (Va, Vg1, Vg2) points.
+     - In that branch, compare `ReefmanPentode::anodeCurrent` (and screen-current path) against ExtractModel outputs at those points:
+       - Confirm unit conventions (mA vs A, kg1/kg2 scaling, exponents alpha/beta/gamma, any clipping or offsets).
+       - Adjust the Reefman equations only in that branch until Ia/Ig2 match ExtractModel within a small tolerance for the test grid, *before* enabling Ceres fitting.
+     - Once static behaviour matches, carefully reintroduce Ceres bounds and seeding for Reefman, still on the experimental branch, and verify that Gardiner behaviour is unchanged.
+   - Mainline policy:
+     - No Reefman/uTracer changes should be merged into `main` unless Gardiner plots are visually unchanged and regression plots pass.
+     - ExtractModel alignment is a long‑running, experimental effort and should not disrupt day-to-day use of Gardiner or Simple Manual Pentode.
+
+4) **Reevaluation after manual path is solid**
+   - Once the Simple Manual Pentode path behaves like the web modeller for representative tubes (e.g. 6L6, EL34), revisit Reefman fitting to decide whether it should be maintained, replaced by the manual+minimal-fit path, or left as an advanced/experimental option only.
 
 ## Test Checklist
 - Designer: Triode CC, Device: 12AX7, Params: Vb=250, Ra=100k, Rk=1.5k, RL=1M.

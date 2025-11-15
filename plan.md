@@ -10,9 +10,9 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
 - Analyser: Automated sweeps remain stable; Save to Project prompts every time
 - Designer: Triode Common Cathode enhancements completed (2025‑11‑06): axes clamp, overlays cleared, gain/swing UI refreshed
 
-- Reliability: Verify full measurement → save → pentode fit → overlay workflow with new logging/bounds
-- Pentode UX: surface manual/automatic fitting options (Simple Manual Pentode sliders TBD)
-- Documentation: End‑user README, plan, tasks, handoff kept current with pentode progress
+- Reliability: Verify full measurement → save → pentode fit → overlay workflow with the restored baseline (no experimental Reefman/bounds changes)
+- Pentode UX: surface manual/automatic fitting options (Simple Manual Pentode sliders TBD, manual-first)
+- Documentation: End‑user README, plan, tasks, handoff kept current with pentode progress and branch policy for experimental pentode work (Reefman/ExtractModel alignment on a dedicated branch)
 
 ## Milestones
 - M1: Workflow baseline (complete)
@@ -41,10 +41,18 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
 - Later: Add explicit "Calculate" button in Designer; refresh README screenshots once pentode UI finalizes
 
 ### Pentode Modelling (in progress)
-- Gardiner/Reefman path: parameter bounds now applied across solve stages, logging cleaned up, overlays match measurement families
-- **Simple Manual Pentode** backend exists (web-style `epk` formula, no auto-fit yet)
-- Next: expose manual parameters in UI (sliders / numeric inputs) and replot live over measured data
-- Later: once manual path mirrors web tool for representative tubes (6L6, EL34), prototype minimal auto-fit over a subset of parameters
+- Gardiner path: parameter bounds applied across solve stages, logging cleaned up, and overlays match measurement families in the restored baseline. Gardiner remains the stable reference Ceres-based pentode fit in `main`.
+- Reefman path: still non-convergent/unstable on current measurements; treat as experimental only and keep any further work on a dedicated branch.
+- **Simple Manual Pentode**: backend `epk` formula implemented **and** Modeller popup UI wired (sliders for `mu, kp, kg1, kg2, alpha, beta, gamma, a`). Simple Manual Pentode can now be selected as the pentode fit mode, seeded from the same `Estimate::estimatePentode` used for Gardiner, and adjusted live via sliders.
+- Current limitation: Simple Manual Pentode `anodeCurrent` scaling is not yet calibrated to the global mA convention; first-pass curves from the slider model do not reliably match Gardiner/measurement magnitude. Use Gardiner for production fits until a dedicated calibration pass is done.
+- Experimental (branch-only): on a dedicated branch (e.g. `feature/reefman-extractmodel`), work toward aligning Reefman pentode behaviour with the standalone ExtractModel_3p0 tool at `C:\Users\lizar\Documents\ExtractModel_3p0` by comparing Ia/Ig2 at selected operating points.
+- Later: once the Simple Manual Pentode path mirrors the web tool and Gardiner in both shape and scale for representative tubes (6L6, EL34), consider a minimal auto-fit layer over a subset of parameters.
+
+#### Option 3 (future): Manual Gardiner-style pentode
+- Longer term, consider a separate "Manual Gardiner Pentode" model that:
+  - Shares Gardiner's unified Ia expression and full parameter set (mu, kg1, kg2/kg2a, kp, kvb, kvb1, vct, a, alpha, beta, gamma, os, etc.).
+  - Is driven purely by Modeller sliders/fields (no Ceres solve), optionally **seeded** from `Estimate::estimatePentode` so the initial curves match the automatic Gardiner fit.
+  - Acts as a manual debug/tuning view of the working Gardiner model, avoiding the unit/scale mismatch inherent in the current Simple Manual Pentode epk formulation.
 
 ## Change log (highlights)
 - 2025‑11‑06: Designer (Triode CC) overlays complete (Max Swing brown / Max Sym Swing blue); Input sensitivity into Designer; K bypass + single Gain; gm/ra formatting; cathode line clipping; Pa‑max entry fix; docs updated

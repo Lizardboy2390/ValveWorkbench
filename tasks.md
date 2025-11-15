@@ -3,18 +3,21 @@
 Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Active tasks (end-user focused)
-- [ ] Validate measurement → save → pentode fit → overlay workflow with new bounds/logging changes (capture before/after plots for docs).
-- [ ] Modeller UI: add sliders / numeric fields for Simple Manual Pentode parameters (`mu, kp, kg1, kg2, alpha, beta, gamma, a`) and replot curves live over measured pentode data.
-- [ ] Optional: once Simple Manual Pentode matches the web tool visually for key tubes, add a small auto-fit layer on top (fit a subset of parameters only).
+- [ ] Validate measurement → save → pentode fit → overlay workflow using the restored baseline (no experimental Reefman/bounds changes); use Gardiner as the visual reference for pentode auto-fit.
+- [ ] Calibrate **Simple Manual Pentode** current scaling so that `anodeCurrent` returns mA in the same numeric range as measurement and Gardiner/Reefman for representative tubes (e.g. 6L6). Remove ad-hoc empirical scale factors once a stable mapping is found.
+- [ ] Optional: once Simple Manual Pentode matches the web tool and Gardiner visually for key tubes (e.g. 6L6, EL34), add a small auto-fit layer on top that adjusts only a subset of parameters while keeping the manual feel.
 - [ ] Designer: ensure device selection auto-replots and axes clamp to device limits.
-- [ ] README: briefly describe Simple Manual Pentode and note that legacy Gardiner/Reefman pentode fits are unchanged.
+- [ ] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
+- [ ] Experimental branch: on a separate branch (e.g. `feature/reefman-extractmodel`), work toward aligning `ReefmanPentode` behaviour with ExtractModel_3p0 located at `C:\Users\lizar\Documents\ExtractModel_3p0`, using common parameter sets and sample Ia/Ig2 points as reference.
 
 ## Recently completed
 - [x] Restored analyser and pentode modeller to baseline behaviour after experimental kg1/curvature changes.
-- [x] Added backend **SimpleManualPentode** model type, wired it into ModelFactory / Options, and updated it to use a web-style `epk` anode-current formula (no sliders or auto-fitting yet).
+- [x] Added backend **SimpleManualPentode** model type, wired it into ModelFactory / Options, and updated it to use a web-style `epk` anode-current formula.
+- [x] Implemented **Simple Manual Pentode** Modeller popup UI (sliders for `mu, kp, kg1, kg2, alpha, beta, gamma, a`), seeded from `Estimate::estimatePentode`, and wired plotting so that the saved instance is used when reselecting the model in the project tree.
 - [x] Stabilised Gardiner/Reefman pentode fitting: reapply deferred bounds to all solve stages and null-initialise parameter array for safe logging (2025-11-13).
 
 ## Change log (highlights)
+- 2025-11-14: Further experimental Reefman/pentode plotting changes caused regressions; all such changes were reverted via VCS and baseline behaviour restored, with Gardiner as reference.
 - 2025-11-13: Gardiner/Reefman pentode solver bounds/logging fix; curves now align with measurement families; docs scheduled for refresh.
 - 2025-11-13: Pentode plotting experiments (kg1 anchor/curvature) tried and reverted; SimpleManualPentode backend added as a new, manual model path; UI work pending.
 - 2025-11-02: Save-to-Project dialog prompts every time; modelling grid-polarity guard

@@ -12,6 +12,16 @@
 SimpleManualPentode::SimpleManualPentode()
 {
     setOptions();
+
+    // 6L6-GC oriented starting values for manual modelling
+    if (parameter[PAR_MU])    parameter[PAR_MU]->setValue(9.0);
+    if (parameter[PAR_KP])    parameter[PAR_KP]->setValue(350.0);
+    if (parameter[PAR_KG1])   parameter[PAR_KG1]->setValue(0.70);
+    if (parameter[PAR_KG2])   parameter[PAR_KG2]->setValue(0.18);
+    if (parameter[PAR_ALPHA]) parameter[PAR_ALPHA]->setValue(0.30);
+    if (parameter[PAR_BETA])  parameter[PAR_BETA]->setValue(0.55);
+    if (parameter[PAR_GAMMA]) parameter[PAR_GAMMA]->setValue(1.6);
+    if (parameter[PAR_A])     parameter[PAR_A]->setValue(0.05);
 }
 
 void SimpleManualPentode::setOptions()
@@ -72,6 +82,15 @@ double SimpleManualPentode::anodeCurrent(double va, double vg1, double vg2, bool
     double scale = 1.0 - g;
 
     double ia    = epk * (k * scale + A * va / kg1);
+
+    // Empirical scaling: the raw epk expression yields currents several
+    // orders of magnitude larger than typical pentode measurements in mA.
+    // Based on previous iaMax diagnostics (~4.7e6 vs ~20–40 mA), use
+    // a smaller global scale factor so the manual model starts in a
+    // realistic tens-of-mA range for 6L6-like tubes.
+    const double scaleIa = 5e-6; // ~1/2e5; adjust if future tubes need a tweak
+    ia *= scaleIa;
+
     if (!std::isfinite(ia) || ia < 0.0) {
         return 0.0;
     }

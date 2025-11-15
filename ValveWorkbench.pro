@@ -62,6 +62,7 @@ SOURCES += \
     valvemodel/ui/uibridge.cpp \
     valvemodel/ui/plot.cpp \
     valvemodel/ui/parameter.cpp \
+    valvemodel/ui/simplemanualpentodedialog.cpp \
     valvemodel/ui/moc_uibridge.cpp \
 
 HEADERS += \
@@ -77,6 +78,7 @@ HEADERS += \
     valvemodel/circuit/triodecommoncathode.h \
     valvemodel/circuit/triodedccathodefollower.h \
     valvemodel/ui/parameter.h \
+    valvemodel/ui/simplemanualpentodedialog.h \
     valvemodel/model/quadraticsolver.h
 
 # Using Ceres installed in C:/Ceres_Install/ceres-solver

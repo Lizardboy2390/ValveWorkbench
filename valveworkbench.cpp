@@ -48,6 +48,8 @@
 #include "comparedialog.h"
 
 #include "valvemodel/circuit/sharedspice.h"
+#include "valvemodel/model/simplemanualpentode.h"
+#include "valvemodel/ui/simplemanualpentodedialog.h"
 
 int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
     // Callback for ngSpice to send characters (e.g., print output)
@@ -1016,6 +1018,51 @@ void ValveWorkbench::selectModel(int modelType)
 {
     customDevice->setModelType(modelType);
     //customDevice->updateUI(parameterLabels, parameterValues);
+}
+
+void ValveWorkbench::plotCurrentModelOverMeasurement()
+{
+    if (!model || !currentMeasurement) {
+        return;
+    }
+
+    if (currentMeasurement->getDeviceType() != PENTODE) {
+        return;
+    }
+
+    if (modelledCurves) {
+        plot.remove(modelledCurves);
+        modelledCurves = nullptr;
+    }
+
+    QGraphicsItemGroup *plotted = model->plotModel(&plot, currentMeasurement, nullptr);
+    if (plotted) {
+        modelledCurves = plotted;
+        plot.add(modelledCurves);
+        modelledCurves->setVisible(ui->modelCheck->isChecked());
+    }
+}
+
+void ValveWorkbench::ensureSimplePentodeDialog()
+{
+    auto *manual = dynamic_cast<SimpleManualPentode*>(model);
+    if (!manual) {
+        if (simplePentodeDialog) {
+            simplePentodeDialog->hide();
+        }
+        return;
+    }
+
+    if (!simplePentodeDialog) {
+        simplePentodeDialog = new SimpleManualPentodeDialog(this);
+        connect(simplePentodeDialog, &SimpleManualPentodeDialog::parametersChanged,
+                this, &ValveWorkbench::plotCurrentModelOverMeasurement);
+    }
+
+    simplePentodeDialog->setModel(manual);
+    simplePentodeDialog->show();
+    simplePentodeDialog->raise();
+    simplePentodeDialog->activateWindow();
 }
 
 void ValveWorkbench::selectCircuit(int circuitType)
@@ -2442,32 +2489,47 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 qInfo("Current measurement device type: %d, model type: %d",
                        currentMeasurement->getDeviceType(), model->getType());
 
-                if ((currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE) ||
-                    (currentMeasurement->getDeviceType() == PENTODE && model->getType() == GARDINER_PENTODE)) {
+                const bool triodeMatch =
+                    (currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE);
+                const bool pentodeMatch =
+                    (currentMeasurement->getDeviceType() == PENTODE &&
+                     (model->getType() == GARDINER_PENTODE || model->getType() == SIMPLE_MANUAL_PENTODE));
+
+                if (triodeMatch || pentodeMatch) {
                     qInfo("Type check PASSED - proceeding with model plotting");
                     plot.remove(modelledCurves);
                     QGraphicsItemGroup *plotted = nullptr;
-                    // Prefer a pentode model instance for pentode measurements to avoid triode evaluation clamps
-                    if (currentMeasurement->getDeviceType() == PENTODE) {
-                        qInfo("PENTODE: Using temporary pentode model for plotting to match measurement device type");
-                        Estimate quick;
-                        // Use any available triode model as seed if present; otherwise nullptr is fine
-                        CohenHelieTriode *seedTriode = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
-                        quick.estimatePentode(currentMeasurement, seedTriode, pentodeModelType, false);
 
-                        std::unique_ptr<Model> temp(ModelFactory::createModel(pentodeModelType));
-                        if (temp) {
-                            temp->setEstimate(&quick);
-                            temp->setPreferences(&preferencesDialog);
-                            temp->setShowScreen(showScreen);
-                            // Add data to the temporary model before solving
-                            temp->addMeasurement(currentMeasurement);
-                            // Solve anode (NORMAL_MODE) quickly so parameters are reasonable before plotting
-                            temp->setMode(NORMAL_MODE);
-                            temp->solve();
-                            plotted = temp->plotModel(&plot, currentMeasurement, sweep);
+                    if (currentMeasurement->getDeviceType() == PENTODE) {
+                        // For Simple Manual Pentode, use the saved model instance directly so
+                        // manual slider tuning and JSON-loaded parameters are respected.
+                        if (model->getType() == SIMPLE_MANUAL_PENTODE) {
+                            qInfo("PENTODE: Using saved SimpleManualPentode instance for plotting");
+                            plotted = model->plotModel(&plot, currentMeasurement, sweep);
                         } else {
-                            qWarning("PENTODE: Failed to create temporary pentode model; falling back to current model instance");
+                            // For fitted pentode models (Gardiner/Reefman), keep using a temporary
+                            // model seeded from Estimate so plotting matches the current measurement
+                            // without relying on any particular saved instance.
+                            qInfo("PENTODE: Using temporary pentode model for plotting to match measurement device type");
+                            Estimate quick;
+                            // Use any available triode model as seed if present; otherwise nullptr is fine
+                            CohenHelieTriode *seedTriode = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
+                            quick.estimatePentode(currentMeasurement, seedTriode, pentodeModelType, false);
+
+                            std::unique_ptr<Model> temp(ModelFactory::createModel(pentodeModelType));
+                            if (temp) {
+                                temp->setEstimate(&quick);
+                                temp->setPreferences(&preferencesDialog);
+                                temp->setShowScreen(showScreen);
+                                // Add data to the temporary model before solving
+                                temp->addMeasurement(currentMeasurement);
+                                // Solve anode (NORMAL_MODE) quickly so parameters are reasonable before plotting
+                                temp->setMode(NORMAL_MODE);
+                                temp->solve();
+                                plotted = temp->plotModel(&plot, currentMeasurement, sweep);
+                            } else {
+                                qWarning("PENTODE: Failed to create temporary pentode model; falling back to current model instance");
+                            }
                         }
                     }
 
@@ -3137,13 +3199,6 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
 void ValveWorkbench::modelPentode()
 {
     doPentodeModel = false; // We're doing it now so don't want to do it again!
-
-    CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
-
-    if (triodeModel == nullptr) {
-        qWarning("No triode model found in project - proceeding with gradient-based seed for pentode fit");
-    }
-
     Measurement *measurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
 
     if (measurement == nullptr) {
@@ -3155,6 +3210,59 @@ void ValveWorkbench::modelPentode()
         ui->fitTriodeButton->setEnabled(true);
 
         return;
+    }
+
+    if (pentodeModelType == SIMPLE_MANUAL_PENTODE) {
+        // Manual, non-Ceres path: seed SimpleManualPentode from the same Estimate
+        // used for Gardiner/Reefman so the initial manual curves match an automatic
+        // fit in shape and scale, then allow refinement via sliders.
+
+        CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
+        if (triodeModel == nullptr) {
+            qWarning("No triode model found in project - proceeding with gradient-based seed for manual pentode fit");
+        }
+
+        Estimate estimate;
+        // Use GARDINER_PENTODE as the estimation target so alpha/beta/gamma, etc.
+        // follow the same heuristics as the main fitted model.
+        estimate.estimatePentode(measurement, triodeModel, GARDINER_PENTODE, false);
+
+        model = ModelFactory::createModel(SIMPLE_MANUAL_PENTODE);
+        if (!model) {
+            qWarning("Failed to create SimpleManualPentode model");
+            ui->fitPentodeButton->setEnabled(true);
+            ui->fitTriodeButton->setEnabled(true);
+            return;
+        }
+
+        if (auto *manual = dynamic_cast<SimpleManualPentode *>(model)) {
+            // Map overlapping Estimate fields into the manual model's parameters.
+            if (auto *p = manual->getParameterObject(PAR_MU))    p->setValue(estimate.getMu());
+            if (auto *p = manual->getParameterObject(PAR_KG1))   p->setValue(estimate.getKg1());
+            if (auto *p = manual->getParameterObject(PAR_KG2))   p->setValue(estimate.getKg2());
+            if (auto *p = manual->getParameterObject(PAR_KP))    p->setValue(estimate.getKp());
+            if (auto *p = manual->getParameterObject(PAR_A))     p->setValue(estimate.getA());
+            if (auto *p = manual->getParameterObject(PAR_ALPHA)) p->setValue(estimate.getAlpha());
+            if (auto *p = manual->getParameterObject(PAR_BETA))  p->setValue(estimate.getBeta());
+            if (auto *p = manual->getParameterObject(PAR_GAMMA)) p->setValue(estimate.getGamma());
+        } else {
+            qWarning("Created pentode model is not a SimpleManualPentode instance");
+        }
+
+        model->setPreferences(&preferencesDialog);
+        currentMeasurement = measurement;
+        plotCurrentModelOverMeasurement();
+        ensureSimplePentodeDialog();
+
+        ui->fitPentodeButton->setEnabled(true);
+        ui->fitTriodeButton->setEnabled(true);
+        return;
+    }
+
+    CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
+
+    if (triodeModel == nullptr) {
+        qWarning("No triode model found in project - proceeding with gradient-based seed for pentode fit");
     }
 
     Estimate estimate;
@@ -3263,7 +3371,11 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
                 }
             } else if (project->getDeviceType() == PENTODE) {
                 ui->fitTriodeButton->setVisible(false);
+                // For Simple Manual Pentode, keep the button but it opens the manual path
                 ui->fitPentodeButton->setVisible(true);
+                if (pentodeModelType == SIMPLE_MANUAL_PENTODE) {
+                    ensureSimplePentodeDialog();
+                }
             } else {
                 ui->fitTriodeButton->setVisible(false);
                 ui->fitPentodeButton->setVisible(false);

@@ -27,6 +27,8 @@
 #include "ledindicator/ledindicator.h"
 #include "preferencesdialog.h"
 
+class SimpleManualPentodeDialog;
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class ValveWorkbench; }
 QT_END_NAMESPACE
@@ -264,6 +266,8 @@ private:
 
     PreferencesDialog preferencesDialog;
 
+    SimpleManualPentodeDialog *simplePentodeDialog = nullptr;
+
     void checkComPorts();
     void setSerialPort(QString portName);
 
@@ -295,6 +299,8 @@ private:
     double updatePMax();
     double updateIaMax();
     void updateParameterDisplay();
+    void plotCurrentModelOverMeasurement();
+    void ensureSimplePentodeDialog();
     void doPlot();
     QTreeWidgetItem *getProject(QTreeWidgetItem *current);
     QTreeWidgetItem *getParent(QTreeWidgetItem *current, int type);
