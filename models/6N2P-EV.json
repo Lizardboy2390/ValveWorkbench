@@ -1,18 +1,27 @@
 {
-    "iaMax": 5,
-    "model": {
-        "device": "triode",
-        "kg1": 834.1363057668849,
-        "kp": 567.9682938171037,
-        "kvb": 22.79074922411432,
-        "kvb1": 11.599094645309258,
-        "mu": 95.07425577338161,
-        "type": "cohenHelie",
-        "vct": 0.05786283303832472,
-        "x": 1.4579399793870187
+    "analyserDefaults": {
+        "anode": {
+            "start": 0,
+            "step": 5,
+            "stop": 300
+        },
+        "doubleTriode": true,
+        "grid": {
+            "start": 0,
+            "step": 0.5,
+            "stop": 5
+        },
+        "limits": {
+            "iaMax": 5,
+            "pMax": 1.125
+        },
+        "screen": {
+            "start": 0,
+            "step": 0,
+            "stop": 0
+        },
+        "testType": 0
     },
-    "name": "6N2P-EV",
-    "paMax": 1.125,
-    "vaMax": 300,
-    "vg1Max": 5
+    "deviceType": "TRIODE",
+    "name": "6N2P-EV"
 }

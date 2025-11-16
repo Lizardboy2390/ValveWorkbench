@@ -162,6 +162,9 @@ private slots:
 
     void exportFittedModelToDevices();
 
+    // Modeller small-signal source toggle: measured (unchecked) vs model (checked)
+    void on_mes_mod_select_stateChanged(int state);
+
     // Analyser tab: Template buttons (Load/Save Template)
     void on_pushButton_3_clicked();
     void on_pushButton_4_clicked();
@@ -283,6 +286,11 @@ private:
     // by the Modeller tab for tube matching when in measured mode
     // (mes_mod_select unchecked).
     void updateSmallSignalFromMeasurement(Measurement *measurement);
+    // Compute small-signal gm, ra and mu from the current fitted model at an
+    // operating point derived from the active measurement. This is used in
+    // model mode (mes_mod_select checked) when a Designer circuit does not
+    // provide small-signal values directly (e.g. pentode models).
+    void updateSmallSignalFromModel(Model *modelForSmallSignal, Measurement *measurement);
     void buildCircuitParameters();
     void buildCircuitSelection();
     void buildStdDeviceSelection(QComboBox *selection, int type);

@@ -110,6 +110,8 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         "on_cir12Value_editingFinished",
         "on_actionExport_Model_triggered",
         "exportFittedModelToDevices",
+        "on_mes_mod_select_stateChanged",
+        "state",
         "on_pushButton_3_clicked",
         "on_pushButton_4_clicked"
     };
@@ -265,10 +267,14 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         QtMocHelpers::SlotData<void()>(69, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'exportFittedModelToDevices'
         QtMocHelpers::SlotData<void()>(70, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_mes_mod_select_stateChanged'
+        QtMocHelpers::SlotData<void(int)>(71, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 72 },
+        }}),
         // Slot 'on_pushButton_3_clicked'
-        QtMocHelpers::SlotData<void()>(71, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(73, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_pushButton_4_clicked'
-        QtMocHelpers::SlotData<void()>(72, 2, QMC::AccessPrivate, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(74, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -352,8 +358,9 @@ void ValveWorkbench::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 57: _t->on_cir12Value_editingFinished(); break;
         case 58: _t->on_actionExport_Model_triggered(); break;
         case 59: _t->exportFittedModelToDevices(); break;
-        case 60: _t->on_pushButton_3_clicked(); break;
-        case 61: _t->on_pushButton_4_clicked(); break;
+        case 60: _t->on_mes_mod_select_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 61: _t->on_pushButton_3_clicked(); break;
+        case 62: _t->on_pushButton_4_clicked(); break;
         default: ;
         }
     }
@@ -380,14 +387,14 @@ int ValveWorkbench::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 62)
+        if (_id < 63)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 62;
+        _id -= 63;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 62)
+        if (_id < 63)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 62;
+        _id -= 63;
     }
     return _id;
 }

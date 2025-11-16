@@ -42,6 +42,7 @@
 #include "valvemodel/data/sweep.h"
 #include "valvemodel/circuit/circuit.h"
 #include "valvemodel/circuit/triodecommoncathode.h"
+#include "valvemodel/circuit/triodeaccathodefollower.h"
 #include "ledindicator/ledindicator.h"
 #include "preferencesdialog.h"
 #include "projectdialog.h"
@@ -1040,7 +1041,13 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     buildCircuitParameters();
     buildCircuitSelection();
 
-    circuits.append(new TriodeCommonCathode());
+    // Initialise Designer circuit instances indexed by eCircuitType so that
+    // ui->circuitSelection itemData (which stores eCircuitType) maps directly
+    // to entries in the circuits list. Only a subset of circuits are
+    // currently implemented; others remain null and are guarded against.
+    circuits.resize(TEST_CALCULATOR + 1);
+    circuits[TRIODE_COMMON_CATHODE]   = new TriodeCommonCathode();
+    circuits[AC_CATHODE_FOLLOWER]     = new TriodeACCathodeFollower();
 }
 
 ValveWorkbench::~ValveWorkbench()
@@ -1050,6 +1057,12 @@ ValveWorkbench::~ValveWorkbench()
         delete analyser;
         analyser = nullptr;
     }
+
+    // Clean up any Designer circuit instances
+    for (Circuit *c : std::as_const(circuits)) {
+        delete c;
+    }
+    circuits.clear();
 }
 
 void ValveWorkbench::buildCircuitParameters()
@@ -1114,7 +1127,13 @@ void ValveWorkbench::buildCircuitSelection()
 
 void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
 {
-    if (deviceNumber < 0 || ui->circuitSelection->currentData().toInt() < 0) {
+    const int circuitType = ui->circuitSelection->currentData().toInt();
+    if (deviceNumber < 0 || circuitType < 0) {
+        return;
+    }
+
+    if (circuitType >= circuits.size() || !circuits.at(circuitType)) {
+        qWarning("selectStdDevice: circuitType %d out of range or not implemented", circuitType);
         return;
     }
 
@@ -1123,7 +1142,7 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     // For Designer, do not set model axes or draw model curves here to avoid overriding
     // the circuit load-line axes. The circuit plot will set appropriate axes.
 
-    Circuit *circuit = circuits.at(ui->circuitSelection->currentData().toInt());
+    Circuit *circuit = circuits.at(circuitType);
     if (index == 1) {
         circuit->setDevice1(device);
     } else {
@@ -1214,8 +1233,8 @@ void ValveWorkbench::selectCircuit(int circuitType)
         circuitValues[i]->setVisible(false);
     }
 
-    if (circuitType < 0) {
-        qInfo("Invalid circuit type - disabling device selections");
+    if (circuitType < 0 || circuitType >= circuits.size() || !circuits.at(circuitType)) {
+        qInfo("Invalid or unimplemented circuit type %d - disabling device selections", circuitType);
         ui->stdDeviceSelection->setCurrentIndex(0);
         ui->stdDeviceSelection2->setCurrentIndex(0);
 
@@ -1334,7 +1353,7 @@ void ValveWorkbench::updateDoubleValue(QLineEdit *input, double value)
 void ValveWorkbench::updateCircuitParameter(int index)
 {
     int currentCircuitType = ui->circuitSelection->currentData().toInt();
-    if (currentCircuitType < 0) {
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size() || !circuits.at(currentCircuitType)) {
         return; // No valid circuit selected
     }
 
@@ -1357,6 +1376,45 @@ void ValveWorkbench::updateCircuitParameter(int index)
             circuit->updateUI(circuitLabels, circuitValues);
             circuit->plot(&plot);
             circuit->updateUI(circuitLabels, circuitValues);
+
+            // In model mode (mes_mod_select checked), drive the small-signal LCDs
+            // from the Designer's Triode Common Cathode circuit so the operating
+            // point and gm/ra/mu are consistent between Designer and Modeller.
+            if (ui->mes_mod_select && ui->mes_mod_select->isChecked()) {
+                auto safeDisplayText = [this](QLCDNumber *lcd, const QString &text) {
+                    if (lcd) {
+                        lcd->display(text);
+                    }
+                };
+
+                const double gm_mA_V = tcc->getParameter(TRI_CC_GM);
+                const double ra_ohms = tcc->getParameter(TRI_CC_AR);
+                const double mu      = tcc->getParameter(TRI_CC_MU);
+                const double ra_k    = (ra_ohms > 0.0) ? (ra_ohms / 1000.0) : 0.0;
+
+                if (ui->gmLcd) {
+                    if (gm_mA_V > 0.0) {
+                        ui->gmLcd->display(QString("%1").arg(gm_mA_V, 0, 'f', 2));
+                    } else {
+                        safeDisplayText(ui->gmLcd, "--");
+                    }
+                }
+                if (ui->raLcd) {
+                    if (ra_k > 0.0) {
+                        ui->raLcd->display(QString("%1").arg(ra_k, 0, 'f', 1));
+                    } else {
+                        safeDisplayText(ui->raLcd, "--");
+                    }
+                }
+                if (ui->lcdNumber_3) {
+                    if (mu > 0.0) {
+                        ui->lcdNumber_3->display(QString("%1").arg(mu, 0, 'f', 1));
+                    } else {
+                        safeDisplayText(ui->lcdNumber_3, "--");
+                    }
+                }
+            }
+
             return;
         }
     }
@@ -1382,11 +1440,13 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
     const int testType   = measurement->getTestType();
 
     if (deviceType != TRIODE && deviceType != PENTODE) {
+        qInfo("SMALL-SIGNAL (MODEL): unsupported deviceType=%d (only TRIODE/PENTODE)", deviceType);
         return;
     }
 
     const int sweepCount = measurement->count();
     if (sweepCount == 0) {
+        qInfo("SMALL-SIGNAL (MODEL): measurement has zero sweeps");
         return;
     }
 
@@ -1507,6 +1567,227 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
         } else {
             safeDisplayText(ui->lcdNumber_3, "--");
         }
+    }
+}
+
+// Helper: compute small-signal gm, ra, mu directly from the fitted model at an
+// operating point derived from the active measurement. This is used in model
+// mode (mes_mod_select checked) when no Designer circuit is providing
+// small-signal values (e.g. pentode models or when only a model fit is present).
+void ValveWorkbench::updateSmallSignalFromModel(Model *modelForSmallSignal, Measurement *measurement)
+{
+    if (!measurement) {
+        qInfo("SMALL-SIGNAL (MODEL): aborted - measurement is null");
+        return;
+    }
+
+    // Only active in model mode
+    if (!(ui->mes_mod_select && ui->mes_mod_select->isChecked())) {
+        qInfo("SMALL-SIGNAL (MODEL): skipped - mes_mod_select is not checked (not in model mode)");
+        return;
+    }
+
+    const int deviceType = measurement->getDeviceType();
+    const int testType   = measurement->getTestType();
+
+    if (deviceType != TRIODE && deviceType != PENTODE) {
+        qInfo("SMALL-SIGNAL (MODEL): unsupported deviceType=%d (only TRIODE/PENTODE)", deviceType);
+        return;
+    }
+
+    // Prefer the explicitly supplied model pointer if valid. If not, or if it
+    // does not match the measurement device type (e.g. pentode measurement but
+    // triode model), fall back to a model found in the current project tree.
+    Model *sourceModel = modelForSmallSignal;
+
+    auto modelMatchesMeasurement = [deviceType](Model *m) {
+        if (!m) return false;
+        const int t = m->getType();
+        if (deviceType == TRIODE) {
+            return (t == COHEN_HELIE_TRIODE || t == KOREN_TRIODE || t == SIMPLE_TRIODE);
+        }
+        // Pentode: accept any pentode family (Gardiner, Reefman, SimpleManual)
+        if (deviceType == PENTODE) {
+            return (t == GARDINER_PENTODE || t == SIMPLE_MANUAL_PENTODE ||
+                    t == REEFMAN_DERK_PENTODE || t == REEFMAN_DERK_E_PENTODE);
+        }
+        return false;
+    };
+
+    if (!modelMatchesMeasurement(sourceModel)) {
+        int desiredType = -1;
+        if (deviceType == TRIODE) {
+            desiredType = COHEN_HELIE_TRIODE;
+        } else if (deviceType == PENTODE) {
+            desiredType = GARDINER_PENTODE;
+        }
+
+        if (desiredType != -1 && currentProject) {
+            Model *projectModel = findModel(desiredType);
+            if (modelMatchesMeasurement(projectModel)) {
+                sourceModel = projectModel;
+            }
+        }
+    }
+
+    if (!modelMatchesMeasurement(sourceModel)) {
+        qInfo("SMALL-SIGNAL (MODEL): no suitable model found for deviceType=%d (mes_mod mode)", deviceType);
+        return;
+    }
+
+    const int sweepCount = measurement->count();
+    if (sweepCount == 0) {
+        return;
+    }
+
+    auto safeDisplayText = [this](QLCDNumber *lcd, const QString &text) {
+        if (lcd) {
+            lcd->display(text);
+        }
+    };
+
+    // Reuse the same central operating point heuristic as the measured helper
+    const int sweepIdx = sweepCount / 2;
+    Sweep *sweep = measurement->at(sweepIdx);
+    if (!sweep || sweep->count() == 0) {
+        qInfo("SMALL-SIGNAL (MODEL): chosen sweep index %d is null or empty", sweepIdx);
+        return;
+    }
+
+    const int sampleCount = sweep->count();
+    const int sampleIdx   = sampleCount / 2;
+    Sample *sampleMid     = sweep->at(sampleIdx);
+    if (!sampleMid) {
+        qInfo("SMALL-SIGNAL (MODEL): central sample index %d is null", sampleIdx);
+        return;
+    }
+
+    double va0   = sampleMid->getVa();
+    double vg1_0 = sampleMid->getVg1();
+    double vg2_0 = 0.0;
+
+    if (!std::isfinite(va0) || !std::isfinite(vg1_0)) {
+        qInfo("SMALL-SIGNAL (MODEL): invalid OP va0=%.6f, vg1_0=%.6f", va0, vg1_0);
+        return;
+    }
+
+    if (deviceType == PENTODE) {
+        // For pentodes, use the measured screen voltage if available for the OP
+        vg2_0 = sampleMid->getVg2();
+        if (!std::isfinite(vg2_0)) {
+            // Fall back to nominal screen bias from the measurement if samples don't carry it
+            vg2_0 = measurement->getScreenStart();
+        }
+    }
+
+    qInfo("SMALL-SIGNAL (MODEL): deviceType=%d testType=%d OP: Va=%.3f V, Vg1=%.3f V, Vg2=%.3f V",
+          deviceType, testType, va0, vg1_0, vg2_0);
+
+    SmallSignalResult ss = sourceModel->computeSmallSignal(
+        va0,
+        vg1_0,
+        vg2_0,
+        sourceModel->withSecondaryEmission());
+
+    if (!ss.valid || ss.gm <= 0.0 || ss.ra <= 0.0 || ss.mu <= 0.0) {
+        qInfo("SMALL-SIGNAL (MODEL): invalid result valid=%d gm=%.6f mA/V ra=%.6f kOhm mu=%.6f",
+              ss.valid ? 1 : 0, ss.gm, ss.ra, ss.mu);
+        safeDisplayText(ui->gmLcd, "--");
+        safeDisplayText(ui->raLcd, "--");
+        safeDisplayText(ui->lcdNumber_3, "--");
+        return;
+    }
+
+    qInfo("SMALL-SIGNAL (MODEL): OK gm=%.3f mA/V ra=%.3f kOhm mu=%.3f",
+          ss.gm, ss.ra, ss.mu);
+
+    if (ui->gmLcd) {
+        ui->gmLcd->display(QString("%1").arg(ss.gm, 0, 'f', 2));
+    }
+    if (ui->raLcd) {
+        ui->raLcd->display(QString("%1").arg(ss.ra, 0, 'f', 1));
+    }
+    if (ui->lcdNumber_3) {
+        ui->lcdNumber_3->display(QString("%1").arg(ss.mu, 0, 'f', 1));
+    }
+}
+
+void ValveWorkbench::on_mes_mod_select_stateChanged(int state)
+{
+    auto safeDisplayText = [this](QLCDNumber *lcd, const QString &text) {
+        if (lcd) {
+            lcd->display(text);
+        }
+    };
+
+    const bool modelMode = (state != 0);
+
+    // Always clear first when switching modes
+    safeDisplayText(ui->gmLcd, "--");
+    safeDisplayText(ui->raLcd, "--");
+    safeDisplayText(ui->lcdNumber_3, "--");
+
+    if (!modelMode) {
+        // Measured mode: recompute from current measurement if available
+        if (currentMeasurement) {
+            updateSmallSignalFromMeasurement(currentMeasurement);
+        }
+        return;
+    }
+
+    // Model mode: if a Triode Common Cathode circuit is active, use its
+    // small-signal parameters so Designer and Modeller agree on gm/ra/mu.
+    int circuitType = ui->circuitSelection
+                      ? ui->circuitSelection->currentData().toInt()
+                      : -1;
+    if (circuitType < 0 || circuitType >= circuits.size()) {
+        return;
+    }
+
+    Circuit *circuit = circuits.at(circuitType);
+    const int measurementDeviceType = currentMeasurement ? currentMeasurement->getDeviceType() : -1;
+
+    // Only use the Designer triode circuit as the gm/ra/mu source when the
+    // active measurement is a triode. For pentode measurements we prefer the
+    // fitted pentode model directly so that pentode small-signal results are
+    // not blocked by a triode-only circuit.
+    if (measurementDeviceType == TRIODE) {
+        if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
+        const double gm_mA_V = tcc->getParameter(TRI_CC_GM);
+        const double ra_ohms = tcc->getParameter(TRI_CC_AR);
+        const double mu      = tcc->getParameter(TRI_CC_MU);
+        const double ra_k    = (ra_ohms > 0.0) ? (ra_ohms / 1000.0) : 0.0;
+
+        if (ui->gmLcd) {
+            if (gm_mA_V > 0.0) {
+                ui->gmLcd->display(QString("%1").arg(gm_mA_V, 0, 'f', 2));
+            } else {
+                safeDisplayText(ui->gmLcd, "--");
+            }
+        }
+        if (ui->raLcd) {
+            if (ra_k > 0.0) {
+                ui->raLcd->display(QString("%1").arg(ra_k, 0, 'f', 1));
+            } else {
+                safeDisplayText(ui->raLcd, "--");
+            }
+        }
+        if (ui->lcdNumber_3) {
+            if (mu > 0.0) {
+                ui->lcdNumber_3->display(QString("%1").arg(mu, 0, 'f', 1));
+            } else {
+                safeDisplayText(ui->lcdNumber_3, "--");
+            }
+        }
+            return;
+        }
+    }
+
+    // If no Designer triode circuit is active, fall back to the fitted model
+    // directly (triode or pentode) if one is available and a measurement is
+    // selected to provide context.
+    if (model && currentMeasurement) {
+        updateSmallSignalFromModel(model, currentMeasurement);
     }
 }
 
@@ -2620,11 +2901,16 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             }
             qInfo("Added measuredCurves to plot");
             ui->measureCheck->setChecked(true);
-            // In measured mode, update the small-signal LCDs (gm/ra/mu) from
-            // the currently selected measurement so the Modeller tab can be
-            // used for tube matching and quick checks without relying on the
-            // Designer circuit.
-            updateSmallSignalFromMeasurement(currentMeasurement);
+            // Auto-refresh small-signal LCDs based on the current mode.
+            if (ui->mes_mod_select && ui->mes_mod_select->isChecked()) {
+                // Model mode: prefer Designer triode circuit, otherwise fall
+                // back to the fitted model if available.
+                on_mes_mod_select_stateChanged(ui->mes_mod_select->checkState());
+            } else {
+                // Measured mode: compute from the currently selected
+                // measurement so Modeller can be used for tube matching.
+                updateSmallSignalFromMeasurement(currentMeasurement);
+            }
             qInfo("=== PROJECT TREE: Finished TYP_MEASUREMENT case ===");
             break;
         }
@@ -2718,6 +3004,12 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 }
                 modelledCurves = nullptr;
                 ui->measureCheck->setChecked(true);
+                // Auto-refresh small-signal LCDs for the new sweep/measurement
+                if (ui->mes_mod_select && ui->mes_mod_select->isChecked()) {
+                    on_mes_mod_select_stateChanged(ui->mes_mod_select->checkState());
+                } else {
+                    updateSmallSignalFromMeasurement(currentMeasurement);
+                }
                 qInfo("=== PROJECT TREE: Finished TYP_SWEEP case ===");
             }
             break;
