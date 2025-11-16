@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-14 (pentode experiments reverted; baseline restored; Simple Manual Pentode UI wired)
+Last updated: 2025-11-15 (docs cleanup; removed abandoned Designer Calculate/auto-scaling items)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -144,10 +144,7 @@ Additional (2025-11-05):
 - `valveworkbench.cpp` (checkbox handlers; compare path)
 
 - [ ] Capture before/after plots showing pentode overlay alignment for documentation.
-- [ ] Add "Calculate" button to Designer and wire to recompute/plot.
-- [ ] Axis auto-scaling incorporating cathode line ranges.
 - [ ] If needed, clamp cathode sweep (e.g., limit |Vg| to device range) to avoid solver edge-cases.
-- [ ] Validate UI update pathway to ensure OP/gain outputs refresh on Calculate.
 - [ ] Finalize model grid-family labeling (Vg labels) strictly for visible families; ensure zero regression errors across compilers.
 
 ## Environment Notes

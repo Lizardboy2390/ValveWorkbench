@@ -107,6 +107,64 @@ double Model::screenCurrent(double va, double vg1, double vg2, bool secondaryEmi
     return 0.0;
 }
 
+SmallSignalResult Model::computeSmallSignal(double va0, double vg1_0, double vg2_0, bool secondaryEmission)
+{
+    SmallSignalResult result;
+
+    if (!std::isfinite(va0) || !std::isfinite(vg1_0) || !std::isfinite(vg2_0) || va0 < 0.0) {
+        return result;
+    }
+
+    const double dVa = 0.1; // V
+    const double dVg = 0.1; // V
+
+    const double vaPlus  = std::max(0.0, va0 + dVa);
+    const double vaMinus = std::max(0.0, va0 - dVa);
+
+    if (std::fabs(vaPlus - vaMinus) < 1e-9) {
+        return result;
+    }
+
+    const double vgPlus  = vg1_0 + dVg;
+    const double vgMinus = vg1_0 - dVg;
+
+    const double ia_vg_plus  = anodeCurrent(va0, vgPlus,  vg2_0, secondaryEmission);
+    const double ia_vg_minus = anodeCurrent(va0, vgMinus, vg2_0, secondaryEmission);
+
+    const double ia_va_plus  = anodeCurrent(vaPlus,  vg1_0, vg2_0, secondaryEmission);
+    const double ia_va_minus = anodeCurrent(vaMinus, vg1_0, vg2_0, secondaryEmission);
+
+    auto finite = [](double v) {
+        return std::isfinite(v);
+    };
+
+    if (!finite(ia_vg_plus)  || !finite(ia_vg_minus) ||
+        !finite(ia_va_plus)  || !finite(ia_va_minus)) {
+        return result;
+    }
+
+    const double dIa_dVg = (ia_vg_plus - ia_vg_minus) / (2.0 * dVg);        // mA/V
+    const double dIa_dVa = (ia_va_plus - ia_va_minus) / (vaPlus - vaMinus); // mA/V
+
+    if (!finite(dIa_dVg) || !finite(dIa_dVa) || std::fabs(dIa_dVa) < 1e-9) {
+        return result;
+    }
+
+    const double ra = 1.0 / dIa_dVa;  // V/mA = kΩ
+    const double gm = dIa_dVg;        // mA/V
+    const double mu = gm * ra;        // dimensionless
+
+    if (!finite(ra) || !finite(gm) || !finite(mu)) {
+        return result;
+    }
+
+    result.ra    = ra;
+    result.gm    = gm;
+    result.mu    = mu;
+    result.valid = true;
+    return result;
+}
+
 void Model::addMeasurement(Measurement *measurement)
 {
     int sweeps = measurement->count();
@@ -325,7 +383,9 @@ QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)
 {
     QTreeWidgetItem *item = new QTreeWidgetItem(parent, TYP_MODEL);
 
-    item->setText(0, "Model");
+    // Use the concrete model's name so the tree clearly shows which model type
+    // this node represents (e.g. Gardiner Pentode, Cohen Helie Pentode, etc.).
+    item->setText(0, getName());
     item->setIcon(0, QIcon(":/icons/estimate32.png"));
     item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
     item->setData(0, Qt::UserRole, QVariant::fromValue((void *) this));
@@ -725,6 +785,21 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                         vaPrev = va;
                         iaPrev = ia;
                     }
+                    // Small-signal diagnostics at mid Va for this family
+                    {
+                        double vaOp  = vaMid;
+                        double vg1Op = vg1;
+                        double vg2Op = sampleVg2(sm);
+                        SmallSignalResult ss = computeSmallSignal(vaOp, vg1Op, vg2Op, withSecondaryEmission());
+                        if (ss.valid) {
+                            qInfo("SMALL-SIGNAL: vg1=%.3f, vg2=%.3f, Va=%.3f -> gm=%.3f mA/V, ra=%.3f kOhm, mu=%.3f",
+                                  vg1Op, vg2Op, vaOp, ss.gm, ss.ra, ss.mu);
+                        } else {
+                            qInfo("SMALL-SIGNAL: vg1=%.3f, vg2=%.3f, Va=%.3f -> invalid",
+                                  vg1Op, vg2Op, vaOp);
+                        }
+                    }
+
                     // If the entire family computes ~zero current, still plot it so the user can
                     // see that the model predicts negligible conduction for this bias.
                     if (iaMax < 1e-3) {

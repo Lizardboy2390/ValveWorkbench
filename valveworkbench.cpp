@@ -858,9 +858,11 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->deviceType->addItem("Pentode", PENTODE);
     ui->deviceType->addItem("Double Triode", TRIODE);
     ui->deviceType->addItem("Diode", DIODE);
-
-    loadTemplate(0);
-
+    
+    if (!templates.isEmpty()) {
+        loadTemplate(0);
+    }
+    
     //buildModelSelection();
 
     // ui->runButton->setEnabled(false);  // Commented out for testing
@@ -2493,7 +2495,10 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                     (currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE);
                 const bool pentodeMatch =
                     (currentMeasurement->getDeviceType() == PENTODE &&
-                     (model->getType() == GARDINER_PENTODE || model->getType() == SIMPLE_MANUAL_PENTODE));
+                     (model->getType() == GARDINER_PENTODE ||
+                      model->getType() == SIMPLE_MANUAL_PENTODE ||
+                      model->getType() == REEFMAN_DERK_PENTODE ||
+                      model->getType() == REEFMAN_DERK_E_PENTODE));
 
                 if (triodeMatch || pentodeMatch) {
                     qInfo("Type check PASSED - proceeding with model plotting");
@@ -2507,16 +2512,19 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                             qInfo("PENTODE: Using saved SimpleManualPentode instance for plotting");
                             plotted = model->plotModel(&plot, currentMeasurement, sweep);
                         } else {
-                            // For fitted pentode models (Gardiner/Reefman), keep using a temporary
-                            // model seeded from Estimate so plotting matches the current measurement
-                            // without relying on any particular saved instance.
-                            qInfo("PENTODE: Using temporary pentode model for plotting to match measurement device type");
+                            // For fitted pentode models (Gardiner/Reefman), use a temporary model whose
+                            // type matches the currently selected model node, so plotting reflects the
+                            // active model (Gardiner vs Reefman) rather than whatever was last stored
+                            // in preferences.
+                            const int activePentodeType = model->getType();
+                            qInfo("PENTODE: Using temporary pentode model of type %d for plotting", activePentodeType);
+
                             Estimate quick;
                             // Use any available triode model as seed if present; otherwise nullptr is fine
                             CohenHelieTriode *seedTriode = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
-                            quick.estimatePentode(currentMeasurement, seedTriode, pentodeModelType, false);
+                            quick.estimatePentode(currentMeasurement, seedTriode, activePentodeType, false);
 
-                            std::unique_ptr<Model> temp(ModelFactory::createModel(pentodeModelType));
+                            std::unique_ptr<Model> temp(ModelFactory::createModel(activePentodeType));
                             if (temp) {
                                 temp->setEstimate(&quick);
                                 temp->setPreferences(&preferencesDialog);
@@ -3199,6 +3207,10 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
 void ValveWorkbench::modelPentode()
 {
     doPentodeModel = false; // We're doing it now so don't want to do it again!
+
+    // Refresh pentode model selection from preferences each time, so changes
+    // made in the Preferences dialog are respected for every new fit.
+    pentodeModelType = preferencesDialog.getPentodeModelType();
     Measurement *measurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
 
     if (measurement == nullptr) {
