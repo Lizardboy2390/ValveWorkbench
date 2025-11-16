@@ -55,6 +55,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - **Gardiner Pentode** — stable Ceres-based pentode fit used as the reference model in the main branch.
   - **Reefman Pentode (Derk / DerkE)** — experimental models based on Derk Reefman’s work; long-term goal is to bring their behaviour closer to the standalone ExtractModel tool at `C:\Users\lizar\Documents\ExtractModel_3p0`. These are not currently recommended for everyday fitting.
   - **Simple Manual Pentode** — a manual pentode modeller using the same web-style `epk` anode-current formula as the web pentode modeller. The backend is implemented; UI sliders/numeric controls on the Modeller tab will allow you to set parameters (`mu, kp, kg1, kg2, alpha, beta, gamma, a`, etc.) by hand and see red curves update live over your measurements, without running Ceres.
+  - **Triode-Connected Pentode analyser mode** — analyser device type that drives a pentode’s anode and screen together (S3/S7 track) to generate triode-like anode characteristics for that tube, used as a high-quality triode seed for pentode fitting.
 - Real‑time plotting and responsive UI
 - SPICE netlist export
 
@@ -66,6 +67,44 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Adjust parameters on the Modeller tab and see the model curves move in real time.
   - Save a manually tuned parameter set via "Export to Devices" for use in Designer.
 - **Reefman Pentode** is experimental. Future work to align it with ExtractModel_3p0 should be done on a separate branch and validated against that tool’s outputs before it is used for regular fitting.
+- Pentode fits now use **centralised parameter bounds** in `Model::setEstimate`, with different envelopes for **Gardiner vs Reefman** models. Gardiner keeps a broad but stable range; Reefman/DerkE uses tighter UTmax-style bounds to keep the DEPIa-style model in a realistic corridor.
+- For triode-based seeding of pentode models, the analyser provides a **Triode-Connected Pentode** device type. Measurements taken in this mode appear in the project tree as `Triode (Triode-Connected Pentode) Anode Characteristics` and are used as the triode source for `Estimate::estimatePentode`.
+
+### Recommended pentode measurement & fitting workflow
+
+1. **Measure triode-connected pentode curves (seed)**
+   - Analyser tab:
+     - Device Type: `Triode-Connected Pentode`.
+     - Test: `Anode Characteristics`.
+     - Set `Va`, `Vg1` ranges and limits as usual.
+   - Run the test and click **Save to Project**.
+   - In the project tree, this measurement will appear as `Triode (Triode-Connected Pentode) Anode Characteristics`.
+
+2. **Fit a triode model from the triode-connected measurement**
+   - Modeller tab:
+     - Select the `Triode (Triode-Connected Pentode)` measurement.
+     - Click **Fit Triode**.
+   - This creates a triode model node in the project, used as the UTmax-style seed for pentode fitting.
+
+3. **Measure normal pentode curves**
+   - Analyser tab:
+     - Device Type: `Pentode`.
+     - Test: `Anode Characteristics` (and/or `Transfer Characteristics`).
+   - Run the test(s) and **Save to Project**.
+
+4. **Fit the pentode model (Gardiner or Reefman)**
+   - Modeller tab:
+     - Select the pentode measurement.
+     - Choose the desired pentode model type (typically **Gardiner Pentode** for production fits).
+     - Click **Fit Pentode**.
+   - The fitter uses the triode model from step 2 as the seed and applies the model-specific bounds described above.
+
+5. **Persist fitted parameters back into the model JSON**
+   - In the project tree, click the fitted pentode model node (e.g. `Gardiner Pentode`).
+   - On the Modeller tab, click **Export to Devices**.
+   - Choose the appropriate device file in `models/` (for example `EL34.json`, `6L6.json`, `6V6-S.json`).
+   - Confirm overwrite if prompted.
+   - On the next application start, the updated JSON parameters become the default for that device in Modeller/Designer and are used when computing load lines.
 
 ## Troubleshooting
 - No “Save to Project” prompt: The app now prompts every time before saving
@@ -76,6 +115,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - Pentode fits look flatter than datasheets: this is expected with the current Gardiner auto-fit. For precise, datasheet-like curves, the planned Simple Manual Pentode modeller (web-style `epk` backend, manual sliders) will allow you to match curves by hand. Reefman models are experimental and may not converge on all data sets yet.
 
 ## Change log (highlights)
+- 2025‑11‑15: Added Triode-Connected Pentode analyser device type; triode-connected pentode measurements stored as triode tests with clear hints; centralised Gardiner vs Reefman pentode bounds aligned with UTmax-style seeding.
 - 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only
 - 2025‑11‑02: Analyser: removed heater button/LCDs (heaters fixed in hardware)
 - 2025‑11‑02: Analyser: Load/Save Template for analyser settings

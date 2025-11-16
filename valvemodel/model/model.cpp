@@ -286,32 +286,95 @@ void Model::setEstimate(Estimate *estimate)
     parameter[PAR_S]->setValue(estimate->getS());
     parameter[PAR_AP]->setValue(estimate->getAp());
 
-    // Hard guardrails for solver stability
-    const std::pair<int, std::pair<double, double>> bounds[] = {
-        {PAR_KG1, {0.05, 5.0}},
-        {PAR_KP, {20.0, 400.0}},
-        {PAR_KVB, {50.0, 800.0}},
-        {PAR_KVB1, {1.0, 80.0}},
-        {PAR_VCT, {0.0, 5.0}},
-        {PAR_X, {1.0, 2.0}},
-        {PAR_MU, {1.0, 50.0}},
-        {PAR_KG2, {0.1, 25.0}},
-        {PAR_A, {0.0, 0.1}},
-        {PAR_ALPHA, {0.0, 0.6}},
-        {PAR_BETA, {0.0, 0.6}},
-        {PAR_GAMMA, {0.3, 3.0}},
-        {PAR_PSI, {0.0, 10.0}},
-        {PAR_OMEGA, {0.0, 1000.0}},
-        {PAR_LAMBDA, {0.0, 300.0}},
-        {PAR_NU, {0.0, 150.0}},
-        {PAR_S, {0.0, 1.0}},
-        {PAR_AP, {0.0, 0.2}}
-    };
-    for (const auto &entry : bounds) {
-        int idx = entry.first;
+    // Hard guardrails for solver stability. Bounds are applied centrally so
+    // individual model classes do not need to duplicate Ceres bound logic.
+    // We allow different envelopes for Gardiner vs Reefman-style pentodes
+    // while retaining a sensible default for other models.
+
+    auto setBound = [&](int idx, double lower, double upper) {
         if (parameter[idx]) {
-            setLimits(parameter[idx], entry.second.first, entry.second.second);
+            setLimits(parameter[idx], lower, upper);
         }
+    };
+
+    const int modelType = getType();
+
+    switch (modelType) {
+    case GARDINER_PENTODE:
+    case SIMPLE_MANUAL_PENTODE:
+        // Gardiner / manual pentode: keep a relatively wide envelope so the
+        // unified Gardiner model can explore its richer shaping space without
+        // hitting hard walls too early. These are essentially the original
+        // global guardrails.
+        setBound(PAR_KG1,   0.05,  5.0);
+        setBound(PAR_KP,   20.0, 400.0);
+        setBound(PAR_KVB,  50.0, 800.0);
+        setBound(PAR_KVB1,  1.0,  80.0);
+        setBound(PAR_VCT,   0.0,   5.0);
+        setBound(PAR_X,     1.0,   2.0);
+        setBound(PAR_MU,    1.0,  50.0);
+        setBound(PAR_KG2,   0.1,  25.0);
+        setBound(PAR_A,     0.0,   0.1);
+        setBound(PAR_ALPHA, 0.0,   0.6);
+        setBound(PAR_BETA,  0.0,   0.6);
+        setBound(PAR_GAMMA, 0.3,   3.0);
+        setBound(PAR_PSI,   0.0,  10.0);
+        setBound(PAR_OMEGA, 0.0, 1000.0);
+        setBound(PAR_LAMBDA,0.0, 300.0);
+        setBound(PAR_NU,    0.0, 150.0);
+        setBound(PAR_S,     0.0,   1.0);
+        setBound(PAR_AP,    0.0,   0.2);
+        break;
+
+    case REEFMAN_DERK_PENTODE:
+    case REEFMAN_DERK_E_PENTODE:
+        // Reefman (Derk / DerkE) pentodes: use tighter UTmax-style ranges to
+        // keep the DEPIa-style model in a physically realistic corridor.
+        // These mirror the clamp ranges used in Estimate::estimatePentode
+        // for the triode-seeded path.
+        setBound(PAR_MU,    3.0,  25.0);
+        setBound(PAR_X,     1.1,   1.8);
+        setBound(PAR_KG1,   0.05,  5.0);
+        setBound(PAR_KP,   20.0, 400.0);
+        setBound(PAR_KVB,  50.0, 600.0);
+        setBound(PAR_KVB1,  1.0,  40.0);
+        setBound(PAR_VCT,   0.0,   3.0);
+        setBound(PAR_KG2,   0.1,  20.0);
+        setBound(PAR_A,     0.0,   0.05);
+        setBound(PAR_ALPHA, 0.0,   2.0);   // knee parameter
+        setBound(PAR_BETA,  0.01,  0.3);   // alpha_s / screen weight
+        setBound(PAR_GAMMA, 0.5,   2.0);
+        setBound(PAR_PSI,   0.5,   8.0);
+        setBound(PAR_OMEGA,10.0, 800.0);
+        setBound(PAR_LAMBDA,5.0, 250.0);
+        setBound(PAR_NU,    0.0, 120.0);
+        setBound(PAR_S,     0.0,   1.0);
+        setBound(PAR_AP,    0.0,   0.2);
+        break;
+
+    default:
+        // Default envelope for triodes and any other models: conservative but
+        // permissive bounds that avoid obviously non-physical regions without
+        // over-constraining the fit.
+        setBound(PAR_KG1,   0.05,  5.0);
+        setBound(PAR_KP,   20.0, 400.0);
+        setBound(PAR_KVB,  50.0, 800.0);
+        setBound(PAR_KVB1,  1.0,  80.0);
+        setBound(PAR_VCT,   0.0,   5.0);
+        setBound(PAR_X,     1.0,   2.0);
+        setBound(PAR_MU,    1.0,  50.0);
+        setBound(PAR_KG2,   0.1,  25.0);
+        setBound(PAR_A,     0.0,   0.1);
+        setBound(PAR_ALPHA, 0.0,   0.6);
+        setBound(PAR_BETA,  0.0,   0.6);
+        setBound(PAR_GAMMA, 0.3,   3.0);
+        setBound(PAR_PSI,   0.0,  10.0);
+        setBound(PAR_OMEGA, 0.0, 1000.0);
+        setBound(PAR_LAMBDA,0.0, 300.0);
+        setBound(PAR_NU,    0.0, 150.0);
+        setBound(PAR_S,     0.0,   1.0);
+        setBound(PAR_AP,    0.0,   0.2);
+        break;
     }
 }
 

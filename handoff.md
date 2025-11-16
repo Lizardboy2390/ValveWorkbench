@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-15 (docs cleanup; removed abandoned Designer Calculate/auto-scaling items)
+Last updated: 2025-11-15 (triode-connected pentode mode, separated Gardiner/Reefman bounds, docs cleanup)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -12,11 +12,17 @@ Last updated: 2025-11-15 (docs cleanup; removed abandoned Designer Calculate/aut
 - Remove confusing Cohen-Helie logs during pentode plotting.
 - Ensure Vg1 families for plotting come directly from measurement (−20…−60 V).
 - Restore analyser to baseline regarding first-sample and limit-clamp (measurement integrity).
+ - Add a dedicated **Triode-Connected Pentode** analyser mode to generate triode-like sweeps for pentode tubes and feed UTmax-style seeding.
+ - Centralise Gardiner vs Reefman pentode parameter bounds in `Model::setEstimate` so fits stay inside model-appropriate corridors.
 
-### 2025-11-13 Summary (Pentode)
+### 2025-11-13–15 Summary (Pentode)
 - Gardiner/Reefman fitting stabilised by reapplying deferred bounds to all solve stages (anode, screen, remodel) and null-initialising the shared parameter array before logging.
 - Logging remains verbose (MODEL INPUT / PENTODE SOLVER START) but runs without crashes; solver overlays now align closely with measured sweeps.
 - Triode modelling continues to behave as before; Simple Manual Pentode backend is now implemented and wired to a popup dialog, seeded from Estimate, but its current scaling is not yet calibrated.
+- New **Triode-Connected Pentode** analyser mode: analyser device type that keeps the hardware in pentode configuration (S3 anode, S7 screen) but drives S3/S7 together during anode-characteristics tests. Measurements taken in this mode are stored as `deviceType = TRIODE` with `testType = ANODE_CHARACTERISTICS` and a `triodeConnectedPentode` flag, and appear in the project tree as `Triode (Triode-Connected Pentode) Anode Characteristics`. These are used as the triode-based seed for `Estimate::estimatePentode`.
+- `Model::setEstimate` now applies **model-specific pentode bounds**:
+  - Gardiner/SimpleManual: wider envelope (original global guardrails) so the unified Gardiner model can explore its shaping space.
+  - Reefman (Derk/DerkE): tighter UTmax-style corridor (mirroring `Estimate::estimatePentode` clamp ranges) to keep the DEPIa-style model physically realistic.
 
 ### 2025-11-14 Note (Reefman / plotting regressions)
 - Experimental changes to Reefman pentode bounds, defaults, and shared pentode plotting were found to destabilise all pentode model plots (diagonal / vertical families and inconsistent re-plots when toggling tree items).

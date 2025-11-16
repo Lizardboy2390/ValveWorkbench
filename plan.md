@@ -47,6 +47,8 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
 - Current limitation: Simple Manual Pentode `anodeCurrent` scaling is not yet calibrated to the global mA convention; first-pass curves from the slider model do not reliably match Gardiner/measurement magnitude. Use Gardiner for production fits until a dedicated calibration pass is done.
 - Experimental (branch-only): on a dedicated branch (e.g. `feature/reefman-extractmodel`), work toward aligning Reefman pentode behaviour with the standalone ExtractModel_3p0 tool at `C:\Users\lizar\Documents\ExtractModel_3p0` by comparing Ia/Ig2 at selected operating points.
 - Later: once the Simple Manual Pentode path mirrors the web tool and Gardiner in both shape and scale for representative tubes (6L6, EL34), consider a minimal auto-fit layer over a subset of parameters.
+ - New: **Triode-Connected Pentode** analyser mode added as a dedicated device type. This drives the pentode’s anode and screen together to generate triode-like anode characteristics per tube, which are then used as high-quality triode seeds for `Estimate::estimatePentode`.
+ - New: Centralised pentode parameter bounds in `Model::setEstimate` now distinguish between **Gardiner** (wider, stable envelope) and **Reefman/DerkE** (tighter UTmax-style corridor) to improve fit stability without constraining the main Gardiner path.
 
 #### Option 3 (future): Manual Gardiner-style pentode
 - Longer term, consider a separate "Manual Gardiner Pentode" model that:
