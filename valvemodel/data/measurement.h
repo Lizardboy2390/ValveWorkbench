@@ -42,6 +42,8 @@ public:
 
     int getDeviceType() const;
     void setDeviceType(int newDeviceType);
+    bool isTriodeConnectedPentode() const;
+    void setTriodeConnectedPentode(bool enable);
     int getTestType() const;
     void setTestType(int newTestType);
     double getHeaterVoltage() const;
@@ -107,6 +109,10 @@ protected:
 
     bool showScreen = true;
     QColor sampleColor = QColor::fromRgb(0, 0, 0);
+
+    // Hint flag: true when this pentode measurement was taken in
+    // triode-connected pentode mode (anode and screen driven together).
+    bool triodeConnectedPentode = false;
 
     void anodeAxes(Plot *plot);
     QList<QGraphicsItem *> *plotTriodeAnode(Plot *plot, Sweep *sweep = nullptr);

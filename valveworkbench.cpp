@@ -908,10 +908,17 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     // Heater button is unused in new hardware; no initialization needed
 
+    // Device type combo: the itemData carries the logical eDevice type used by
+    // the analyser and measurements. Variants like "Double Triode" and
+    // "Triode-Connected Pentode" piggy-back on TRIODE or PENTODE and are
+    // distinguished via separate flags.
     ui->deviceType->addItem("Triode", TRIODE);
     ui->deviceType->addItem("Pentode", PENTODE);
     ui->deviceType->addItem("Double Triode", TRIODE);
     ui->deviceType->addItem("Diode", DIODE);
+    // Triode-Connected Pentode uses pentode hardware (S7 as screen) but with
+    // anode and screen driven together in the analyser.
+    ui->deviceType->addItem("Triode-Connected Pentode", PENTODE);
 
     // Use a single base model (prefer 12AX7 triode) as the unified source
     // for analyser ranges/steps and modelling limits instead of analyser.json
@@ -2837,13 +2844,24 @@ void ValveWorkbench::setFitButtons()
 
 void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
 {
-    switch (ui->deviceType->itemData(index).toInt()) {
+    // Decode the logical device type from itemData and then refine behaviour
+    // based on the human-readable label to distinguish variants that share
+    // the same base type (e.g. Double Triode, Triode-Connected Pentode).
+    const int logicalType = ui->deviceType->itemData(index).toInt();
+    const QString label = ui->deviceType->currentText();
+
+    isDoubleTriode = (label == QLatin1String("Double Triode"));
+    isTriodeConnectedPentode = (label == QLatin1String("Triode-Connected Pentode"));
+
+    switch (logicalType) {
     case PENTODE:
         pentodeMode();
         break;
     case TRIODE:
-        triodeMode(ui->deviceType->currentText() == "Double Triode");
-        isDoubleTriode = ui->deviceType->currentText() == "Double Triode";
+        // Single triode, double triode, and triode-connected pentode all
+        // share the same underlying TRIODE device type. triodeMode's
+        // doubleTriode flag controls the secondary-anode UI.
+        triodeMode(isDoubleTriode);
         break;
     case DIODE:
         diodeMode();
@@ -3039,8 +3057,11 @@ void ValveWorkbench::on_runButton_clicked()
     log("Configuring analyser");
     analyser->setDeviceType(deviceType);
     analyser->setTestType(testType);
-    analyser->setIsDoubleTriode(ui->deviceType->currentText() == "Double Triode");
-    isDoubleTriode = ui->deviceType->currentText() == "Double Triode";
+    // Propagate multi-section and triode-connected flags so the analyser can
+    // adjust its command patterns while measurements still report TRIODE or
+    // PENTODE through deviceType.
+    analyser->setIsDoubleTriode(isDoubleTriode);
+    analyser->setIsTriodeConnectedPentode(isTriodeConnectedPentode);
     analyser->setPMax(pMax);
     analyser->setIaMax(iaMax);
     analyser->setSweepParameters(anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep, secondGridStart, secondGridStop, secondGridStep, secondAnodeStart, secondAnodeStop, secondAnodeStep);
@@ -3096,6 +3117,11 @@ void ValveWorkbench::on_btnAddToProject_clicked()
         return;
     }
     if (project->addMeasurement(measurement)) {
+        // Tag pentode measurements that were taken in triode-connected
+        // mode so the UI can display a clear hint in the device name.
+        if (measurement->getDeviceType() == PENTODE && isTriodeConnectedPentode) {
+            measurement->setTriodeConnectedPentode(true);
+        }
         qDebug("Measurement added to project successfully");
         qDebug("About to build tree");
         measurement->buildTree(currentProject);

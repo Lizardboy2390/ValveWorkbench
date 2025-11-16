@@ -222,6 +222,7 @@ private:
     double pMax;
 
     bool isDoubleTriode = false;
+    bool isTriodeConnectedPentode = false;
 
     QFile *logFile;
 

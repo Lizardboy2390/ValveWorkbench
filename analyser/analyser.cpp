@@ -220,6 +220,15 @@ void Analyser::setIsDoubleTriode(bool isDouble)
     isDoubleTriode = isDouble;
 }
 
+void Analyser::setIsTriodeConnectedPentode(bool enable)
+{
+    // In triode-connected pentode mode we still report deviceType as PENTODE
+    // so the measurement knows this is a pentode tube, but the analyser
+    // drives the anode and screen together (S3 and S7 track) during anode
+    // characteristics sweeps.
+    isTriodeConnectedPentode = enable;
+}
+
 void Analyser::setSweepPoints(int newSweepPoints)
 {
     sweepPoints = newSweepPoints;
@@ -304,7 +313,17 @@ void Analyser::startTest()
     // Clear down the previous result set
     result = new Measurement();
     result->setTestType(testType);
-    result->setDeviceType(deviceType);
+
+    // For triode-connected pentode mode we still drive pentode hardware
+    // (S3 anode, S7 screen tracking), but we want the saved measurement to
+    // behave like a triode anode-characteristics set for modelling and
+    // seeding. Record it as a TRIODE and tag the triode-connected flag.
+    if (isTriodeConnectedPentode && testType == ANODE_CHARACTERISTICS) {
+        result->setDeviceType(TRIODE);
+        result->setTriodeConnectedPentode(true);
+    } else {
+        result->setDeviceType(deviceType);
+    }
     result->setIaMax(iaMax);
     result->setPMax(pMax);
 
@@ -387,7 +406,7 @@ void Analyser::startTest()
             }
         }
 
-        if (deviceType == PENTODE) { // Anode swept, Grid stepped, Screen fixed
+        if (deviceType == PENTODE) { // Anode swept, Grid stepped, Screen fixed or tracking
             result->setScreenStart(screenStart);
 
             // Generate sweep/step parameters: anode sweep, grid step
@@ -578,11 +597,6 @@ void Analyser::nextSample() {
             }
         }
 
-        if (isDoubleTriode && stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()) {
-            const int primaryGrid = stepParameter.at(stepIndex);
-            sendCommand(buildSetCommand("S2 ", primaryGrid));
-        }
-
         if (isDoubleTriode && sweepType == GRID) {
             // TRANSFER (double triode): sweep both grids together (S2 and S6)
             QString cmdS2 = buildSetCommand("S2 ", sweepValue);
@@ -592,15 +606,25 @@ void Analyser::nextSample() {
             qInfo("Command: %s (secondary grid sweep)", cmdS6.toStdString().c_str());
             sendCommand(cmdS6);
         } else {
-            // Single triode or anode sweep cases
+            // Single triode or anode sweep cases (including triode-connected pentode)
             QString primaryCommand = buildSetCommand(sweepCommandPrefix, sweepValue);
             qInfo("Command: %s (primary sweep)", primaryCommand.toStdString().c_str());
             sendCommand(primaryCommand);
+
+            // For double triode TRANSFER with ANODE sweep we mirror S3->S7.
             if (isDoubleTriode && sweepType == ANODE) {
-                // Only track anode sweep to secondary anode when sweeping ANODE
                 QString secondaryCommand = buildSetCommand("S7 ", sweepValue);
                 qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
                 sendCommand(secondaryCommand);
+            }
+
+            // In triode-connected pentode mode, treat S7 as the screen supply that
+            // tracks the anode for every ANODE sweep point so the tube operates as
+            // a triode-connected pentode without requiring a physical strap.
+            if (isTriodeConnectedPentode && deviceType == PENTODE && sweepType == ANODE) {
+                QString screenTrack = buildSetCommand("S7 ", sweepValue);
+                qInfo("Command: %s (triode-connected screen tracking)", screenTrack.toStdString().c_str());
+                sendCommand(screenTrack);
             }
         }
         if (testType == TRANSFER_CHARACTERISTICS || testType == ANODE_CHARACTERISTICS) {

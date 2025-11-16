@@ -198,12 +198,17 @@ QString Measurement::measurementName()
 
 QString Measurement::deviceName()
 {
-    switch(deviceType) {
+    switch (deviceType) {
     case TRIODE:
+        // For triode-connected pentode tests we still model as a triode but
+        // add a hint to indicate the hardware was in triode-connected mode.
+        if (triodeConnectedPentode) {
+            return QString("Triode (Triode-Connected Pentode)");
+        }
         return QString("Triode");
-        break;
     case PENTODE:
         return QString("Pentode");
+    default:
         break;
     }
 
@@ -293,6 +298,16 @@ int Measurement::getDeviceType() const
 void Measurement::setDeviceType(int newDeviceType)
 {
     deviceType = newDeviceType;
+}
+
+bool Measurement::isTriodeConnectedPentode() const
+{
+    return triodeConnectedPentode;
+}
+
+void Measurement::setTriodeConnectedPentode(bool enable)
+{
+    triodeConnectedPentode = enable;
 }
 
 int Measurement::getTestType() const

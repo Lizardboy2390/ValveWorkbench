@@ -49,7 +49,9 @@ public:
 
     void setTestType(int newTestType);
 
+    // Enable special multi-section / variant modes.
     void setIsDoubleTriode(bool isDouble);
+    void setIsTriodeConnectedPentode(bool enable);
 
     void setSweepPoints(int newSweepPoints);
 
@@ -162,6 +164,7 @@ private:
     bool isVersionRead = false;
     bool isMega = false;
     bool isDoubleTriode = false;
+    bool isTriodeConnectedPentode = false;
     bool isVerifyingHardware = false;  // ← ADD THIS: Track verification state
     int verificationAttempts = 0;      // ← ADD THIS: Track verification attempts
     static const int MAX_VERIFICATION_ATTEMPTS = 3; // ← ADD THIS: Max verification retries
