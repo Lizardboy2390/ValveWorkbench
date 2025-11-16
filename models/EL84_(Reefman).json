@@ -1,0 +1,27 @@
+{
+    "analyserDefaults": {
+        "anode": {
+            "start": 0,
+            "step": 5,
+            "stop": 300
+        },
+        "doubleTriode": false,
+        "grid": {
+            "start": 0,
+            "step": 1,
+            "stop": 30
+        },
+        "limits": {
+            "iaMax": 45,
+            "pMax": 14
+        },
+        "screen": {
+            "start": 0,
+            "step": 0,
+            "stop": 0
+        },
+        "testType": 0
+    },
+    "deviceType": "TRIODE",
+    "name": "EL84 (Reefman)"
+}

@@ -13,7 +13,7 @@
         },
         "limits": {
             "iaMax": 50,
-            "pMax": 30
+            "pMax": 25
         },
         "screen": {
             "start": 250,

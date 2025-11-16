@@ -1,0 +1,18 @@
+{
+	"name": "12AU7",
+	"vaMax": 300.0,
+	"vg1Max": 5.0,
+	"iaMax": 5.0,
+	"paMax": 1.125,
+	"model": {
+		"device": "triode",
+		"type": "cohenHelie",
+		"kg1": 0.899682072661792,
+		"mu": 20,
+		"x": 1.52,
+		"kp": 806,
+		"kvb": 3,
+		"kvb1": 12.5,
+		"vct": 0.505
+	}
+}

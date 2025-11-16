@@ -185,12 +185,40 @@ void ReefmanPentode::addSample(double va, double ia, double vg1, double vg2, dou
 
 void ReefmanPentode::fromJson(QJsonObject source)
 {
+    // Load common Cohen-Helie triode-style parameters first (mu, kg1, x, kp, kvb, kvb1, vct)
+    CohenHelieTriode::fromJson(source);
 
+    // Reefman-specific pentode parameters (minimal set used in anodeCurrent/addSample)
+    if (source.contains("kg2") && source["kg2"].isDouble()) {
+        parameter[PAR_KG2]->setValue(source["kg2"].toDouble());
+    }
+
+    if (source.contains("a") && source["a"].isDouble()) {
+        parameter[PAR_A]->setValue(source["a"].toDouble());
+    }
+
+    if (source.contains("alpha") && source["alpha"].isDouble()) {
+        parameter[PAR_ALPHA]->setValue(source["alpha"].toDouble());
+    }
+
+    if (source.contains("beta") && source["beta"].isDouble()) {
+        parameter[PAR_BETA]->setValue(source["beta"].toDouble());
+    }
 }
 
 void ReefmanPentode::toJson(QJsonObject &destination)
 {
+    // Serialize the shared Cohen-Helie base parameters first
+    CohenHelieTriode::toJson(destination);
 
+    // Serialize the minimal Reefman pentode parameter set
+    destination["kg2"]   = parameter[PAR_KG2]->getValue();
+    destination["a"]     = parameter[PAR_A]->getValue();
+    destination["alpha"] = parameter[PAR_ALPHA]->getValue();
+    destination["beta"]  = parameter[PAR_BETA]->getValue();
+
+    destination["device"] = "pentode";
+    destination["type"]   = "reefman";
 }
 
 void ReefmanPentode::updateUI(QLabel *labels[], QLineEdit *values[])

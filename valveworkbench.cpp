@@ -63,12 +63,31 @@ int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
 
 void ValveWorkbench::on_pushButton_3_clicked()
 {
-    // Load Template...
-    QString baseDir = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
-                                      + "/ValveWorkbench/templates");
-    if (!QDir(baseDir).exists()) QDir().mkpath(baseDir);
-    QString startDir = baseDir;
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Template"), startDir, tr("JSON Files (*.json)"));
+    // Load Template... (default to models directory near the application)
+    QString baseDir;
+    {
+        QStringList possiblePaths = {
+            QCoreApplication::applicationDirPath() + "/../../../../../models",
+            QCoreApplication::applicationDirPath() + "/../../../../models",
+            QCoreApplication::applicationDirPath() + "/../../../models",
+            QCoreApplication::applicationDirPath() + "/../models",
+            QCoreApplication::applicationDirPath() + "/models"
+        };
+
+        for (const QString &path : possiblePaths) {
+            QDir testDir(path);
+            if (testDir.exists()) {
+                baseDir = path;
+                break;
+            }
+        }
+
+        if (baseDir.isEmpty()) {
+            baseDir = QDir::currentPath() + "/models";
+        }
+    }
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Template"), baseDir, tr("JSON Files (*.json)"));
     if (fileName.isEmpty()) return;
 
     QFile f(fileName);
@@ -171,10 +190,24 @@ void ValveWorkbench::on_pushButton_3_clicked()
         setRange("grid", gridStart, gridStop, gridStep);
         setRange("screen", screenStart, screenStop, screenStep);
 
+        // Prefer limits block if present (new-format templates)
         const QJsonObject lim = defs.value("limits").toObject();
         if (!lim.isEmpty()) {
             iaMax = lim.value("iaMax").toDouble(iaMax);
-            pMax = lim.value("pMax").toDouble(pMax);
+            pMax  = lim.value("pMax").toDouble(pMax);
+        } else {
+            // Backward compatibility: fall back to legacy top-level fields
+            if (obj.contains("ia_max") && obj.value("ia_max").isDouble()) {
+                iaMax = obj.value("ia_max").toDouble(iaMax);
+            } else if (obj.contains("iaMax") && obj.value("iaMax").isDouble()) {
+                iaMax = obj.value("iaMax").toDouble(iaMax);
+            }
+
+            if (obj.contains("pa_max") && obj.value("pa_max").isDouble()) {
+                pMax = obj.value("pa_max").toDouble(pMax);
+            } else if (obj.contains("pMax") && obj.value("pMax").isDouble()) {
+                pMax = obj.value("pMax").toDouble(pMax);
+            }
         }
 
         // Apply double-triode flag for triode devices (overrides TRI vs DOUBLE_TRIODE selection)
@@ -248,7 +281,7 @@ void ValveWorkbench::on_pushButton_4_clicked()
     defs.insert("anode", makeRange(anodeStart, anodeStop, anodeStep));
     defs.insert("grid", makeRange(gridStart, gridStop, gridStep));
     defs.insert("screen", makeRange(screenStart, screenStop, screenStep));
-    // Save default test type and double-triode mode
+    // Save default test type, double-triode mode, and current limits from the analyser UI
     defs.insert("testType", testType);
     defs.insert("doubleTriode", isDoubleTriode);
     QJsonObject lim; lim.insert("iaMax", iaMax); lim.insert("pMax", pMax); defs.insert("limits", lim);
@@ -256,9 +289,30 @@ void ValveWorkbench::on_pushButton_4_clicked()
 
     QJsonDocument out(obj);
 
-    QString baseDir = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
-                                      + "/ValveWorkbench/templates");
-    QDir().mkpath(baseDir);
+    // Default template directory to models folder near the application
+    QString baseDir;
+    {
+        QStringList possiblePaths = {
+            QCoreApplication::applicationDirPath() + "/../../../../../models",
+            QCoreApplication::applicationDirPath() + "/../../../../models",
+            QCoreApplication::applicationDirPath() + "/../../../models",
+            QCoreApplication::applicationDirPath() + "/../models",
+            QCoreApplication::applicationDirPath() + "/models"
+        };
+
+        for (const QString &path : possiblePaths) {
+            QDir testDir(path);
+            if (testDir.exists()) {
+                baseDir = path;
+                break;
+            }
+        }
+
+        if (baseDir.isEmpty()) {
+            baseDir = QDir::currentPath() + "/models";
+        }
+    }
+
     QString suggested = baseDir + "/" + obj.value("name").toString("Device").replace(' ', '_') + ".json";
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save Template"), suggested, tr("JSON Files (*.json)"));
     if (fileName.isEmpty()) return;
@@ -858,11 +912,87 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->deviceType->addItem("Pentode", PENTODE);
     ui->deviceType->addItem("Double Triode", TRIODE);
     ui->deviceType->addItem("Diode", DIODE);
-    
-    if (!templates.isEmpty()) {
-        loadTemplate(0);
+
+    // Use a single base model (prefer 12AX7 triode) as the unified source
+    // for analyser ranges/steps and modelling limits instead of analyser.json
+    Device *defaultDevice = nullptr;
+
+    // Prefer an explicit 12AX7 triode if present
+    for (int i = 0; i < devices.size(); ++i) {
+        Device *dev = devices.at(i);
+        if (dev && dev->getDeviceType() == TRIODE && dev->getName() == QLatin1String("12AX7")) {
+            defaultDevice = dev;
+            break;
+        }
     }
-    
+
+    // Otherwise fall back to the first triode device
+    if (!defaultDevice) {
+        for (int i = 0; i < devices.size(); ++i) {
+            Device *dev = devices.at(i);
+            if (dev && dev->getDeviceType() == TRIODE) {
+                defaultDevice = dev;
+                break;
+            }
+        }
+    }
+
+    // And finally to the very first loaded device if nothing else matches
+    if (!defaultDevice && !devices.isEmpty()) {
+        defaultDevice = devices.first();
+    }
+
+    if (defaultDevice) {
+        // Fixed heater voltage (hardware constant)
+        heaterVoltage = 6.3;
+
+        // Derive analyser ranges and limits from the base model
+        anodeStart = 0.0;
+        anodeStop  = defaultDevice->getVaMax();
+        // Use a reasonable default step: either 5V or roughly 60 points over the range
+        anodeStep  = std::max(5.0, anodeStop / 60.0);
+
+        gridStart  = 0.0;
+        gridStop   = defaultDevice->getVg1Max();
+        gridStep   = 0.5;   // designer-style grid increment
+
+        screenStart = 0.0;
+        screenStop  = 0.0;
+        screenStep  = 0.0;
+
+        iaMax = defaultDevice->getIaMax();
+        pMax  = defaultDevice->getPaMax();
+
+        // Update basic UI selections to match the base model
+        if (ui->deviceName) {
+            ui->deviceName->setText(defaultDevice->getName());
+        }
+
+        deviceType = defaultDevice->getDeviceType();
+        int deviceIndex = 0;
+        if (deviceType == TRIODE) {
+            deviceIndex = 0;
+        } else if (deviceType == PENTODE) {
+            deviceIndex = 1;
+        } else if (deviceType == DOUBLE_TRIODE) {
+            deviceIndex = 2;
+        } else if (deviceType == DIODE) {
+            deviceIndex = 3;
+        }
+
+        ui->deviceType->setCurrentIndex(deviceIndex);
+        on_deviceType_currentIndexChanged(deviceIndex);
+
+        // Default to anode-characteristics test type
+        if (ui->testType) {
+            ui->testType->setCurrentIndex(0);
+            on_testType_currentIndexChanged(0);
+        }
+
+        // Push derived values into the analyser parameter fields
+        updateParameterDisplay();
+    }
+
     //buildModelSelection();
 
     // ui->runButton->setEnabled(false);  // Commented out for testing

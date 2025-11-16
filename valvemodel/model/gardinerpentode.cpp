@@ -533,100 +533,10 @@ void GardinerPentode::setOptions()
         //problem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
         //problem.SetParameterBlockConstant(parameter[PAR_PSI]->getPointer());
 
-        anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.00001);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_OS]->getPointer(), 0, 0.01);
-
-        if (preferences->useSecondaryEmission()) {
-            anodeProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 2.0 * parameter[PAR_MU]->getValue());
-            anodeProblem.SetParameterLowerBound(parameter[PAR_OMEGA]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_NU]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_S]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_AP]->getPointer(), 0, 0.0);
-
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_S]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_PHI]->getPointer());
-            //anodeProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
-        }
-
-        //problem.SetParameterUpperBound(parameter[PAR_KG2]->getPointer(), 0, parameter[PAR_KG1]->getValue() * 6.0);
-
-        // Enforce strictly positive minima for denominators involved in residuals
-        anodeProblem.SetParameterLowerBound(parameter[PAR_KG2]->getPointer(), 0, 1e-6);
-        screenProblem.SetParameterLowerBound(parameter[PAR_KG2A]->getPointer(), 0, 1e-6);
-        // Reasonable upper bounds to avoid runaway
-        anodeProblem.SetParameterUpperBound(parameter[PAR_KG2]->getPointer(), 0, 30.0);
-        screenProblem.SetParameterUpperBound(parameter[PAR_KG2A]->getPointer(), 0, 30.0);
-
-        // Gardiner-specific guardrails: keep Kg1 and Mu in realistic ranges
-        // so the fit cannot collapse to Mu~1 with extreme Kg1.
-        anodeProblem.SetParameterLowerBound(parameter[PAR_KG1]->getPointer(), 0, 0.05);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_KG1]->getPointer(), 0, 2.0);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_MU]->getPointer(), 0, 3.0);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_MU]->getPointer(), 0, 25.0);
-
-        // Global bounds (wide) derived from web models to stabilize search
-        anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.6);
-        // Prevent the knee shaping from vanishing (Beta≈0) or becoming
-        // excessively steep/flat (Gamma << 1 or >> 3), which leads to
-        // near-zero or diagonal curves.
-        anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.02);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_BETA]->getPointer(), 0, 0.6);
-        anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.7);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.5);
-
-        // A (slope) small
-        // Keep A (slope term) small but non-zero to avoid flat, 
-        // diagonal-like behaviour with collapsed curvature.
-        anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.001);
-        anodeProblem.SetParameterUpperBound(parameter[PAR_A]->getPointer(), 0, 0.05);
-
-        // Screen-shaping parameters
-        screenProblem.SetParameterLowerBound(parameter[PAR_TAU]->getPointer(), 0, 0.02);
-        screenProblem.SetParameterUpperBound(parameter[PAR_TAU]->getPointer(), 0, 0.5);
-        screenProblem.SetParameterLowerBound(parameter[PAR_RHO]->getPointer(), 0, 0.01);
-        screenProblem.SetParameterUpperBound(parameter[PAR_RHO]->getPointer(), 0, 0.2);
-        screenProblem.SetParameterLowerBound(parameter[PAR_THETA]->getPointer(), 0, 0.8);
-        screenProblem.SetParameterUpperBound(parameter[PAR_THETA]->getPointer(), 0, 3.0);
-        screenProblem.SetParameterLowerBound(parameter[PAR_PSI]->getPointer(), 0, 0.0);
-        screenProblem.SetParameterUpperBound(parameter[PAR_PSI]->getPointer(), 0, 10.0);
-
-        // Secondary emission geometry only exists in problems when SE is enabled
-        if (preferences->useSecondaryEmission()) {
-            anodeProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 30.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_NU]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterUpperBound(parameter[PAR_NU]->getPointer(), 0, 8.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_OMEGA]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterUpperBound(parameter[PAR_OMEGA]->getPointer(), 0, 300.0);
-
-            screenProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 0.0);
-            screenProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 30.0);
-            screenProblem.SetParameterLowerBound(parameter[PAR_NU]->getPointer(), 0, 0.0);
-            screenProblem.SetParameterUpperBound(parameter[PAR_NU]->getPointer(), 0, 8.0);
-            screenProblem.SetParameterLowerBound(parameter[PAR_OMEGA]->getPointer(), 0, 0.0);
-            screenProblem.SetParameterUpperBound(parameter[PAR_OMEGA]->getPointer(), 0, 300.0);
-        }
-
+        // Solver configuration only; bounds are now handled centrally via Model::setEstimate/setLimits
         options.max_num_iterations = 400;
         options.max_num_consecutive_invalid_steps = 20;
-        //options.use_inner_iterations = true;
-        //options.use_nonmonotonic_steps = true;
-        //options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-        //options.trust_region_strategy_type = ceres::DOGLEG;
         options.linear_solver_type = ceres::DENSE_QR;
-        //options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
-        //options.preconditioner_type = ceres::JACOBI;
-        //options.preconditioner_type = ceres::SUBSET;
     } else if (mode == SCREEN_MODE) {
 
         parameter[PAR_TAU]->setValue(parameter[PAR_ALPHA]->getValue());
@@ -646,15 +556,6 @@ void GardinerPentode::setOptions()
                 screenProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
             }
         }
-
-        screenProblem.SetParameterLowerBound(parameter[PAR_TAU]->getPointer(), 0, 0.02);
-        screenProblem.SetParameterUpperBound(parameter[PAR_TAU]->getPointer(), 0, 0.5);
-        screenProblem.SetParameterLowerBound(parameter[PAR_RHO]->getPointer(), 0, 0.01);
-        screenProblem.SetParameterUpperBound(parameter[PAR_RHO]->getPointer(), 0, 0.2);
-        screenProblem.SetParameterLowerBound(parameter[PAR_THETA]->getPointer(), 0, 0.8);
-        screenProblem.SetParameterUpperBound(parameter[PAR_THETA]->getPointer(), 0, 3.0);
-        screenProblem.SetParameterLowerBound(parameter[PAR_PSI]->getPointer(), 0, 0.0);
-        screenProblem.SetParameterUpperBound(parameter[PAR_PSI]->getPointer(), 0, 10.0);
     } else if (mode == ANODE_REMODEL_MODE) {
         anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
         //anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
@@ -666,7 +567,7 @@ void GardinerPentode::setOptions()
 
         anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
 
-        anodeRemodelProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
+        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_OS]->getPointer());
 
         if (preferences->useSecondaryEmission()) {
             anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
