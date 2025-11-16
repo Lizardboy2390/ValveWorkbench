@@ -223,6 +223,14 @@ QPointF TriodeCommonCathode::findOperatingPoint()
 
             QPointF intersection = findLineIntersection(anodeStart, anodeEnd, cathodeStart, cathodeEnd);
             if (intersection.x() >= 0 && intersection.y() >= 0) {
+                // Reject degenerate intersections that sit effectively at the origin (Va too close to 0V).
+                // In these cases, fall back to the simple estimate rather than using an unusable bias point.
+                if (intersection.x() < 1.0) {
+                    qInfo("Designer: OP: intersection at Va=%.2f V is too close to 0V - ignoring (seg a%d/c%d)",
+                          intersection.x(), i, j);
+                    continue;
+                }
+
                 // Valid intersection point found
                 qInfo("Designer: OP: found intersection at Va=%.2f V, Ia=%.2f mA (seg a%d/c%d)",
                       intersection.x(), intersection.y(), i, j);
@@ -385,7 +393,7 @@ void TriodeCommonCathode::update(int index)
 
 void TriodeCommonCathode::plot(Plot *plot)
 {
-    qInfo("Designer: plot() start. Device=%s, Vb=%.2f, Ra=%.0f, Rk=%.0f, RL=%.0f",
+    qInfo("Designer: TriodeCC plot() start. Device=%s, Vb=%.2f, Ra=%.0f, Rk=%.0f, RL=%.0f",
           device1 ? device1->getName().toStdString().c_str() : "<none>",
           parameter[TRI_CC_VB]->getValue(),
           parameter[TRI_CC_RA]->getValue(),
@@ -443,7 +451,7 @@ void TriodeCommonCathode::plot(Plot *plot)
     calculateCathodeLoadLine();
     QPointF op = findOperatingPoint();
 
-    qInfo("Designer: Operating point estimate Va=%.2f V, Ia=%.2f mA", op.x(), op.y());
+    qInfo("Designer: TriodeCC OP estimate Va=%.2f V, Ia=%.2f mA", op.x(), op.y());
 
     // Set axes strictly to device limits to match model plot size
     double vb = parameter[TRI_CC_VB]->getValue();
@@ -493,6 +501,7 @@ void TriodeCommonCathode::plot(Plot *plot)
 
     // Plot cathode load line (purple) - only if we have valid data
     if (cathodeLoadLineData.size() >= 2) {
+        qInfo("Designer: TriodeCC plot() drawing cathode load line, points=%d", cathodeLoadLineData.size());
         cathodeLoadLine = new QGraphicsItemGroup();
 
         QPen cathodePen;
@@ -548,6 +557,7 @@ void TriodeCommonCathode::plot(Plot *plot)
 
     // Mark operating point (red crosshair)
     if (op.x() >= 0.0 && op.y() >= 0.0) {
+        qInfo("Designer: TriodeCC plot() drawing OP marker at Va=%.2f, Ia=%.2f", op.x(), op.y());
         QPen opPen;
         opPen.setColor(QColor::fromRgb(255, 0, 0));  // Red for operating point
         opPen.setWidth(2);
@@ -565,6 +575,7 @@ void TriodeCommonCathode::plot(Plot *plot)
         }
     }
 
+    qInfo("Designer: TriodeCC plot() entering AC load line block");
     // Plot small-signal AC load line (yellow) around operating point
     if (op.x() >= 0 && op.y() >= 0) {
         double ra = parameter[TRI_CC_RA]->getValue();
@@ -695,6 +706,7 @@ void TriodeCommonCathode::plot(Plot *plot)
         }
     }
 
+    qInfo("Designer: TriodeCC plot() entering Pa limit block");
     // Draw maximum dissipation limit (Pa = constant) as dashed line
     if (device1) {
         const double paMaxW = device1->getPaMax(); // Watts
@@ -726,6 +738,7 @@ void TriodeCommonCathode::plot(Plot *plot)
         }
     }
 
+    qInfo("Designer: TriodeCC plot() entering symmetric swing block");
     // Symmetrical swing helper and input sensitivity (Vpp), conditional
     if (op.x() >= 0.0 && op.y() >= 0.0 && device1) {
         double ra = parameter[TRI_CC_RA]->getValue();

@@ -151,6 +151,15 @@ void Device::transferAxes(Plot *plot)
 
 QGraphicsItemGroup *Device::anodePlot(Plot *plot)
 {
+    // Some device presets (e.g., analyser-only exports) may not have an attached
+    // fitted model. In that case, skip plotting model curves instead of
+    // dereferencing a null model pointer.
+    if (model == nullptr) {
+        qWarning("Device::anodePlot: device '%s' has no model; skipping model plot",
+                 name.toStdString().c_str());
+        return nullptr;
+    }
+
     QList<QGraphicsItem *> items;
 
     QPen modelPen;

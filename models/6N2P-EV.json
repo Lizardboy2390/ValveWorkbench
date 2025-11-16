@@ -23,5 +23,20 @@
         "testType": 0
     },
     "deviceType": "TRIODE",
-    "name": "6N2P-EV"
+    "iaMax": 5,
+    "model": {
+        "device": "triode",
+        "kg1": 992.4478296706736,
+        "kp": 400,
+        "kvb": 112.91863900096547,
+        "kvb1": 6.504253068478265,
+        "mu": 92.54925887409811,
+        "type": "cohenHelie",
+        "vct": 0.22366623199249858,
+        "x": 1.5893974708526801
+    },
+    "name": "6N2P-EV",
+    "paMax": 1.125,
+    "vaMax": 300,
+    "vg1Max": 5
 }

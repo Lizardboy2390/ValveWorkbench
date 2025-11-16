@@ -4364,6 +4364,62 @@ void ValveWorkbench::exportFittedModelToDevices()
     root["iaMax"] = iaMaxOut;
     root["paMax"] = paMaxOut;
 
+    // Device type string for presets
+    if (deviceType == TRIODE) {
+        root["deviceType"] = "TRIODE";
+    } else if (deviceType == PENTODE) {
+        root["deviceType"] = "PENTODE";
+    } else if (deviceType == DOUBLE_TRIODE) {
+        root["deviceType"] = "DOUBLE_TRIODE";
+    } else {
+        root["deviceType"] = "UNKNOWN";
+    }
+
+    // Persist analyser defaults alongside the fitted model so presets can act as
+    // both analyser templates and Designer devices.
+    QJsonObject analyserDefaults;
+
+    // Anode sweep range
+    {
+        QJsonObject anodeObj;
+        anodeObj["start"] = anodeStart;
+        anodeObj["step"]  = anodeStep;
+        anodeObj["stop"]  = anodeStop;
+        analyserDefaults["anode"] = anodeObj;
+    }
+
+    // Grid sweep range
+    {
+        QJsonObject gridObj;
+        gridObj["start"] = gridStart;
+        gridObj["step"]  = gridStep;
+        gridObj["stop"]  = gridStop;
+        analyserDefaults["grid"] = gridObj;
+    }
+
+    // Screen sweep range
+    {
+        QJsonObject screenObj;
+        screenObj["start"] = screenStart;
+        screenObj["step"]  = screenStep;
+        screenObj["stop"]  = screenStop;
+        analyserDefaults["screen"] = screenObj;
+    }
+
+    // Limits
+    {
+        QJsonObject limitsObj;
+        limitsObj["iaMax"] = iaMaxOut;
+        limitsObj["pMax"]  = paMaxOut;
+        analyserDefaults["limits"] = limitsObj;
+    }
+
+    analyserDefaults["testType"]    = testType;
+    analyserDefaults["doubleTriode"] = isDoubleTriode;
+
+    root["analyserDefaults"] = analyserDefaults;
+
+    // Fitted model parameters
     QJsonObject modelObj;
     toExport->toJson(modelObj);
     root["model"] = modelObj;
