@@ -531,7 +531,6 @@ release\moc_ledindicator.cpp: ..\..\ledindicator\ledindicator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -735,7 +734,6 @@ release\moc_preferencesdialog.cpp: ..\..\preferencesdialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -964,7 +962,6 @@ release\moc_projectdialog.cpp: ..\..\projectdialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -1169,7 +1166,6 @@ release\moc_comparedialog.cpp: ..\..\comparedialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -1776,7 +1772,6 @@ release\moc_valveworkbench.cpp: ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -2433,7 +2428,6 @@ release\moc_circuit.cpp: ..\..\valvemodel\circuit\circuit.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -3054,7 +3048,6 @@ release\moc_triodeaccathodefollower.cpp: ..\..\valvemodel\circuit\triodeaccathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -3675,7 +3668,6 @@ release\moc_triodecommoncathode.cpp: ..\..\valvemodel\circuit\triodecommoncathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -4299,7 +4291,6 @@ release\moc_triodedccathodefollower.cpp: ..\..\valvemodel\circuit\triodedccathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -4917,7 +4908,6 @@ release\moc_simplemanualpentodedialog.cpp: ..\..\valvemodel\ui\simplemanualpento
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -5139,7 +5129,6 @@ release\analyser.obj: ..\..\analyser\analyser.cpp ..\..\analyser\analyser.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -5434,7 +5423,6 @@ release\ledindicator.obj: ..\..\ledindicator\ledindicator.cpp ..\..\ledindicator
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -5639,7 +5627,6 @@ release\main.obj: ..\..\main.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -6293,7 +6280,6 @@ release\preferencesdialog.obj: ..\..\preferencesdialog.cpp ..\..\preferencesdial
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -6922,7 +6908,6 @@ release\projectdialog.obj: ..\..\projectdialog.cpp ..\..\projectdialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -7155,7 +7140,6 @@ release\comparedialog.obj: ..\..\comparedialog.cpp ..\..\comparedialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -7763,7 +7747,6 @@ release\project.obj: ..\..\project.cpp ..\..\project.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -8382,7 +8365,6 @@ release\valveworkbench.obj: ..\..\valveworkbench.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -9081,7 +9063,6 @@ release\circuit.obj: ..\..\valvemodel\circuit\circuit.cpp ..\..\valvemodel\circu
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -9703,7 +9684,6 @@ release\triodecommoncathode.obj: ..\..\valvemodel\circuit\triodecommoncathode.cp
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -10309,7 +10289,6 @@ release\dataset.obj: ..\..\valvemodel\data\dataset.cpp ..\..\valvemodel\data\dat
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -10569,7 +10548,6 @@ release\measurement.obj: ..\..\valvemodel\data\measurement.cpp ..\..\valvemodel\
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -10818,7 +10796,6 @@ release\project.obj: ..\..\valvemodel\data\project.cpp ..\..\valvemodel\data\pro
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -11408,7 +11385,6 @@ release\sample.obj: ..\..\valvemodel\data\sample.cpp ..\..\valvemodel\data\sampl
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -11649,7 +11625,6 @@ release\sweep.obj: ..\..\valvemodel\data\sweep.cpp ..\..\valvemodel\data\sweep.h
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qstdlibdetection.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcomparehelpers.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmetamacros.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -11918,7 +11893,6 @@ release\cohenhelietriode.obj: ..\..\valvemodel\model\cohenhelietriode.cpp ..\..\
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -12520,7 +12494,6 @@ release\device.obj: ..\..\valvemodel\model\device.cpp ..\..\valvemodel\model\dev
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -13138,7 +13111,6 @@ release\estimate.obj: ..\..\valvemodel\model\estimate.cpp ..\..\valvemodel\model
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -13754,7 +13726,6 @@ release\gardinerpentode.obj: ..\..\valvemodel\model\gardinerpentode.cpp ..\..\va
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -14360,7 +14331,6 @@ release\simplemanualpentode.obj: ..\..\valvemodel\model\simplemanualpentode.cpp 
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -14947,7 +14917,6 @@ release\linearsolver.obj: ..\..\valvemodel\model\linearsolver.cpp ..\..\valvemod
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -15432,7 +15401,6 @@ release\model.obj: ..\..\valvemodel\model\model.cpp ..\..\valvemodel\model\model
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -16044,7 +16012,6 @@ release\modelfactory.obj: ..\..\valvemodel\model\modelfactory.cpp ..\..\valvemod
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -16653,7 +16620,6 @@ release\korentriode.obj: ..\..\valvemodel\model\korentriode.cpp ..\..\valvemodel
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -17259,7 +17225,6 @@ release\reefmanpentode.obj: ..\..\valvemodel\model\reefmanpentode.cpp ..\..\valv
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -17862,7 +17827,6 @@ release\simpletriode.obj: ..\..\valvemodel\model\simpletriode.cpp ..\..\valvemod
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -18449,7 +18413,6 @@ release\template.obj: ..\..\valvemodel\model\template.cpp ..\..\valvemodel\model
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -18591,7 +18554,6 @@ release\quadraticsolver.obj: ..\..\valvemodel\model\quadraticsolver.cpp ..\..\va
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -19076,7 +19038,6 @@ release\moc_device.obj: ..\..\valvemodel\model\moc_device.cpp ..\..\valvemodel\m
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -19695,7 +19656,6 @@ release\moc_model.obj: ..\..\valvemodel\model\moc_model.cpp ..\..\valvemodel\mod
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -20304,7 +20264,6 @@ release\moc_cohenhelietriode.obj: ..\..\valvemodel\model\moc_cohenhelietriode.cp
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -20913,7 +20872,6 @@ release\moc_estimate.obj: ..\..\valvemodel\model\moc_estimate.cpp ..\..\valvemod
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -21524,7 +21482,6 @@ release\moc_gardinerpentode.obj: ..\..\valvemodel\model\moc_gardinerpentode.cpp 
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -22132,7 +22089,6 @@ release\moc_korentriode.obj: ..\..\valvemodel\model\moc_korentriode.cpp ..\..\va
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -22742,7 +22698,6 @@ release\moc_reefmanpentode.obj: ..\..\valvemodel\model\moc_reefmanpentode.cpp ..
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -23349,7 +23304,6 @@ release\moc_simpletriode.obj: ..\..\valvemodel\model\moc_simpletriode.cpp ..\..\
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -23955,7 +23909,6 @@ release\uibridge.obj: ..\..\valvemodel\ui\uibridge.cpp ..\..\valvemodel\ui\uibri
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -24185,7 +24138,6 @@ release\plot.obj: ..\..\valvemodel\ui\plot.cpp ..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -24336,7 +24288,6 @@ release\parameter.obj: ..\..\valvemodel\ui\parameter.cpp ..\..\valvemodel\ui\par
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -24432,7 +24383,6 @@ release\simplemanualpentodedialog.obj: ..\..\valvemodel\ui\simplemanualpentodedi
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \
@@ -25043,7 +24993,6 @@ release\moc_uibridge.obj: ..\..\valvemodel\ui\moc_uibridge.cpp ..\..\valvemodel\
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qarraydataops.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qcontainertools_impl.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qxptype_traits.h \
-		new \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20functional.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20memory.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q17memory.h \

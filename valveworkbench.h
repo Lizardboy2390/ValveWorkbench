@@ -277,6 +277,12 @@ private:
     void loadDevices();
 
     //void buildModelSelection();
+
+    // Compute small-signal gm, ra and mu from the currently selected
+    // measurement at an automatically chosen operating point. This is used
+    // by the Modeller tab for tube matching when in measured mode
+    // (mes_mod_select unchecked).
+    void updateSmallSignalFromMeasurement(Measurement *measurement);
     void buildCircuitParameters();
     void buildCircuitSelection();
     void buildStdDeviceSelection(QComboBox *selection, int type);

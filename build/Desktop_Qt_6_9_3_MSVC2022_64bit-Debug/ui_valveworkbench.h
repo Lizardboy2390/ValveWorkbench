@@ -218,8 +218,8 @@ public:
     QCheckBox *modelCheck;
     QSpacerItem *horizontalSpacer_171;
     QCheckBox *designerCheck;
-    QSpacerItem *horizontalSpacer_15;
     QCheckBox *screenCheck;
+    QSpacerItem *horizontalSpacer_15;
     QSpacerItem *horizontalSpacer_6;
     QSpacerItem *verticalSpacer_5;
     QSpacerItem *horizontalSpacer_2;
@@ -1274,14 +1274,14 @@ public:
 
         horizontalLayout_9->addWidget(designerCheck);
 
-        horizontalSpacer_15 = new QSpacerItem(20, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        horizontalLayout_9->addItem(horizontalSpacer_15);
-
         screenCheck = new QCheckBox(horizontalLayoutWidget);
         screenCheck->setObjectName("screenCheck");
 
         horizontalLayout_9->addWidget(screenCheck);
+
+        horizontalSpacer_15 = new QSpacerItem(20, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_9->addItem(horizontalSpacer_15);
 
         horizontalSpacer_6 = new QSpacerItem(20, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
@@ -1390,7 +1390,7 @@ public:
         cir15Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel15", nullptr));
         cir16Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel16", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab), QCoreApplication::translate("ValveWorkbench", "Designer", nullptr));
-        label_2->setText(QCoreApplication::translate("ValveWorkbench", "Project Browser", nullptr));
+        label_2->setText(QCoreApplication::translate("ValveWorkbench", "Project prowser", nullptr));
         groupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Small-signal (gm/ra/\316\274)", nullptr));
         gmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (mA/V)", nullptr));
         raLabel->setText(QCoreApplication::translate("ValveWorkbench", "ra (k\316\251)", nullptr));
@@ -1423,7 +1423,7 @@ public:
         plotTitle->setText(QString());
         measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));
         modelCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Fitted Model", nullptr));
-        designerCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Designer Overlays", nullptr));
+        designerCheck->setText(QCoreApplication::translate("ValveWorkbench", "Designer Overlays", nullptr));
         screenCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Screen Current", nullptr));
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));

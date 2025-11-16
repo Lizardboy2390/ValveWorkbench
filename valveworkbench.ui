@@ -636,7 +636,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>10</y>
+           <y>0</y>
            <width>312</width>
            <height>670</height>
           </rect>
@@ -681,7 +681,7 @@
             <property name="minimumSize">
              <size>
               <width>40</width>
-              <height>150</height>
+              <height>100</height>
              </size>
             </property>
             <property name="title">
@@ -691,7 +691,7 @@
              <property name="geometry">
               <rect>
                <x>0</x>
-               <y>30</y>
+               <y>40</y>
                <width>91</width>
                <height>20</height>
               </rect>
@@ -707,7 +707,7 @@
              <property name="geometry">
               <rect>
                <x>120</x>
-               <y>30</y>
+               <y>40</y>
                <width>63</width>
                <height>20</height>
               </rect>
@@ -723,7 +723,7 @@
              <property name="geometry">
               <rect>
                <x>230</x>
-               <y>30</y>
+               <y>40</y>
                <width>63</width>
                <height>20</height>
               </rect>
@@ -783,19 +783,26 @@
               <enum>QLCDNumber::SegmentStyle::Flat</enum>
              </property>
             </widget>
-            <widget class="QLabel" name="label">
+            <widget class="QCheckBox" name="mes_mod_select">
              <property name="geometry">
               <rect>
-               <x>0</x>
-               <y>130</y>
-               <width>310</width>
-               <height>20</height>
+               <x>210</x>
+               <y>10</y>
+               <width>91</width>
+               <height>24</height>
               </rect>
              </property>
              <property name="text">
-              <string>Properties</string>
+              <string>Mes/Mod</string>
              </property>
             </widget>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Properties</string>
+            </property>
            </widget>
           </item>
           <item>
@@ -2043,10 +2050,17 @@
          <item>
           <widget class="QCheckBox" name="designerCheck">
            <property name="text">
-            <string>Show Designer Overlays</string>
+            <string>Designer Overlays</string>
            </property>
            <property name="checked">
             <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="screenCheck">
+           <property name="text">
+            <string>Show Screen Current</string>
            </property>
           </widget>
          </item>
@@ -2062,13 +2076,6 @@
             </size>
            </property>
           </spacer>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="screenCheck">
-           <property name="text">
-            <string>Show Screen Current</string>
-           </property>
-          </widget>
          </item>
          <item>
           <spacer name="horizontalSpacer_6">

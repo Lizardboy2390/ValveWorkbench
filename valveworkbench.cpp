@@ -1344,8 +1344,8 @@ void ValveWorkbench::updateCircuitParameter(int index)
     updateDoubleValue(circuitValues[index], value);
 
     // If this is the Triode Common Cathode circuit, treat RA and RL inputs as kΩ in the UI
+    // but do not drive the small-signal LCDs here. The LCDs are a Modeller tool and are updated from measured/model data instead.
     {
-        // Safe downcast only if header is available
         #include "valvemodel/circuit/triodecommoncathode.h"
         if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
             if (index == TRI_CC_RA || index == TRI_CC_RL) {
@@ -1353,13 +1353,161 @@ void ValveWorkbench::updateCircuitParameter(int index)
             } else {
                 circuit->setParameter(index, value);
             }
-        } else {
-            circuit->setParameter(index, value);
+
+            circuit->updateUI(circuitLabels, circuitValues);
+            circuit->plot(&plot);
+            circuit->updateUI(circuitLabels, circuitValues);
+            return;
         }
     }
+
+    // Default path for all other circuits
+    circuit->setParameter(index, value);
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
+}
+
+// Helper: compute small-signal gm, ra, mu from a measured dataset at an
+// automatically chosen operating point. This is used for tube matching in
+// Modeller when mes_mod_select is unchecked ("measured" mode).
+void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
+{
+    // Only active in measured mode
+    if (!measurement || (ui->mes_mod_select && ui->mes_mod_select->isChecked())) {
+        return;
+    }
+
+    const int deviceType = measurement->getDeviceType();
+    const int testType   = measurement->getTestType();
+
+    if (deviceType != TRIODE && deviceType != PENTODE) {
+        return;
+    }
+
+    const int sweepCount = measurement->count();
+    if (sweepCount == 0) {
+        return;
+    }
+
+    auto safeDisplayText = [this](QLCDNumber *lcd, const QString &text) {
+        if (lcd) {
+            lcd->display(text);
+        }
+    };
+
+    // Choose a central sweep and sample as the initial operating point
+    const int sweepIdx  = sweepCount / 2;
+    Sweep *sweep        = measurement->at(sweepIdx);
+    if (!sweep || sweep->count() < 3) {
+        return;
+    }
+
+    const int sampleCount = sweep->count();
+    const int sampleIdx   = sampleCount / 2;
+
+    // Helper to clamp indices into valid range
+    auto clampIndex = [](int idx, int max) {
+        if (idx < 0) return 0;
+        if (idx >= max) return max - 1;
+        return idx;
+    };
+
+    const int iPrev = clampIndex(sampleIdx - 1, sampleCount);
+    const int iNext = clampIndex(sampleIdx + 1, sampleCount);
+
+    Sample *samplePrev = sweep->at(iPrev);
+    Sample *sampleNext = sweep->at(iNext);
+    Sample *sampleMid  = sweep->at(sampleIdx);
+    if (!samplePrev || !sampleNext || !sampleMid) {
+        return;
+    }
+
+    double gm_mA_V = 0.0;
+    double ra_ohms = 0.0;
+    double mu      = 0.0;
+
+    if (testType == ANODE_CHARACTERISTICS) {
+        // ra from anode sweep: dVa/dIa at roughly constant Vg
+        const double vaPrev = samplePrev->getVa();
+        const double iaPrev = samplePrev->getIa();
+        const double vaNext = sampleNext->getVa();
+        const double iaNext = sampleNext->getIa();
+
+        const double dIa_mA = iaNext - iaPrev;
+        const double dVa    = vaNext - vaPrev;
+        if (std::abs(dIa_mA) > 1e-9) {
+            const double dVa_dIa_V_per_mA = dVa / dIa_mA;
+            ra_ohms = dVa_dIa_V_per_mA * 1000.0; // V/mA → Ohms
+        }
+
+        // gm from neighbouring sweeps at the same sample index (vary Vg, hold Va)
+        if (sweepCount >= 3) {
+            const int sweepPrevIdx = clampIndex(sweepIdx - 1, sweepCount);
+            const int sweepNextIdx = clampIndex(sweepIdx + 1, sweepCount);
+            Sweep *sPrev = measurement->at(sweepPrevIdx);
+            Sweep *sNext = measurement->at(sweepNextIdx);
+            if (sPrev && sNext && sPrev->count() > sampleIdx && sNext->count() > sampleIdx) {
+                Sample *spPrev = sPrev->at(sampleIdx);
+                Sample *spNext = sNext->at(sampleIdx);
+                if (spPrev && spNext) {
+                    const double iaPrevSweep = spPrev->getIa();
+                    const double iaNextSweep = spNext->getIa();
+                    const double vgPrev      = sPrev->getVg1Nominal();
+                    const double vgNext      = sNext->getVg1Nominal();
+                    const double dVg         = vgNext - vgPrev;
+                    if (std::abs(dVg) > 1e-6) {
+                        gm_mA_V = (iaNextSweep - iaPrevSweep) / dVg; // mA/V
+                    }
+                }
+            }
+        }
+    } else if (testType == TRANSFER_CHARACTERISTICS) {
+        // gm from transfer: dIa/dVg1 within a single sweep (Va fixed)
+        const double iaPrev = samplePrev->getIa();
+        const double iaNext = sampleNext->getIa();
+        const double vgPrev = samplePrev->getVg1();
+        const double vgNext = sampleNext->getVg1();
+        const double dVg    = vgNext - vgPrev;
+        if (std::abs(dVg) > 1e-6) {
+            gm_mA_V = (iaNext - iaPrev) / dVg; // mA/V
+        }
+
+        // Approximate ra from DC operating point: Va / Ia
+        const double vaMid = sampleMid->getVa();
+        const double iaMid = sampleMid->getIa();
+        if (iaMid > 1e-9) {
+            ra_ohms = (vaMid / iaMid) * 1000.0; // V / (mA) → Ohms
+        }
+    }
+
+    const double ra_k = (ra_ohms > 0.0) ? (ra_ohms / 1000.0) : 0.0;
+    if (gm_mA_V > 0.0 && ra_k > 0.0) {
+        mu = gm_mA_V * ra_k; // μ ≈ Ra[kΩ] * Gm[mA/V]
+    }
+
+    // Push values to LCDs; if something failed, show "--" for that field.
+    if (ui->gmLcd) {
+        if (gm_mA_V > 0.0) {
+            ui->gmLcd->display(QString("%1").arg(gm_mA_V, 0, 'f', 2));
+        } else {
+            safeDisplayText(ui->gmLcd, "--");
+        }
+    }
+    if (ui->raLcd) {
+        if (ra_k > 0.0) {
+            ui->raLcd->display(QString("%1").arg(ra_k, 0, 'f', 1));
+        } else {
+            safeDisplayText(ui->raLcd, "--");
+        }
+    }
+    if (ui->lcdNumber_3) {
+        if (mu > 0.0) {
+            ui->lcdNumber_3->display(QString("%1").arg(mu, 0, 'f', 1));
+        } else {
+            safeDisplayText(ui->lcdNumber_3, "--");
+        }
+    }
 }
 
 void ValveWorkbench::updateHeater(double vh, double ih)
@@ -2472,6 +2620,11 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             }
             qInfo("Added measuredCurves to plot");
             ui->measureCheck->setChecked(true);
+            // In measured mode, update the small-signal LCDs (gm/ra/mu) from
+            // the currently selected measurement so the Modeller tab can be
+            // used for tube matching and quick checks without relying on the
+            // Designer circuit.
+            updateSmallSignalFromMeasurement(currentMeasurement);
             qInfo("=== PROJECT TREE: Finished TYP_MEASUREMENT case ===");
             break;
         }
@@ -2807,38 +2960,60 @@ void ValveWorkbench::setSelectedTreeItem(QTreeWidgetItem *item, bool selected)
 void ValveWorkbench::setFitButtons()
 {
     // Resolve the root project from the current selection
-    if (!currentProject) {
-        ui->fitTriodeButton->setVisible(false);
-        ui->fitPentodeButton->setVisible(false);
+    ui->fitTriodeButton->setVisible(false);
+    ui->fitPentodeButton->setVisible(false);
+
+    QTreeWidgetItem *currentItem = ui->projectTree->currentItem();
+    if (!currentItem) {
         return;
     }
 
-    QTreeWidgetItem *rootProject = currentProject;
-    if (rootProject->type() != TYP_PROJECT) {
-        rootProject = getParent(rootProject, TYP_PROJECT);
-    }
-    if (!rootProject) {
-        ui->fitTriodeButton->setVisible(false);
-        ui->fitPentodeButton->setVisible(false);
-        return;
+    int deviceTypeForButtons = -1;
+
+    if (currentItem->type() == TYP_MEASUREMENT) {
+        void *data = currentItem->data(0, Qt::UserRole).value<void *>();
+        Measurement *measurement = static_cast<Measurement *>(data);
+        if (measurement) {
+            deviceTypeForButtons = measurement->getDeviceType();
+        }
+    } else if (currentItem->type() == TYP_SWEEP || currentItem->type() == TYP_SAMPLE) {
+        QTreeWidgetItem *measurementItem = getParent(currentItem, TYP_MEASUREMENT);
+        if (measurementItem) {
+            void *data = measurementItem->data(0, Qt::UserRole).value<void *>();
+            Measurement *measurement = static_cast<Measurement *>(data);
+            if (measurement) {
+                deviceTypeForButtons = measurement->getDeviceType();
+            }
+        }
     }
 
-    Project *project = static_cast<Project *>(rootProject->data(0, Qt::UserRole).value<void *>());
-    if (!project) {
-        ui->fitTriodeButton->setVisible(false);
-        ui->fitPentodeButton->setVisible(false);
-        return;
+    if (deviceTypeForButtons == -1) {
+        if (!currentProject) {
+            return;
+        }
+
+        QTreeWidgetItem *rootProject = currentProject;
+        if (rootProject->type() != TYP_PROJECT) {
+            rootProject = getParent(rootProject, TYP_PROJECT);
+        }
+        if (!rootProject) {
+            return;
+        }
+
+        Project *project = static_cast<Project *>(rootProject->data(0, Qt::UserRole).value<void *>());
+        if (!project) {
+            return;
+        }
+
+        deviceTypeForButtons = project->getDeviceType();
     }
 
-    if (project->getDeviceType() == TRIODE) {
+    if (deviceTypeForButtons == TRIODE) {
         ui->fitTriodeButton->setVisible(true);
         ui->fitPentodeButton->setVisible(false);
-    } else if (project->getDeviceType() == PENTODE) {
+    } else if (deviceTypeForButtons == PENTODE) {
         ui->fitTriodeButton->setVisible(false);
         ui->fitPentodeButton->setVisible(true);
-    } else {
-        ui->fitTriodeButton->setVisible(false);
-        ui->fitPentodeButton->setVisible(false);
     }
 }
 
@@ -3580,10 +3755,6 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
             if (project->getDeviceType() == TRIODE) {
                 ui->fitTriodeButton->setVisible(true);
                 ui->fitPentodeButton->setVisible(false);
-                if (!autoTriodeFitRun && !runningTriodeBFit && !triodeBFitPending && thread == nullptr) {
-                    autoTriodeFitRun = true;
-                    on_fitTriodeButton_clicked();
-                }
             } else if (project->getDeviceType() == PENTODE) {
                 ui->fitTriodeButton->setVisible(false);
                 // For Simple Manual Pentode, keep the button but it opens the manual path

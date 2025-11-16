@@ -188,6 +188,16 @@ void ReefmanPentode::fromJson(QJsonObject source)
     // Load common Cohen-Helie triode-style parameters first (mu, kg1, x, kp, kvb, kvb1, vct)
     CohenHelieTriode::fromJson(source);
 
+    // Optional modelType hint allows JSON to distinguish between Derk and
+    // DerkE variants when re-importing a saved model. Older files without
+    // this field default to the original Derk formulation.
+    const QString modelTypeStr = source.value("modelType").toString().trimmed().toUpper();
+    if (modelTypeStr == QLatin1String("REEFMAN_DERK_E_PENTODE")) {
+        modelType = DERK_E;
+    } else {
+        modelType = DERK;
+    }
+
     // Reefman-specific pentode parameters (minimal set used in anodeCurrent/addSample)
     if (source.contains("kg2") && source["kg2"].isDouble()) {
         parameter[PAR_KG2]->setValue(source["kg2"].toDouble());
@@ -219,6 +229,14 @@ void ReefmanPentode::toJson(QJsonObject &destination)
 
     destination["device"] = "pentode";
     destination["type"]   = "reefman";
+
+    // Preserve the specific Reefman variant so re-import can recreate the
+    // correct model type without relying on external metadata.
+    if (modelType == DERK_E) {
+        destination["modelType"] = "REEFMAN_DERK_E_PENTODE";
+    } else {
+        destination["modelType"] = "REEFMAN_DERK_PENTODE";
+    }
 }
 
 void ReefmanPentode::updateUI(QLabel *labels[], QLineEdit *values[])
@@ -241,12 +259,19 @@ void ReefmanPentode::updateUI(QLabel *labels[], QLineEdit *values[])
 
 QString ReefmanPentode::getName()
 {
-    return "Cohen Helie Pentode";
+    // Expose the concrete Reefman variant in the project tree so it is
+    // obvious whether the Derk or DerkE (DEPIa-style) formulation is used.
+    if (modelType == DERK_E) {
+        return "Reefman Pentode (DerkE)";
+    }
+    return "Reefman Pentode (Derk)";
 }
 
 int ReefmanPentode::getType()
 {
-    return REEFMAN_DERK_PENTODE;
+    // Map internal variant to the public eModelType so downstream code
+    // (preferences, plotting, bounds) can distinguish them when needed.
+    return (modelType == DERK_E) ? REEFMAN_DERK_E_PENTODE : REEFMAN_DERK_PENTODE;
 }
 
 void ReefmanPentode::updateProperties(QTableWidget *properties)
