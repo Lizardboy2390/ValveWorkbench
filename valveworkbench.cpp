@@ -808,31 +808,31 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
         ensureToggle(symSwingCheck, "symSwingCheck", tr("Max Sym Swing"), &ValveWorkbench::on_symSwingCheck_stateChanged);
         ensureToggle(useBypassedGainCheck, "useBypassedGainCheck", tr("K bypass"), &ValveWorkbench::on_useBypassedGainCheck_stateChanged);
-        if (symSwingCheck) {
-            symSwingCheck->setStyleSheet("color: rgb(100,149,237);");
-        }
     }
 
-    // Move the three Designer-related checkboxes into a new row below the Input sensitivity row (cir12)
-    if (ui->verticalLayout && ui->horizontalLayout_19) {
+    // Move the Designer swing-related checkboxes (Max Sym Swing, K bypass) into
+    // a dedicated row at the very bottom of the circuit parameter panel (i.e.
+    // visually below the last parameter row / label 16), instead of keeping
+    // them in the bottom toggle bar.
+    if (ui->verticalLayout) {
         // Remove from bottom toggle row if present
-        auto removeIfIn = [&](QCheckBox *w){ if (!w) return; if (ui->horizontalLayout_9 && ui->horizontalLayout_9->indexOf(w) >= 0) { ui->horizontalLayout_9->removeWidget(w); } };
+        auto removeIfIn = [&](QCheckBox *w){
+            if (!w) return;
+            if (ui->horizontalLayout_9 && ui->horizontalLayout_9->indexOf(w) >= 0) {
+                ui->horizontalLayout_9->removeWidget(w);
+            }
+        };
         removeIfIn(symSwingCheck);
         removeIfIn(useBypassedGainCheck);
 
-        // Create a new row layout and insert it right after horizontalLayout_19 (which holds cir12)
+        // Create a new row layout and append it to the parameter panel
         QHBoxLayout *designerTogglesRow = new QHBoxLayout();
         designerTogglesRow->addStretch();
         if (symSwingCheck) designerTogglesRow->addWidget(symSwingCheck);
         if (useBypassedGainCheck) designerTogglesRow->addWidget(useBypassedGainCheck);
         designerTogglesRow->addStretch();
 
-        int idx = ui->verticalLayout->indexOf(ui->horizontalLayout_19);
-        if (idx >= 0) {
-            ui->verticalLayout->insertLayout(idx + 1, designerTogglesRow);
-        } else {
-            ui->verticalLayout->addLayout(designerTogglesRow);
-        }
+        ui->verticalLayout->addLayout(designerTogglesRow);
     }
 
     // Ensure Modeller tab has an Export to Devices button
@@ -4144,12 +4144,32 @@ void ValveWorkbench::on_designerCheck_stateChanged(int arg1)
 void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
 {
     const bool enabled = (arg1 != 0);
-    for (Circuit *c : circuits) {
-        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
-            t->setSymSwingEnabled(enabled);
-            t->plot(&plot);
-            t->updateUI(circuitLabels, circuitValues);
-        }
+
+    // Only apply Max Sym Swing change to the currently selected Designer
+    // circuit so that we don't have multiple circuits overwriting the
+    // shared Designer UI simultaneously.
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) {
+        return;
+    }
+
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) {
+        return;
+    }
+
+    if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
+        t->setSymSwingEnabled(enabled);
+        t->plot(&plot);
+        t->updateUI(circuitLabels, circuitValues);
+    } else if (auto *se = dynamic_cast<SingleEndedOutput*>(c)) {
+        // Reset SE headroom manual override to 0 whenever the Max Sym Swing
+        // checkbox is clicked, so that the helper-derived symmetric/max swing
+        // becomes the default effective headroom again.
+        se->setParameter(SE_HEADROOM, 0.0);
+        se->setSymSwingEnabled(enabled);
+        se->plot(&plot);
+        se->updateUI(circuitLabels, circuitValues);
     }
 }
 
@@ -4167,13 +4187,31 @@ void ValveWorkbench::on_inputSensitivityCheck_stateChanged(int arg1)
 void ValveWorkbench::on_useBypassedGainCheck_stateChanged(int arg1)
 {
     const bool useBypassed = (arg1 != 0);
-    for (Circuit *c : circuits) {
-        if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
-            t->setSensitivityGainMode(useBypassed ? 1 : 0);
-            t->plot(&plot);
-            // Refresh Designer panel values (Input sensitivity depends on gain mode)
-            t->updateUI(circuitLabels, circuitValues);
-        }
+
+    // Only apply K-bypass change to the currently selected Designer circuit
+    // so that we don't have multiple circuits overwriting the shared
+    // circuitLabels/circuitValues UI with N/A values.
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) {
+        return;
+    }
+
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) {
+        return;
+    }
+
+    if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
+        t->setSensitivityGainMode(useBypassed ? 1 : 0);
+        t->plot(&plot);
+        // Refresh Designer panel values (Input sensitivity depends on gain mode)
+        t->updateUI(circuitLabels, circuitValues);
+    } else if (auto *se = dynamic_cast<SingleEndedOutput*>(c)) {
+        // Apply K-bypass choice to the SE output stage so that its
+        // input sensitivity and THD reflect bypassed vs unbypassed cathode.
+        se->setGainMode(useBypassed ? 1 : 0);
+        se->plot(&plot);
+        se->updateUI(circuitLabels, circuitValues);
     }
 }
 

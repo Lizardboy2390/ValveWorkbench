@@ -9,6 +9,8 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - [ ] Designer: ensure device selection auto-replots and axes clamp to device limits.
 - [ ] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
 - [ ] Experimental branch: on a separate branch (e.g. `feature/reefman-extractmodel`), work toward aligning `ReefmanPentode` behaviour with ExtractModel_3p0 located at `C:\Users\lizar\Documents\ExtractModel_3p0`, using common parameter sets and sample Ia/Ig2 points as reference.
+- [ ] Designer (Single-Ended Output): extend SE Designer circuit beyond Pout/Vk/Ik/Rk/headroom/THD by adding **max symmetric clean swing (Vpp_sym)** and **max possible swing (Vpp_max)** metrics, and draw corresponding blue (symmetric) and brown (max) zones on the SE AC load line. Sym Swing checkbox should toggle which zone is visible.
+- [ ] Designer (Single-Ended Output): compute SE stage **input sensitivity** for both Vpp_sym and Vpp_max using the appropriate small-signal gain (respecting K-bypass mode), display the active sensitivity value in the Designer panel, and color the text to match the active swing zone (blue vs brown). Ensure Triode CC behaviour is unchanged.
 
 ## Recently completed
 - [x] Restored analyser and pentode modeller to baseline behaviour after experimental kg1/curvature changes.

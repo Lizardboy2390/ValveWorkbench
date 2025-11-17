@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-16 (Designer circuits: pentode CC, cathode followers, SE/SE-UL, Push-Pull/UL; shared device presets; Designer plot clearing)
+Last updated: 2025-11-17 (Designer circuits: pentode CC, cathode followers, SE/SE-UL, Push-Pull/UL; SE headroom/THD; shared device presets; Designer plot clearing)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -190,6 +190,11 @@ Additional (2025-11-05):
     - Implemented Pentode Common Cathode Designer circuit mirroring `pentodecc.js`, including screen load-line intersection for `Vg2/Ig2`, anode OP, gm and gains.
   - `valvemodel/circuit/singleendedoutput.h/.cpp` and `singleendeduloutput.h/.cpp`
     - Implemented single-ended and single-ended UL output circuits with AC load lines, Pout, Vk, Ik, and Rk.
+    - 2025-11-17: Extended **SingleEndedOutput** Designer circuit with:
+        - Manual anode headroom input (Vpk) used to compute `PHEAD` (Vpk² / 2·RA).
+        - Harmonic analysis: HD2, HD3, HD4, THD computed using the tube model over the chosen headroom swing (VTADIY-style 5-point method).
+        - Blue headroom overlay on the SE AC load line: linear symmetric segment around the operating point with a filled polygon down to Ia=0 for visualizing the requested swing region.
+        - Note: symmetric vs max swing zones and SE input sensitivity are **not yet implemented**; Triode CC retains those advanced Designer helpers.
   - `valvemodel/circuit/pushpulloutput.h/.cpp` and `pushpulluloutput.h/.cpp`
     - Implemented push-pull and UL push-pull output circuits with class-A, class-B, and combined AC load lines plus Pout, Vk, Ik, and Rk.
 
