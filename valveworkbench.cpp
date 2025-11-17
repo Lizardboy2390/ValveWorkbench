@@ -43,6 +43,7 @@
 #include "valvemodel/circuit/circuit.h"
 #include "valvemodel/circuit/triodecommoncathode.h"
 #include "valvemodel/circuit/triodeaccathodefollower.h"
+#include "valvemodel/circuit/triodedccathodefollower.h"
 #include "ledindicator/ledindicator.h"
 #include "preferencesdialog.h"
 #include "projectdialog.h"
@@ -1048,6 +1049,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     circuits.resize(TEST_CALCULATOR + 1);
     circuits[TRIODE_COMMON_CATHODE]   = new TriodeCommonCathode();
     circuits[AC_CATHODE_FOLLOWER]     = new TriodeACCathodeFollower();
+    circuits[DC_CATHODE_FOLLOWER]     = new TriodeDCCathodeFollower();
 }
 
 ValveWorkbench::~ValveWorkbench()
@@ -1225,6 +1227,22 @@ void ValveWorkbench::ensureSimplePentodeDialog()
 
 void ValveWorkbench::selectCircuit(int circuitType)
 {
+    // Clear Designer plot and hide any existing circuit overlays when
+    // switching circuits so load lines, operating point markers, and model
+    // curves from the previous circuit do not linger on the shared scene.
+    plot.clear();
+    measuredCurves = nullptr;
+    measuredCurvesSecondary = nullptr;
+    estimatedCurves = nullptr;
+    modelledCurves = nullptr;
+    modelledCurvesSecondary = nullptr;
+
+    for (Circuit *c : std::as_const(circuits)) {
+        if (c) {
+            c->setOverlaysVisible(false);
+        }
+    }
+
     qInfo("=== SELECTING CIRCUIT ===");
     qInfo("Circuit type: %d", circuitType);
 
