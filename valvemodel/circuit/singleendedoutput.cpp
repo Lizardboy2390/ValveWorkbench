@@ -5,22 +5,26 @@
 #include <QPointF>
 #include <QVector>
 
+#include <QGraphicsPolygonItem>
+
 #include <algorithm>
 #include <cmath>
 
 SingleEndedOutput::SingleEndedOutput()
 {
     // Input parameters mirroring web SingleEnded defaults
-    parameter[SE_VB] = new Parameter("Supply voltage (V)", 300.0);
-    parameter[SE_VS] = new Parameter("Screen voltage (V)", 250.0);
-    parameter[SE_IA] = new Parameter("Bias current (anode) (mA)", 30.0);
-    parameter[SE_RA] = new Parameter("Anode load (\u03a9)", 8000.0);
+    parameter[SE_VB]       = new Parameter("Supply voltage (V)", 300.0);
+    parameter[SE_VS]       = new Parameter("Screen voltage (V)", 250.0);
+    parameter[SE_IA]       = new Parameter("Bias current (anode) (mA)", 30.0);
+    parameter[SE_RA]       = new Parameter("Anode load (\u03a9)", 8000.0);
+    parameter[SE_HEADROOM] = new Parameter("Headroom at anode (Vpk)", 0.0);
 
     // Calculated values
     parameter[SE_VK]   = new Parameter("Bias point Vk (V)", 0.0);
     parameter[SE_IK]   = new Parameter("Cathode current (mA)", 0.0);
     parameter[SE_RK]   = new Parameter("Cathode resistor (\u03a9)", 0.0);
     parameter[SE_POUT] = new Parameter("Max output power (W)", 0.0);
+    parameter[SE_PHEAD]= new Parameter("Power at headroom (W)", 0.0);
 }
 
 int SingleEndedOutput::getDeviceType(int index)
@@ -38,8 +42,8 @@ QTreeWidgetItem *SingleEndedOutput::buildTree(QTreeWidgetItem *parent)
 
 void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
 {
-    // Inputs: first 4 fields
-    for (int i = 0; i < 4; ++i) {
+    // Inputs: first parameters up to SE_HEADROOM
+    for (int i = 0; i <= SE_HEADROOM; ++i) {
         if (parameter[i] && labels[i] && values[i]) {
             labels[i]->setText(parameter[i]->getName());
             values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 1));
@@ -49,8 +53,8 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         }
     }
 
-    // Outputs: next 4 fields
-    for (int i = 4; i <= SE_POUT; ++i) {
+    // Outputs: remaining fields after SE_HEADROOM
+    for (int i = SE_VK; i <= SE_PHEAD; ++i) {
         if (!labels[i] || !values[i]) continue;
 
         QString labelText;
@@ -59,6 +63,7 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         case SE_IK:   labelText = "Cathode current (mA):"; break;
         case SE_RK:   labelText = "Cathode resistor (\u03a9):"; break;
         case SE_POUT: labelText = "Max output power (W):"; break;
+        case SE_PHEAD:labelText = "Power at headroom (W):"; break;
         default: break;
         }
 
@@ -66,7 +71,7 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         if (!device1) {
             values[i]->setText("N/A");
         } else if (parameter[i]) {
-            int decimals = (i == SE_POUT) ? 3 : 3;
+            int decimals = (i == SE_POUT || i == SE_PHEAD) ? 3 : 3;
             values[i]->setText(QString::number(parameter[i]->getValue(), 'f', decimals));
         } else {
             values[i]->setText("-");
@@ -78,7 +83,7 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
     }
 
     // Hide remaining parameter slots
-    for (int i = SE_POUT + 1; i < 16; ++i) {
+    for (int i = SE_PHEAD + 1; i < 16; ++i) {
         if (labels[i] && values[i]) {
             labels[i]->setVisible(false);
             values[i]->setVisible(false);
@@ -120,19 +125,22 @@ void SingleEndedOutput::update(int index)
         parameter[SE_IK]->setValue(0.0);
         parameter[SE_RK]->setValue(0.0);
         parameter[SE_POUT]->setValue(0.0);
+        parameter[SE_PHEAD]->setValue(0.0);
         return;
     }
 
     const double vb  = parameter[SE_VB]->getValue();
     const double vs  = parameter[SE_VS]->getValue();
-    const double ia  = parameter[SE_IA]->getValue(); // mA
-    const double raa = parameter[SE_RA]->getValue();
+    const double ia        = parameter[SE_IA]->getValue(); // mA
+    const double raa       = parameter[SE_RA]->getValue();
+    const double headroom  = parameter[SE_HEADROOM]->getValue(); // Vpk at anode
 
     if (vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
         parameter[SE_VK]->setValue(0.0);
         parameter[SE_IK]->setValue(0.0);
         parameter[SE_RK]->setValue(0.0);
         parameter[SE_POUT]->setValue(0.0);
+        parameter[SE_PHEAD]->setValue(0.0);
         return;
     }
 
@@ -217,6 +225,14 @@ void SingleEndedOutput::update(int index)
     parameter[SE_IK]->setValue(ik_mA);
     parameter[SE_RK]->setValue(rk_ohms);
     parameter[SE_POUT]->setValue(pout_W);
+
+    // Simple power-at-headroom helper using linear load assumption around OP.
+    double phead_W = 0.0;
+    if (headroom > 0.0 && raa > 0.0) {
+        // Treat SE_HEADROOM as anode peak swing; output power is Vpk^2 / (2 * Ra).
+        phead_W = (headroom * headroom) / (2.0 * raa);
+    }
+    parameter[SE_PHEAD]->setValue(phead_W);
 }
 
 void SingleEndedOutput::plot(Plot *plot)
@@ -258,8 +274,9 @@ void SingleEndedOutput::plot(Plot *plot)
 
     const double vb  = parameter[SE_VB]->getValue();
     const double vs  = parameter[SE_VS]->getValue();
-    const double ia  = parameter[SE_IA]->getValue();
-    const double raa = parameter[SE_RA]->getValue();
+    const double ia       = parameter[SE_IA]->getValue();
+    const double raa      = parameter[SE_RA]->getValue();
+    const double headroom = parameter[SE_HEADROOM]->getValue();
 
     if (vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
         return;
@@ -313,6 +330,65 @@ void SingleEndedOutput::plot(Plot *plot)
         } else {
             delete opMarker;
             opMarker = nullptr;
+        }
+    }
+
+    // Draw a simple headroom segment around the operating point along the AC load line
+    if (headroom > 0.0) {
+        double vaMin = vb - headroom;
+        double vaMax2 = vb + headroom;
+
+        // Clamp to the plotted Va range instead of skipping when out of bounds
+        vaMin  = std::max(0.0, vaMin);
+        vaMax2 = std::min(vaMax, vaMax2);
+
+        if (vaMax2 > vaMin) {
+            const double dia = headroom * 1000.0 / raa; // mA deviation along load line
+
+            anodeLoadLine = new QGraphicsItemGroup();
+            QPen pen;
+            pen.setColor(QColor::fromRgb(0, 0, 255));
+            pen.setWidth(2);
+
+            const double iaHigh = ia + dia;
+            const double iaLow  = ia - dia;
+            if (auto *seg = plot->createSegment(vaMin, iaHigh, vaMax2, iaLow, pen)) {
+                anodeLoadLine->addToGroup(seg);
+            }
+
+            // Build a filled polygon in scene coordinates under the headroom line,
+            // using the same mapping as Plot::createSegment.
+            const double xScale = PLOT_WIDTH  / (vaMax - 0.0);
+            const double yScale = PLOT_HEIGHT / (iaMax - 0.0);
+
+            const double sx1 = (vaMin  - 0.0) * xScale;
+            const double sy1 = PLOT_HEIGHT - (iaHigh - 0.0) * yScale;
+            const double sx2 = (vaMax2 - 0.0) * xScale;
+            const double sy2 = PLOT_HEIGHT - (iaLow  - 0.0) * yScale;
+            const double sx3 = sx2;
+            const double sy3 = PLOT_HEIGHT - (0.0    - 0.0) * yScale;
+            const double sx4 = sx1;
+            const double sy4 = sy3;
+
+            QPolygonF poly;
+            poly << QPointF(sx1, sy1)
+                 << QPointF(sx2, sy2)
+                 << QPointF(sx3, sy3)
+                 << QPointF(sx4, sy4);
+
+            auto *polyItem = new QGraphicsPolygonItem(poly);
+            QColor fillColor = QColor::fromRgb(0, 0, 255);
+            fillColor.setAlpha(40);
+            polyItem->setBrush(fillColor);
+            polyItem->setPen(Qt::NoPen);
+            anodeLoadLine->addToGroup(polyItem);
+
+            if (!anodeLoadLine->childItems().isEmpty()) {
+                plot->getScene()->addItem(anodeLoadLine);
+            } else {
+                delete anodeLoadLine;
+                anodeLoadLine = nullptr;
+            }
         }
     }
 }

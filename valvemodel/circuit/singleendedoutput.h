@@ -9,10 +9,12 @@ enum eSingleEndedParameter {
     SE_VS,       // Screen voltage (V)
     SE_IA,       // Bias current (anode) (mA)
     SE_RA,       // Anode load (ohms)
+    SE_HEADROOM, // Headroom at anode (Vpk)
     SE_VK,       // Bias point Vk (V)
     SE_IK,       // Cathode current (mA)
     SE_RK,       // Cathode resistor (ohms)
-    SE_POUT      // Max output power (W)
+    SE_POUT,     // Max output power (W)
+    SE_PHEAD     // Power at headroom (W)
 };
 
 class SingleEndedOutput : public Circuit

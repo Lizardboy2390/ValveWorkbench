@@ -15222,7 +15222,8 @@ release\singleendedoutput.obj: ..\..\..\valvemodel\circuit\singleendedoutput.cpp
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsPolygonItem
 
 release\singleendeduloutput.obj: ..\..\..\valvemodel\circuit\singleendeduloutput.cpp ..\..\..\valvemodel\circuit\singleendeduloutput.h \
 		..\..\..\valvemodel\circuit\circuit.h \

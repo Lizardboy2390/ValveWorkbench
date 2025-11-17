@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-15 (triode-connected pentode mode, separated Gardiner/Reefman bounds, docs cleanup)
+Last updated: 2025-11-16 (Designer circuits: pentode CC, cathode followers, SE/SE-UL, Push-Pull/UL; shared device presets; Designer plot clearing)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -14,6 +14,23 @@ Last updated: 2025-11-15 (triode-connected pentode mode, separated Gardiner/Reef
 - Restore analyser to baseline regarding first-sample and limit-clamp (measurement integrity).
  - Add a dedicated **Triode-Connected Pentode** analyser mode to generate triode-like sweeps for pentode tubes and feed UTmax-style seeding.
  - Centralise Gardiner vs Reefman pentode parameter bounds in `Model::setEstimate` so fits stay inside model-appropriate corridors.
+
+### 2025-11-16 Summary (Designer circuits / shared presets)
+- Designer circuits now mirror the web tool set more closely:
+  - **Triode Common Cathode** (existing, now with symmetric swing helper and diagnostics).
+  - **Pentode Common Cathode** (PentodeCC) with screen-load and cathode-load intersection, Vg2/Ig2 reporting, gm and gain.
+  - **AC Cathode Follower** (existing).
+  - **DC Cathode Follower** (DCCathodeFollower) including stage-1 OP, follower DC point (Vk2/Ik2) and analytic gain.
+  - **Single-Ended Output** (pentode) and **Single-Ended UL Output** (UL tap) with AC load line and Pout estimate.
+  - **Push-Pull Output** and **Push-Pull UL Output** with class-A, class-B, and combined AC load line plus Pout.
+- Designer plot clearing was hardened:
+  - On circuit change, the shared `Plot` scene is cleared and all circuit overlay pointers (load lines, OP markers) are reset to avoid dangling QGraphicsItemGroup references.
+- Device presets are now shared between Analyser and Designer:
+  - **Export to Devices** writes both `analyserDefaults` and `model` into the same JSON so a single preset can drive analyser ranges and Designer load lines.
+- Robustness fixes:
+  - Devices without a `model` block (e.g. early 6N2P-EV exports) no longer crash Designer; model plotting is skipped with a warning instead.
+  - Triode CC operating point search now ignores degenerate intersections at Va≈0 V and falls back to the simple OP estimate when necessary.
+  - DC cathode follower accepts `Ra = 0` by falling back to `Rk` for the anode load-line denominator.
 
 ### 2025-11-13–15 Summary (Pentode)
 - Gardiner/Reefman fitting stabilised by reapplying deferred bounds to all solve stages (anode, screen, remodel) and null-initialising the shared parameter array before logging.
@@ -143,11 +160,45 @@ Additional (2025-11-05):
 - Toggle overlays via Measured/Model checkboxes.
 - Modeller fit: logs show `vg1 range used [...] (should be <= 0)` with max ≤ 0 for both triodes.
 
+### 5) Designer circuits and shared device presets (2025-11-16)
+- Files:
+  - `valvemodel/model/device.h/.cpp`
+    - Added `Device::screenCurrent(va, vg1, vg2)` forwarding to `Model::screenCurrent` for pentode circuits.
+    - Added null-guarded `anodePlot` so devices without models (analyser-only presets) no longer crash when model curves are toggled.
+  - `valvemodel/circuit/circuit.h/.cpp`
+    - Added `acSignalLine` member previously and now `resetOverlays()` helper so circuits can drop overlay pointers when the shared plot is cleared.
+  - `valveworkbench.cpp`
+    - In `selectCircuit`, now fully clears the Designer plot (`plot.clear()` and resets measured/modelled curve groups) and calls `Circuit::resetOverlays()` on all circuits to avoid dangling QGraphicsItemGroup pointers when changing circuits.
+    - Wires new Designer circuits into the `circuits` array:
+      - `PentodeCommonCathode` → `PENTODE_COMMON_CATHODE`.
+      - `TriodeACCathodeFollower` → `AC_CATHODE_FOLLOWER` (existing).
+      - `TriodeDCCathodeFollower` → `DC_CATHODE_FOLLOWER`.
+      - `SingleEndedOutput` → `SINGLE_ENDED_OUTPUT`.
+      - `SingleEndedUlOutput` → `ULTRALINEAR_SINGLE_ENDED`.
+      - `PushPullOutput` → `PUSH_PULL_OUTPUT`.
+      - `PushPullUlOutput` → `ULTRALINEAR_PUSH_PULL`.
+    - `selectStdDevice` now triggers a compute pass (via `setParameter(0, getParameter(0))`) for the selected circuit so Designer outputs (Va, Ia, Vk, gains, etc.) are filled immediately on device selection.
+  - `ValveWorkbench.pro`
+    - Registers new circuit sources/headers so they are built and linked:
+      - `valvemodel/circuit/pentodecommoncathode.*`, `triodedccathodefollower.*`, `singleendedoutput.*`, `singleendeduloutput.*`, `pushpulloutput.*`, `pushpulluloutput.*`.
+  - `valvemodel/circuit/triodecommoncathode.cpp`
+    - Added logging and a guard to ignore OP intersections at Va < 1.0 V and fall back to the simple OP estimate.
+  - `valvemodel/circuit/triodedccathodefollower.h/.cpp`
+    - Implemented DC cathode follower Designer circuit with stage-1 and follower DC calculations plus anode/cathode/follower load lines and OP plotting.
+    - Relaxed `Ra > 0` guard and used `(Ra + Rk)` or `Rk` alone in the anode load-line denominator so `Ra = 0` defaults are supported.
+  - `valvemodel/circuit/pentodecommoncathode.h/.cpp`
+    - Implemented Pentode Common Cathode Designer circuit mirroring `pentodecc.js`, including screen load-line intersection for `Vg2/Ig2`, anode OP, gm and gains.
+  - `valvemodel/circuit/singleendedoutput.h/.cpp` and `singleendeduloutput.h/.cpp`
+    - Implemented single-ended and single-ended UL output circuits with AC load lines, Pout, Vk, Ik, and Rk.
+  - `valvemodel/circuit/pushpulloutput.h/.cpp` and `pushpulluloutput.h/.cpp`
+    - Implemented push-pull and UL push-pull output circuits with class-A, class-B, and combined AC load lines plus Pout, Vk, Ik, and Rk.
+
 ## Files Modified (recent)
 - `valvemodel/model/model.cpp` (pentode plotting path, kg1/curvature/guards)
-- `valvemodel/model/device.cpp` (pentode plot calls use 3‑arg with measured Vg2)
+- `valvemodel/model/device.cpp` (pentode plot calls use 3‑arg with measured Vg2; new `screenCurrent`; safe `anodePlot` for analyser-only presets)
 - `valvemodel/model/cohenhelietriode.cpp` (muted logs)
-- `valveworkbench.cpp` (checkbox handlers; compare path)
+- `valveworkbench.cpp` (checkbox handlers; compare path; Designer circuit registry; plot clearing; Export to Devices)
+- `ValveWorkbench.pro` (registered new Designer circuit sources/headers)
 
 - [ ] Capture before/after plots showing pentode overlay alignment for documentation.
 - [ ] If needed, clamp cathode sweep (e.g., limit |Vg| to device range) to avoid solver edge-cases.
