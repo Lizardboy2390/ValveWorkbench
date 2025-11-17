@@ -27,6 +27,14 @@ void Circuit::setOverlaysVisible(bool visible)
     if (opMarker) opMarker->setVisible(visible);
 }
 
+void Circuit::resetOverlays()
+{
+    anodeLoadLine = nullptr;
+    cathodeLoadLine = nullptr;
+    acSignalLine = nullptr;
+    opMarker = nullptr;
+}
+
 void Circuit::setParameter(int index, double value)
 {
     parameter[index]->setValue(value);

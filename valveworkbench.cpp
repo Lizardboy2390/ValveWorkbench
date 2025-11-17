@@ -42,6 +42,11 @@
 #include "valvemodel/data/sweep.h"
 #include "valvemodel/circuit/circuit.h"
 #include "valvemodel/circuit/triodecommoncathode.h"
+#include "valvemodel/circuit/pentodecommoncathode.h"
+#include "valvemodel/circuit/singleendedoutput.h"
+#include "valvemodel/circuit/singleendeduloutput.h"
+#include "valvemodel/circuit/pushpulloutput.h"
+#include "valvemodel/circuit/pushpulluloutput.h"
 #include "valvemodel/circuit/triodeaccathodefollower.h"
 #include "valvemodel/circuit/triodedccathodefollower.h"
 #include "ledindicator/ledindicator.h"
@@ -1048,6 +1053,11 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     // currently implemented; others remain null and are guarded against.
     circuits.resize(TEST_CALCULATOR + 1);
     circuits[TRIODE_COMMON_CATHODE]   = new TriodeCommonCathode();
+    circuits[PENTODE_COMMON_CATHODE]  = new PentodeCommonCathode();
+    circuits[SINGLE_ENDED_OUTPUT]     = new SingleEndedOutput();
+    circuits[ULTRALINEAR_SINGLE_ENDED]= new SingleEndedUlOutput();
+    circuits[PUSH_PULL_OUTPUT]        = new PushPullOutput();
+    circuits[ULTRALINEAR_PUSH_PULL]   = new PushPullUlOutput();
     circuits[AC_CATHODE_FOLLOWER]     = new TriodeACCathodeFollower();
     circuits[DC_CATHODE_FOLLOWER]     = new TriodeDCCathodeFollower();
 }
@@ -1240,6 +1250,7 @@ void ValveWorkbench::selectCircuit(int circuitType)
     for (Circuit *c : std::as_const(circuits)) {
         if (c) {
             c->setOverlaysVisible(false);
+            c->resetOverlays();
         }
     }
 

@@ -47,6 +47,15 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
     - Show Fitted Model (model curves)
     - Show Designer Overlays (anode/cathode/AC/OP designer lines)
     - Show Screen Current (pentode only; hidden for triode circuits)
+  - Available Designer circuits (subset wired as of 2025-11-16):
+    - Triode Common Cathode (TriodeCC)
+    - Pentode Common Cathode (PentodeCC)
+    - AC Cathode Follower
+    - DC Cathode Follower
+    - Single-Ended Output (pentode)
+    - Single-Ended UL Output (pentode, UL tap)
+    - Push-Pull Output (pentode)
+    - Push-Pull UL Output (pentode, UL tap)
 
 ## Features
 - Double‑triode workflow with A/B overlays and color‑coded labels
@@ -115,6 +124,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - Pentode fits look flatter than datasheets: this is expected with the current Gardiner auto-fit. For precise, datasheet-like curves, the planned Simple Manual Pentode modeller (web-style `epk` backend, manual sliders) will allow you to match curves by hand. Reefman models are experimental and may not converge on all data sets yet.
 
 ## Change log (highlights)
+- 2025‑11‑16: Designer circuits: added Pentode Common Cathode, AC/DC Cathode Follower, Single-Ended and Single-Ended UL outputs, Push-Pull and Push-Pull UL outputs; Designer plot now fully clears and resets overlays when switching circuits; Export to Devices now writes both `analyserDefaults` and `model` to preset JSONs so Designer and Analyser share a single device profile.
 - 2025‑11‑15: Added Triode-Connected Pentode analyser device type; triode-connected pentode measurements stored as triode tests with clear hints; centralised Gardiner vs Reefman pentode bounds aligned with UTmax-style seeding.
 - 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only
 - 2025‑11‑02: Analyser: removed heater button/LCDs (heaters fixed in hardware)
@@ -122,7 +132,6 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - 2025‑11‑02: Always prompt for Project name before saving measurements
 - 2025‑11‑02: Modeller guard flips positive grid voltages to negative during fitting
 - 2025‑10‑21: Fixed infinite loop in model plotting (grid stepping correction)
-- 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only
 
 ## Credits & Contact
 - AudioSmith — Darrin Smith, Nelson BC, Canada

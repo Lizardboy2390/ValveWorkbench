@@ -32,6 +32,11 @@ SOURCES += \
     valvemodel/circuit/circuit.cpp \
     valvemodel/circuit/triodeaccathodefollower.cpp \
     valvemodel/circuit/triodecommoncathode.cpp \
+    valvemodel/circuit/pentodecommoncathode.cpp \
+    valvemodel/circuit/singleendedoutput.cpp \
+    valvemodel/circuit/singleendeduloutput.cpp \
+    valvemodel/circuit/pushpulloutput.cpp \
+    valvemodel/circuit/pushpulluloutput.cpp \
     valvemodel/circuit/triodedccathodefollower.cpp \
     valvemodel/data/dataset.cpp \
     valvemodel/data/measurement.cpp \
@@ -76,6 +81,11 @@ HEADERS += \
     valvemodel/circuit/circuit.h \
     valvemodel/circuit/triodeaccathodefollower.h \
     valvemodel/circuit/triodecommoncathode.h \
+    valvemodel/circuit/pentodecommoncathode.h \
+    valvemodel/circuit/singleendedoutput.h \
+    valvemodel/circuit/singleendeduloutput.h \
+    valvemodel/circuit/pushpulloutput.h \
+    valvemodel/circuit/pushpulluloutput.h \
     valvemodel/circuit/triodedccathodefollower.h \
     valvemodel/ui/parameter.h \
     valvemodel/ui/simplemanualpentodedialog.h \

@@ -43,6 +43,10 @@ public:
     double anodeCurrent(double va, double vg1, double vg2 = 0);
     double anodeVoltage(double ia, double vg1, double vg2 = 0);
 
+    // For pentode devices, expose screen current via the underlying model.
+    // Returns current in mA, matching the Model::screenCurrent convention.
+    double screenCurrent(double va, double vg1, double vg2);
+
     void updateUI(QLabel *labels[], QLineEdit *values[]);
     void anodeAxes(Plot *plot);
     void transferAxes(Plot *plot);

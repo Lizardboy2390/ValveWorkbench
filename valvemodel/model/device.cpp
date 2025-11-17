@@ -123,6 +123,15 @@ double Device::anodeVoltage(double ia, double vg1, double vg2)
     return 0.0;
 }
 
+double Device::screenCurrent(double va, double vg1, double vg2)
+{
+    if (model != nullptr) {
+        return model->screenCurrent(va, vg1, vg2);
+    }
+
+    return 0.0;
+}
+
 void Device::updateUI(QLabel *labels[], QLineEdit *values[])
 {
     for (int i=0; i < 16; i++) { // Parameters all initially hidden

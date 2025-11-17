@@ -27,9 +27,11 @@ TriodeDCCathodeFollower::TriodeDCCathodeFollower()
 
 int TriodeDCCathodeFollower::getDeviceType(int index)
 {
-    Q_UNUSED(index);
-    // Single triode device
-    return TRIODE;
+    // Single triode device for this circuit
+    if (index == 1) {
+        return TRIODE;
+    }
+    return -1;
 }
 
 QTreeWidgetItem *TriodeDCCathodeFollower::buildTree(QTreeWidgetItem *parent)
@@ -107,12 +109,15 @@ void TriodeDCCathodeFollower::calculateLoadLines(QVector<QPointF> &anodeData,
     const double rk = parameter[TRI_DCCF_RK]->getValue();
     const double ra = parameter[TRI_DCCF_RA]->getValue();
 
-    if (vb <= 0.0 || rk <= 0.0 || ra <= 0.0) {
+    if (vb <= 0.0 || rk <= 0.0) {
         return;
     }
 
-    // Anode DC load line: from (0, Ia_max) to (Vb, 0)
-    const double iaMax_mA = vb / (ra + rk) * 1000.0; // mA
+    // Anode DC load line: from (0, Ia_max) to (Vb, 0).
+    // Allow Ra = 0 (direct feed) by falling back to Rk alone for the
+    // denominator when Ra is not positive.
+    const double denom = (ra + rk > 0.0) ? (ra + rk) : rk;
+    const double iaMax_mA = vb / denom * 1000.0; // mA
     anodeData.push_back(QPointF(0.0, iaMax_mA));
     anodeData.push_back(QPointF(vb, 0.0));
 
