@@ -530,7 +530,10 @@ void SingleEndedOutput::update(int index)
     parameter[SE_HD4]->setValue(0.0);
     parameter[SE_THD]->setValue(0.0);
 
-    if (headroom > 0.0 && raa > 0.0) {
+    // THD should be computed whenever we have a positive effective headroom,
+    // regardless of whether it came from the manual Headroom parameter or from
+    // the max/sym swing helpers.
+    if (effectiveHeadroomVpk > 0.0 && raa > 0.0) {
         double Ia = 0.0, Ib = 0.0, Ic = 0.0, Id = 0.0, Ie = 0.0;
         if (computeHeadroomHarmonicCurrents(vb, ia, raa, effectiveHeadroomVpk, vs,
                                             Ia, Ib, Ic, Id, Ie)) {
@@ -659,12 +662,17 @@ bool SingleEndedOutput::computeHeadroomHarmonicCurrents(double vb,
     const double mA = -qA / vb;
     const double vOperating = (biasCurrent_A - qA) / mA;
 
-    const double vMin = vOperating - headroom;
-    const double vMax = vOperating + headroom;
+    double vMin = vOperating - headroom;
+    double vMax = vOperating + headroom;
 
-    if (vMin <= 0.0 || vMax <= 0.0) {
-        return false;
-    }
+    // For very large headroom values, the ideal sinusoid may demand swings
+    // past Va=0 or beyond the plotted range. Instead of bailing out, clamp
+    // to a small positive minimum and a reasonable upper bound so we can
+    // continue to estimate THD into clipping.
+    const double kMinVa = 1e-3;
+    const double kMaxVa = 2.0 * vb;
+    vMin = std::max(vMin, kMinVa);
+    vMax = std::clamp(vMax, vMin + 1e-6, kMaxVa);
 
     const double I_max = dcLoadlineCurrent(vb, raa, vMin);
     const double I_min = dcLoadlineCurrent(vb, raa, vMax);
@@ -718,12 +726,16 @@ bool SingleEndedOutput::computeHeadroomPolygonPoints(double vb,
     const double mA = -qA / vb;
     const double vOperating = (biasCurrent_A - qA) / mA;
 
-    const double vMin = vOperating - headroom;
-    const double vMax = vOperating + headroom;
+    double vMin = vOperating - headroom;
+    double vMax = vOperating + headroom;
 
-    if (vMin <= 0.0 || vMax <= 0.0) {
-        return false;
-    }
+    // Allow large headroom up to clipping by clamping Va range instead of
+    // rejecting swings that would go negative or far beyond the plotted
+    // domain.
+    const double kMinVa = 1e-3;
+    const double kMaxVa = 2.0 * vb;
+    vMin = std::max(vMin, kMinVa);
+    vMax = std::clamp(vMax, vMin + 1e-6, kMaxVa);
 
     const double I_max = dcLoadlineCurrent(vb, raa, vMin);      // amps
     if (!std::isfinite(I_max)) {

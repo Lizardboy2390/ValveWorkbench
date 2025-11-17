@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-17 (Designer circuits: pentode CC, cathode followers, SE/SE-UL, Push-Pull/UL; SE headroom/THD; shared device presets; Designer plot clearing)
+Last updated: 2025-11-17 (Designer circuits: pentode CC, cathode followers, SE/SE-UL, Push-Pull/UL; SE headroom/THD/swing helpers; shared device presets; Designer plot clearing)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -192,9 +192,11 @@ Additional (2025-11-05):
     - Implemented single-ended and single-ended UL output circuits with AC load lines, Pout, Vk, Ik, and Rk.
     - 2025-11-17: Extended **SingleEndedOutput** Designer circuit with:
         - Manual anode headroom input (Vpk) used to compute `PHEAD` (Vpk² / 2·RA).
-        - Harmonic analysis: HD2, HD3, HD4, THD computed using the tube model over the chosen headroom swing (VTADIY-style 5-point method).
+        - Harmonic analysis: HD2, HD3, HD4, THD computed using the tube model over the chosen headroom swing (VTADIY-style 5-point method), now robust up to and into clipping via clamped Va bounds.
         - Blue headroom overlay on the SE AC load line: linear symmetric segment around the operating point with a filled polygon down to Ia=0 for visualizing the requested swing region.
-        - Note: symmetric vs max swing zones and SE input sensitivity are **not yet implemented**; Triode CC retains those advanced Designer helpers.
+        - Max swing (brown) and max symmetric swing (blue) helpers along the SE AC load line: `Vpp_max` drawn between the Vg1=0/Pa_max limit and Ia=0 intercept; `Vpp_sym` drawn as the largest symmetric span around the operating point.
+        - Sym Swing checkbox wired to SE and Triode CC: in SE, toggling Max Sym Swing selects which swing mode (max vs symmetric) drives the effective headroom and overlay colour scheme, and resets manual headroom to 0 so helpers take over.
+        - SE input sensitivity (Vpp) derived from the effective headroom swing using a gm·Ra-based gain estimate that respects K-bypass (gainMode) and matches the active swing mode colours (blue/brown for helpers, bright blue for manual override).
   - `valvemodel/circuit/pushpulloutput.h/.cpp` and `pushpulluloutput.h/.cpp`
     - Implemented push-pull and UL push-pull output circuits with class-A, class-B, and combined AC load lines plus Pout, Vk, Ik, and Rk.
 
