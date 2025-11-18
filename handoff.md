@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-17 (Designer circuits: pentode CC, cathode followers, SE/SE-UL, Push-Pull/UL; SE headroom/THD/swing helpers; shared device presets; Designer plot clearing)
+Last updated: 2025-11-18 (Tube-style device presets with embedded measurement; Designer SE bias from measurement; shared presets still honoured)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -15,7 +15,7 @@ Last updated: 2025-11-17 (Designer circuits: pentode CC, cathode followers, SE/S
  - Add a dedicated **Triode-Connected Pentode** analyser mode to generate triode-like sweeps for pentode tubes and feed UTmax-style seeding.
  - Centralise Gardiner vs Reefman pentode parameter bounds in `Model::setEstimate` so fits stay inside model-appropriate corridors.
 
-### 2025-11-16 Summary (Designer circuits / shared presets)
+### 2025-11-16–18 Summary (Designer circuits / shared presets / tube-style presets)
 - Designer circuits now mirror the web tool set more closely:
   - **Triode Common Cathode** (existing, now with symmetric swing helper and diagnostics).
   - **Pentode Common Cathode** (PentodeCC) with screen-load and cathode-load intersection, Vg2/Ig2 reporting, gm and gain.
@@ -27,6 +27,8 @@ Last updated: 2025-11-17 (Designer circuits: pentode CC, cathode followers, SE/S
   - On circuit change, the shared `Plot` scene is cleared and all circuit overlay pointers (load lines, OP markers) are reset to avoid dangling QGraphicsItemGroup references.
 - Device presets are now shared between Analyser and Designer:
   - **Export to Devices** writes both `analyserDefaults` and `model` into the same JSON so a single preset can drive analyser ranges and Designer load lines.
+  - 2025-11-18: When the export originates from a measurement-based pentode fit, the preset JSON also includes a `measurement` object containing the full analyser sweeps (Va/Vg1/Vg2/Ia/Ig2). This turns the preset into a tube-style package (model + measurement) for downstream tools.
+  - 2025-11-18: Modeller gained an **Import from Device** button which scans loaded device presets for an embedded `measurement` and, when selected, clones that Measurement into the current project. This enables re-fitting models from tube-style presets without re-running the analyser.
 - Robustness fixes:
   - Devices without a `model` block (e.g. early 6N2P-EV exports) no longer crash Designer; model plotting is skipped with a warning instead.
   - Triode CC operating point search now ignores degenerate intersections at Va≈0 V and falls back to the simple OP estimate when necessary.
@@ -197,6 +199,10 @@ Additional (2025-11-05):
         - Max swing (brown) and max symmetric swing (blue) helpers along the SE AC load line: `Vpp_max` drawn between the Vg1=0/Pa_max limit and Ia=0 intercept; `Vpp_sym` drawn as the largest symmetric span around the operating point.
         - Sym Swing checkbox wired to SE and Triode CC: in SE, toggling Max Sym Swing selects which swing mode (max vs symmetric) drives the effective headroom and overlay colour scheme, and resets manual headroom to 0 so helpers take over.
         - SE input sensitivity (Vpp) derived from the effective headroom swing using a gm·Ra-based gain estimate that respects K-bypass (gainMode) and matches the active swing mode colours (blue/brown for helpers, bright blue for manual override).
+    - 2025-11-18: **Measurement-driven SE bias**:
+        - `Device` now optionally owns an embedded `Measurement` when constructed from a preset JSON that includes a `measurement` object (tube-style export from Modeller/Analyser).
+        - `Device::findBiasFromMeasurement(vb, vs, targetIa_mA, Vk_out, Ig2_out)` scans the embedded sweeps for samples near `(Va≈Vb, Vg2≈Vs)`, sorts by Ia, and linearly interpolates Vg1/Ig2 around `targetIa_mA`. It returns `Vk_out = -Vg1` and `Ig2_out` in mA.
+        - `SingleEndedOutput::update` now prefers this measurement-based bias when available (Vk/Ik/Ig2 taken from data), and falls back to the original model-based grid-bias search (scan Vk so Ia_model≈target Ia, then call `Device::screenCurrent`) when no measurement is present. This keeps legacy presets working while aligning SE numeric outputs with the analyser’s measured idle for tube-style presets.
   - `valvemodel/circuit/pushpulloutput.h/.cpp` and `pushpulluloutput.h/.cpp`
     - Implemented push-pull and UL push-pull output circuits with class-A, class-B, and combined AC load lines plus Pout, Vk, Ik, and Rk.
 

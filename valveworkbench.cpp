@@ -587,17 +587,44 @@ void ValveWorkbench::cleanupTriodeBResources()
 void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
 {
     const bool show = (arg1 != 0);
-    // Apply to latest measurement and refresh the measured plot
-    if (currentMeasurement != nullptr) {
-        currentMeasurement->setShowScreen(show);
-        if (measuredCurves != nullptr) {
-            plot.remove(measuredCurves);
-            measuredCurves = nullptr;
+    const int tabIndex = ui->tabWidget ? ui->tabWidget->currentIndex() : -1;
+
+    if (tabIndex == 1) {
+        // Modeller tab: apply to the active project measurement and redraw the
+        // measured plot (axes managed by Measurement itself).
+        if (currentMeasurement != nullptr) {
+            currentMeasurement->setShowScreen(show);
+            if (measuredCurves != nullptr) {
+                plot.remove(measuredCurves);
+                measuredCurves = nullptr;
+            }
+            measuredCurves = currentMeasurement->updatePlot(&plot);
+            if (measuredCurves) {
+                plot.add(measuredCurves);
+                measuredCurves->setVisible(ui->measureCheck->isChecked());
+            }
         }
-        measuredCurves = currentMeasurement->updatePlot(&plot);
-        if (measuredCurves) {
-            plot.add(measuredCurves);
-            measuredCurves->setVisible(ui->measureCheck->isChecked());
+    } else if (tabIndex == 2) {
+        // Designer tab: apply to the embedded Measurement on the current
+        // Device (if any) and replot it without touching Designer axes.
+        if (currentDevice && currentDevice->getMeasurement()) {
+            Measurement *embedded = currentDevice->getMeasurement();
+            embedded->setShowScreen(show);
+
+            if (measuredCurves) {
+                plot.remove(measuredCurves);
+                measuredCurves = nullptr;
+            }
+            if (measuredCurvesSecondary) {
+                plot.remove(measuredCurvesSecondary);
+                measuredCurvesSecondary = nullptr;
+            }
+
+            measuredCurves = embedded->updatePlotWithoutAxes(&plot);
+            if (measuredCurves) {
+                plot.add(measuredCurves);
+                measuredCurves->setVisible(ui->measureCheck->isChecked());
+            }
         }
     }
 }
@@ -1032,11 +1059,18 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     connect(&serialPort, &QSerialPort::readyRead, this, &ValveWorkbench::handleReadyRead);
     connect(&serialPort, &QSerialPort::errorOccurred, this, &ValveWorkbench::handleError);
     connect(&timeoutTimer, &QTimer::timeout, this, &ValveWorkbench::handleTimeout);
+
+    // Modeller tab: import Measurement from a tube-style device preset.
+    if (ui->btnImportFromDevice) {
+        connect(ui->btnImportFromDevice, &QPushButton::clicked,
+                this, &ValveWorkbench::importFromDevice);
+    }
     connect(ui->runButton, &QPushButton::clicked, this, &ValveWorkbench::on_runButton_clicked);
 
     int count = ui->properties->rowCount();
     for (int i = 0; i < count; i++) {
         ui->properties->removeRow(0);
+    // ... (rest of the code remains the same)
     }
 
     ui->properties->setColumnCount(3);
@@ -1189,6 +1223,27 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         if (modelledCurves) {
             plot.add(modelledCurves);
             modelledCurves->setVisible(ui->modelCheck->isChecked());
+        }
+    }
+
+    // If the selected Device carries an embedded Measurement (from a tube-style
+    // preset JSON), plot its sweeps onto the Designer plot when Show
+    // Measurement is enabled. Use the "without axes" variant so the current
+    // circuit's axes (set above) remain in control.
+    if (measuredCurves) {
+        plot.remove(measuredCurves);
+        measuredCurves = nullptr;
+    }
+    if (measuredCurvesSecondary) {
+        plot.remove(measuredCurvesSecondary);
+        measuredCurvesSecondary = nullptr;
+    }
+    if (ui->measureCheck->isChecked() && device && device->getMeasurement()) {
+        Measurement *embedded = device->getMeasurement();
+        measuredCurves = embedded->updatePlotWithoutAxes(&plot);
+        if (measuredCurves) {
+            plot.add(measuredCurves);
+            measuredCurves->setVisible(ui->measureCheck->isChecked());
         }
     }
 }
@@ -3659,6 +3714,125 @@ void ValveWorkbench::on_btnAddToProject_clicked()
 
     ui->btnAddToProject->setEnabled(false);
 }
+
+void ValveWorkbench::importFromDevice()
+{
+    // Import a Measurement from a device preset that contains an embedded
+    // 'measurement' block. This lets Modeller work from tube-style device
+    // JSONs without re-running the analyser.
+
+    // Require at least one device with embedded measurement.
+    QList<Device *> candidates;
+    QStringList names;
+    for (Device *d : devices) {
+        if (!d) continue;
+        if (d->getMeasurement()) {
+            candidates.append(d);
+            names.append(d->getName());
+        }
+    }
+
+    if (candidates.isEmpty()) {
+        QMessageBox::warning(this, tr("Import from Device"),
+                             tr("No devices with embedded measurements are loaded. Export a fitted model with measurement from the Modeller tab first."));
+        return;
+    }
+
+    bool ok = false;
+    QString choice = QInputDialog::getItem(this,
+                                           tr("Import from Device"),
+                                           tr("Select device with embedded measurement:"),
+                                           names,
+                                           0,
+                                           false,
+                                           &ok);
+    if (!ok || choice.isEmpty()) {
+        return;
+    }
+
+    int idx = names.indexOf(choice);
+    if (idx < 0 || idx >= candidates.size()) {
+        return;
+    }
+
+    Device *srcDevice = candidates.at(idx);
+    Measurement *srcMeas = srcDevice ? srcDevice->getMeasurement() : nullptr;
+    if (!srcMeas) {
+        QMessageBox::warning(this, tr("Import from Device"),
+                             tr("Selected device has no embedded measurement."));
+        return;
+    }
+
+    // Clone the embedded measurement via JSON round-trip so the project owns
+    // its own independent copy.
+    QJsonObject measObj;
+    srcMeas->toJson(measObj);
+    Measurement *cloned = new Measurement();
+    cloned->fromJson(measObj);
+
+    // Ensure a project exists or create one (reuse Save to Project dialog).
+    ProjectDialog dialog;
+    if (currentProject == nullptr) {
+        if (dialog.exec() != QDialog::Accepted) {
+            delete cloned;
+            return;
+        }
+
+        Project *project = new Project();
+        project->setName(dialog.getName());
+        project->setDeviceType(dialog.getDeviceType());
+
+        setSelectedTreeItem(currentProject, false);
+        currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
+        currentProject->setText(0, dialog.getName());
+        currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
+        currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) project));
+
+        project->setTreeItem(currentProject);
+        setSelectedTreeItem(currentProject, true);
+    } else {
+        // Update existing project metadata from dialog (optional rename/type).
+        if (dialog.exec() == QDialog::Accepted) {
+            Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+            if (project != nullptr) {
+                project->setName(dialog.getName());
+                project->setDeviceType(dialog.getDeviceType());
+            }
+            currentProject->setText(0, dialog.getName());
+        }
+    }
+
+    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+    if (!project) {
+        delete cloned;
+        return;
+    }
+
+    if (!project->addMeasurement(cloned)) {
+        QMessageBox::warning(this, tr("Import from Device"),
+                             tr("Failed to add imported measurement to project."));
+        delete cloned;
+        return;
+    }
+
+    // Attach to project tree and plot on Modeller plot.
+    cloned->buildTree(currentProject);
+    currentMeasurement = cloned;
+
+    if (measuredCurves) {
+        plot.remove(measuredCurves);
+        measuredCurves = nullptr;
+    }
+    measuredCurves = cloned->updatePlot(&plot);
+    if (measuredCurves) {
+        plot.add(measuredCurves);
+        measuredCurves->setVisible(ui->measureCheck->isChecked());
+    }
+
+    // Update properties table to reflect the imported measurement.
+    cloned->updateProperties(ui->properties);
+}
 void ValveWorkbench::on_fitTriodeButton_clicked()
 {
     if (currentProject == nullptr) {
@@ -4128,11 +4302,30 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
 
 void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
 {
+    const bool wantVisible = ui->measureCheck->isChecked();
+
+    // Modeller tab: handled implicitly by measurement plotting paths; here we
+    // just toggle visibility of any existing measurement groups.
     if (measuredCurves != nullptr) {
-        measuredCurves->setVisible(ui->measureCheck->isChecked());
+        measuredCurves->setVisible(wantVisible);
     }
     if (measuredCurvesSecondary != nullptr) {
-        measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+        measuredCurvesSecondary->setVisible(wantVisible);
+    }
+
+    // Designer tab: if the user turns Show Measurement on and there is an
+    // embedded Measurement on the current Device but no plotted measurement
+    // yet, create it now so the checkbox actually brings curves into view.
+    const int tabIndex = ui->tabWidget ? ui->tabWidget->currentIndex() : -1;
+    if (wantVisible && tabIndex == 2 && currentDevice && !measuredCurves) {
+        Measurement *embedded = currentDevice->getMeasurement();
+        if (embedded) {
+            measuredCurves = embedded->updatePlotWithoutAxes(&plot);
+            if (measuredCurves) {
+                plot.add(measuredCurves);
+                measuredCurves->setVisible(true);
+            }
+        }
     }
 }
 

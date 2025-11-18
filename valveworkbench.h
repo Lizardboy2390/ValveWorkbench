@@ -123,6 +123,8 @@ private slots:
 
     void on_btnAddToProject_clicked();
 
+    void importFromDevice();
+
     void on_fitTriodeButton_clicked();
 
     void on_fitPentodeButton_clicked();

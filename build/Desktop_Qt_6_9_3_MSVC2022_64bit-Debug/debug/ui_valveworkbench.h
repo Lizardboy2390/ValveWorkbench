@@ -202,9 +202,9 @@ public:
     QSpacerItem *horizontalSpacer_18;
     QProgressBar *progressBar;
     QSpacerItem *verticalSpacer_11;
-    QHBoxLayout *horizontalLayout_2;
     QSpacerItem *horizontalSpacer_8;
     QPushButton *btnAddToProject;
+    QPushButton *btnImportFromDevice;
     QSpacerItem *horizontalSpacer_9;
     QSpacerItem *horizontalSpacer;
     QVBoxLayout *verticalLayout_2;
@@ -1199,24 +1199,25 @@ public:
 
         verticalLayout_6->addItem(verticalSpacer_11);
 
-        horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setObjectName("horizontalLayout_2");
         horizontalSpacer_8 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
-        horizontalLayout_2->addItem(horizontalSpacer_8);
+        verticalLayout_6->addItem(horizontalSpacer_8);
 
         btnAddToProject = new QPushButton(layoutWidget_2);
         btnAddToProject->setObjectName("btnAddToProject");
         btnAddToProject->setEnabled(false);
 
-        horizontalLayout_2->addWidget(btnAddToProject);
+        verticalLayout_6->addWidget(btnAddToProject);
+
+        btnImportFromDevice = new QPushButton(layoutWidget_2);
+        btnImportFromDevice->setObjectName("btnImportFromDevice");
+        btnImportFromDevice->setEnabled(true);
+
+        verticalLayout_6->addWidget(btnImportFromDevice);
 
         horizontalSpacer_9 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
-        horizontalLayout_2->addItem(horizontalSpacer_9);
-
-
-        verticalLayout_6->addLayout(horizontalLayout_2);
+        verticalLayout_6->addItem(horizontalSpacer_9);
 
         tabWidget->addTab(tab_3, QString());
 
@@ -1426,6 +1427,7 @@ public:
         heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (A)", nullptr));
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
+        btnImportFromDevice->setText(QCoreApplication::translate("ValveWorkbench", "Import from Device", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         plotTitle->setText(QString());
         measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));

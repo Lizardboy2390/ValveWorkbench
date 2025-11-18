@@ -36,12 +36,18 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Select a measurement → Fit Triode/Pentode
   - Red curves (Triode A) and Green curves (Triode B) overlay when available
   - Positive grid voltages are auto-corrected negative for fitting
-  - Export to Devices: after fitting, click "Export to Devices" to save the fitted model preset JSON into `models/` and refresh device dropdowns in Designer
+  - Export to Devices: after fitting, click "Export to Devices" to save the fitted model preset JSON into `models/` and refresh device dropdowns in Designer. The preset now acts as a **tube-style package**:
+    - `model`: fitted parameters (e.g. Gardiner pentode) used by Designer and Modeller.
+    - `measurement` (optional): full analyser sweeps (Va/Vg1/Vg2/Ia/Ig2) embedded in the same JSON, when the export originates from a measurement-based fit.
+  - Import from Device: on the Modeller tab, use this button to **pull a measurement back out of a tube-style device preset** (any JSON in `models/` that has an embedded `measurement` block). This clones the sweeps into the current project as a normal Measurement so you can refit models without re-running the analyser.
 - Designer tab
   - Choose circuit (e.g., Triode Common Cathode)
   - Adjust parameters and see load lines and operating point
   - Export SPICE netlist when ready
   - Device selection: pick a device from the dropdown; if "Show Fitted Model" is checked, red model curves will auto-plot even without measurements
+  - For **Single-Ended Output (pentode)**, when the selected device JSON contains an embedded `measurement` block from the analyser, the numeric SE panel now prefers **measurement-based idle**:
+    - Given `Vb`, `Vs`, and target `Ia`, Designer interpolates the embedded sweeps near that Va/Vg2 to find `Vg1` and `Ig2`, then reports `Vk = -Vg1`, `Ik = Ia + Ig2`.
+    - When no measurement data is present in the preset (legacy or hand-authored JSON), Designer falls back to the model-only bias search used previously.
   - Toggles (bottom row):
     - Show Measurement (measurement curves)
     - Show Fitted Model (model curves)
@@ -124,6 +130,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - Pentode fits look flatter than datasheets: this is expected with the current Gardiner auto-fit. For precise, datasheet-like curves, the planned Simple Manual Pentode modeller (web-style `epk` backend, manual sliders) will allow you to match curves by hand. Reefman models are experimental and may not converge on all data sets yet.
 
 ## Change log (highlights)
+- 2025‑11‑18: **Tube-style device JSON**: Export to Devices now optionally embeds the full analyser `measurement` (sweeps) alongside the fitted `model` in a single preset. Designer SE output uses embedded measurement data to compute Vk/Ik/Ig2 when available, with a safe fallback to the fitted tube model for legacy presets.
 - 2025‑11‑16: Designer circuits: added Pentode Common Cathode, AC/DC Cathode Follower, Single-Ended and Single-Ended UL outputs, Push-Pull and Push-Pull UL outputs; Designer plot now fully clears and resets overlays when switching circuits; Export to Devices now writes both `analyserDefaults` and `model` to preset JSONs so Designer and Analyser share a single device profile.
 - 2025‑11‑15: Added Triode-Connected Pentode analyser device type; triode-connected pentode measurements stored as triode tests with clear hints; centralised Gardiner vs Reefman pentode bounds aligned with UTmax-style seeding.
 - 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only

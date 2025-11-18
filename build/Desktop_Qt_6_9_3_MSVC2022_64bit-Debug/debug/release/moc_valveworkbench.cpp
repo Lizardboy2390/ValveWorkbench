@@ -85,6 +85,7 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         "on_iaMax_editingFinished",
         "on_pMax_editingFinished",
         "on_btnAddToProject_clicked",
+        "importFromDevice",
         "on_fitTriodeButton_clicked",
         "on_fitPentodeButton_clicked",
         "on_tabWidget_currentChanged",
@@ -205,76 +206,78 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         QtMocHelpers::SlotData<void()>(44, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_btnAddToProject_clicked'
         QtMocHelpers::SlotData<void()>(45, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_fitTriodeButton_clicked'
+        // Slot 'importFromDevice'
         QtMocHelpers::SlotData<void()>(46, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_fitPentodeButton_clicked'
+        // Slot 'on_fitTriodeButton_clicked'
         QtMocHelpers::SlotData<void()>(47, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_fitPentodeButton_clicked'
+        QtMocHelpers::SlotData<void()>(48, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_tabWidget_currentChanged'
-        QtMocHelpers::SlotData<void(int)>(48, 2, QMC::AccessPrivate, QMetaType::Void, {{
+        QtMocHelpers::SlotData<void(int)>(49, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::Int, 10 },
         }}),
         // Slot 'on_measureCheck_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(49, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 50 },
+        QtMocHelpers::SlotData<void(int)>(50, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 51 },
         }}),
         // Slot 'on_modelCheck_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(51, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 50 },
+        QtMocHelpers::SlotData<void(int)>(52, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 51 },
         }}),
         // Slot 'on_screenCheck_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(52, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 50 },
+        QtMocHelpers::SlotData<void(int)>(53, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 51 },
         }}),
         // Slot 'on_designerCheck_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(53, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 50 },
+        QtMocHelpers::SlotData<void(int)>(54, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 51 },
         }}),
         // Slot 'on_symSwingCheck_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(54, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 50 },
+        QtMocHelpers::SlotData<void(int)>(55, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 51 },
         }}),
         // Slot 'on_inputSensitivityCheck_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(55, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 50 },
+        QtMocHelpers::SlotData<void(int)>(56, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 51 },
         }}),
         // Slot 'on_useBypassedGainCheck_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(56, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 50 },
+        QtMocHelpers::SlotData<void(int)>(57, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 51 },
         }}),
         // Slot 'on_properties_itemChanged'
-        QtMocHelpers::SlotData<void(QTableWidgetItem *)>(57, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { 0x80000000 | 58, 59 },
+        QtMocHelpers::SlotData<void(QTableWidgetItem *)>(58, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { 0x80000000 | 59, 60 },
         }}),
         // Slot 'on_actionSave_Project_triggered'
-        QtMocHelpers::SlotData<void()>(60, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionOpen_Project_triggered'
         QtMocHelpers::SlotData<void()>(61, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionClose_Project_triggered'
+        // Slot 'on_actionOpen_Project_triggered'
         QtMocHelpers::SlotData<void()>(62, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_compareButton_clicked'
+        // Slot 'on_actionClose_Project_triggered'
         QtMocHelpers::SlotData<void()>(63, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_cir8Value_editingFinished'
+        // Slot 'on_compareButton_clicked'
         QtMocHelpers::SlotData<void()>(64, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_cir9Value_editingFinished'
+        // Slot 'on_cir8Value_editingFinished'
         QtMocHelpers::SlotData<void()>(65, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_cir10Value_editingFinished'
+        // Slot 'on_cir9Value_editingFinished'
         QtMocHelpers::SlotData<void()>(66, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_cir11Value_editingFinished'
+        // Slot 'on_cir10Value_editingFinished'
         QtMocHelpers::SlotData<void()>(67, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_cir12Value_editingFinished'
+        // Slot 'on_cir11Value_editingFinished'
         QtMocHelpers::SlotData<void()>(68, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionExport_Model_triggered'
+        // Slot 'on_cir12Value_editingFinished'
         QtMocHelpers::SlotData<void()>(69, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'exportFittedModelToDevices'
+        // Slot 'on_actionExport_Model_triggered'
         QtMocHelpers::SlotData<void()>(70, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'exportFittedModelToDevices'
+        QtMocHelpers::SlotData<void()>(71, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_mes_mod_select_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(71, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 72 },
+        QtMocHelpers::SlotData<void(int)>(72, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 73 },
         }}),
         // Slot 'on_pushButton_3_clicked'
-        QtMocHelpers::SlotData<void()>(73, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_pushButton_4_clicked'
         QtMocHelpers::SlotData<void()>(74, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButton_4_clicked'
+        QtMocHelpers::SlotData<void()>(75, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -336,31 +339,32 @@ void ValveWorkbench::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 35: _t->on_iaMax_editingFinished(); break;
         case 36: _t->on_pMax_editingFinished(); break;
         case 37: _t->on_btnAddToProject_clicked(); break;
-        case 38: _t->on_fitTriodeButton_clicked(); break;
-        case 39: _t->on_fitPentodeButton_clicked(); break;
-        case 40: _t->on_tabWidget_currentChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 41: _t->on_measureCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 42: _t->on_modelCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 43: _t->on_screenCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 44: _t->on_designerCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 45: _t->on_symSwingCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 46: _t->on_inputSensitivityCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 47: _t->on_useBypassedGainCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 48: _t->on_properties_itemChanged((*reinterpret_cast< std::add_pointer_t<QTableWidgetItem*>>(_a[1]))); break;
-        case 49: _t->on_actionSave_Project_triggered(); break;
-        case 50: _t->on_actionOpen_Project_triggered(); break;
-        case 51: _t->on_actionClose_Project_triggered(); break;
-        case 52: _t->on_compareButton_clicked(); break;
-        case 53: _t->on_cir8Value_editingFinished(); break;
-        case 54: _t->on_cir9Value_editingFinished(); break;
-        case 55: _t->on_cir10Value_editingFinished(); break;
-        case 56: _t->on_cir11Value_editingFinished(); break;
-        case 57: _t->on_cir12Value_editingFinished(); break;
-        case 58: _t->on_actionExport_Model_triggered(); break;
-        case 59: _t->exportFittedModelToDevices(); break;
-        case 60: _t->on_mes_mod_select_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 61: _t->on_pushButton_3_clicked(); break;
-        case 62: _t->on_pushButton_4_clicked(); break;
+        case 38: _t->importFromDevice(); break;
+        case 39: _t->on_fitTriodeButton_clicked(); break;
+        case 40: _t->on_fitPentodeButton_clicked(); break;
+        case 41: _t->on_tabWidget_currentChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 42: _t->on_measureCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 43: _t->on_modelCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 44: _t->on_screenCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 45: _t->on_designerCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 46: _t->on_symSwingCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 47: _t->on_inputSensitivityCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 48: _t->on_useBypassedGainCheck_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 49: _t->on_properties_itemChanged((*reinterpret_cast< std::add_pointer_t<QTableWidgetItem*>>(_a[1]))); break;
+        case 50: _t->on_actionSave_Project_triggered(); break;
+        case 51: _t->on_actionOpen_Project_triggered(); break;
+        case 52: _t->on_actionClose_Project_triggered(); break;
+        case 53: _t->on_compareButton_clicked(); break;
+        case 54: _t->on_cir8Value_editingFinished(); break;
+        case 55: _t->on_cir9Value_editingFinished(); break;
+        case 56: _t->on_cir10Value_editingFinished(); break;
+        case 57: _t->on_cir11Value_editingFinished(); break;
+        case 58: _t->on_cir12Value_editingFinished(); break;
+        case 59: _t->on_actionExport_Model_triggered(); break;
+        case 60: _t->exportFittedModelToDevices(); break;
+        case 61: _t->on_mes_mod_select_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 62: _t->on_pushButton_3_clicked(); break;
+        case 63: _t->on_pushButton_4_clicked(); break;
         default: ;
         }
     }
@@ -387,14 +391,14 @@ int ValveWorkbench::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 63)
+        if (_id < 64)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 63;
+        _id -= 64;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 63)
+        if (_id < 64)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 63;
+        _id -= 64;
     }
     return _id;
 }
