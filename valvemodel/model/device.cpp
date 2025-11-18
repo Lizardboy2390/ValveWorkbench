@@ -1,6 +1,11 @@
 #include "device.h"
 #include <QGraphicsTextItem>
 
+// For findBiasFromMeasurement we need access to Sweep and Sample getters,
+// so include their headers here (measurement.h only forward-declares them).
+#include "../data/sweep.h"
+#include "../data/sample.h"
+
 Device::Device(int _modelDeviceType) : deviceType(_modelDeviceType)
 {
     if (deviceType == TRIODE) {
@@ -127,11 +132,137 @@ Device::Device(QJsonDocument modelDocument)
         } else {
             qInfo("No model object found in JSON");
         }
+
+        // Optional embedded measurement data exported from the analyser. When
+        // present, this allows Designer helpers (e.g. SE bias calculations) to
+        // reconstruct operating points directly from the original sweeps
+        // instead of relying solely on the fitted model surface.
+        if (deviceObject.contains("measurement") && deviceObject["measurement"].isObject()) {
+            QJsonObject measObj = deviceObject["measurement"].toObject();
+            measurement = new Measurement();
+            measurement->fromJson(measObj);
+            qInfo("Device '%s' has embedded measurement with %d sweeps",
+                  name.toStdString().c_str(), measurement->count());
+        }
     } else {
         qInfo("JSON document is not an object");
     }
 
+    // Log final axis limits and device type for Designer diagnostics so we can
+    // verify that JSON-specified ranges are honoured at runtime.
+    qInfo("DEVICE AXES: name='%s' type=%d vaMax=%.3f iaMax=%.3f vg1Max=%.3f vg2Max=%.3f paMax=%.3f",
+          name.toStdString().c_str(), deviceType, vaMax, iaMax, vg1Max, vg2Max, paMax);
+
     qInfo("Final device type: %d", deviceType);
+}
+
+bool Device::findBiasFromMeasurement(double vb,
+                                     double vs,
+                                     double targetIa_mA,
+                                     double &vk_out,
+                                     double &ig2_mA_out) const
+{
+    vk_out = 0.0;
+    ig2_mA_out = 0.0;
+
+    if (!measurement || measurement->count() <= 0) {
+        return false;
+    }
+
+    struct BiasSample {
+        double vg1;
+        double ia_mA;
+        double ig2_mA;
+    };
+
+    std::vector<BiasSample> samples;
+    samples.reserve(128);
+
+    const double vaTol = std::max(5.0, std::fabs(vb) * 0.05);  // 5 V or 5%
+    const double vsTol = std::max(5.0, std::fabs(vs) * 0.05);
+
+    for (int i = 0; i < measurement->count(); ++i) {
+        Sweep *sw = measurement->at(i);
+        if (!sw) continue;
+        for (int j = 0; j < sw->count(); ++j) {
+            Sample *s = sw->at(j);
+            if (!s) continue;
+
+            const double va    = s->getVa();
+            const double vg1   = s->getVg1();
+            const double vg2   = s->getVg2();
+            const double ia_mA = s->getIa();
+            const double ig2_mA = s->getIg2();
+
+            if (!std::isfinite(va) || !std::isfinite(vg1) ||
+                !std::isfinite(vg2) || !std::isfinite(ia_mA)) {
+                continue;
+            }
+
+            if (std::fabs(va - vb) <= vaTol && std::fabs(vg2 - vs) <= vsTol) {
+                BiasSample bs{vg1, ia_mA, std::isfinite(ig2_mA) ? ig2_mA : 0.0};
+                samples.push_back(bs);
+            }
+        }
+    }
+
+    if (samples.size() < 1) {
+        return false;
+    }
+
+    // Prefer interpolation when we have at least two points spanning target Ia.
+    // Sort by ia so we can bracket the target current.
+    std::sort(samples.begin(), samples.end(),
+              [](const BiasSample &a, const BiasSample &b) {
+                  return a.ia_mA < b.ia_mA;
+              });
+
+    const double target = targetIa_mA;
+    int bracket = -1;
+    for (int i = 0; i + 1 < static_cast<int>(samples.size()); ++i) {
+        const double ia1 = samples[i].ia_mA;
+        const double ia2 = samples[i + 1].ia_mA;
+        if ((ia1 <= target && ia2 >= target) || (ia1 >= target && ia2 <= target)) {
+            bracket = i;
+            break;
+        }
+    }
+
+    double vg1_sel = 0.0;
+    double ig2_sel = 0.0;
+
+    if (bracket >= 0) {
+        const BiasSample &s1 = samples[bracket];
+        const BiasSample &s2 = samples[bracket + 1];
+        const double denom = (s2.ia_mA - s1.ia_mA);
+        double t = 0.0;
+        if (std::fabs(denom) > 1e-9) {
+            t = (target - s1.ia_mA) / denom;
+            t = std::clamp(t, 0.0, 1.0);
+        }
+        vg1_sel = s1.vg1 + t * (s2.vg1 - s1.vg1);
+        ig2_sel = s1.ig2_mA + t * (s2.ig2_mA - s1.ig2_mA);
+    } else {
+        // No bracketing pair: fall back to nearest Ia sample.
+        double bestErr = std::numeric_limits<double>::infinity();
+        for (const auto &bs : samples) {
+            const double err = std::fabs(bs.ia_mA - target);
+            if (err < bestErr) {
+                bestErr = err;
+                vg1_sel = bs.vg1;
+                ig2_sel = bs.ig2_mA;
+            }
+        }
+    }
+
+    if (!std::isfinite(vg1_sel)) {
+        return false;
+    }
+
+    // Measurement Vg1 is negative for normal bias; Vk is its magnitude.
+    vk_out = -vg1_sel;
+    ig2_mA_out = ig2_sel;
+    return true;
 }
 
 double Device::anodeCurrent(double va, double vg1, double vg2)
@@ -197,6 +328,9 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
                  name.toStdString().c_str());
         return nullptr;
     }
+
+    qInfo("Device::anodePlot: name='%s' type=%d vaMax=%.3f iaMax=%.3f vg1Max=%.3f vg2Max=%.3f",
+          name.toStdString().c_str(), deviceType, vaMax, iaMax, vg1Max, vg2Max);
 
     QList<QGraphicsItem *> items;
 

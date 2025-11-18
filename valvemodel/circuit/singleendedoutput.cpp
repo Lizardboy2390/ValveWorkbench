@@ -375,30 +375,61 @@ void SingleEndedOutput::update(int index)
         }
     }
 
-    // Find Vk (grid bias) such that Ia(Vb, -Vk, Vs) ~= ia
-    double bestVg1 = 0.0;
-    double minErr = std::numeric_limits<double>::infinity();
-    const int vgSteps = 1000;
-    for (int i = 0; i <= vgSteps; ++i) {
-        const double vg1 = vg1Max * static_cast<double>(i) / vgSteps;
-        double ia_test_mA = device1->anodeCurrent(vb, -vg1, vs) * 1000.0;
-        if (!std::isfinite(ia_test_mA)) continue;
-        const double err = std::abs(ia - ia_test_mA);
-        if (err < minErr) {
-            minErr = err;
-            bestVg1 = vg1;
+    // Prefer using embedded measurement data (if present on this Device) to
+    // determine Vk and Ig2 at the requested bias. This makes the SE numeric
+    // panel match the analyser's measured idle more closely. Fall back to the
+    // fitted model surface when no suitable measurement data is available.
+    double bestVg1 = 0.0;   // Vk (positive magnitude of grid bias)
+    double ik_mA = ia;
+    double ig2_mA = 0.0;
+
+    bool usedMeasurementBias = false;
+    if (device1 && device1->getMeasurement()) {
+        double vk_meas = 0.0;
+        double ig2_meas_mA = 0.0;
+        if (device1->findBiasFromMeasurement(vb, vs, ia, vk_meas, ig2_meas_mA)) {
+            bestVg1 = vk_meas;
+            ig2_mA = ig2_meas_mA;
+            ik_mA = ia + ig2_mA;
+            usedMeasurementBias = true;
         }
     }
 
-    double ik_mA = ia;
-    if (device1->getDeviceType() == PENTODE) {
-        ik_mA += device1->screenCurrent(vb, -bestVg1, vs) * 1000.0;
+    if (!usedMeasurementBias) {
+        // Existing model-based path: find Vk (grid bias) such that
+        // Ia(Vb, -Vk, Vs) ~= ia using the fitted model.
+        double minErr = std::numeric_limits<double>::infinity();
+        const int vgSteps = 1000;
+        for (int i = 0; i <= vgSteps; ++i) {
+            const double vg1 = vg1Max * static_cast<double>(i) / vgSteps;
+            double ia_test_mA = device1->anodeCurrent(vb, -vg1, vs) * 1000.0;
+            if (!std::isfinite(ia_test_mA)) continue;
+            const double err = std::abs(ia - ia_test_mA);
+            if (err < minErr) {
+                minErr = err;
+                bestVg1 = vg1;
+            }
+        }
+
+        ik_mA = ia;
+        ig2_mA = 0.0;
+        if (device1->getDeviceType() == PENTODE) {
+            // Device::screenCurrent already returns mA (see Model::screenCurrent
+            // convention), so add it directly without additional scaling.
+            ig2_mA = device1->screenCurrent(vb, -bestVg1, vs);
+            ik_mA += ig2_mA;
+        }
     }
 
     double rk_ohms = 0.0;
     if (ik_mA > 0.0) {
         rk_ohms = 1000.0 * bestVg1 / ik_mA;
     }
+
+    // Diagnostics: log SE operating point and model currents so we can compare
+    // against analyser expectations (e.g., Ig2 ~1.5 mA at typical 6L6 bias).
+    qInfo("SE_OUTPUT OP: Vb=%.3f Vs=%.3f Vk=%.3f (Vg1=-Vk=%.3f) Ia=%.3f mA Ig2=%.3f mA Ik=%.3f mA Rk=%.3f ohms",
+          vb, vs, bestVg1, -bestVg1, ia, ig2_mA, ik_mA, rk_ohms);
 
     parameter[SE_VK]->setValue(bestVg1);
     parameter[SE_IK]->setValue(ik_mA);
@@ -818,9 +849,9 @@ void SingleEndedOutput::plot(Plot *plot)
     const double xMajor = std::max(5.0, vaMax / 10.0);
     const double yMajor = std::max(0.5, iaMax / 10.0);
 
-    if (plot->getScene()->items().isEmpty()) {
-        plot->setAxes(0.0, vaMax, xMajor, 0.0, iaMax, yMajor);
-    }
+    // Always set axes based on the current device's limits so SE output plots
+    // do not inherit stale ranges (e.g., 300V/5mA) from previous circuits.
+    plot->setAxes(0.0, vaMax, xMajor, 0.0, iaMax, yMajor);
 
     const double vb  = parameter[SE_VB]->getValue();
     const double vs  = parameter[SE_VS]->getValue();

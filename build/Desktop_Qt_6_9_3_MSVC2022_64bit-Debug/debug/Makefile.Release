@@ -20507,7 +20507,9 @@ release\device.obj: ..\..\..\valvemodel\model\device.cpp ..\..\..\valvemodel\mod
 		..\..\..\valvemodel\model\korentriode.h \
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
-		..\..\..\valvemodel\model\gardinerpentode.h
+		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\data\sweep.h \
+		..\..\..\valvemodel\data\sample.h
 
 release\estimate.obj: ..\..\..\valvemodel\model\estimate.cpp ..\..\..\valvemodel\model\estimate.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \

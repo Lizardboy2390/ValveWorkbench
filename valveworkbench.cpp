@@ -4441,13 +4441,58 @@ void ValveWorkbench::exportFittedModelToDevices()
     QJsonObject root;
     root["name"] = deviceName;
 
-    // Use current analyser limits if available; otherwise sensible defaults
+    // Use current analyser limits if available; otherwise sensible defaults.
+    // For pentodes, ensure Designer has enough headroom for SE/PP output
+    // stages by enforcing a minimum Va range.
     double vaMaxOut = 300.0;
     double iaMaxOut = 5.0;
     double paMaxOut = 1.125;
     if (std::isfinite(anodeStop) && anodeStop > 0.0) vaMaxOut = anodeStop;
     if (std::isfinite(iaMax) && iaMax > 0.0) iaMaxOut = iaMax;
     if (std::isfinite(pMax) && pMax > 0.0) paMaxOut = pMax;
+
+    if (deviceType == PENTODE) {
+        // Give pentode Designer circuits enough voltage headroom.
+        if (vaMaxOut < 500.0) {
+            vaMaxOut = 500.0;
+        }
+
+        // Derive vg1Max from the analyser grid stop magnitude so that
+        // Designer plots use a comparable grid-voltage family to the
+        // measured curves (e.g. 0 .. -40 V for a 6L6GC).
+        double vg1MaxOut = gridStop;
+        if (vg1MaxOut < 0.0) {
+            vg1MaxOut = -vg1MaxOut;
+        }
+        if (!(vg1MaxOut > 0.0)) {
+            vg1MaxOut = 50.0; // fallback similar to legacy presets
+        }
+        root["vg1Max"] = vg1MaxOut;
+
+        // Derive vg2Max from the analyser screen settings so Designer uses
+        // a realistic screen voltage instead of defaulting to Va max.
+        double vg2MaxOut = screenStart;
+        if (vg2MaxOut == 0.0) {
+            vg2MaxOut = screenStop;
+        }
+        if (vg2MaxOut < 0.0) {
+            vg2MaxOut = -vg2MaxOut;
+        }
+        if (vg2MaxOut > 0.0) {
+            root["vg2Max"] = vg2MaxOut;
+        }
+
+        // For power pentodes, honour the analyser's Ia limit (from the
+        // input boxes/template) but clamp it to the hardware maximum so
+        // Designer cannot exceed the 50 mA capability of the analyser.
+        if (!(iaMaxOut > 0.0)) {
+            iaMaxOut = 5.0; // conservative fallback if analyser Ia is unset
+        }
+        if (iaMaxOut > 50.0) {
+            iaMaxOut = 50.0;
+        }
+    }
+
     root["vaMax"] = vaMaxOut;
     if (deviceType == TRIODE) {
         root["vg1Max"] = 5.0;
@@ -4548,6 +4593,17 @@ void ValveWorkbench::exportFittedModelToDevices()
     QJsonObject modelObj;
     toExport->toJson(modelObj);
     root["model"] = modelObj;
+
+    // Attach full analyser measurement (if available) so offline tools and
+    // Designer can reconstruct bias and perform data-driven recalculations.
+    // This effectively turns the preset into a tube-style package: model
+    // parameters plus the original sweeps.
+    Measurement *measForExport = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
+    if (measForExport) {
+        QJsonObject measObj;
+        measForExport->toJson(measObj);
+        root["measurement"] = measObj;
+    }
 
     // Resolve models directory to MATCH loadDevices() search
     QStringList possiblePaths = {

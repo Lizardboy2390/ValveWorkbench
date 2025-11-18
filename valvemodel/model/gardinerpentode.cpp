@@ -188,7 +188,8 @@ double GardinerPentode::screenCurrent(double va, double vg1, double vg2, bool se
         ig2 = ig2 + epk * psec / parameter[PAR_KG2A]->getValue();
     }
 
-    return ig2;
+    // Match the JS reference semantics: screen current cannot be negative.
+    return std::max(0.0, ig2);
 }
 
 GardinerPentode::GardinerPentode()
@@ -587,8 +588,10 @@ void GardinerPentode::setOptions()
         //problem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
         //problem.SetParameterBlockConstant(parameter[PAR_PSI]->getPointer());
 
-        // Solver configuration only; bounds are now handled centrally via Model::setEstimate/setLimits
-        options.max_num_iterations = 400;
+        // Solver configuration only; bounds are now handled centrally via Model::setEstimate/setLimits.
+        // Allow more iterations for difficult Gardiner pentode fits (e.g., near-cutoff sweeps)
+        // before declaring non-convergence.
+        options.max_num_iterations = 800;
         options.max_num_consecutive_invalid_steps = 20;
         options.linear_solver_type = ceres::DENSE_QR;
     } else if (mode == SCREEN_MODE) {

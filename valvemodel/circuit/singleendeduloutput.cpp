@@ -206,7 +206,9 @@ void SingleEndedUlOutput::update(int index)
 
     double ik_mA = ia;
     if (device1->getDeviceType() == PENTODE) {
-        ik_mA += device1->screenCurrent(vb, -bestVg1, vb) * 1000.0;
+        // Device::screenCurrent returns mA, so add it directly without
+        // additional 1000x conversion.
+        ik_mA += device1->screenCurrent(vb, -bestVg1, vb);
     }
 
     double rk_ohms = 0.0;

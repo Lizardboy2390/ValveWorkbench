@@ -209,7 +209,9 @@ void PushPullUlOutput::update(int index)
 
     double ik_mA = ia;
     if (device1->getDeviceType() == PENTODE) {
-        ik_mA += device1->screenCurrent(vb, -bestVg1, vb) * 1000.0;
+        // Device::screenCurrent already returns mA, so no extra 1000x factor
+        // is needed when forming Ik.
+        ik_mA += device1->screenCurrent(vb, -bestVg1, vb);
     }
 
     double rk_ohms = 0.0;

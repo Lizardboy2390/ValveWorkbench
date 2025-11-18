@@ -314,6 +314,9 @@ void Model::setEstimate(Estimate *estimate)
         setBound(PAR_X,     1.0,   2.0);
         setBound(PAR_MU,    1.0,  50.0);
         setBound(PAR_KG2,   0.1,  25.0);
+        // Screen current scale: keep Kg2a in a moderate range so Ig2 cannot
+        // collapse toward zero or explode due to extreme denominator values.
+        setBound(PAR_KG2A,  0.1,  50.0);
         setBound(PAR_A,     0.0,   0.1);
         setBound(PAR_ALPHA, 0.0,   0.6);
         setBound(PAR_BETA,  0.0,   0.6);
