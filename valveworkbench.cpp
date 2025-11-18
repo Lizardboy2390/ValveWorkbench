@@ -1149,7 +1149,16 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         return;
     }
 
+    if (deviceNumber >= devices.size()) {
+        qWarning("selectStdDevice: device index %d out of range (devices.size()=%d)", deviceNumber, devices.size());
+        return;
+    }
+
     Device *device = devices.at(deviceNumber);
+    if (!device) {
+        qWarning("selectStdDevice: devices[%d] is null", deviceNumber);
+        return;
+    }
     currentDevice = device;
     // For Designer, do not set model axes or draw model curves here to avoid overriding
     // the circuit load-line axes. The circuit plot will set appropriate axes.
@@ -2632,9 +2641,37 @@ void ValveWorkbench::on_actionOptions_triggered()
 
 void ValveWorkbench::on_actionLoad_Model_triggered()
 {
-    QString baseDir = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
-                                      + "/ValveWorkbench/templates");
-    if (!QDir(baseDir).exists()) QDir().mkpath(baseDir);
+    // Prefer the same models directories used by exportFittedModelToDevices()/loadDevices()
+    // so that analyser-exported devices are easy to re-import. Fall back to the
+    // legacy Documents/ValveWorkbench/templates path if no models dir exists.
+    QString baseDir;
+
+    QStringList possiblePaths = {
+        QCoreApplication::applicationDirPath() + "/../../../../../models",
+        QCoreApplication::applicationDirPath() + "/../../../../models",
+        QCoreApplication::applicationDirPath() + "/../../../models",
+        QCoreApplication::applicationDirPath() + "/../models",
+        QCoreApplication::applicationDirPath() + "/models",
+        QDir::currentPath() + "/models",
+        QDir::currentPath() + "/../models",
+        QDir::currentPath() + "/../../models",
+        QDir::currentPath() + "/../../../models"
+    };
+
+    for (const QString &p : possiblePaths) {
+        QDir d(p);
+        if (d.exists()) {
+            baseDir = d.absolutePath();
+            break;
+        }
+    }
+
+    if (baseDir.isEmpty()) {
+        baseDir = QDir::cleanPath(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                                   + "/ValveWorkbench/templates");
+        if (!QDir(baseDir).exists()) QDir().mkpath(baseDir);
+    }
+
     QString modelName = QFileDialog::getOpenFileName(this, "Import Model to Project", baseDir, "JSON Files (*.json)");
 
     if (modelName.isNull()) {
@@ -2725,6 +2762,11 @@ void ValveWorkbench::on_actionLoad_Model_triggered()
         QMessageBox::warning(this, tr("Import Model"), tr("Could not create model instance."));
         return;
     }
+    // Ensure imported models have preferences wired so methods like
+    // updateProperties() can safely consult settings (e.g. GardinerPentode
+    // checking useSecondaryEmission()). This mirrors how fitted models are
+    // configured elsewhere in the app.
+    m->setPreferences(&preferencesDialog);
     m->fromJson(modelObj);
 
     Project *proj = static_cast<Project *>(currentProject->data(0, Qt::UserRole).value<void *>());
@@ -3076,9 +3118,16 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             setSelectedTreeItem(currentProject, true);
             setFitButtons();
 
-            qInfo("=== MODEL PLOTTING: currentMeasurementItem type = %d, is null = %s ===", 
+            qInfo("=== MODEL PLOTTING: currentMeasurementItem type = %d, is null = %s ===",
                    currentMeasurementItem ? currentMeasurementItem->type() : -1,
                    currentMeasurementItem ? "false" : "true");
+
+            // Require a valid measurement selection before attempting model plotting
+            if (!currentMeasurementItem || !currentMeasurement) {
+                qInfo("MODEL PLOTTING: No current measurement selected - skipping model overlay");
+                ui->modelCheck->setChecked(true);
+                break;
+            }
 
             Sweep *sweep = nullptr;
 
@@ -3097,79 +3146,54 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
             Model *model = (Model *) data;
             model->updateProperties(ui->properties);
-            if (currentMeasurement != nullptr) {
-                qInfo("=== VALVEWORKBENCH: Attempting model plotting ===");
-                qInfo("Current measurement device type: %d, model type: %d",
-                       currentMeasurement->getDeviceType(), model->getType());
 
-                const bool triodeMatch =
-                    (currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE);
-                const bool pentodeMatch =
-                    (currentMeasurement->getDeviceType() == PENTODE &&
-                     (model->getType() == GARDINER_PENTODE ||
-                      model->getType() == SIMPLE_MANUAL_PENTODE ||
-                      model->getType() == REEFMAN_DERK_PENTODE ||
-                      model->getType() == REEFMAN_DERK_E_PENTODE));
+            qInfo("=== VALVEWORKBENCH: Attempting model plotting ===");
+            qInfo("Current measurement device type: %d, model type: %d",
+                   currentMeasurement->getDeviceType(), model->getType());
 
-                if (triodeMatch || pentodeMatch) {
-                    qInfo("Type check PASSED - proceeding with model plotting");
-                    plot.remove(modelledCurves);
-                    QGraphicsItemGroup *plotted = nullptr;
+            const bool triodeMatch =
+                (currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE);
+            const bool pentodeMatch =
+                (currentMeasurement->getDeviceType() == PENTODE &&
+                 (model->getType() == GARDINER_PENTODE ||
+                  model->getType() == SIMPLE_MANUAL_PENTODE ||
+                  model->getType() == REEFMAN_DERK_PENTODE ||
+                  model->getType() == REEFMAN_DERK_E_PENTODE));
 
-                    if (currentMeasurement->getDeviceType() == PENTODE) {
-                        // For Simple Manual Pentode, use the saved model instance directly so
-                        // manual slider tuning and JSON-loaded parameters are respected.
-                        if (model->getType() == SIMPLE_MANUAL_PENTODE) {
-                            qInfo("PENTODE: Using saved SimpleManualPentode instance for plotting");
-                            plotted = model->plotModel(&plot, currentMeasurement, sweep);
-                        } else {
-                            // For fitted pentode models (Gardiner/Reefman), use a temporary model whose
-                            // type matches the currently selected model node, so plotting reflects the
-                            // active model (Gardiner vs Reefman) rather than whatever was last stored
-                            // in preferences.
-                            const int activePentodeType = model->getType();
-                            qInfo("PENTODE: Using temporary pentode model of type %d for plotting", activePentodeType);
+            if (triodeMatch || pentodeMatch) {
+                qInfo("Type check PASSED - proceeding with model plotting");
+                plot.remove(modelledCurves);
+                QGraphicsItemGroup *plotted = nullptr;
 
-                            Estimate quick;
-                            // Use any available triode model as seed if present; otherwise nullptr is fine
-                            CohenHelieTriode *seedTriode = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
-                            quick.estimatePentode(currentMeasurement, seedTriode, activePentodeType, false);
+                if (currentMeasurement->getDeviceType() == PENTODE) {
+                    // Always plot pentode models (Gardiner/Reefman/SimpleManual) using the
+                    // current model instance so that JSON-loaded parameters and fitted
+                    // analyser models are reflected exactly, and to avoid doing a second
+                    // on-the-fly pentode fit when selecting a model node.
+                    qInfo("PENTODE: Using current model instance of type %d for plotting", model->getType());
+                    model->setShowScreen(showScreen);
+                    plotted = model->plotModel(&plot, currentMeasurement, sweep);
+                } else {
+                    // Triode or other device types fall back to the model instance as before.
+                    model->setShowScreen(showScreen);
+                    plotted = model->plotModel(&plot, currentMeasurement, sweep);
+                }
 
-                            std::unique_ptr<Model> temp(ModelFactory::createModel(activePentodeType));
-                            if (temp) {
-                                temp->setEstimate(&quick);
-                                temp->setPreferences(&preferencesDialog);
-                                temp->setShowScreen(showScreen);
-                                // Add data to the temporary model before solving
-                                temp->addMeasurement(currentMeasurement);
-                                // Solve anode (NORMAL_MODE) quickly so parameters are reasonable before plotting
-                                temp->setMode(NORMAL_MODE);
-                                temp->solve();
-                                plotted = temp->plotModel(&plot, currentMeasurement, sweep);
-                            } else {
-                                qWarning("PENTODE: Failed to create temporary pentode model; falling back to current model instance");
-                            }
-                        }
-                    }
-
-                    if (!plotted) {
-                        model->setShowScreen(showScreen);
-                        plotted = model->plotModel(&plot, currentMeasurement, sweep);
-                    }
-
+                if (plotted) {
                     modelledCurves = plotted;
                     plot.add(modelledCurves);
                     qInfo("Model plotting completed");
                 } else {
-                    qInfo("Type check FAILED - skipping model plotting");
-                    qInfo("Measurement device: %d, Model type: %d", currentMeasurement->getDeviceType(), model->getType());
+                    qInfo("Model plotting returned null item group - nothing added to plot");
                 }
             } else {
-                qInfo("No current measurement available for model plotting");
+                qInfo("Type check FAILED - skipping model plotting");
+                qInfo("Measurement device: %d, Model type: %d", currentMeasurement->getDeviceType(), model->getType());
             }
+
             ui->modelCheck->setChecked(true);
             break;
-        }       
+        }
     case TYP_SAMPLE: {
             if (currentMeasurementItem != nullptr) {
                 QFont font = currentMeasurementItem->font(0);
@@ -4486,7 +4510,41 @@ void ValveWorkbench::exportFittedModelToDevices()
 
     root["analyserDefaults"] = analyserDefaults;
 
-    // Fitted model parameters
+    // Fitted model parameters: log key values at export time so we can
+    // compare against Device/GardinerPentode logs on import.
+    if (toExport) {
+        int mtype = toExport->getType();
+        qInfo("EXPORT MODEL: type=%d name='%s'", mtype, deviceName.toUtf8().constData());
+        if (mtype == GARDINER_PENTODE || mtype == REEFMAN_DERK_PENTODE) {
+            qInfo("  EXPORT CORE: mu=%.12f kg1=%.12f x=%.12f kp=%.12f kvb=%.12f kvb1=%.12f vct=%.12f",
+                  toExport->getParameter(PAR_MU),
+                  toExport->getParameter(PAR_KG1),
+                  toExport->getParameter(PAR_X),
+                  toExport->getParameter(PAR_KP),
+                  toExport->getParameter(PAR_KVB),
+                  toExport->getParameter(PAR_KVB1),
+                  toExport->getParameter(PAR_VCT));
+            qInfo("  EXPORT PENTODE: kg2=%.12f kg2a=%.12f a=%.12f alpha=%.12f beta=%.12f gamma=%.12f os=%.12f",
+                  toExport->getParameter(PAR_KG2),
+                  toExport->getParameter(PAR_KG2A),
+                  toExport->getParameter(PAR_A),
+                  toExport->getParameter(PAR_ALPHA),
+                  toExport->getParameter(PAR_BETA),
+                  toExport->getParameter(PAR_GAMMA),
+                  toExport->getParameter(PAR_OS));
+            qInfo("  EXPORT SE/BLOOM: tau=%.12f rho=%.12f theta=%.12f psi=%.12f omega=%.12f lambda=%.12f nu=%.12f s=%.12f ap=%.12f",
+                  toExport->getParameter(PAR_TAU),
+                  toExport->getParameter(PAR_RHO),
+                  toExport->getParameter(PAR_THETA),
+                  toExport->getParameter(PAR_PSI),
+                  toExport->getParameter(PAR_OMEGA),
+                  toExport->getParameter(PAR_LAMBDA),
+                  toExport->getParameter(PAR_NU),
+                  toExport->getParameter(PAR_S),
+                  toExport->getParameter(PAR_AP));
+        }
+    }
+
     QJsonObject modelObj;
     toExport->toJson(modelObj);
     root["model"] = modelObj;

@@ -401,6 +401,33 @@ void GardinerPentode::fromJson(QJsonObject source)
     if (source.contains("os") && source["os"].isDouble()) {
         parameter[PAR_OS]->setValue(source["os"].toDouble());
     }
+
+    qInfo("GardinerPentode::fromJson: mu=%.12f kg1=%.12f x=%.12f kp=%.12f kvb=%.12f kvb1=%.12f vct=%.12f",
+          parameter[PAR_MU]->getValue(),
+          parameter[PAR_KG1]->getValue(),
+          parameter[PAR_X]->getValue(),
+          parameter[PAR_KP]->getValue(),
+          parameter[PAR_KVB]->getValue(),
+          parameter[PAR_KVB1]->getValue(),
+          parameter[PAR_VCT]->getValue());
+    qInfo("  kg2=%.12f kg2a=%.12f a=%.12f alpha=%.12f beta=%.12f gamma=%.12f os=%.12f",
+          parameter[PAR_KG2]->getValue(),
+          parameter[PAR_KG2A]->getValue(),
+          parameter[PAR_A]->getValue(),
+          parameter[PAR_ALPHA]->getValue(),
+          parameter[PAR_BETA]->getValue(),
+          parameter[PAR_GAMMA]->getValue(),
+          parameter[PAR_OS]->getValue());
+    qInfo("  tau=%.12f rho=%.12f theta=%.12f psi=%.12f omega=%.12f lambda=%.12f nu=%.12f s=%.12f ap=%.12f",
+          parameter[PAR_TAU]->getValue(),
+          parameter[PAR_RHO]->getValue(),
+          parameter[PAR_THETA]->getValue(),
+          parameter[PAR_PSI]->getValue(),
+          parameter[PAR_OMEGA]->getValue(),
+          parameter[PAR_LAMBDA]->getValue(),
+          parameter[PAR_NU]->getValue(),
+          parameter[PAR_S]->getValue(),
+          parameter[PAR_AP]->getValue());
 }
 
 void GardinerPentode::toJson(QJsonObject &model)
@@ -429,6 +456,33 @@ void GardinerPentode::toJson(QJsonObject &model)
 
     model["device"] = "pentode";
     model["type"] = "gardiner";
+
+    qInfo("GardinerPentode::toJson: mu=%.12f kg1=%.12f x=%.12f kp=%.12f kvb=%.12f kvb1=%.12f vct=%.12f",
+          parameter[PAR_MU]->getValue(),
+          parameter[PAR_KG1]->getValue(),
+          parameter[PAR_X]->getValue(),
+          parameter[PAR_KP]->getValue(),
+          parameter[PAR_KVB]->getValue(),
+          parameter[PAR_KVB1]->getValue(),
+          parameter[PAR_VCT]->getValue());
+    qInfo("  kg2=%.12f kg2a=%.12f a=%.12f alpha=%.12f beta=%.12f gamma=%.12f os=%.12f",
+          parameter[PAR_KG2]->getValue(),
+          parameter[PAR_KG2A]->getValue(),
+          parameter[PAR_A]->getValue(),
+          parameter[PAR_ALPHA]->getValue(),
+          parameter[PAR_BETA]->getValue(),
+          parameter[PAR_GAMMA]->getValue(),
+          parameter[PAR_OS]->getValue());
+    qInfo("  tau=%.12f rho=%.12f theta=%.12f psi=%.12f omega=%.12f lambda=%.12f nu=%.12f s=%.12f ap=%.12f",
+          parameter[PAR_TAU]->getValue(),
+          parameter[PAR_RHO]->getValue(),
+          parameter[PAR_THETA]->getValue(),
+          parameter[PAR_PSI]->getValue(),
+          parameter[PAR_OMEGA]->getValue(),
+          parameter[PAR_LAMBDA]->getValue(),
+          parameter[PAR_NU]->getValue(),
+          parameter[PAR_S]->getValue(),
+          parameter[PAR_AP]->getValue());
 }
 
 void GardinerPentode::updateUI(QLabel *labels[], QLineEdit *values[])

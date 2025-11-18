@@ -94,6 +94,35 @@ Device::Device(QJsonDocument modelDocument)
             if (model != nullptr) {
                 model->fromJson(modelObject);
                 qInfo("Model created and initialized");
+                if (modelTypeStr == "gardiner") {
+                    qInfo("Device '%s' Gardiner parameters after fromJson: mu=%.12f kg1=%.12f x=%.12f kp=%.12f kvb=%.12f kvb1=%.12f vct=%.12f",
+                          name.toStdString().c_str(),
+                          model->getParameter(PAR_MU),
+                          model->getParameter(PAR_KG1),
+                          model->getParameter(PAR_X),
+                          model->getParameter(PAR_KP),
+                          model->getParameter(PAR_KVB),
+                          model->getParameter(PAR_KVB1),
+                          model->getParameter(PAR_VCT));
+                    qInfo("  kg2=%.12f kg2a=%.12f a=%.12f alpha=%.12f beta=%.12f gamma=%.12f os=%.12f",
+                          model->getParameter(PAR_KG2),
+                          model->getParameter(PAR_KG2A),
+                          model->getParameter(PAR_A),
+                          model->getParameter(PAR_ALPHA),
+                          model->getParameter(PAR_BETA),
+                          model->getParameter(PAR_GAMMA),
+                          model->getParameter(PAR_OS));
+                    qInfo("  tau=%.12f rho=%.12f theta=%.12f psi=%.12f omega=%.12f lambda=%.12f nu=%.12f s=%.12f ap=%.12f",
+                          model->getParameter(PAR_TAU),
+                          model->getParameter(PAR_RHO),
+                          model->getParameter(PAR_THETA),
+                          model->getParameter(PAR_PSI),
+                          model->getParameter(PAR_OMEGA),
+                          model->getParameter(PAR_LAMBDA),
+                          model->getParameter(PAR_NU),
+                          model->getParameter(PAR_S),
+                          model->getParameter(PAR_AP));
+                }
             }
         } else {
             qInfo("No model object found in JSON");
@@ -203,8 +232,11 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
             ia = iaNext;
         }
 
-        // Add a label at the curve's intersection with the plot edge
-        // Prefer right edge (x = vaMax); if current exceeds iaMax there, use top edge (y = iaMax)
+        // Add a label near the right edge of the plot for this grid line.
+        // Avoid calling Model::anodeVoltage here, since some steep Gardiner
+        // parameter sets require many iterations to invert Ia(Va) and can
+        // stall the UI. Instead, clamp the right-edge current into range and
+        // place the label there.
         const double epsX = std::max(0.5, vaMax * 0.01);   // 1% inset or 0.5V minimum
         const double epsY = std::max(0.05, iaMax * 0.01);  // 1% inset or 0.05mA minimum
 
@@ -215,21 +247,9 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
         } else {
             yAtRight = model->anodeCurrent(vaMax, vg1);
         }
-        double y;
-        if (std::isfinite(yAtRight) && yAtRight <= iaMax) {
-            // Right edge intersection
+        double y = iaMax - epsY;
+        if (std::isfinite(yAtRight)) {
             y = std::min(iaMax - epsY, std::max(0.0, yAtRight));
-        } else {
-            // Use top edge intersection: find Va at Ia = iaMax (mA)
-            double xTop = 0.0;
-            if (deviceType == PENTODE) {
-                xTop = model->anodeVoltage(iaMax, vg1, vg2Max);
-            } else {
-                xTop = model->anodeVoltage(iaMax, vg1);
-            }
-            if (!std::isfinite(xTop)) xTop = vaMax;
-            x = std::min(vaMax - epsX, std::max(epsX, xTop - epsX));
-            y = iaMax - epsY;
         }
         QGraphicsTextItem *label = plot->createLabel(x, y, vgLabel, QColor::fromRgb(255, 0, 0));
         if (label) {
@@ -315,6 +335,12 @@ void Device::setModelType(int newModelType)
 
 double Device::getParameter(int index) const
 {
+    if (!model) {
+        qWarning("Device::getParameter: device '%s' has no model (index=%d)",
+                 name.toStdString().c_str(), index);
+        return 0.0;
+    }
+
     return model->getParameter(index);
 }
 

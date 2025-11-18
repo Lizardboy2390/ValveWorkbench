@@ -833,6 +833,15 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                             continue;
                         }
 
+                        // Guard against non-finite currents from extreme parameter sets
+                        if (!std::isfinite(iaPrev) || !std::isfinite(ia)) {
+                            qWarning("PENTODE: Non-finite Ia encountered (iaPrev=%.6f, ia=%.6f) at Va=%.3f, vg1=%.3f - skipping segment",
+                                     iaPrev, ia, va, vg1);
+                            vaPrev = va;
+                            iaPrev = ia;
+                            continue;
+                        }
+
                         double y1 = std::min(yMaxAxis, std::max(0.0, iaPrev));
                         double y2 = std::min(yMaxAxis, std::max(0.0, ia));
                         QGraphicsItem *segment = plot->createSegment(vaPrev, y1, va, y2, anodePen);
