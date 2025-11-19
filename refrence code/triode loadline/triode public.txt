@@ -1,0 +1,580 @@
+function tickUDrag(e) {
+    if (e.x <= tube.uamax && e.x > tube.uagp && e.x > tube.uag2) {
+        var t = tube.ia / e.x
+          , u = .001 * (tube.ia - t * tube.uag1)
+          , n = tube.getUg(tube.uag1, u);
+        n <= tube.ugmin && (tube.ua = e.x,
+        tube.iagp = .001 * (tube.ia - t * tube.uagp),
+        tube.ugp = tube.getUg(tube.uagp, tube.iagp),
+        tube.iag1 = u,
+        tube.ug1 = n,
+        tube.iag2 = .001 * (tube.ia - t * tube.uag2),
+        tube.ug2 = tube.getUg(tube.uag2, tube.iag2),
+        tube.uinp = tube.ug1 - tube.ugp,
+        "P" === tube.type && (tube.is = tube.getIs(tube.ugp, tube.us)),
+        frontLayerDraw())
+    }
+}
+function tickIDrag(e) {
+    if (e.y <= tube.iamax && e.y > 0) {
+        var t = e.y / tube.ua
+          , u = .001 * (e.y - t * tube.uag1)
+          , n = tube.getUg(tube.uag1, u);
+        n < tube.ugmin && (tube.ia = e.y,
+        tube.iagp = .001 * (tube.ia - t * tube.uagp),
+        tube.ugp = tube.getUg(tube.uagp, tube.iagp),
+        tube.iag1 = u,
+        tube.ug1 = n,
+        tube.iag2 = .001 * (tube.ia - t * tube.uag2),
+        tube.ug2 = tube.getUg(tube.uag2, tube.iag2),
+        tube.uinp = tube.ug1 - tube.ugp,
+        "P" === tube.type && (tube.is = tube.getIs(tube.ugp, tube.us)),
+        frontLayerDraw())
+    }
+}
+function tickPDrag(e) {
+    if (e.x < tube.ua && e.x > 0) {
+        var t = tube.ia / tube.ua
+          , u = .001 * (tube.ia - t * e.x)
+          , n = tube.getUg(e.x, u);
+        n + tube.uinp < tube.ugmin && (tube.uagp = e.x,
+        tube.iagp = u,
+        tube.ugp = n,
+        tube.uag1 = tube.getUa_Ra(n + tube.uinp),
+        tube.iag1 = .001 * (tube.ia - t * tube.uag1),
+        tube.ug1 = tube.getUg(tube.uag1, tube.iag1),
+        tube.ug2 = 2 * tube.ugp - tube.ug1,
+        tube.uag2 = tube.getUa_Ra(tube.ug2),
+        tube.iag2 = .001 * (tube.ia - t * tube.uag2),
+        "P" === tube.type && (tube.is = tube.getIs(tube.ugp, tube.us)),
+        frontLayerDraw())
+    }
+}
+function tickADrag(e) {
+    if (e.x > 0 && e.x < tube.uagp) {
+        var t = tube.ia / tube.ua
+          , u = .001 * (tube.ia - t * e.x)
+          , n = tube.getUg(e.x, u);
+        n < tube.ugmin && (tube.uinp = n - tube.ugp,
+        tube.uag1 = e.x,
+        tube.ug1 = n,
+        tube.iag1 = u,
+        tube.ug2 = 2 * tube.ugp - tube.ug1,
+        tube.uag2 = tube.getUa_Ra(tube.ug2),
+        tube.iag2 = .001 * (tube.ia - t * tube.uag2),
+        frontLayerDraw())
+    }
+}
+function tickUPDrag(e) {
+    if (e.x <= tube.uamax && e.x > tube.uag2) {
+        var t = 1e3 * tube.iagp / (e.x - tube.uagp)
+          , u = t * e.x;
+        u < tube.iamax && (tube.ia = u,
+        tube.ua = e.x,
+        tube.uag1 = tube.getUa_Ra(tube.ug1),
+        tube.iag1 = .001 * (tube.ia - t * tube.uag1),
+        tube.uag2 = tube.getUa_Ra(tube.ug2),
+        tube.iag2 = .001 * (tube.ia - t * tube.uag2),
+        frontLayerDraw())
+    }
+}
+function tickIPDrag(e) {
+    if (e.y <= tube.iamax && e.y > 0) {
+        var t = tube.uagp / (e.y - 1e3 * tube.iagp)
+          , u = t * e.y;
+        u < tube.uamax && (tube.ia = e.y,
+        tube.ua = u,
+        tube.uag1 = tube.getUa_Ra(tube.ug1),
+        tube.iag1 = .001 * (tube.ia - tube.uag1 / t),
+        tube.uag2 = tube.getUa_Ra(tube.ug2),
+        tube.iag2 = .001 * (tube.ia - tube.uag2 / t),
+        frontLayerDraw())
+    }
+}
+function frontLayerDraw() {
+    var e, t = [0, tube.ia, tube.ua, 0], u = [];
+    for (frontLayer.clearCanvas(),
+    frontLayer.render(tickU, tube.ua, 0, 1),
+    frontLayer.render(tickI, 0, tube.ia, 1),
+    frontLayer.render(tickP, tube.uagp, tube.iamax, 1),
+    frontLayer.render(tickA, tube.uag1, tube.iamax, 1),
+    frontLayer.render(tickUP, tube.ua, 0, 1),
+    frontLayer.render(tickIP, 0, tube.ia, 1),
+    frontLayer.drawPath(t, 0, 0, colorTable.c_frontLoadLine),
+    t = [tube.uagp, tube.iamax, tube.uagp, 1e3 * tube.iagp],
+    frontLayer.drawPath(t, 0, 0, colorTable.c_frontUagpLine),
+    i = 0; i <= tube.uamax && (e = 1e3 * tube.getIa(tube.ugp, i),
+    e < tube.iamax); i++)
+        u.push(i, e);
+    for (frontLayer.drawPath(u, 0, 0, colorTable.c_frontUagpCurve),
+    clear(u),
+    t = [tube.uag1, tube.iamax, tube.uag1, 1e3 * tube.iag1],
+    frontLayer.drawPath(t, 0, 0, colorTable.c_frontUag1Line),
+    i = 0; i <= tube.uamax && (e = 1e3 * tube.getIa(tube.ug1, i),
+    e < tube.iamax); i++)
+        u.push(i, e);
+    for (frontLayer.drawPath(u, 0, 0, colorTable.c_frontUag1Curve),
+    clear(u),
+    t = [tube.uag2, tube.iamax, tube.uag2, 1e3 * tube.iag2],
+    frontLayer.drawPath(t, 0, 0, colorTable.c_frontUag2Line),
+    i = 0; i <= tube.uamax && (e = 1e3 * tube.getIa(tube.ug2, i),
+    e < tube.iamax); i++)
+        u.push(i, e);
+    frontLayer.drawPath(u, 0, 0, colorTable.c_frontUag2Curve),
+    clear(u),
+    frontLayer.drawText(tube.ua.toFixed(1) + "V", tube.ua - 15 * xcoef, .95 * ycoef, colorTable.c_frontText, 10, 4),
+    frontLayer.drawText(tube.ia.toFixed(2) + "mA", 5.8 * xcoef, tube.ia + .05 * ycoef, colorTable.c_frontText, 10, 4),
+    updateResults()
+}
+function updateResults() {
+    var e, t, u, n, a, i, g, o, r, s, m, l, d, b, c, h, p, y, f, T, I, L, E;
+    t = 1 / (tube.getIa(tube.ugp, tube.uagp + 1) - tube.iagp),
+    u = -1e3 * (tube.getIa(.99 * tube.ugp, tube.uagp) - tube.getIa(tube.ugp, tube.uagp)) / (.01 * tube.ugp),
+    document.getElementById("uaval").innerHTML = tube.uagp.toFixed(1),
+    document.getElementById("iaval").innerHTML = (1e3 * tube.iagp).toFixed(2),
+    document.getElementById("ugval").innerHTML = tube.ugp.toFixed(2),
+    t > 1e3 ? (document.getElementById("rival").innerHTML = (.001 * t).toFixed(1),
+    document.getElementById("riunit").innerHTML = "[K&#8486;]") : (document.getElementById("rival").innerHTML = t.toFixed(1),
+    document.getElementById("riunit").innerHTML = "[&#8486;]"),
+    e = 1e3 * tube.ua / tube.ia,
+    document.getElementById("raval").innerHTML = (.001 * e).toFixed(1),
+    document.getElementById("sval").innerHTML = u.toFixed(2),
+    n = .001 * u * t,
+    document.getElementById("mival").innerHTML = n.toFixed(2),
+    L = tube.uagp * tube.iagp,
+    L > 1 ? (document.getElementById("paval").innerHTML = L.toFixed(2),
+    document.getElementById("paunit").innerHTML = "[W]") : (document.getElementById("paval").innerHTML = (1e3 * L).toFixed(1),
+    document.getElementById("paunit").innerHTML = "[mW]"),
+    "T" === tube.type ? (document.getElementById("is").innerHTML = "",
+    document.getElementById("isval").innerHTML = "",
+    document.getElementById("isunit").innerHTML = "",
+    document.getElementById("ps").innerHTML = "",
+    document.getElementById("psval").innerHTML = "",
+    document.getElementById("psunit").innerHTML = "") : (document.getElementById("is").innerHTML = "I<sub>s</sub>&nbsp;=&nbsp;",
+    document.getElementById("isval").innerHTML = (1e3 * tube.is).toFixed(2),
+    document.getElementById("isunit").innerHTML = "[mA]",
+    E = tube.is * tube.us,
+    document.getElementById("ps").innerHTML = "P<sub>s</sub>&nbsp;=&nbsp;",
+    E > 1 ? (document.getElementById("psval").innerHTML = E.toFixed(2),
+    document.getElementById("psunit").innerHTML = "[W]") : (document.getElementById("psval").innerHTML = (1e3 * E).toFixed(1),
+    document.getElementById("psunit").innerHTML = "[mW]")),
+    tube.uinp < 1 ? (document.getElementById("uinpval").innerHTML = (1e3 * tube.uinp).toFixed(1),
+    document.getElementById("uinpunit").innerHTML = "[mV]") : (document.getElementById("uinpval").innerHTML = tube.uinp.toFixed(2),
+    document.getElementById("uinpunit").innerHTML = "[V]"),
+    harm5Point(tube),
+    document.getElementById("h2val").innerHTML = (100 * tube.h2).toFixed(3),
+    document.getElementById("h3val").innerHTML = (100 * tube.h3).toFixed(3),
+    document.getElementById("h4val").innerHTML = (100 * tube.h4).toFixed(3),
+    document.getElementById("htotval").innerHTML = (100 * tube.htot).toFixed(3),
+    "T" === tube.type ? (document.getElementById("rk").innerHTML = "R<sub>k</sub>&nbsp;=&nbsp;",
+    document.getElementById("prk").innerHTML = "P<sub>rk</sub>&nbsp;=&nbsp;",
+    document.getElementById("grk").innerHTML = "G<sub>(rk)</sub>&nbsp;=&nbsp;",
+    document.getElementById("grkunit").innerHTML = "[V/V]",
+    document.getElementById("grk0").innerHTML = "G<sub>(rk=0)</sub>&nbsp;=&nbsp;",
+    document.getElementById("grk0unit").innerHTML = "[V/V]",
+    document.getElementById("poutse").innerHTML = "P<sub>out</sub>&nbsp;=&nbsp;",
+    document.getElementById("pouttse").innerHTML = "P<sub>out</sub>(t)&nbsp;=&nbsp;",
+    document.getElementById("l1se").innerHTML = "L<sub>1min</sub>&nbsp;=",
+    document.getElementById("l1sse").innerHTML = "L<sub>1smax</sub>&nbsp;=",
+    document.getElementById("nse").innerHTML = "N&nbsp;=",
+    document.getElementById("nse_rev").innerHTML = "1/N&nbsp;=",
+    a = -tube.ugp / tube.iagp,
+    a > 0 ? (a > 1e3 ? (document.getElementById("rkval").innerHTML = (.001 * a).toFixed(2),
+    document.getElementById("rkunit").innerHTML = "[K&#8486;]") : (document.getElementById("rkval").innerHTML = a.toFixed(1),
+    document.getElementById("rkunit").innerHTML = "[&#8486;]"),
+    i = tube.iagp * tube.iagp * a,
+    i > 1 ? (document.getElementById("prkval").innerHTML = i.toFixed(2),
+    document.getElementById("prkunit").innerHTML = "[W]") : (document.getElementById("prkval").innerHTML = (1e3 * i).toFixed(1),
+    document.getElementById("prkunit").innerHTML = "[mW]"),
+    g = n * e / (t + e + a * (n + 1)),
+    document.getElementById("grkval").innerHTML = g.toFixed(1),
+    o = n * e / (t + e),
+    document.getElementById("grk0val").innerHTML = o.toFixed(1)) : (document.getElementById("rkval").innerHTML = "x",
+    document.getElementById("prkval").innerHTML = "x",
+    document.getElementById("grkval").innerHTML = "x",
+    document.getElementById("grk0val").innerHTML = "x"),
+    h = parseFloat(document.getElementById("s_fl").value),
+    p = parseFloat(document.getElementById("s_ml").value),
+    p = Math.pow(10, p / 20),
+    y = parseFloat(document.getElementById("s_fh").value),
+    f = parseFloat(document.getElementById("s_mh").value),
+    f = Math.pow(10, f / 20),
+    r = parseFloat(document.getElementById("s_theta").value),
+    l = parseFloat(document.getElementById("s_rl").value),
+    m = (tube.uag2 - tube.uag1) * (tube.iag1 - tube.iag2) / 8,
+    m > 1 ? (document.getElementById("pouttseval").innerHTML = m.toFixed(2),
+    document.getElementById("pouttseunit").innerHTML = "[W]") : (document.getElementById("pouttseval").innerHTML = (1e3 * m).toFixed(1),
+    document.getElementById("pouttseunit").innerHTML = "[mW]"),
+    s = r * m,
+    m > 1 ? (document.getElementById("poutseval").innerHTML = s.toFixed(2),
+    document.getElementById("poutseunit").innerHTML = "[W]") : (document.getElementById("poutseval").innerHTML = (1e3 * s).toFixed(1),
+    document.getElementById("poutseunit").innerHTML = "[mW]"),
+    c = e * (1 - r) / 2,
+    T = (t + 2 * c) * (e - 2 * c) / (e + t),
+    d = T / (2 * Math.PI * h * Math.sqrt(p * p - 1)),
+    d > 1 ? (document.getElementById("l1seval").innerHTML = d.toFixed(2),
+    document.getElementById("l1seunit").innerHTML = "[H]") : (document.getElementById("l1seval").innerHTML = (1e3 * d).toFixed(1),
+    document.getElementById("l1seunit").innerHTML = "[mH]"),
+    b = (e + t) * Math.sqrt(f * f - 1) / (2 * Math.PI * y),
+    b > 1 ? (document.getElementById("l1sseval").innerHTML = b.toFixed(2),
+    document.getElementById("l1sseunit").innerHTML = "[H]") : (document.getElementById("l1sseval").innerHTML = (1e3 * b).toFixed(1),
+    document.getElementById("l1sseunit").innerHTML = "[mH]"),
+    I = Math.sqrt(l / (e * r)),
+    document.getElementById("nseval").innerHTML = I.toFixed(5),
+    document.getElementById("nse_revval").innerHTML = (1 / I).toFixed(1)) : (document.getElementById("rk").innerHTML = "",
+    document.getElementById("rkval").innerHTML = "",
+    document.getElementById("rkunit").innerHTML = "",
+    document.getElementById("prk").innerHTML = "",
+    document.getElementById("prkval").innerHTML = "",
+    document.getElementById("prkunit").innerHTML = "",
+    document.getElementById("grk").innerHTML = "",
+    document.getElementById("grkval").innerHTML = "",
+    document.getElementById("grkunit").innerHTML = "",
+    document.getElementById("grk0").innerHTML = "",
+    document.getElementById("grk0val").innerHTML = "",
+    document.getElementById("grk0unit").innerHTML = "",
+    document.getElementById("poutse").innerHTML = "",
+    document.getElementById("poutseval").innerHTML = "",
+    document.getElementById("poutseunit").innerHTML = "",
+    document.getElementById("pouttse").innerHTML = "",
+    document.getElementById("pouttseval").innerHTML = "",
+    document.getElementById("pouttseunit").innerHTML = "",
+    document.getElementById("l1se").innerHTML = "",
+    document.getElementById("l1seval").innerHTML = "",
+    document.getElementById("l1seunit").innerHTML = "",
+    document.getElementById("l1sse").innerHTML = "",
+    document.getElementById("l1sseval").innerHTML = "",
+    document.getElementById("l1sseunit").innerHTML = "",
+    document.getElementById("nse").innerHTML = "",
+    document.getElementById("nseval").innerHTML = "",
+    document.getElementById("nse_rev").innerHTML = "",
+    document.getElementById("nse_revval").innerHTML = "")
+}
+function initSimulator(e) {
+    var t, u, n, a, i, g, o = [];
+    for (tube = "T" === e[0] ? new TRIODE(e) : new PENTODE(e),
+    tube.init(),
+    xcoef = tube.uamax / 300,
+    ycoef = tube.iamax / 20,
+    segU = ["M", 0, 0, "L", 2.5 * xcoef, -.5 * ycoef, "L", -2.5 * xcoef, -.5 * ycoef, "z"],
+    segI = ["M", 0, 0, "L", -5 * xcoef, .25 * ycoef, "L", -5 * xcoef, -.25 * ycoef, "z"],
+    segP = ["M", 0, 0, "L", 2.5 * xcoef, .5 * ycoef, "L", -2.5 * xcoef, .5 * ycoef, "z"],
+    segA = ["M", 0, 0, "L", 2.5 * xcoef, -.5 * ycoef, "L", -2.5 * xcoef, -.5 * ycoef, "z"],
+    segUP = ["M", 0, 0, "L", 2.5 * xcoef, .5 * ycoef, "L", -2.5 * xcoef, .5 * ycoef, "z"],
+    segIP = ["M", 0, 0, "L", 5 * xcoef, .25 * ycoef, "L", 5 * xcoef, -.25 * ycoef, "z"],
+    "object" == typeof backLayer && backLayer.clearCanvas(),
+    backLayer = new Cango(cvsID),
+    backLayer.fillViewport(colorTable.c_backLayer),
+    backLayer.setViewport(9, 5, 88, 63),
+    backLayer.setWorldCoords(0, 0, tube.uamax, tube.iamax),
+    backLayer.drawBoxAxes(tube.uamin, tube.uamax, tube.iamin, tube.iamax, tube.uamax / 6, tube.iamax / 4, "V", "mA", tube.name),
+    "object" == typeof frontLayer && frontLayer.clearCanvas(),
+    frontLayer = new Cango(backLayer.createLayer()),
+    frontLayer.dupCtx(backLayer),
+    tickU = frontLayer.compileShape(segU, colorTable.c_tickU),
+    tickI = frontLayer.compileShape(segI, colorTable.c_tickI),
+    tickP = frontLayer.compileShape(segP, colorTable.c_tickP),
+    tickA = frontLayer.compileShape(segA, colorTable.c_tickA),
+    tickUP = frontLayer.compileShape(segUP, colorTable.c_tickUP),
+    tickIP = frontLayer.compileShape(segIP, colorTable.c_tickIP),
+    tickU.enableDrag(null, tickUDrag, null),
+    tickI.enableDrag(null, tickIDrag, null),
+    tickP.enableDrag(null, tickPDrag, null),
+    tickA.enableDrag(null, tickADrag, null),
+    tickUP.enableDrag(null, tickUPDrag, null),
+    tickIP.enableDrag(null, tickIPDrag, null),
+    a = tube.ugmin,
+    i = Math.abs((tube.ugmin - tube.ugmax) / 5),
+    g = Math.round(tube.uamax / 50),
+    u = 0; 5 >= u; u++) {
+        for (t = 0; t < tube.uamax; t++) {
+            if (n = 1e3 * tube.getIa(a, t),
+            !(n < tube.iamax)) {
+                n = tube.iamax;
+                break
+            }
+            o.push(t, n)
+        }
+        backLayer.drawPath(o, 0, 0, colorTable.c_backGraph),
+        backLayer.drawText(a.toFixed(2) + "V", t - .07 * tube.uamax, .95 * n, colorTable.c_backText, 10, 5),
+        a -= i,
+        clear(o)
+    }
+    for (t = tube.uamax; t > 0 && (n = 1e3 * tube.padm / t,
+    n < tube.iamax); t--)
+        o.push(t, n);
+    backLayer.drawPath(o, 0, 0, colorTable.c_padm),
+    frontLayerDraw(),
+    document.getElementById("s_partub").value = tube.partub.toFixed(0).toString(),
+    document.getElementById("s_iamax").value = tube.iamax.toFixed(1).toString(),
+    document.getElementById("s_uamax").value = tube.uamax.toFixed(1).toString(),
+    document.getElementById("s_ugmin").value = tube.ugmin.toFixed(1).toString(),
+    document.getElementById("s_ugmax").value = tube.ugmax.toFixed(1).toString(),
+    "T" === e[0] ? document.getElementById("s_us").value = "---" : document.getElementById("s_us").value = tube.us.toFixed(1).toString()
+}
+function selectTubeModel() {
+    var e = document.getElementById("tubeType")
+      , t = parseInt(e.options[e.selectedIndex].value);
+    initSimulator(tubeModelData[t])
+}
+function applyRanges() {
+    var e, t, u, n, a, i, g, o, r, s, m, l, d, b, c = !1, h = document.getElementById("tubeType"), p = parseInt(h.options[h.selectedIndex].value);
+    b = tubeModelData[p].slice(0),
+    e = b[0],
+    t = document.getElementById("s_partub").value,
+    u = document.getElementById("s_uamax").value,
+    n = document.getElementById("s_iamax").value,
+    a = document.getElementById("s_ugmin").value,
+    i = document.getElementById("s_ugmax").value,
+    g = document.getElementById("s_fl").value,
+    o = document.getElementById("s_ml").value,
+    r = document.getElementById("s_fh").value,
+    s = document.getElementById("s_mh").value,
+    m = document.getElementById("s_theta").value,
+    l = document.getElementById("s_rl").value,
+    d = document.getElementById("s_us").value,
+    (0 === t.length || isNaN(t) || parseInt(t) < 1 || parseInt(t) > 8) && (c = !0),
+    (0 === u.length || isNaN(u) || parseFloat(u) <= .1 * b[10] || parseFloat(u) > 10 * b[10]) && (c = !0),
+    (0 === n.length || isNaN(n) || parseFloat(n) <= .1 * b[12] || parseFloat(n) > 10 * b[12]) && (c = !0),
+    (0 === a.length || isNaN(a) || parseFloat(a) < parseFloat(i)) && (c = !0),
+    (0 === i.length || isNaN(i) || parseFloat(a) < parseFloat(i)) && (c = !0),
+    (0 === g.length || isNaN(g) || parseFloat(g) >= parseFloat(r)) && (c = !0),
+    (0 === o.length || isNaN(o) || parseFloat(o) <= 0) && (c = !0),
+    (0 === r.length || isNaN(r) || parseFloat(r) <= parseFloat(g)) && (c = !0),
+    (0 === s.length || isNaN(s) || parseFloat(s) <= 0) && (c = !0),
+    (0 === m.length || isNaN(m) || parseFloat(m) < .1 || parseFloat(m) > 1) && (c = !0),
+    (0 === l.length || isNaN(l) || parseFloat(l) < 1 || parseFloat(l) > 1e5) && (c = !0),
+    "T" === e || (0 === d.length || isNaN(d) || parseFloat(d) > parseFloat(u)) && (c = !0),
+    c ? (document.getElementById("s_partub").value = b[2].toString(),
+    document.getElementById("s_uamax").value = b[10].toString(),
+    document.getElementById("s_iamax").value = b[12].toString(),
+    document.getElementById("s_ugmin").value = b[13].toString(),
+    document.getElementById("s_ugmax").value = b[14].toString(),
+    document.getElementById("s_fl").value = "20",
+    document.getElementById("s_ml").value = "3.0",
+    document.getElementById("s_fh").value = "20000",
+    document.getElementById("s_mh").value = "3.0",
+    document.getElementById("s_theta").value = "0.85",
+    document.getElementById("s_rl").value = "4.0",
+    "T" === e ? document.getElementById("s_us").value = "---" : document.getElementById("s_us").value = b[15].toString()) : (b[2] = parseInt(t),
+    b[10] = parseFloat(u),
+    b[12] = parseFloat(n),
+    b[13] = parseFloat(a),
+    b[14] = parseFloat(i),
+    "T" === e ? b[15] = 0 : b[15] = parseFloat(d),
+    initSimulator(b))
+}
+function init(e) {
+    var t, u, n;
+    for (cvsID = e,
+    colorTable = colorTable1,
+    tubeModelData = [["T", "10/10Y", 1, 8.07, 1.5711, 5297.41, 140.64, 111, 12, 0, 800, 0, 50, 10, -100, 0, 0], ["T", "12BH7-A", 1, 24.696, 1.1487, 196.63, 96.49, 5953.007, 3.5, 0, 540, 0, 36, 0, -35, 0, 0], ["T", "2A3", 1, 4.24, 1.563, 1264.5, 42.7, 1e-6, 15, 0, 480, 0, 180, 0, -110, 0, 0], ["T", "300B", 1, 4.06, 1.576, 1295.4, 40.7, 2989, 40, 0, 720, 0, 300, 0, -140, 0, 0], ["T", "45", 1, 3.628, 1.3688, 1686.57, 41.62, 587.2939, 10, 0, 540, 0, 80, 0, -110, 0, 0], ["T", "5670", 1, 36.689, 1.6154, 447.13, 145.33, 33.06525, 1.5, 0, 360, 0, 20, 1, -10, 0, 0], ["T", "5687", 1, 19.191, 1.2255, 163.32, 120.92, 1583.511, 4.2, 0, 480, 0, 52, 0, -20, 0, 0], ["T", "6111", 1, 24.846, 1.6089, 422.3, 84.58, 297.3542, 1.1, 0, 300, 0, 20, 0, -15, 0, 0], ["P", "6550", 1, 7.9, 1.35, 890, 60, 24, 42, 0, 600, 0, 500, 0, -35, 300, 4800], ["T", "6BK7", 1, 41.93, 1.1819, 173.6, 130.44, 966.3958, 2.7, 0, 480, 0, 36, 2, -12, 0, 0], ["T", "6CG7/8CG7", 1, 21.48797, 1.3624, 698.1779, 144.5351, 849.3319, 4, 0, 540, 0, 30, 0, -22, 0, 0], ["T", "6GK5", 1, 102.951, 1.0606, 46.46, 315.43, 4283.894, 2.5, 0, 360, 0, 36, 0, -5, 0, 0], ["T", "6K5-GT", 1, 79.017, .8919, 485.71, 473.71, 3359.79, .5, 0, 420, 0, 4, 0, -5, 0, 0], ["P", "6L6GC", 1, 8.7, 1.35, 1460, 48, 12, 30, 0, 500, 0, 450, 0, -50, 400, 4500], ["T", "6L6GC (triode mode)", 1, 9.215, 1.3869, 537.46, 35.4, 612.5635, 30, 0, 660, 0, 180, 10, -75, 0, 0], ["T", "6N13S", 1, 2.59, 1.4203, 397.71, 7.26, 445.7589, 13, 0, 240, 0, 240, 0, -100, 0, 0], ["T", "6N16B", 1, 24.723, 1.6862, 558.95, 173.44, 15.39709, .9, 0, 300, 0, 16, 2, -10, 0, 0], ["T", "6N17B", 1, 104.5039, 1.92377, 433.7539, 224.5167, 578.72225, .9, 0, 440, 0, 8, 1, -5, 0, 0], ["T", "6N1P/6N1P-EW", 1, 36.469, 1.1645, 230.96, 432.84, 134.9447, 2.2, 0, 480, 0, 25, 3, -15, 0, 0], ["T", "6N23P/6N23P-EW", 1, 33.067, 1.3427, 131.81, 213.69, 523.5281, 1.8, 0, 360, 0, 25, 0, -8, 0, 0], ["T", "6N2P/6N2P-EW", 1, 122.993, .817, 336.13, 569.64, 3841.25, .8, 0, 540, 0, 6, .5, -5, 0, 0], ["T", "6N30P-DR", 1, 15.937, 1.2242, 90.2, 82.4, 426.249, 4, 0, 300, 0, 80, 0, -15, 0, 0], ["T", "6N3P", 1, 39.007, 1.5855, 390.84, 167.86, 41.91808, 1.5, 0, 360, 0, 20, 2, -8, 0, 0], ["T", "6N6P", 1, 17.002, 1.6603, 484.96, 135.17, 439.1161, 4.8, 0, 420, 0, 45, 0, -15, 0, 0], ["T", "6S19P", 1, 2.77, 1.5513, 728.557, 13.532, 7.63264, 11, 0, 330, 0, 140, -5, -130, 0, 0], ["T", "6S33S", 1, 2.99, 1.0974, 42.23, 17.74, 1959.283, 60, 0, 480, 0, 900, 0, -120, 0, 0], ["T", "6S33S (1 cathode)", 1, 3.141, 1.2469, 93.81, 23.15, 66.97089, 45, 0, 480, 0, 600, 0, -120, 0, 0], ["T", "6S3P-EW", 1, 49.618, 2.5118, 230.63, 227.74, .005361, 3, 0, 360, 0, 36, 0, -5, 0, 0], ["T", "6S41S", 1, 2.54508, 1.53593, 458.78, 14.78019, 357.9148, 25, 0, 440, 0, 300, 1, -180, 0, 0], ["T", "6S45P-E", 1, 56.281, 2.1108, 61.12, 291.01, 2331.962, 7.8, 0, 360, 0, 100, 0, -5, 0, 0], ["T", "6S4S", 1, 4.35, 1.273, 466.15, 57.93, 336.0262, 15, 0, 420, 0, 180, 0, -75, 0, 0], ["T", "6SL7/6SL7GT", 1, 77.644, 1.0673, 584.33, 703.87, 8027.917, 1, 0, 540, 0, 8, 0, -5, 0, 0], ["T", "6SN7/6SN7GT", 1, 21.026, 1.254, 656.82, 164.39, 993.3948, 2.5, 0, 540, 0, 20, 0, -18, 0, 0], ["T", "6V6GT (triode mode)", 1, 9.735, 1.3709, 706.05, 52.01, 366.0437, 9, 0, 480, 0, 100, 10, -50, 0, 0], ["T", "6Ż9P (triode mode)", 1, 64.158, 1.1678, 63.75, 491.34, 1284.098, 3, 0, 360, 0, 40, 0, -4, 0, 0], ["T", "813 (triode mode)", 1, 7.36, 1.5125, 1939.62, 126.53, 21110.36, 100, 0, 2100, 0, 240, 0, -200, 0, 0], ["T", "833", 1, 37.506, 1.1405, 180.92, 735.21, 30713.77168, 400, 0, 3e3, 0, 2e3, 150, -50, 0, 0], ["T", "845", 1, 5.627, 1.2921, 1044.46, 69.2, 9519.60787, 100, 0, 2400, 0, 180, 0, -450, 0, 0], ["T", "AD1", 1, 4.245, 1.3503, 575.9, 64.46, .029604, 15, 0, 600, 0, 140, 0, -90, 0, 0], ["T", "C3g (triode mode)", 1, 41.444, 1.6995, 150.945, 420.299, .00322, 3.5, 0, 350, 0, 50, 0, -7.5, 0, 0], ["T", "C3m (triode mode)", 1, 18.58895, 1.32091, 240.0861, 140.5314, 669.2813, 5, 0, 360, 0, 66, 0, -16, 0, 0], ["T", "D3a (triode mode)", 1, 85.80959, 1.17741, 20.94986, 723.9534, 2521.285, 4.5, 0, 300, 0, 60, 0, -3, 0, 0], ["T", "E180CC", 1, 71.016, 1.1701, 95, 166.31, 3400.43, 2, 0, 300, 0, 36, 0, -5, 0, 0], ["T", "E182CC", 1, 24.87, 1.2284, 99.16, 146.98, 528.6173, 4.5, 0, 300, 0, 60, 0, -12, 0, 0], ["T", "E92CC", 1, 56.17, 1.319, 179.3, 145.8, 1718, 2, 0, 300, 0, 20, 0, -7, 0, 0], ["T", "EC86", 1, 76.35, 1.286, 79.4, 594.3, 1524, 2.2, 0, 300, 0, 25, 0, -4, 0, 0], ["T", "EC91", 1, 81.62, 1.441, 212.3, 457.5, 9233, 2.5, 0, 360, 0, 30, 0, -3, 0, 0], ["T", "ECC32", 1, 35.271, 1.2894, 606.523, 277.067, 2468.1981, 5, 0, 450, 0, 35, 0, -10, 0, 0], ["T", "ECC40", 1, 33.886, 1.1841, 390.08, 253.62, 1664.129, 1.5, 0, 480, 0, 16, 0, -15, 0, 0], ["T", "ECC81", 1, 63.24, 1.338, 306.7, 208.5, 2363, 2.5, 0, 420, 0, 25, 0, -6, 0, 0], ["T", "ECC82", 1, 20.73, 1.35, 751.3, 85.3, 992, 2.75, 0, 420, 0, 20, 0, -20, 0, 0], ["T", "ECC83", 1, 108.93, .988, 389.8, 677.7, 10751, 1, 0, 360, 0, 6, 0, -4, 0, 0], ["T", "ECC85", 1, 94.04, 1.148, 119.8, 230.9, 3805, 2.5, 0, 360, 0, 25, 0, -7, 0, 0], ["T", "ECC88", 1, 34.63, 1.09, 139.8, 288, 1209, 1.5, 0, 300, 0, 25, 0, -7, 0, 0], ["T", "ECC91", 1, 43.82, 1.157, 156.4, 144.8, 4141, 1.5, 0, 420, 0, 16, 0, -15, 0, 0], ["T", "ECC99", 1, 23.254, 1.475, 225.32, 176.31, 127.5874, 5, 0, 420, 0, 60, 0, -20, 0, 0], ["T", "ECL82 (triode section)", 1, 77.50223, 1.09295, 370.2459, 399.0022, 2231.602, 1, 0, 360, 0, 12, 0, -4, 0, 0], ["T", "ECL86 (triode section)", 1, 117.7652, 1.02888, 418.4044, 520.5635, 7214.498, .5, 0, 360, 0, 8, 0, -4, 0, 0], ["T", "EF86 (triode mode", 1, 41.28806, 1.20212, 451.2341, 194.0864, 1204.769, 1, 0, 440, 0, 10, 0, -10, 0, 0], ["T", "EL156 (triode mode)", 1, 13.493, 1.174, 111.62, 102.89, 2108.017, 50, 0, 660, 0, 300, 0, -40, 0, 0], ["T", "EL34 (triode mode)", 1, 11.986, 1.4873, 283.64, 54.71, 13820.25, 30, 0, 600, 0, 200, 0, -35, 0, 0], ["T", "EL84 (triode mode)", 1, 19.097, 1.518, 271.93, 126.66, 2302.869, 12, 0, 420, 0, 150, 0, -15, 0, 0], ["T", "GM-70", 1, 9.003, 1.0948, 305.99, 30.59, 13046.36675, 125, 0, 1600, 0, 450, 75, -200, 0, 0], ["T", "GM-100", 1, 18.267, 1.3938, 1896.25, 85.91, 26346.41267, 1e3, 0, 4800, 0, 1200, 200, -200, 0, 0], ["P", "KT88", 1, 8.8, 1.35, 730, 32, 16, 42, 0, 600, 0, 550, 0, -40, 300, 4200], ["T", "KT88 (triode mode)", 1, 9.982, 1.3819, 216.35, 28.88, 3320.893, 42, 0, 600, 0, 300, 0, -50, 0, 0], ["T", "PX25", 1, 9.08674, 1.8477, 2091.619, 69.48971, 661e-6, 25, 0, 800, 0, 140, 0, -60, 0, 0], ["T", "PX4", 1, 5.23957, 1.69779, 2234.838, 50.64874, 1542.746, 15, 0, 800, 0, 100, 0, -90, 0, 0], ["T", "RS241", 1, 17.193, 1.3656, 899.76, 265.69, 389.1004, 15, 0, 840, 0, 80, 10, -40, 0, 0]],
+    t = document.getElementById("tubeType"),
+    u = 0; u < tubeModelData.length; u++)
+        n = document.createElement("option"),
+        n.value = u.toString(),
+        n.text = tubeModelData[u][1],
+        t.appendChild(n);
+    initSimulator(tubeModelData[0])
+}
+var tube, cvsID, segU, segI, segP, segA, segUP, segIP, tickU, tickI, tickP, tickA, tickUP, tickIP, backLayer, frontLayer, xcoef, ycoef, tubeModelData, colorTable, colorTable1 = {
+    c_backLayer: "#303a30",
+    c_tickU: "#00ffff",
+    c_tickI: "#00ffff",
+    c_tickP: "#ffffff",
+    c_tickA: "yellow",
+    c_tickUP: "#8899ff",
+    c_tickIP: "#8899ff",
+    c_backGraph: "#608090",
+    c_backText: "#8090a0",
+    c_padm: "#ff0000",
+    c_frontLoadLine: "#00ffff",
+    c_frontUagpLine: "#ffffff",
+    c_frontUagpCurve: "#ffffff",
+    c_frontUag1Line: "#ffff00",
+    c_frontUag1Curve: "#ffff00",
+    c_frontUag2Line: "#ffff00",
+    c_frontUag2Curve: "#ffff00",
+    c_frontText: "#ffffff"
+}, colorTable2 = {
+    c_backLayer: "#ffffff",
+    c_tickU: "#00ffff",
+    c_tickI: "#00ffff",
+    c_tickP: "#000000",
+    c_tickA: "#00ff00",
+    c_tickUP: "#8899ff",
+    c_tickIP: "#8899ff",
+    c_backGraph: "#0000ff",
+    c_backText: "#000000",
+    c_padm: "#ff0000",
+    c_frontLoadLine: "#00ffff",
+    c_frontUagpLine: "#000000",
+    c_frontUagpCurve: "#000000",
+    c_frontUag1Line: "#00ff00",
+    c_frontUag1Curve: "#00ff00",
+    c_frontUag2Line: "#00ff00",
+    c_frontUag2Curve: "#00ff00",
+    c_frontText: "#000000"
+};
+ElectronTube = function(e) {
+    this.type = e[0],
+    this.name = e[1],
+    this.partub = e[2]
+}
+;
+var TRIODE = function(e) {
+    this.ia,
+    this.ua,
+    this.ugp,
+    this.ug1,
+    this.ug2,
+    this.uagp,
+    this.uag1,
+    this.uag2,
+    this.iagp,
+    this.iag1,
+    this.iag2,
+    this.uinp,
+    this.htot,
+    this.h2,
+    this.h3,
+    this.h4,
+    this.type = e[0],
+    this.name = e[1],
+    this.partub = e[2],
+    this.mu = e[3],
+    this.ex = e[4],
+    this.kg1 = e[5],
+    this.kp = e[6],
+    this.kvb = e[7],
+    this.padm = e[8] * e[2],
+    this.uamin = e[9],
+    this.uamax = e[10],
+    this.iamin = e[11],
+    this.iamax = e[12] * e[2],
+    this.ugmin = e[13],
+    this.ugmax = e[14],
+    this.init = function() {
+        this.ia = Math.round(.9 * this.iamax),
+        this.ua = Math.round(.8 * this.uamax),
+        this.ugp = .5 * this.ugmax,
+        this.ug1 = .25 * this.ugmax,
+        this.ug2 = .75 * this.ugmax,
+        this.uagp = this.getUa_Ra(this.ugp),
+        this.uag1 = this.getUa_Ra(this.ug1),
+        this.uag2 = this.getUa_Ra(this.ug2),
+        this.iagp = this.getIa(this.ugp, this.uagp),
+        this.iag1 = this.getIa(this.ug1, this.uag1),
+        this.iag2 = this.getIa(this.ug2, this.uag2),
+        this.uinp = this.ug1 - this.ugp
+    }
+    ,
+    this.getIa = function(e, t) {
+        var u, n;
+        return u = t / this.kp * Math.log(1 + Math.exp(this.kp * (1 / this.mu + e / Math.sqrt(this.kvb + t * t)))),
+        n = this.partub * Math.pow(u, this.ex) * (1 + sign(u)) / (2 * this.kg1)
+    }
+    ,
+    this.getUg = function(e, t) {
+        var u, n, a, i;
+        return u = Math.exp(Math.log(t / this.partub * this.kg1) / this.ex),
+        n = Math.sqrt(this.kvb + e * e),
+        a = Math.exp(u * this.kp / e) - 1,
+        i = n * (Math.log(a) / this.kp - 1 / this.mu)
+    }
+    ,
+    this.getUa_Ra = function(e) {
+        var t, u, n, a = this.ia / this.ua, i = this.ua / 2, g = i, o = !0;
+        do
+            t = this.ia - a * i,
+            u = 1e3 * this.getIa(e, i),
+            n = Math.abs(t - u),
+            1e-6 > n ? o = !1 : t > u ? i += g : i -= g,
+            g /= 2;
+        while (o);
+        return i
+    }
+}
+  , PENTODE = function(e) {
+    this.ia,
+    this.ua,
+    this.ugp,
+    this.ug1,
+    this.ug2,
+    this.uagp,
+    this.uag1,
+    this.uag2,
+    this.iagp,
+    this.iag1,
+    this.iag2,
+    this.uinp,
+    this.htot,
+    this.h2,
+    this.h3,
+    this.h4,
+    this.is,
+    this.type = e[0],
+    this.name = e[1],
+    this.partub = e[2],
+    this.mu = e[3],
+    this.ex = e[4],
+    this.kg1 = e[5],
+    this.kp = e[6],
+    this.kvb = e[7],
+    this.kg2 = e[16],
+    this.padm = e[8] * e[2],
+    this.uamin = e[9],
+    this.uamax = e[10],
+    this.iamin = e[11],
+    this.iamax = e[12] * e[2],
+    this.ugmin = e[13],
+    this.ugmax = e[14],
+    this.us = e[15],
+    this.init = function() {
+        this.us = e[15],
+        this.ia = Math.round(.9 * this.iamax),
+        this.ua = Math.round(.8 * this.uamax),
+        this.ugp = .5 * this.ugmax,
+        this.ug1 = .25 * this.ugmax,
+        this.ug2 = .75 * this.ugmax,
+        this.uagp = this.getUa_Ra(this.ugp),
+        this.uag1 = this.getUa_Ra(this.ug1),
+        this.uag2 = this.getUa_Ra(this.ug2),
+        this.iagp = this.getIa(this.ugp, this.uagp),
+        this.iag1 = this.getIa(this.ug1, this.uag1),
+        this.iag2 = this.getIa(this.ug2, this.uag2),
+        this.uinp = this.ug1 - this.ugp,
+        this.is = this.getIs(this.ugp, this.us)
+    }
+    ,
+    this.getIa = function(e, t) {
+        var u, n;
+        return u = this.us / this.kp * Math.log(1 + Math.exp(this.kp * (1 / this.mu + e / this.us))),
+        n = this.partub * Math.pow(u, this.ex) * (1 + sign(u)) * Math.atan(t / this.kvb) / (1 * this.kg1)
+    }
+    ,
+    this.getIs = function(e, t) {
+        var u, n;
+        return n = e + t / this.mu,
+        u = n >= 0 ? Math.pow(n, 1.5) / this.kg2 : 0
+    }
+    ,
+    this.getUg = function(e, t) {
+        var u, n, a;
+        return u = Math.exp(Math.log(t / Math.atan(e / this.kvb) / this.partub * .5 * this.kg1) / this.ex),
+        n = Math.exp(u * this.kp / this.us) - 1,
+        a = this.us * (Math.log(n) / this.kp - 1 / this.mu)
+    }
+    ,
+    this.getUa_Ra = function(e) {
+        var t, u, n, a = this.ia / this.ua, i = this.ua / 2, g = i, o = !0;
+        do
+            t = this.ia - a * i,
+            u = 1e3 * this.getIa(e, i),
+            n = Math.abs(t - u),
+            1e-6 > n ? o = !1 : t > u ? i += g : i -= g,
+            g /= 2;
+        while (o);
+        return i
+    }
+};

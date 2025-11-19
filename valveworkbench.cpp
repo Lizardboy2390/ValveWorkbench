@@ -1762,15 +1762,62 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
         }
     };
 
-    // Choose a central sweep and sample as the initial operating point
-    const int sweepIdx  = sweepCount / 2;
-    Sweep *sweep        = measurement->at(sweepIdx);
-    if (!sweep || sweep->count() < 3) {
-        return;
+    // Choose an operating point. For anode characteristics we prefer a point
+    // near the middle of the tube's current (around 50% of Ia_max), which is
+    // closer to a realistic bias than the geometric centre of the dataset.
+    int   sweepIdx  = sweepCount / 2;
+    int   sampleIdx = -1;
+    Sweep *sweep    = nullptr;
+
+    if (testType == ANODE_CHARACTERISTICS) {
+        const double iaTarget = std::max(0.0, measurement->getIaMax() * 0.5);
+        double bestDiff = std::numeric_limits<double>::infinity();
+
+        for (int sw = 0; sw < sweepCount; ++sw) {
+            Sweep *s = measurement->at(sw);
+            if (!s || s->count() < 3) {
+                continue;
+            }
+            const int nSamples = s->count();
+            for (int sa = 0; sa < nSamples; ++sa) {
+                Sample *sample = s->at(sa);
+                if (!sample) continue;
+                const double ia = sample->getIa();
+                if (ia <= 0.0) {
+                    continue; // skip non-conducting points
+                }
+                const double diff = std::fabs(ia - iaTarget);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    sweepIdx = sw;
+                    sampleIdx = sa;
+                    sweep = s;
+                }
+            }
+        }
+
+        // Fallback: if we didn't find a suitable point, use the central
+        // sweep/sample as before.
+        if (!sweep) {
+            sweepIdx = sweepCount / 2;
+            sweep = measurement->at(sweepIdx);
+            if (!sweep || sweep->count() < 3) {
+                return;
+            }
+            sampleIdx = sweep->count() / 2;
+        }
+    } else {
+        // Transfer characteristics or other tests: retain the original
+        // central sweep/sample heuristic.
+        sweepIdx = sweepCount / 2;
+        sweep = measurement->at(sweepIdx);
+        if (!sweep || sweep->count() < 3) {
+            return;
+        }
+        sampleIdx = sweep->count() / 2;
     }
 
     const int sampleCount = sweep->count();
-    const int sampleIdx   = sampleCount / 2;
 
     // Helper to clamp indices into valid range
     auto clampIndex = [](int idx, int max) {
@@ -1952,17 +1999,65 @@ void ValveWorkbench::updateSmallSignalFromModel(Model *modelForSmallSignal, Meas
         }
     };
 
-    // Reuse the same central operating point heuristic as the measured helper
-    const int sweepIdx = sweepCount / 2;
-    Sweep *sweep = measurement->at(sweepIdx);
-    if (!sweep || sweep->count() == 0) {
-        qInfo("SMALL-SIGNAL (MODEL): chosen sweep index %d is null or empty", sweepIdx);
-        return;
+    // Choose an operating point. For anode characteristics we prefer a point
+    // near the middle of the tube's current (around 50% of Ia_max), matching
+    // the heuristic used for measurement-based small-signal.
+    int   sweepIdx  = sweepCount / 2;
+    int   sampleIdx = -1;
+    Sweep *sweep    = nullptr;
+
+    if (testType == ANODE_CHARACTERISTICS) {
+        const double iaTarget = std::max(0.0, measurement->getIaMax() * 0.5);
+        double bestDiff = std::numeric_limits<double>::infinity();
+
+        for (int sw = 0; sw < sweepCount; ++sw) {
+            Sweep *s = measurement->at(sw);
+            if (!s || s->count() < 1) {
+                continue;
+            }
+            const int nSamples = s->count();
+            for (int sa = 0; sa < nSamples; ++sa) {
+                Sample *sample = s->at(sa);
+                if (!sample) continue;
+                const double ia = sample->getIa();
+                if (ia <= 0.0) {
+                    continue; // skip non-conducting points
+                }
+                const double diff = std::fabs(ia - iaTarget);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    sweepIdx = sw;
+                    sampleIdx = sa;
+                    sweep = s;
+                }
+            }
+        }
+
+        // Fallback: if we didn't find a suitable point, use the central
+        // sweep/sample as before.
+        if (!sweep) {
+            sweepIdx = sweepCount / 2;
+            sweep = measurement->at(sweepIdx);
+            if (!sweep || sweep->count() == 0) {
+                qInfo("SMALL-SIGNAL (MODEL): chosen sweep index %d is null or empty", sweepIdx);
+                return;
+            }
+            sampleIdx = sweep->count() / 2;
+        }
+    } else {
+        // Transfer characteristics or other tests: retain the original
+        // central sweep/sample heuristic.
+        sweepIdx = sweepCount / 2;
+        sweep = measurement->at(sweepIdx);
+        if (!sweep || sweep->count() == 0) {
+            qInfo("SMALL-SIGNAL (MODEL): chosen sweep index %d is null or empty", sweepIdx);
+            return;
+        }
+        sampleIdx = sweep->count() / 2;
     }
 
     const int sampleCount = sweep->count();
-    const int sampleIdx   = sampleCount / 2;
-    Sample *sampleMid     = sweep->at(sampleIdx);
+    Sample *sampleMid     = (sampleIdx >= 0 && sampleIdx < sampleCount) ? sweep->at(sampleIdx) : nullptr;
     if (!sampleMid) {
         qInfo("SMALL-SIGNAL (MODEL): central sample index %d is null", sampleIdx);
         return;
@@ -2041,58 +2136,56 @@ void ValveWorkbench::on_mes_mod_select_stateChanged(int state)
         return;
     }
 
-    // Model mode: if a Triode Common Cathode circuit is active, use its
-    // small-signal parameters so Designer and Modeller agree on gm/ra/mu.
+    // Model mode: if a Triode Common Cathode circuit is active and the
+    // current measurement is a triode, use its small-signal parameters so
+    // Designer and Modeller agree on gm/ra/mu. Otherwise fall back to the
+    // fitted model directly.
     int circuitType = ui->circuitSelection
                       ? ui->circuitSelection->currentData().toInt()
                       : -1;
-    if (circuitType < 0 || circuitType >= circuits.size()) {
-        return;
-    }
 
-    Circuit *circuit = circuits.at(circuitType);
+    Circuit *circuit = (circuitType >= 0 && circuitType < circuits.size())
+                       ? circuits.at(circuitType)
+                       : nullptr;
     const int measurementDeviceType = currentMeasurement ? currentMeasurement->getDeviceType() : -1;
 
-    // Only use the Designer triode circuit as the gm/ra/mu source when the
-    // active measurement is a triode. For pentode measurements we prefer the
-    // fitted pentode model directly so that pentode small-signal results are
-    // not blocked by a triode-only circuit.
-    if (measurementDeviceType == TRIODE) {
+    bool usedDesigner = false;
+    if (measurementDeviceType == TRIODE && circuit) {
         if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
-        const double gm_mA_V = tcc->getParameter(TRI_CC_GM);
-        const double ra_ohms = tcc->getParameter(TRI_CC_AR);
-        const double mu      = tcc->getParameter(TRI_CC_MU);
-        const double ra_k    = (ra_ohms > 0.0) ? (ra_ohms / 1000.0) : 0.0;
+            const double gm_mA_V = tcc->getParameter(TRI_CC_GM);
+            const double ra_ohms = tcc->getParameter(TRI_CC_AR);
+            const double mu      = tcc->getParameter(TRI_CC_MU);
+            const double ra_k    = (ra_ohms > 0.0) ? (ra_ohms / 1000.0) : 0.0;
 
-        if (ui->gmLcd) {
-            if (gm_mA_V > 0.0) {
-                ui->gmLcd->display(QString("%1").arg(gm_mA_V, 0, 'f', 2));
-            } else {
-                safeDisplayText(ui->gmLcd, "--");
+            if (ui->gmLcd) {
+                if (gm_mA_V > 0.0) {
+                    ui->gmLcd->display(QString("%1").arg(gm_mA_V, 0, 'f', 2));
+                } else {
+                    safeDisplayText(ui->gmLcd, "--");
+                }
             }
-        }
-        if (ui->raLcd) {
-            if (ra_k > 0.0) {
-                ui->raLcd->display(QString("%1").arg(ra_k, 0, 'f', 1));
-            } else {
-                safeDisplayText(ui->raLcd, "--");
+            if (ui->raLcd) {
+                if (ra_k > 0.0) {
+                    ui->raLcd->display(QString("%1").arg(ra_k, 0, 'f', 1));
+                } else {
+                    safeDisplayText(ui->raLcd, "--");
+                }
             }
-        }
-        if (ui->lcdNumber_3) {
-            if (mu > 0.0) {
-                ui->lcdNumber_3->display(QString("%1").arg(mu, 0, 'f', 1));
-            } else {
-                safeDisplayText(ui->lcdNumber_3, "--");
+            if (ui->lcdNumber_3) {
+                if (mu > 0.0) {
+                    ui->lcdNumber_3->display(QString("%1").arg(mu, 0, 'f', 1));
+                } else {
+                    safeDisplayText(ui->lcdNumber_3, "--");
+                }
             }
-        }
-            return;
+            usedDesigner = true;
         }
     }
 
-    // If no Designer triode circuit is active, fall back to the fitted model
+    // If no Designer triode circuit was used, fall back to the fitted model
     // directly (triode or pentode) if one is available and a measurement is
     // selected to provide context.
-    if (model && currentMeasurement) {
+    if (!usedDesigner && model && currentMeasurement) {
         updateSmallSignalFromModel(model, currentMeasurement);
     }
 }
@@ -3876,7 +3969,21 @@ void ValveWorkbench::modelTriode()
 {
     QList<Measurement *> measurements;
 
-    Measurement *measurement = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
+    Measurement *measurement = nullptr;
+
+    // Prefer the explicitly selected triode anode measurement in the
+    // project tree when fitting, so the model matches the measurement
+    // the user is actually working with. Fall back to the first
+    // matching triode/anode measurement in the current project if
+    // nothing suitable is selected.
+    if (currentMeasurement && currentMeasurementItem &&
+        getProject(currentMeasurementItem) == currentProject &&
+        currentMeasurement->getDeviceType() == TRIODE &&
+        currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
+        measurement = currentMeasurement;
+    } else {
+        measurement = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
+    }
 
     if (measurement == nullptr) {
         QMessageBox message;

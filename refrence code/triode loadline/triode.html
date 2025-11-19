@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<!--
+(c) 2014-2015 Grzegorz Makarewicz www.trioda.com
+-->
+<html>
+    <head>
+        <title>Triode / Pentode Loadline Simulator v.1.0 (20161216 www.trioda.com)</title>
+        <meta charset="UTF-8">
+        <meta name="Keywords" content="trioda, triode, ecc83, 300b, 2a3, 6N30P, 6S45P, ecc88, 45, loadline, obciążenie"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="css/A.triode.css.pagespeed.cf.ipwiycSgKW.css"/>
+        <script type="text/javascript" src="lib/Cango-5v17.js"></script>
+        <script type="text/javascript" src="lib/CangoDragAndDrop-1v00.js"></script>
+        <script type="text/javascript" src="lib/CangoAxes-1v03.js"></script>
+        <script type="text/javascript" src="lib/canvasStack1v06.js"></script>
+        <script type="text/javascript" src="js/miscpublic.js"></script>
+		<script type="text/javascript" src="js/triodepublic.js?v=20160104"></script>
+    </head>
+    <body onload="init('cvs')">
+        <p align="center">
+            <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+            <!-- trioda skrypty duża reklama -->
+            <ins class="adsbygoogle" style="display:inline-block;width:728px;height:90px" data-ad-client="ca-pub-0459566097789188" data-ad-slot="1966442700"></ins>
+            <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </p>
+        <div id="content">
+            <div id="header">Triode / Pentode Loadline Simulator (v.1.0 20161216)</div>        
+            <div id="divcenter">Select tube from the list</div>
+            <div id="divcenter">
+                <select id="tubeType" onchange="selectTubeModel()"></select> 
+            </div>
+            <div id="divcenter"><canvas id="cvs" width="700" height="500"></canvas></div>
+            <div>
+                <table>
+                    <tr>
+                        <td colspan="15">Parameters at operaing point</td>
+                    </tr>
+                    <tr>
+                        <td>U<sub>a</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="uaval"></label></td>
+                        <td width="20%">[V]</td>
+                        
+                        <td>I<sub>a</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="iaval"></label></td>
+                        <td width="20%">[mA]</td>
+                        
+                        <td>U<sub>g</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="ugval"></label></td>
+                        <td width="20%">[V]</td>
+
+                        <td>R<sub>i</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="rival"></label></td>
+                        <td width="20%"><label id="riunit"></label></td>
+
+                        <td>R<sub>a</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="raval"></label></td>
+                        <td>[K&#8486;]</td>
+                    </tr>
+                    <tr>
+                        <td>S&nbsp;=&nbsp;</td>
+                        <td><label id="sval"></label></td>
+                        <td>[mA/V]</td>
+                        
+                        <td>&micro;</td>
+                        <td><label id="mival"></label></td>
+                        <td>[V/V]</td>
+                        
+                        <td>P<sub>a</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="paval"></label></td>
+                        <td><label id="paunit"></label></td>
+
+                        <td><label id="is"></label></td>
+                        <td><label id="isval"></label></td>
+                        <td><label id="isunit"></label></td>
+						
+                        <td><label id="ps"></label></td>
+                        <td><label id="psval"></label></td>
+                        <td><label id="psunit"></label></td>
+                    </tr>
+                    <tr>
+                        <td colspan="15">Harmonic distortion for U<sub>inp</sub>&nbsp;=&nbsp;<label id="uinpval"></label>&nbsp;<label id="uinpunit"></label></td>
+                    </tr>
+                    <tr>
+                        <td>h<sub>2</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="h2val"></label></td>
+                        <td>[%]</td>
+                        
+                        <td>h<sub>3</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="h3val"></label></td>
+                        <td>[%]</td>
+                        
+                        <td>h<sub>4</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="h4val"></label></td>
+                        <td>[%]</td>
+
+                        <td>h<sub>tot</sub>&nbsp;=&nbsp;</td>
+                        <td><label id="htotval"></label></td>
+                        <td>[%]</td>
+
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td colspan="15">Single Stage Grounded Cathode Amplifier Parameters</td>
+                    </tr>
+                    <tr>
+                        <td><label id="rk"></label></td>
+                        <td><label id="rkval"></label></td>
+                        <td><label id="rkunit"></label></td>
+                        
+                        <td><label id="prk"></label></td>
+                        <td><label id="prkval"></label></td>
+                        <td><label id="prkunit"></label></td>
+                        
+                        <td><label id="grk"></label></td>
+                        <td><label id="grkval"></label></td>
+                        <td><label id="grkunit"></label></td>
+
+                        <td><label id="grk0"></label></td>
+                        <td><label id="grk0val"></label></td>
+                        <td><label id="grk0unit"></label></td>
+
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td colspan="15">SE Output Stage Parameters</td>
+                    </tr>
+                    <tr>
+                        <td><label id="poutse"></label></td>
+                        <td><label id="poutseval"></label></td>
+                        <td><label id="poutseunit"></label></td>
+                        
+                        <td><label id="pouttse"></label></td>
+                        <td><label id="pouttseval"></label></td>
+                        <td><label id="pouttseunit"></label></td>
+                        
+                        <td></td>
+                        <td></td>
+                        <td></td>
+
+                        <td></td>
+                        <td></td>
+                        <td></td>
+
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td colspan="15">SE Output Transformer Parameters</td>
+                    </tr>
+                    <tr>
+                        <td><label id="l1se"></label></td>
+                        <td><label id="l1seval"></label></td>
+                        <td><label id="l1seunit"></label></td>
+                        
+                        <td><label id="l1sse"></label></td>
+                        <td><label id="l1sseval"></label></td>
+                        <td><label id="l1sseunit"></label></td>
+                        
+                        <td><label id="nse"></label></td>
+                        <td><label id="nseval"></label></td>
+                        <td></td>
+
+                        <td><label id="nse_rev"></label></td>
+                        <td><label id="nse_revval"></label></td>
+                        <td></td>
+
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </table>
+            </div>
+			<div>
+				<table id="commands">
+					<tr>
+						<td>No. of tubes</br>(parallel connection)</td>
+						<td>I<sub>amax</sub></td>
+						<td>U<sub>amax</sub></td>
+						<td>U<sub>gmin</sub></td>
+						<td>U<sub>gmax<sub></td>
+						<td rowspan="6"><button type="button" id="rangesBtn" onclick="applyRanges()">Apply</button></td>
+					</tr>
+					<tr>
+						<td><input type="text" id="s_partub" size="3" value="1"></td>
+						<td><input type="text" id="s_iamax" size="5">[mA]</td>
+						<td><input type="text" id="s_uamax" size="5">[V]</td>
+						<td><input type="text" id="s_ugmin" size="5">[V]</td>
+						<td><input type="text" id="s_ugmax" size="5">[V]</td>
+					</tr>
+					<tr>
+						<td>Lower frequency</br>limit F<sub>L</sub></td>
+						<td>Frequency</br>distortion M<sub>L</sub></td>
+						<td>Upper frequency</br>limit F<sub>H</sub></td>
+						<td>Frequency</br>distortion M<sub>H</sub></td>
+						<td>Transformer</br>efficiency</td>
+					</tr>
+					<tr>
+						<td><input type="text" id="s_fl" size="3" value="20">[Hz]</td>
+						<td><input type="text" id="s_ml" size="5" value="3.0">[dB]</td>
+						<td><input type="text" id="s_fh" size="5" value="20000">[Hz]</td>
+						<td><input type="text" id="s_mh" size="5" value="3.0">[dB]</td>
+						<td><input type="text" id="s_theta" size="5" value="0.85"></td>
+					</tr>
+					<tr>
+						<td>Loudspeaker</br>impedance R<sub>L</sub></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td>Screen voltage</br>U<sub>s</sub> (pentodes)</td>
+					</tr>
+					<tr>
+						<td><input type="text" id="s_rl" size="3" value="4.0">[&Omega;]</td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td><input type="text" id="s_us" size="5">[V]</td>
+					</tr>
+				</table>
+			</div>
+            <div>
+                <table id="description">
+                    <tr>
+                        <td>Symbol</td>
+                        <td>Description</td>
+                    </tr>
+                    <tr>
+                        <td>U<sub>a</sub></td>
+                        <td>Anode voltage at operating point.</td>
+                    </tr>
+                    <tr>
+                        <td>I<sub>a</sub></td>
+                        <td>Anode current at operating point.</td>
+                    </tr>
+                    <tr>
+                        <td>U<sub>g</sub></td>
+                        <td>Bias voltage (grid voltage) at operating point.</td>
+                    </tr>
+                    <tr>
+                        <td>R<sub>i</sub></td>
+                        <td>Plate (internal) resistance at operating point.</td>
+                    </tr>
+                    <tr>
+                        <td>R<sub>a</sub></td>
+                        <td>Plate load resistance.</td>
+                    </tr>
+                    <tr>
+                        <td>S</td>
+                        <td>Transconductance calculated at operating point.</td>
+                    </tr>
+                    <tr>
+                        <td>&micro;</td>
+                        <td>Amplification factor of a tube at operating point.</td>
+                    </tr>
+                    <tr>
+                        <td>P<sub>a</sub></td>
+                        <td>Anode power dissipation at operating point.</td>
+                    </tr>
+                    <tr>
+                        <td>I<sub>s</sub></td>
+                        <td>Screen grid current (tetrodes and pentodes).</td>
+                    </tr>
+                    <tr>
+                        <td>P<sub>s</sub></td>
+                        <td>Screen grid power dissiparion at operating point.</td>
+                    </tr>
+                    <tr>
+                        <td>R<sub>k</sub></td>
+                        <td>Cathode resistor.</td>
+                    </tr>
+                    <tr>
+                        <td>P<sub>rk</sub></td>
+                        <td>Power dissipation of cathode resistor.</td>
+                    </tr>
+                    <tr>
+                        <td>G<sub>(rk)</sub></td>
+                        <td>Gain of a single stage amplifier with cathode resistor.</td>
+                    </tr>
+                    <tr>
+                        <td>G<sub>(rk=0)</sub></td>
+                        <td>Gain of a single stage amplifier without or bypassed cathode resistor.</td>
+                    </tr>
+					<tr>
+                        <td>M<sub>L</sub></td>
+                        <td>Lower frequency distortion at frequency F<sub>L</sub></td>
+                    </tr>
+					<tr>
+                        <td>M<sub>H</sub></td>
+                        <td>Higher frequency distortion at frequency F<sub>H</sub></td>
+                    </tr>
+                    <tr>
+                        <td>P<sub>out(t)</sub></td>
+                        <td>Power dissipated in the anode circuit of SE amplifier</td>
+                    </tr>
+                    <tr>
+                        <td>P<sub>out</sub></td>
+                        <td>Output power (SE) - P<sub>out(t)</sub> corrected by transformer efficiency </td>
+                    </tr>
+                    <tr>
+                        <td>&eta;</td>
+                        <td>Output transformer efficiency (usually in the range from 0.8 to 0.9)</td>
+                    </tr>
+					<tr>
+                        <td>L<sub>1min</sub></td>
+                        <td>Minimum inductance of the primary winding of output transformer</td>
+                    </tr>
+					<tr>
+                        <td>L<sub>1smax</sub></td>
+                        <td>Maximum leakage inductance of the primary winding of output transformer</td>
+                    </tr>
+					<tr>
+                        <td>N</td>
+                        <td>Output transformer windings ratio (&omega;<sub>2</sub>/&omega;<sub>1</sub>)</td>
+                    </tr>
+                </table>
+            </div>
+			<div>Additional Information</div>
+			<div><a href="http://www.trioda.com/forum/viewtopic.php?f=8&t=27921" target="_blank">Trioda Forum</a></div>
+			<div><a href="http://www.diyaudio.com/forums/tubes-valves/260908-triode-pentode-loadline-calculator.html" target="_blank">diyAudio Forum</a></div>
+            <div id="footer">&copy;2014-2016 Grzegorz Makarewicz www.trioda.com</div>
+        </div>
+    </body>
+</html>
