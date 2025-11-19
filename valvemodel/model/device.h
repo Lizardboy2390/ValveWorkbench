@@ -54,6 +54,11 @@ public:
     // points directly from measured data.
     Measurement *getMeasurement() const { return measurement; }
 
+    // Optional embedded triode seed model (Cohen-Helie) when the preset JSON
+    // includes a 'triodeModel' block. Used by Modeller to seed pentode fits
+    // without requiring a separate triode model node in the project tree.
+    CohenHelieTriode *getTriodeSeed() const { return triodeSeed; }
+
     // Convenience: try to find a grid bias Vk and screen current Ig2 (both in
     // mA units for Ig2, V for Vk) such that the measured Ia(Va≈vb, Vg1≈-Vk,
     // Vg2≈vs) is close to targetIa_mA. Returns true on success.
@@ -98,6 +103,11 @@ private:
     // that included analyser sweeps. May be null for legacy presets or
     // hand-authored JSON.
     Measurement *measurement = nullptr;
+
+    // Optional triode seed model used when exporting a fitted pentode: when
+    // present, this allows Modeller to reproduce the original triode-based
+    // seed for pentode fitting without re-running the triode fit.
+    CohenHelieTriode *triodeSeed = nullptr;
 
     QString name;
 

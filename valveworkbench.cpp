@@ -64,6 +64,215 @@ int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
     return 0;
 }
 
+void ValveWorkbench::populateDataTableFromMeasurement(Measurement *measurement)
+{
+    // Populate analyser data table with rows per sweep from the given
+    // Measurement. Shared between live analyser results and measurements
+    // imported from device presets.
+    if (!measurement || !dataTable) {
+        return;
+    }
+
+    dataTable->clearContents();
+    int numSweeps = measurement->count();
+
+    if (numSweeps == 0) {
+        qWarning("No sweeps found in measurement data");
+        return;
+    }
+
+    // Determine rows per sweep based on device type
+    const int measDeviceType = measurement->getDeviceType();
+    // Pentode: Va, Ia, Vg1, Vg2, Ig2 (5 rows)
+    // Double triode: Va, Ia, Vg1, Vg3, Va2, Ia2 (6 rows)
+    // Single triode: Va, Ia, Vg1 (and optional Vg3 if present) - keep legacy 4 rows for compatibility
+    int rowsPerSweep = 4;
+    if (measDeviceType == PENTODE) {
+        rowsPerSweep = 5;
+    } else if (isDoubleTriode) {
+        rowsPerSweep = 6;
+    } else {
+        rowsPerSweep = 4;
+    }
+    dataTable->setRowCount(numSweeps * rowsPerSweep);
+
+    // Set column headers for the 62 Va points
+    dataTable->setColumnCount(62);
+    QStringList headers;
+    for (int i = 0; i < 62; ++i) {
+        headers << QString("Va_%1").arg(i);
+    }
+    dataTable->setHorizontalHeaderLabels(headers);
+
+    qInfo("Populating table with %d sweeps (%d rows each)", numSweeps, rowsPerSweep);
+
+    for (int sweepIdx = 0; sweepIdx < numSweeps; ++sweepIdx) {
+        Sweep *sweep = measurement->at(sweepIdx);
+        QString gridVoltage = QString("Vg_%1V").arg(sweep->getVg1Nominal(), 0, 'f', 2);
+
+        int sampleCount = sweep->count();
+        qInfo("Sweep %d: Vg1Nominal = %f, sampleCount = %d", sweepIdx, sweep->getVg1Nominal(), sampleCount);
+
+        if (sampleCount == 0) {
+            qWarning("Sweep %d has zero samples - skipping data population for this sweep", sweepIdx);
+            continue;  // Skip to next sweep
+        }
+
+        // Row for anode voltage values
+        int vaRow = sweepIdx * rowsPerSweep;
+        QString vaRowHeader = gridVoltage + " (Va)";
+        dataTable->setVerticalHeaderItem(vaRow, new QTableWidgetItem(vaRowHeader));
+
+        // Row for anode current values
+        int iaRow = sweepIdx * rowsPerSweep + 1;
+        QString iaRowHeader = gridVoltage + " (Ia)";
+        dataTable->setVerticalHeaderItem(iaRow, new QTableWidgetItem(iaRowHeader));
+
+        // Row for first grid voltage values (Vg1)
+        int vg1Row = sweepIdx * rowsPerSweep + 2;
+        QString vg1RowHeader = gridVoltage + " (Vg1)";
+        dataTable->setVerticalHeaderItem(vg1Row, new QTableWidgetItem(vg1RowHeader));
+
+        // Either add Vg3 (double triode) or Vg2/Ig2 (pentode)
+        int vg3Row = -1;
+        int vg2Row = -1;
+        int ig2Row = -1;
+        int va2Row = -1;
+        int ia2Row = -1;
+
+        if (measDeviceType == PENTODE) {
+            // Row for screen voltage values (Vg2)
+            vg2Row = sweepIdx * rowsPerSweep + 3;
+            QString vg2RowHeader = gridVoltage + " (Vg2)";
+            dataTable->setVerticalHeaderItem(vg2Row, new QTableWidgetItem(vg2RowHeader));
+
+            // Row for screen current values (Ig2)
+            ig2Row = sweepIdx * rowsPerSweep + 4;
+            QString ig2RowHeader = gridVoltage + " (Ig2)";
+            dataTable->setVerticalHeaderItem(ig2Row, new QTableWidgetItem(ig2RowHeader));
+        } else if (isDoubleTriode) {
+            // Row for second grid voltage values (Vg3)
+            vg3Row = sweepIdx * rowsPerSweep + 3;
+            QString vg3RowHeader = gridVoltage + " (Vg3)";
+            dataTable->setVerticalHeaderItem(vg3Row, new QTableWidgetItem(vg3RowHeader));
+            // Row for second anode voltage values (Va2)
+            va2Row = sweepIdx * rowsPerSweep + 4;
+            QString va2RowHeader = gridVoltage + " (Va2)";
+            dataTable->setVerticalHeaderItem(va2Row, new QTableWidgetItem(va2RowHeader));
+
+            // Row for second anode current values (Ia2)
+            ia2Row = sweepIdx * rowsPerSweep + 5;
+            QString ia2RowHeader = gridVoltage + " (Ia2)";
+            dataTable->setVerticalHeaderItem(ia2Row, new QTableWidgetItem(ia2RowHeader));
+        }
+
+        // Populate Va row (even row numbers)
+        for (int col = 0; col < 62 && col < sampleCount; ++col) {
+            Sample *sample = sweep->at(col);
+            double va = sample->getVa();
+            if (col < 3) { // Log first few Va values for debugging
+                qInfo("Sweep %d, Va_%d = %f", sweepIdx, col + 1, va);
+            }
+            QTableWidgetItem *vaItem = new QTableWidgetItem(QString::number(va, 'f', 2));
+            dataTable->setItem(vaRow, col, vaItem);
+        }
+
+        // Populate Ia row (odd row numbers)
+        for (int col = 0; col < 62 && col < sampleCount; ++col) {
+            Sample *sample = sweep->at(col);
+            double ia = sample->getIa();
+            if (col < 3) { // Log first few Ia values for debugging
+                qInfo("Sweep %d, Ia_%d = %f", sweepIdx, col + 1, ia);
+            }
+            QTableWidgetItem *iaItem = new QTableWidgetItem(QString::number(ia, 'f', 3));
+            dataTable->setItem(iaRow, col, iaItem);
+        }
+
+        // Populate Vg1 row (third row per sweep)
+        for (int col = 0; col < 62 && col < sampleCount; ++col) {
+            Sample *sample = sweep->at(col);
+            double vg1 = sample->getVg1();
+            if (col < 3) { // Log first few Vg1 values for debugging
+                qInfo("Sweep %d, Vg1_%d = %f", sweepIdx, col + 1, vg1);
+            }
+            QTableWidgetItem *vg1Item = new QTableWidgetItem(QString::number(vg1, 'f', 2));
+            dataTable->setItem(vg1Row, col, vg1Item);
+        }
+
+        // Populate Vg3 row for double triode
+        if (isDoubleTriode) {
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double vg3 = sample->getVg3();
+                if (col < 3) {
+                    qInfo("Sweep %d, Vg3_%d = %f", sweepIdx, col + 1, vg3);
+                }
+                QTableWidgetItem *vg3Item = new QTableWidgetItem(QString::number(vg3, 'f', 2));
+                dataTable->setItem(vg3Row, col, vg3Item);
+            }
+        }
+
+        // Populate Vg2 and Ig2 rows for pentode
+        if (measDeviceType == PENTODE) {
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double vg2 = sample->getVg2();
+                if (col < 3) {
+                    qInfo("Sweep %d, Vg2_%d = %f", sweepIdx, col + 1, vg2);
+                }
+                QTableWidgetItem *vg2Item = new QTableWidgetItem(QString::number(vg2, 'f', 2));
+                dataTable->setItem(vg2Row, col, vg2Item);
+            }
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double ig2 = sample->getIg2();
+                if (col < 3) {
+                    qInfo("Sweep %d, Ig2_%d = %f", sweepIdx, col + 1, ig2);
+                }
+                QTableWidgetItem *ig2Item = new QTableWidgetItem(QString::number(ig2, 'f', 3));
+                dataTable->setItem(ig2Row, col, ig2Item);
+            }
+        }
+
+        if (isDoubleTriode) {
+            // Populate Va2 row (fourth row per sweep)
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double va2 = sample->getVa2();
+                if (col < 3) { // Log first few Va2 values for debugging
+                    qInfo("Sweep %d, Va2_%d = %f", sweepIdx, col + 1, va2);
+                }
+                QTableWidgetItem *va2Item = new QTableWidgetItem(QString::number(va2, 'f', 2));
+                dataTable->setItem(va2Row, col, va2Item);
+            }
+
+            // Populate Ia2 row (fifth row per sweep)
+            for (int col = 0; col < 62 && col < sampleCount; ++col) {
+                Sample *sample = sweep->at(col);
+                double ia2 = sample->getIa2();
+                if (col < 3) { // Log first few Ia2 values for debugging
+                    qInfo("Sweep %d, Ia2_%d = %f", sweepIdx, col + 1, ia2);
+                }
+                QTableWidgetItem *ia2Item = new QTableWidgetItem(QString::number(ia2, 'f', 3));
+                dataTable->setItem(ia2Row, col, ia2Item);
+            }
+        }
+
+        // Resize columns to fit content and set a minimum width for visibility
+        dataTable->resizeColumnsToContents();
+        for (int col = 0; col < 62; ++col) {
+            dataTable->setColumnWidth(col, qMax(dataTable->columnWidth(col), 40)); // Minimum 40px width
+        }
+    }
+
+    // Set row heights for better readability
+    for (int row = 0; row < numSweeps * rowsPerSweep; ++row) {
+        dataTable->setRowHeight(row, qMax(dataTable->rowHeight(row), 25));
+    }
+
+    qInfo("Data table populated: %d sweeps x %d rows each = %d total rows", numSweeps, rowsPerSweep, numSweeps * rowsPerSweep);
+}
+
  
 
 // (Removed duplicate checkbox handlers; using the canonical implementations below.)
@@ -1928,207 +2137,7 @@ void ValveWorkbench::testFinished()
     }
     ui->measureCheck->setChecked(true);
 
-    // Populate data table with rows per sweep
-    if (currentMeasurement && dataTable) {
-        dataTable->clearContents();
-        int numSweeps = currentMeasurement->count();
-
-        if (numSweeps == 0) {
-            qWarning("No sweeps found in measurement data");
-            return;
-        }
-
-        // Determine rows per sweep based on device type
-        const int measDeviceType = currentMeasurement->getDeviceType();
-        // Pentode: Va, Ia, Vg1, Vg2, Ig2 (5 rows)
-        // Double triode: Va, Ia, Vg1, Vg3, Va2, Ia2 (6 rows)
-        // Single triode: Va, Ia, Vg1 (and optional Vg3 if present) - keep legacy 4 rows for compatibility
-        int rowsPerSweep = 4;
-        if (measDeviceType == PENTODE) {
-            rowsPerSweep = 5;
-        } else if (isDoubleTriode) {
-            rowsPerSweep = 6;
-        } else {
-            rowsPerSweep = 4;
-        }
-        dataTable->setRowCount(numSweeps * rowsPerSweep);
-
-        // Set column headers for the 62 Va points
-        dataTable->setColumnCount(62);
-        QStringList headers;
-        for (int i = 0; i < 62; ++i) {
-            headers << QString("Va_%1").arg(i);
-        }
-        dataTable->setHorizontalHeaderLabels(headers);
-
-        qInfo("Populating table with %d sweeps (%d rows each)", numSweeps, rowsPerSweep);
-
-        for (int sweepIdx = 0; sweepIdx < numSweeps; ++sweepIdx) {
-            Sweep *sweep = currentMeasurement->at(sweepIdx);
-            QString gridVoltage = QString("Vg_%1V").arg(sweep->getVg1Nominal(), 0, 'f', 2);
-
-            int sampleCount = sweep->count();
-            qInfo("Sweep %d: Vg1Nominal = %f, sampleCount = %d", sweepIdx, sweep->getVg1Nominal(), sampleCount);
-
-            if (sampleCount == 0) {
-                qWarning("Sweep %d has zero samples - skipping data population for this sweep", sweepIdx);
-                continue;  // Skip to next sweep
-            }
-
-            // Row for anode voltage values
-            int vaRow = sweepIdx * rowsPerSweep;
-            QString vaRowHeader = gridVoltage + " (Va)";
-            dataTable->setVerticalHeaderItem(vaRow, new QTableWidgetItem(vaRowHeader));
-
-            // Row for anode current values
-            int iaRow = sweepIdx * rowsPerSweep + 1;
-            QString iaRowHeader = gridVoltage + " (Ia)";
-            dataTable->setVerticalHeaderItem(iaRow, new QTableWidgetItem(iaRowHeader));
-
-            // Row for first grid voltage values (Vg1)
-            int vg1Row = sweepIdx * rowsPerSweep + 2;
-            QString vg1RowHeader = gridVoltage + " (Vg1)";
-            dataTable->setVerticalHeaderItem(vg1Row, new QTableWidgetItem(vg1RowHeader));
-
-            // Either add Vg3 (double triode) or Vg2/Ig2 (pentode)
-            int vg3Row = -1;
-            int vg2Row = -1;
-            int ig2Row = -1;
-            int va2Row = -1;
-            int ia2Row = -1;
-
-            if (measDeviceType == PENTODE) {
-                // Row for screen voltage values (Vg2)
-                vg2Row = sweepIdx * rowsPerSweep + 3;
-                QString vg2RowHeader = gridVoltage + " (Vg2)";
-                dataTable->setVerticalHeaderItem(vg2Row, new QTableWidgetItem(vg2RowHeader));
-
-                // Row for screen current values (Ig2)
-                ig2Row = sweepIdx * rowsPerSweep + 4;
-                QString ig2RowHeader = gridVoltage + " (Ig2)";
-                dataTable->setVerticalHeaderItem(ig2Row, new QTableWidgetItem(ig2RowHeader));
-            } else if (isDoubleTriode) {
-                // Row for second grid voltage values (Vg3)
-                vg3Row = sweepIdx * rowsPerSweep + 3;
-                QString vg3RowHeader = gridVoltage + " (Vg3)";
-                dataTable->setVerticalHeaderItem(vg3Row, new QTableWidgetItem(vg3RowHeader));
-                // Row for second anode voltage values (Va2)
-                va2Row = sweepIdx * rowsPerSweep + 4;
-                QString va2RowHeader = gridVoltage + " (Va2)";
-                dataTable->setVerticalHeaderItem(va2Row, new QTableWidgetItem(va2RowHeader));
-
-                // Row for second anode current values (Ia2)
-                ia2Row = sweepIdx * rowsPerSweep + 5;
-                QString ia2RowHeader = gridVoltage + " (Ia2)";
-                dataTable->setVerticalHeaderItem(ia2Row, new QTableWidgetItem(ia2RowHeader));
-            }
-
-            // Populate Va row (even row numbers)
-            for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                Sample *sample = sweep->at(col);
-                double va = sample->getVa();
-                if (col < 3) { // Log first few Va values for debugging
-                    qInfo("Sweep %d, Va_%d = %f", sweepIdx, col + 1, va);
-                }
-                QTableWidgetItem *vaItem = new QTableWidgetItem(QString::number(va, 'f', 2));
-                dataTable->setItem(vaRow, col, vaItem);
-            }
-
-            // Populate Ia row (odd row numbers)
-            for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                Sample *sample = sweep->at(col);
-                double ia = sample->getIa();
-                if (col < 3) { // Log first few Ia values for debugging
-                    qInfo("Sweep %d, Ia_%d = %f", sweepIdx, col + 1, ia);
-                }
-                QTableWidgetItem *iaItem = new QTableWidgetItem(QString::number(ia, 'f', 3));
-                dataTable->setItem(iaRow, col, iaItem);
-            }
-
-            // Populate Vg1 row (third row per sweep)
-            for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                Sample *sample = sweep->at(col);
-                double vg1 = sample->getVg1();
-                if (col < 3) { // Log first few Vg1 values for debugging
-                    qInfo("Sweep %d, Vg1_%d = %f", sweepIdx, col + 1, vg1);
-                }
-                QTableWidgetItem *vg1Item = new QTableWidgetItem(QString::number(vg1, 'f', 2));
-                dataTable->setItem(vg1Row, col, vg1Item);
-            }
-
-            // Populate Vg3 row for double triode
-            if (isDoubleTriode) {
-                for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                    Sample *sample = sweep->at(col);
-                    double vg3 = sample->getVg3();
-                    if (col < 3) {
-                        qInfo("Sweep %d, Vg3_%d = %f", sweepIdx, col + 1, vg3);
-                    }
-                    QTableWidgetItem *vg3Item = new QTableWidgetItem(QString::number(vg3, 'f', 2));
-                    dataTable->setItem(vg3Row, col, vg3Item);
-                }
-            }
-
-            // Populate Vg2 and Ig2 rows for pentode
-            if (measDeviceType == PENTODE) {
-                for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                    Sample *sample = sweep->at(col);
-                    double vg2 = sample->getVg2();
-                    if (col < 3) {
-                        qInfo("Sweep %d, Vg2_%d = %f", sweepIdx, col + 1, vg2);
-                    }
-                    QTableWidgetItem *vg2Item = new QTableWidgetItem(QString::number(vg2, 'f', 2));
-                    dataTable->setItem(vg2Row, col, vg2Item);
-                }
-                for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                    Sample *sample = sweep->at(col);
-                    double ig2 = sample->getIg2();
-                    if (col < 3) {
-                        qInfo("Sweep %d, Ig2_%d = %f", sweepIdx, col + 1, ig2);
-                    }
-                    QTableWidgetItem *ig2Item = new QTableWidgetItem(QString::number(ig2, 'f', 3));
-                    dataTable->setItem(ig2Row, col, ig2Item);
-                }
-            }
-
-            if (isDoubleTriode) {
-                // Populate Va2 row (fourth row per sweep)
-                for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                    Sample *sample = sweep->at(col);
-                    double va2 = sample->getVa2();
-                    if (col < 3) { // Log first few Va2 values for debugging
-                        qInfo("Sweep %d, Va2_%d = %f", sweepIdx, col + 1, va2);
-                    }
-                    QTableWidgetItem *va2Item = new QTableWidgetItem(QString::number(va2, 'f', 2));
-                    dataTable->setItem(va2Row, col, va2Item);
-                }
-
-                // Populate Ia2 row (fifth row per sweep)
-                for (int col = 0; col < 62 && col < sampleCount; ++col) {
-                    Sample *sample = sweep->at(col);
-                    double ia2 = sample->getIa2();
-                    if (col < 3) { // Log first few Ia2 values for debugging
-                        qInfo("Sweep %d, Ia2_%d = %f", sweepIdx, col + 1, ia2);
-                    }
-                    QTableWidgetItem *ia2Item = new QTableWidgetItem(QString::number(ia2, 'f', 3));
-                    dataTable->setItem(ia2Row, col, ia2Item);
-                }
-            }
-
-            // Resize columns to fit content and set a minimum width for visibility
-            dataTable->resizeColumnsToContents();
-            for (int col = 0; col < 62; ++col) {
-                dataTable->setColumnWidth(col, qMax(dataTable->columnWidth(col), 40)); // Minimum 40px width
-            }
-        }
-
-        // Set row heights for better readability
-        for (int row = 0; row < numSweeps * rowsPerSweep; ++row) {
-            dataTable->setRowHeight(row, qMax(dataTable->rowHeight(row), 25));
-        }
-
-        qInfo("Data table populated: %d sweeps x %d rows each = %d total rows", numSweeps, rowsPerSweep, numSweeps * rowsPerSweep);
-    }
+    populateDataTableFromMeasurement(currentMeasurement);
 }
 
 void ValveWorkbench::testAborted()
@@ -3763,6 +3772,13 @@ void ValveWorkbench::importFromDevice()
         return;
     }
 
+    // Also treat this device as the currentDevice so subsequent Modeller fits
+    // (e.g. Fit Pentode) can use its embedded triodeModel seed or pentode
+    // parameters as the starting point without requiring a separate Designer
+    // selection step.
+    currentDevice = srcDevice;
+    deviceType = srcDevice->getDeviceType();
+
     // Clone the embedded measurement via JSON round-trip so the project owns
     // its own independent copy.
     QJsonObject measObj;
@@ -3832,6 +3848,10 @@ void ValveWorkbench::importFromDevice()
 
     // Update properties table to reflect the imported measurement.
     cloned->updateProperties(ui->properties);
+
+    // Populate analyser-style data table so the imported measurement appears
+    // on the Data screen just like a live analyser run.
+    populateDataTableFromMeasurement(cloned);
 }
 void ValveWorkbench::on_fitTriodeButton_clicked()
 {
@@ -4080,8 +4100,15 @@ void ValveWorkbench::modelPentode()
         // fit in shape and scale, then allow refinement via sliders.
 
         CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
+        if (triodeModel == nullptr && currentDevice && currentDevice->getDeviceType() == PENTODE && currentDevice->getTriodeSeed() != nullptr) {
+            // If there is no separate triode model node, prefer the embedded
+            // triodeModel seed stored in the current Device preset.
+            triodeModel = currentDevice->getTriodeSeed();
+            qInfo("Simple Manual Pentode: using embedded triodeModel seed from device '%s'",
+                  currentDevice->getName().toStdString().c_str());
+        }
         if (triodeModel == nullptr) {
-            qWarning("No triode model found in project - proceeding with gradient-based seed for manual pentode fit");
+            qWarning("No triode model found in project or device seed - proceeding with gradient-based seed for manual pentode fit");
         }
 
         Estimate estimate;
@@ -4169,13 +4196,54 @@ void ValveWorkbench::modelPentode()
     }
 
     CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
-
-    if (triodeModel == nullptr) {
-        qWarning("No triode model found in project - proceeding with gradient-based seed for pentode fit");
+    if (triodeModel == nullptr && currentDevice && currentDevice->getDeviceType() == PENTODE && currentDevice->getTriodeSeed() != nullptr) {
+        // If there is no separate triode model in the project, prefer the
+        // embedded triodeModel seed from the currently selected Device.
+        triodeModel = currentDevice->getTriodeSeed();
+        qInfo("No triode model in project; using embedded triodeModel seed from device '%s'",
+              currentDevice->getName().toStdString().c_str());
     }
 
     Estimate estimate;
-    estimate.estimatePentode(measurement, triodeModel, pentodeModelType, false);
+
+    if (triodeModel != nullptr) {
+        // Normal path: use the project's triode model or the embedded
+        // triodeModel seed as the base for pentode estimation so the
+        // Gardiner/Reefman pentode starts from a consistent triode base.
+        estimate.estimatePentode(measurement, triodeModel, pentodeModelType, false);
+    } else if (currentDevice && currentDevice->getDeviceType() == PENTODE) {
+        // Secondary fallback: if we have no explicit triode seed but do have a
+        // pentode device model, copy its parameters into the Estimate as a
+        // starting point.
+        qInfo("No triode model or triode seed; seeding pentode Estimate from current device model '%s'",
+              currentDevice->getName().toStdString().c_str());
+
+        estimate.setMu(currentDevice->getParameter(PAR_MU));
+        estimate.setKg1(currentDevice->getParameter(PAR_KG1));
+        estimate.setX(currentDevice->getParameter(PAR_X));
+        estimate.setKp(currentDevice->getParameter(PAR_KP));
+        estimate.setKvb(currentDevice->getParameter(PAR_KVB));
+        estimate.setKvb1(currentDevice->getParameter(PAR_KVB1));
+        estimate.setVct(currentDevice->getParameter(PAR_VCT));
+
+        estimate.setKg2(currentDevice->getParameter(PAR_KG2));
+        estimate.setA(currentDevice->getParameter(PAR_A));
+        estimate.setAlpha(currentDevice->getParameter(PAR_ALPHA));
+        estimate.setBeta(currentDevice->getParameter(PAR_BETA));
+        estimate.setGamma(currentDevice->getParameter(PAR_GAMMA));
+        estimate.setPsi(currentDevice->getParameter(PAR_PSI));
+
+        estimate.setOmega(currentDevice->getParameter(PAR_OMEGA));
+        estimate.setLambda(currentDevice->getParameter(PAR_LAMBDA));
+        estimate.setNu(currentDevice->getParameter(PAR_NU));
+        estimate.setS(currentDevice->getParameter(PAR_S));
+        estimate.setAp(currentDevice->getParameter(PAR_AP));
+    } else {
+        // Last resort: fall back to the legacy gradient-based estimate that
+        // derives all parameters directly from the measurement alone.
+        qWarning("No triode model found in project and no suitable current device; proceeding with gradient-based seed for pentode fit");
+        estimate.estimatePentode(measurement, nullptr, pentodeModelType, false);
+    }
 
     model = ModelFactory::createModel(pentodeModelType);
     model->setEstimate(&estimate);
@@ -4245,6 +4313,30 @@ void ValveWorkbench::remodelAnode()
 
 void ValveWorkbench::on_tabWidget_currentChanged(int index)
 {
+    // When switching between Analyser/Modeller/Designer, clear any existing
+    // measurement/model overlays from the shared Plot so each tab can
+    // reconstruct its own view without dangling QGraphicsItemGroup pointers.
+    if (measuredCurves != nullptr) {
+        plot.remove(measuredCurves);
+        measuredCurves = nullptr;
+    }
+    if (measuredCurvesSecondary != nullptr) {
+        plot.remove(measuredCurvesSecondary);
+        measuredCurvesSecondary = nullptr;
+    }
+    if (estimatedCurves != nullptr) {
+        plot.remove(estimatedCurves);
+        estimatedCurves = nullptr;
+    }
+    if (modelledCurves != nullptr) {
+        plot.remove(modelledCurves);
+        modelledCurves = nullptr;
+    }
+    if (modelledCurvesSecondary != nullptr) {
+        plot.remove(modelledCurvesSecondary);
+        modelledCurvesSecondary = nullptr;
+    }
+
     switch (index) {
     case 0:
         // Show toggles on Designer as well, so user can hide/show analyser/modeller plots
@@ -4786,6 +4878,18 @@ void ValveWorkbench::exportFittedModelToDevices()
     QJsonObject modelObj;
     toExport->toJson(modelObj);
     root["model"] = modelObj;
+
+    // If a Cohen-Helie triode model exists in the project, embed its
+    // parameters as a 'triodeModel' block so future pentode fits can reuse
+    // the same triode seed without re-running the triode fit.
+    if (deviceType == PENTODE && currentProject != nullptr) {
+        if (Model *triodeSeed = findModel(COHEN_HELIE_TRIODE)) {
+            QJsonObject triodeObj;
+            triodeSeed->toJson(triodeObj);
+            root["triodeModel"] = triodeObj;
+            qInfo("Export to Devices: embedded triodeModel seed for device '%s'", deviceName.toUtf8().constData());
+        }
+    }
 
     // Attach full analyser measurement (if available) so offline tools and
     // Designer can reconstruct bias and perform data-driven recalculations.

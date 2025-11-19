@@ -337,4 +337,5 @@ private:
     Measurement *firstTriodeBMeasurement() const;
     void queueTriodeModelRun(Model *modelToRun);
     bool measurementHasValidSamples(Measurement *measurement) const;
+    void populateDataTableFromMeasurement(Measurement *measurement);
 };

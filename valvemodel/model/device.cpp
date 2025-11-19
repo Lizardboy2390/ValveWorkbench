@@ -133,6 +133,17 @@ Device::Device(QJsonDocument modelDocument)
             qInfo("No model object found in JSON");
         }
 
+        // Optional embedded triode seed model used when the preset was
+        // exported from a combined triode+pentode fit. When present, this
+        // allows Modeller to reuse the original triode seed for later pentode
+        // fits without re-running the triode modelling step.
+        if (deviceObject.contains("triodeModel") && deviceObject["triodeModel"].isObject()) {
+            QJsonObject triodeObj = deviceObject["triodeModel"].toObject();
+            triodeSeed = new CohenHelieTriode();
+            triodeSeed->fromJson(triodeObj);
+            qInfo("Device '%s' has embedded triode seed model", name.toStdString().c_str());
+        }
+
         // Optional embedded measurement data exported from the analyser. When
         // present, this allows Designer helpers (e.g. SE bias calculations) to
         // reconstruct operating points directly from the original sweeps
