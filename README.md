@@ -38,8 +38,9 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Positive grid voltages are auto-corrected negative for fitting
   - Export to Devices: after fitting, click "Export to Devices" to save the fitted model preset JSON into `models/` and refresh device dropdowns in Designer. The preset now acts as a **tube-style package**:
     - `model`: fitted parameters (e.g. Gardiner pentode) used by Designer and Modeller.
+    - `triodeModel` (optional): embedded Cohen-Helie triode seed used by Modeller for pentode fits when no separate triode model node exists in the project.
     - `measurement` (optional): full analyser sweeps (Va/Vg1/Vg2/Ia/Ig2) embedded in the same JSON, when the export originates from a measurement-based fit.
-  - Import from Device: on the Modeller tab, use this button to **pull a measurement back out of a tube-style device preset** (any JSON in `models/` that has an embedded `measurement` block). This clones the sweeps into the current project as a normal Measurement so you can refit models without re-running the analyser.
+  - Import from Device: on the Modeller tab, use this button to **pull a measurement back out of a tube-style device preset** (any JSON in `models/` that has an embedded `measurement` block). This clones the sweeps into the current project as a normal Measurement so you can refit models without re-running the analyser, and also selects that Device as the current pentode so subsequent Fits seed from its embedded triodeModel or fitted parameters automatically.
 - Designer tab
   - Choose circuit (e.g., Triode Common Cathode)
   - Adjust parameters and see load lines and operating point
@@ -49,10 +50,10 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
     - Given `Vb`, `Vs`, and target `Ia`, Designer interpolates the embedded sweeps near that Va/Vg2 to find `Vg1` and `Ig2`, then reports `Vk = -Vg1`, `Ik = Ia + Ig2`.
     - When no measurement data is present in the preset (legacy or hand-authored JSON), Designer falls back to the model-only bias search used previously.
   - Toggles (bottom row):
-    - Show Measurement (measurement curves)
-    - Show Fitted Model (model curves)
+    - Show Measurement (measurement curves; when a device preset carries an embedded `measurement`, these sweeps can be displayed directly in Designer as grey curves)
+    - Show Fitted Model (model curves; for pentodes, red families step Vg1 in ~2 V increments up to the device's `vg1Max` so the number of model sweeps roughly matches the analyser's grid families)
     - Show Designer Overlays (anode/cathode/AC/OP designer lines)
-    - Show Screen Current (pentode only; hidden for triode circuits)
+    - Show Screen Current (pentode only; hidden for triode circuits). This gates Ig2 for both measured sweeps and model overlays in Modeller and Designer.
   - Available Designer circuits (subset wired as of 2025-11-16):
     - Triode Common Cathode (TriodeCC)
     - Pentode Common Cathode (PentodeCC)
@@ -131,6 +132,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Change log (highlights)
 - 2025‑11‑18: **Tube-style device JSON**: Export to Devices now optionally embeds the full analyser `measurement` (sweeps) alongside the fitted `model` in a single preset. Designer SE output uses embedded measurement data to compute Vk/Ik/Ig2 when available, with a safe fallback to the fitted tube model for legacy presets.
+  - Also: Export to Devices now embeds an optional `triodeModel` seed, Modeller prefers a project triode model or this embedded triodeModel when fitting pentodes, Import from Device selects the corresponding Device so subsequent pentode fits seed from it automatically, and Designer pentode plotting uses a finer grid-family spacing with an explicit Screen Current toggle for Ig2.
 - 2025‑11‑16: Designer circuits: added Pentode Common Cathode, AC/DC Cathode Follower, Single-Ended and Single-Ended UL outputs, Push-Pull and Push-Pull UL outputs; Designer plot now fully clears and resets overlays when switching circuits; Export to Devices now writes both `analyserDefaults` and `model` to preset JSONs so Designer and Analyser share a single device profile.
 - 2025‑11‑15: Added Triode-Connected Pentode analyser device type; triode-connected pentode measurements stored as triode tests with clear hints; centralised Gardiner vs Reefman pentode bounds aligned with UTmax-style seeding.
 - 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only

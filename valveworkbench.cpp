@@ -1449,6 +1449,10 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     }
     if (ui->measureCheck->isChecked() && device && device->getMeasurement()) {
         Measurement *embedded = device->getMeasurement();
+        // On initial selection in Designer, align the embedded measurement's
+        // screen visibility with the Screen checkbox so Ig2 shows/hides
+        // according to the current state instead of a stale default.
+        embedded->setShowScreen(ui->screenCheck->isChecked());
         measuredCurves = embedded->updatePlotWithoutAxes(&plot);
         if (measuredCurves) {
             plot.add(measuredCurves);

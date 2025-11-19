@@ -348,7 +348,17 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
     QPen modelPen;
     modelPen.setColor(QColor::fromRgb(255, 0, 0));
 
-    double vgInterval = interval(vg1Max);
+    // Choose grid voltage step for model sweeps. For pentodes with typical
+    // power-tube ranges (e.g. 0 .. -40 V), use a finer fixed step so the
+    // number of red model curves is closer to the number of analyser
+    // measurement sweeps. For other cases, fall back to the generic interval
+    // heuristic.
+    double vgInterval = 0.0;
+    if (deviceType == PENTODE && vg1Max > 0.0 && vg1Max <= 50.0) {
+        vgInterval = 2.0;
+    } else {
+        vgInterval = interval(vg1Max);
+    }
 
     double vg1 = -vg1Max;
     int vgIndex = 0; // used to stagger labels to avoid overlap

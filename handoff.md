@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-18 (Tube-style device presets with embedded measurement; Designer SE bias from measurement; shared presets still honoured)
+Last updated: 2025-11-18 (Tube-style device presets with embedded measurement/triodeModel; Designer SE bias from measurement; shared presets still honoured)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -27,8 +27,8 @@ Last updated: 2025-11-18 (Tube-style device presets with embedded measurement; D
   - On circuit change, the shared `Plot` scene is cleared and all circuit overlay pointers (load lines, OP markers) are reset to avoid dangling QGraphicsItemGroup references.
 - Device presets are now shared between Analyser and Designer:
   - **Export to Devices** writes both `analyserDefaults` and `model` into the same JSON so a single preset can drive analyser ranges and Designer load lines.
-  - 2025-11-18: When the export originates from a measurement-based pentode fit, the preset JSON also includes a `measurement` object containing the full analyser sweeps (Va/Vg1/Vg2/Ia/Ig2). This turns the preset into a tube-style package (model + measurement) for downstream tools.
-  - 2025-11-18: Modeller gained an **Import from Device** button which scans loaded device presets for an embedded `measurement` and, when selected, clones that Measurement into the current project. This enables re-fitting models from tube-style presets without re-running the analyser.
+    - 2025-11-18: When the export originates from a measurement-based pentode fit, the preset JSON also includes a `measurement` object containing the full analyser sweeps (Va/Vg1/Vg2/Ia/Ig2) and, when a Cohen-Helie triode model exists in the project, an embedded `triodeModel` block. This turns the preset into a tube-style package (model + triode seed + measurement) for downstream tools.
+    - 2025-11-18: Modeller gained an **Import from Device** button which scans loaded device presets for an embedded `measurement` and, when selected, clones that Measurement into the current project **and selects the corresponding Device as `currentDevice`**. This enables re-fitting models from tube-style presets without re-running the analyser and ensures subsequent pentode fits seed from the same device/triodeModel without a separate Designer selection step.
 - Robustness fixes:
   - Devices without a `model` block (e.g. early 6N2P-EV exports) no longer crash Designer; model plotting is skipped with a warning instead.
   - Triode CC operating point search now ignores degenerate intersections at Va≈0 V and falls back to the simple OP estimate when necessary.
@@ -51,7 +51,7 @@ Last updated: 2025-11-18 (Tube-style device presets with embedded measurement; D
 
 ## Key Code Changes
 
-### 1) Modeller: Pentode input/solve guards
+### 1) Modeller: Pentode input/solve guards and seeding
 - File: `valvemodel/model/model.cpp`
 - Method: `Model::addMeasurement`
 - Changes:
@@ -59,6 +59,7 @@ Last updated: 2025-11-18 (Tube-style device presets with embedded measurement; D
   - Reapply deferred parameter bounds immediately after each sample and prior to every solve.
   - Parameter array now zero-initialised to avoid logging garbage pointers in `logParameterSet`.
   - Logs per sweep remain: `MODEL INPUT: sweep=<s> first vg1 used=...` and `vg1 range used [...]`.
+  - Pentode fits now prefer, in order: (1) an explicit Cohen-Helie triode model node from the project; (2) an embedded `triodeModel` seed from the currently selected Device preset; (3) the Device's own pentode parameters; and only then (4) a pure gradient-based estimate from the measurement.
 
 ### 2) Designer: Triode Common Cathode plotting
 - Files:
@@ -167,10 +168,13 @@ Additional (2025-11-05):
   - `valvemodel/model/device.h/.cpp`
     - Added `Device::screenCurrent(va, vg1, vg2)` forwarding to `Model::screenCurrent` for pentode circuits.
     - Added null-guarded `anodePlot` so devices without models (analyser-only presets) no longer crash when model curves are toggled.
+    - For pentode devices with typical grid ranges (e.g. 0 .. -40 V), Designer model plotting now uses a finer fixed Vg1 step (~2 V) so the number of red grid families roughly matches the analyser's measured sweeps, improving visual comparison.
   - `valvemodel/circuit/circuit.h/.cpp`
     - Added `acSignalLine` member previously and now `resetOverlays()` helper so circuits can drop overlay pointers when the shared plot is cleared.
   - `valveworkbench.cpp`
     - In `selectCircuit`, now fully clears the Designer plot (`plot.clear()` and resets measured/modelled curve groups) and calls `Circuit::resetOverlays()` on all circuits to avoid dangling QGraphicsItemGroup pointers when changing circuits.
+    - In `modelPentode`, pentode seeding now prefers a project triode model, then an embedded `triodeModel` seed from `currentDevice`, then the Device's own pentode parameters, and only falls back to gradient-based estimation when none of those are available.
+    - `importFromDevice` now also sets `currentDevice`/`deviceType` to the chosen preset so that Fit Pentode on the Modeller tab automatically seeds from that device's embedded triodeModel or fitted parameters without a separate Designer step.
     - Wires new Designer circuits into the `circuits` array:
       - `PentodeCommonCathode` → `PENTODE_COMMON_CATHODE`.
       - `TriodeACCathodeFollower` → `AC_CATHODE_FOLLOWER` (existing).
