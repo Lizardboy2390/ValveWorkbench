@@ -78,6 +78,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 ## Pentode modelling notes
 
 - In the **mainline** build, Gardiner is the stable, auto-fit pentode model. If pentode fits look wrong after an experiment, revert to a commit where Gardiner overlays are correct and treat that as the baseline.
+  - The original uTmax `dr_optimize` code is present under `refrence code/uTmax-master/` for reference only. ValveWorkbench does **not** call `dr_optimize` at runtime; all fitting is done through Ceres Solver and the in-tree Gardiner/Reefman/Cohen–Helie implementations.
 - **Simple Manual Pentode** is intended as a manual slider-based modelling path. When the sliders are wired, you will be able to:
   - Select Simple Manual Pentode in Options.
   - Adjust parameters on the Modeller tab and see the model curves move in real time.
@@ -85,6 +86,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - **Reefman Pentode** is experimental. Future work to align it with ExtractModel_3p0 should be done on a separate branch and validated against that tool’s outputs before it is used for regular fitting.
 - Pentode fits now use **centralised parameter bounds** in `Model::setEstimate`, with different envelopes for **Gardiner vs Reefman** models. Gardiner keeps a broad but stable range; Reefman/DerkE uses tighter UTmax-style bounds to keep the DEPIa-style model in a realistic corridor.
 - For triode-based seeding of pentode models, the analyser provides a **Triode-Connected Pentode** device type. Measurements taken in this mode appear in the project tree as `Triode (Triode-Connected Pentode) Anode Characteristics` and are used as the triode source for `Estimate::estimatePentode`.
+  - Triode seeding typically uses a Cohen–Helie triode fit derived from the triode-connected measurement (or an embedded `triodeModel` in the device JSON). This seed is intended to land the pentode solver in a physically sensible region (µ, Kg1, knee location), not to be a pixel-perfect match to every detail of the triode curves—especially for larger bottles (e.g. 6L6 in triode mode) where small differences in the shallow knee or secondary-emission dip are acceptable as long as overall Ia magnitude and slope are correct.
 
 ### Recommended pentode measurement & fitting workflow
 
