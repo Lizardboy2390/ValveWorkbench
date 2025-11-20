@@ -796,9 +796,24 @@ void ValveWorkbench::cleanupTriodeBResources()
 void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
 {
     const bool show = (arg1 != 0);
-    const int tabIndex = ui->tabWidget ? ui->tabWidget->currentIndex() : -1;
 
-    if (tabIndex == 1) {
+    // Map current tab widget to logical role: 0 = Designer, 1 = Modeller, 2 = Analyser.
+    int tabRole = -1;
+    if (ui->tabWidget) {
+        QWidget *w = ui->tabWidget->currentWidget();
+        if (w == ui->tab) {
+            tabRole = 0;
+        } else if (w == ui->tab_2) {
+            tabRole = 1;
+        } else if (w == ui->tab_3) {
+            tabRole = 2;
+        }
+    }
+    if (tabRole >= 0 && tabRole < 3) {
+        overlayStates[tabRole].showScreen = show;
+    }
+
+    if (tabRole == 1) {
         // Modeller tab: apply to the active project measurement and redraw the
         // measured plot (axes managed by Measurement itself).
         if (currentMeasurement != nullptr) {
@@ -813,7 +828,7 @@ void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
                 measuredCurves->setVisible(ui->measureCheck->isChecked());
             }
         }
-    } else if (tabIndex == 2) {
+    } else if (tabRole == 0) {
         // Designer tab: apply to the embedded Measurement on the current
         // Device (if any) and replot it without touching Designer axes.
         if (currentDevice && currentDevice->getMeasurement()) {
@@ -950,6 +965,46 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     loadDevices();
 
     ui->setupUi(this);
+
+    // Initialise per-tab overlay visibility defaults:
+    // 0 = Designer, 1 = Modeller, 2 = Analyser.
+    for (int i = 0; i < 3; ++i) {
+        overlayStates[i].showMeasurement = false;
+        overlayStates[i].showModel = false;
+        overlayStates[i].showScreen = false;
+    }
+    // Designer: show model + screen overlays, no measurement by default.
+    overlayStates[0].showMeasurement = false;
+    overlayStates[0].showModel = true;
+    overlayStates[0].showScreen = true;
+    // Modeller: show both measurement and model; screen visible.
+    overlayStates[1].showMeasurement = true;
+    overlayStates[1].showModel = true;
+    overlayStates[1].showScreen = true;
+    // Analyser: show measurement and screen; model off by default.
+    overlayStates[2].showMeasurement = true;
+    overlayStates[2].showModel = false;
+    overlayStates[2].showScreen = true;
+
+    // Apply overlay state for the initially selected tab.
+    int initialRole = 0; // Assume Designer by default.
+    if (ui->tabWidget) {
+        QWidget *currentTab = ui->tabWidget->currentWidget();
+        if (currentTab == ui->tab_2) {
+            initialRole = 1; // Modeller
+        } else if (currentTab == ui->tab_3) {
+            initialRole = 2; // Analyser
+        }
+    }
+    if (ui->measureCheck) {
+        ui->measureCheck->setChecked(overlayStates[initialRole].showMeasurement);
+    }
+    if (ui->modelCheck) {
+        ui->modelCheck->setChecked(overlayStates[initialRole].showModel);
+    }
+    if (ui->screenCheck) {
+        ui->screenCheck->setChecked(overlayStates[initialRole].showScreen);
+    }
 
     // Auto-open a serial port at startup using central routine
     checkComPorts();
@@ -2225,12 +2280,37 @@ void ValveWorkbench::testFinished()
         // Apply current checkbox state to measurement so screen overlay can be drawn
         currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
     }
-    measuredCurves = currentMeasurement->updatePlot(&plot);
-    plot.add(measuredCurves);
 
-    if (isDoubleTriode && triodeMeasurementSecondary != nullptr) {
-        measuredCurvesSecondary = triodeMeasurementSecondary->updatePlot(&plot);
-        plot.add(measuredCurvesSecondary);
+    // Primary (Triode A) curves
+    measuredCurves = currentMeasurement ? currentMeasurement->updatePlot(&plot) : nullptr;
+    if (measuredCurves) {
+        plot.add(measuredCurves);
+    }
+
+    // For double triode measurements, create a Triode B clone directly from
+    // the analyser result so Analyser can display both sections (A and B)
+    // together when Show Measurement is enabled.
+    if (isDoubleTriode && currentMeasurement && measurementHasTriodeBData(currentMeasurement)) {
+        // Clean up any previous secondary measurement created in a prior run
+        if (triodeMeasurementSecondary != nullptr) {
+            deleteMeasurementClone(triodeMeasurementSecondary);
+            triodeMeasurementSecondary = nullptr;
+        }
+
+        Measurement *clone = createTriodeBMeasurementClone(currentMeasurement);
+        if (clone != nullptr && measurementHasValidSamples(clone)) {
+            triodeMeasurementSecondary = clone;
+            triodeMeasurementSecondary->setSampleColor(QColor::fromRgb(0, 0, 255));
+
+            // Plot Triode B without axes so we don't redraw axes twice.
+            measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
+            if (measuredCurvesSecondary) {
+                plot.add(measuredCurvesSecondary);
+            }
+        } else if (clone) {
+            // Clone had no valid samples; discard it.
+            deleteMeasurementClone(clone);
+        }
     }
     ui->measureCheck->setChecked(true);
 
@@ -3807,6 +3887,25 @@ void ValveWorkbench::on_btnAddToProject_clicked()
         qDebug("About to build tree");
         measurement->buildTree(currentProject);
         qDebug("Tree built successfully");
+
+        // Treat this newly added measurement as the explicit current
+        // measurement for Analyser/Modeller. Also try to locate and
+        // remember its tree item so tab changes can re-plot it without
+        // guessing.
+        currentMeasurement = measurement;
+        currentMeasurementItem = nullptr;
+        if (currentProject) {
+            for (int i = 0; i < currentProject->childCount(); ++i) {
+                QTreeWidgetItem *child = currentProject->child(i);
+                if (!child) continue;
+                if (child->type() != TYP_MEASUREMENT) continue;
+                void *mData = child->data(0, Qt::UserRole).value<void *>();
+                if (mData == static_cast<void *>(measurement)) {
+                    currentMeasurementItem = child;
+                    break;
+                }
+            }
+        }
         qDebug("About to switch tab");
         // Temporarily commented out due to Qt bug in tab switching
         // ui->tabWidget->setCurrentIndex(1);
@@ -4424,7 +4523,7 @@ void ValveWorkbench::remodelAnode()
 
 void ValveWorkbench::on_tabWidget_currentChanged(int index)
 {
-    // When switching between Analyser/Modeller/Designer, clear any existing
+    // When switching between Designer/Modeller/Analyser, clear any existing
     // measurement/model overlays from the shared Plot so each tab can
     // reconstruct its own view without dangling QGraphicsItemGroup pointers.
     if (measuredCurves != nullptr) {
@@ -4448,17 +4547,39 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
         modelledCurvesSecondary = nullptr;
     }
 
-    switch (index) {
-    case 0:
-        // Show toggles on Designer as well, so user can hide/show analyser/modeller plots
-        ui->measureCheck->setVisible(true);
-        ui->modelCheck->setVisible(true);
-        break;
-    case 1:
-        ui->measureCheck->setVisible(true);
-        ui->modelCheck->setVisible(true);
+    // Map the concrete tab widget to a logical role:
+    // 0 = Designer, 1 = Modeller, 2 = Analyser.
+    int tabRole = -1;
+    if (ui->tabWidget) {
+        QWidget *w = ui->tabWidget->widget(index);
+        if (w == ui->tab) {
+            tabRole = 0;
+        } else if (w == ui->tab_2) {
+            tabRole = 1;
+        } else if (w == ui->tab_3) {
+            tabRole = 2;
+        }
+    }
+
+    if (tabRole == 2) {
+        // Analyser tab: ensure measurement/model/screen toggles are visible.
+        if (ui->measureCheck) ui->measureCheck->setVisible(true);
+        if (ui->modelCheck) ui->modelCheck->setVisible(true);
+        if (ui->screenCheck) ui->screenCheck->setVisible(true);
+
+        // If we already have a measurement, refresh the Data table so that
+        // values are restored when returning to the Analyser tab.
+        if (currentMeasurement && dataTable) {
+            populateDataTableFromMeasurement(currentMeasurement);
+        }
+    } else if (tabRole == 1) {
+        // Modeller tab: show measurement/model/screen toggles and control
+        // Fit buttons based on the current project's device type.
+        if (ui->measureCheck) ui->measureCheck->setVisible(true);
+        if (ui->modelCheck) ui->modelCheck->setVisible(true);
+        if (ui->screenCheck) ui->screenCheck->setVisible(true);
+
         if (currentProject != nullptr) {
-            // Resolve root project from current selection
             QTreeWidgetItem *rootProject = currentProject;
             if (rootProject->type() != TYP_PROJECT) {
                 rootProject = getParent(rootProject, TYP_PROJECT);
@@ -4466,49 +4587,83 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
             if (!rootProject) {
                 ui->fitTriodeButton->setVisible(false);
                 ui->fitPentodeButton->setVisible(false);
-                break;
-            }
-            Project *project = static_cast<Project *>(rootProject->data(0, Qt::UserRole).value<void *>());
-            if (!project) {
-                ui->fitTriodeButton->setVisible(false);
-                ui->fitPentodeButton->setVisible(false);
-                break;
-            }
-            if (project->getDeviceType() == TRIODE) {
-                ui->fitTriodeButton->setVisible(true);
-                ui->fitPentodeButton->setVisible(false);
-            } else if (project->getDeviceType() == PENTODE) {
-                ui->fitTriodeButton->setVisible(false);
-                // For Simple Manual Pentode, keep the button but it opens the manual path
-                ui->fitPentodeButton->setVisible(true);
-                if (pentodeModelType == SIMPLE_MANUAL_PENTODE) {
-                    ensureSimplePentodeDialog();
-                }
             } else {
-                ui->fitTriodeButton->setVisible(false);
-                ui->fitPentodeButton->setVisible(false);
+                Project *project = static_cast<Project *>(rootProject->data(0, Qt::UserRole).value<void *>());
+                if (!project) {
+                    ui->fitTriodeButton->setVisible(false);
+                    ui->fitPentodeButton->setVisible(false);
+                } else if (project->getDeviceType() == TRIODE) {
+                    ui->fitTriodeButton->setVisible(true);
+                    ui->fitPentodeButton->setVisible(false);
+                } else if (project->getDeviceType() == PENTODE) {
+                    ui->fitTriodeButton->setVisible(false);
+                    ui->fitPentodeButton->setVisible(true);
+                    if (pentodeModelType == SIMPLE_MANUAL_PENTODE) {
+                        ensureSimplePentodeDialog();
+                    }
+                } else {
+                    ui->fitTriodeButton->setVisible(false);
+                    ui->fitPentodeButton->setVisible(false);
+                }
             }
         } else {
             ui->fitTriodeButton->setVisible(false);
             ui->fitPentodeButton->setVisible(false);
         }
-        break;
-    case 2:
-        ui->measureCheck->setVisible(false);
-        ui->modelCheck->setVisible(false);
-        break;
-    default:
-        break;
+    } else if (tabRole == 0) {
+        // Designer tab: keep the measurement/model/screen toggles visible so
+        // the user can manually hide/show analyser/modeller overlays while
+        // working in Designer.
+        if (ui->measureCheck) ui->measureCheck->setVisible(true);
+        if (ui->modelCheck) ui->modelCheck->setVisible(true);
+        if (ui->screenCheck) ui->screenCheck->setVisible(true);
     }
-    ui->measureCheck->setChecked(true);
+
+    // Apply the stored overlay state for this tab role to the shared checkboxes.
+    if (tabRole >= 0 && tabRole < 3) {
+        if (ui->measureCheck) {
+            ui->measureCheck->setChecked(overlayStates[tabRole].showMeasurement);
+        }
+        if (ui->modelCheck) {
+            ui->modelCheck->setChecked(overlayStates[tabRole].showModel);
+        }
+        if (ui->screenCheck) {
+            ui->screenCheck->setChecked(overlayStates[tabRole].showScreen);
+        }
+
+        // If this tab is configured to show measurements and the plot was
+        // cleared on tab change, lazily recreate measurement curves using the
+        // same logic as the checkbox handler so curves reappear without
+        // requiring a manual toggle sequence.
+        if (overlayStates[tabRole].showMeasurement && ui->measureCheck) {
+            on_measureCheck_stateChanged(ui->measureCheck->checkState());
+        }
+    }
 }
 
 void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
 {
-    const bool wantVisible = ui->measureCheck->isChecked();
+    Q_UNUSED(arg1);
 
-    // Modeller tab: handled implicitly by measurement plotting paths; here we
-    // just toggle visibility of any existing measurement groups.
+    const bool wantVisible = ui->measureCheck && ui->measureCheck->isChecked();
+
+    // Map current tab widget to logical role: 0 = Designer, 1 = Modeller, 2 = Analyser.
+    int tabRole = -1;
+    if (ui->tabWidget) {
+        QWidget *w = ui->tabWidget->currentWidget();
+        if (w == ui->tab) {
+            tabRole = 0;
+        } else if (w == ui->tab_2) {
+            tabRole = 1;
+        } else if (w == ui->tab_3) {
+            tabRole = 2;
+        }
+    }
+    if (tabRole >= 0 && tabRole < 3) {
+        overlayStates[tabRole].showMeasurement = wantVisible;
+    }
+
+    // If curves already exist, just toggle visibility.
     if (measuredCurves != nullptr) {
         measuredCurves->setVisible(wantVisible);
     }
@@ -4516,36 +4671,97 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
         measuredCurvesSecondary->setVisible(wantVisible);
     }
 
-    // Designer tab: if the user turns Show Measurement on and there is an
-    // embedded Measurement on the current Device but no plotted measurement
-    // yet, create it now so the checkbox actually brings curves into view.
-    const int tabIndex = ui->tabWidget ? ui->tabWidget->currentIndex() : -1;
-    if (wantVisible && tabIndex == 2 && currentDevice && !measuredCurves) {
-        Measurement *embedded = currentDevice->getMeasurement();
-        if (embedded) {
-            measuredCurves = embedded->updatePlotWithoutAxes(&plot);
-            if (measuredCurves) {
-                plot.add(measuredCurves);
-                measuredCurves->setVisible(true);
+    // When turning measurement visibility ON and there are no curves yet for
+    // this tab, lazily (re)create them from the appropriate Measurement
+    // source. This keeps behaviour intuitive when returning to a tab or
+    // enabling Show Measurement after plot groups were cleared.
+    if (!wantVisible) {
+        return;
+    }
+
+    // Analyser tab (role 2): use currentMeasurement with full axes, and
+    // restore any Triode B overlay if a secondary measurement exists.
+    if (tabRole == 2 && !measuredCurves && currentMeasurement) {
+        currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+        measuredCurves = currentMeasurement->updatePlot(&plot);
+        if (measuredCurves) {
+            plot.add(measuredCurves);
+            measuredCurves->setVisible(true);
+        }
+
+        if (triodeMeasurementSecondary && !measuredCurvesSecondary) {
+            measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
+            if (measuredCurvesSecondary) {
+                plot.add(measuredCurvesSecondary);
+                measuredCurvesSecondary->setVisible(true);
             }
+        }
+    }
+
+    // Modeller tab (role 1): use currentMeasurement and any available
+    // Triode B clone for secondary overlays.
+    if (tabRole == 1 && !measuredCurves && currentMeasurement) {
+        currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+        measuredCurves = currentMeasurement->updatePlot(&plot);
+        if (measuredCurves) {
+            plot.add(measuredCurves);
+            measuredCurves->setVisible(true);
+        }
+
+        // Recreate Triode B measurement overlay if present.
+        if (triodeMeasurementSecondary && !measuredCurvesSecondary) {
+            measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
+            if (measuredCurvesSecondary) {
+                plot.add(measuredCurvesSecondary);
+                measuredCurvesSecondary->setVisible(true);
+            }
+        }
+    }
+
+    // Designer tab (role 0): use embedded Measurement on current Device
+    // (tube-style preset) without changing Designer axes.
+    if (tabRole == 0 && !measuredCurves && currentDevice && currentDevice->getMeasurement()) {
+        Measurement *embedded = currentDevice->getMeasurement();
+        embedded->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+
+        measuredCurves = embedded->updatePlotWithoutAxes(&plot);
+        if (measuredCurves) {
+            plot.add(measuredCurves);
+            measuredCurves->setVisible(true);
         }
     }
 }
 
 void ValveWorkbench::on_modelCheck_stateChanged(int arg1)
 {
-    const bool wantVisible = ui->modelCheck->isChecked();
-    if (!wantVisible) {
-        if (modelledCurves) modelledCurves->setVisible(false);
-        return;
+    Q_UNUSED(arg1);
+
+    const bool wantVisible = ui->modelCheck && ui->modelCheck->isChecked();
+
+    // Map current tab widget to logical role: 0 = Designer, 1 = Modeller, 2 = Analyser.
+    int tabRole = -1;
+    if (ui->tabWidget) {
+        QWidget *w = ui->tabWidget->currentWidget();
+        if (w == ui->tab) {
+            tabRole = 0;
+        } else if (w == ui->tab_2) {
+            tabRole = 1;
+        } else if (w == ui->tab_3) {
+            tabRole = 2;
+        }
     }
-    // If toggled on and no model curves yet, try to plot from current device
-    if (!modelledCurves && currentDevice) {
-        plot.remove(modelledCurves);
-        modelledCurves = currentDevice->anodePlot(&plot);
-        if (modelledCurves) plot.add(modelledCurves);
+    if (tabRole >= 0 && tabRole < 3) {
+        overlayStates[tabRole].showModel = wantVisible;
     }
-    if (modelledCurves) modelledCurves->setVisible(true);
+
+    // Pure visibility toggle: model plotting paths create the groups; the
+    // checkbox only shows/hides them.
+    if (modelledCurves) {
+        modelledCurves->setVisible(wantVisible);
+    }
+    if (modelledCurvesSecondary) {
+        modelledCurvesSecondary->setVisible(wantVisible);
+    }
 }
 
 void ValveWorkbench::on_designerCheck_stateChanged(int arg1)

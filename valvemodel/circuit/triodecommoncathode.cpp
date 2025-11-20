@@ -17,6 +17,7 @@ TriodeCommonCathode::TriodeCommonCathode()
     parameter[TRI_CC_GAIN_B] = new Parameter("Gain (bypassed)", 0.0); // Voltage gain with bypassed cathode
     parameter[TRI_CC_MU] = new Parameter("Mu (unitless)", 0.0); // Small-signal mu at OP
     parameter[TRI_CC_GM] = new Parameter("Transconductance (mA/V)", 0.0); // gm at OP
+    parameter[TRI_CC_HEADROOM] = new Parameter("Headroom (Vpk)", 0.0); // Manual headroom override
 }
 
 
@@ -40,7 +41,7 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
         }
     }
 
-    // Output parameters (read-only) - next 8 (including mu and gm)
+    // Output parameters (read-only) - Vk, Va, Ia, ra, Gain, mu, gm
     for (int i = 4; i < 12; i++) {
         if (parameter[i] && labels[i] && values[i]) {
             QString labelText;
@@ -89,30 +90,88 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
         }
     }
 
-    // Input sensitivity (Vpp) as an extra Designer value in row 12 (populated only when Max Sym Swing is enabled)
+    // Manual headroom input (Vpk) in row 12
     if (labels[12] && values[12]) {
-        labels[12]->setText("Input sensitivity (Vpp):");
-        if (device1 == nullptr) {
-            values[12]->setText("N/A");
+        labels[12]->setText("Headroom (Vpk):");
+        if (!device1) {
+            values[12]->setText("0.0");
         } else {
-            if (showSymSwing && lastSymVpp > 0.0) {
-                // choose gain based on toggle: 1=bypassed, 0=unbypassed
-                double gain = (sensitivityGainMode == 1) ? parameter[TRI_CC_GAIN_B]->getValue() : parameter[TRI_CC_GAIN]->getValue();
-                double vpp_in = (std::isfinite(gain) && std::abs(gain) > 1e-12) ? (lastSymVpp / std::abs(gain)) : 0.0;
-                values[12]->setText(QString::number(vpp_in, 'f', 1));
+            values[12]->setText(QString::number(parameter[TRI_CC_HEADROOM]->getValue(), 'f', 1));
+        }
+
+        const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
+        QString style;
+        if (headroomManual > 0.0) {
+            // Manual override: bright blue
+            style = "color: rgb(0,0,255);";
+        } else if (lastSymVpp > 0.0) {
+            // Helper-derived symmetric swing
+            if (showSymSwing) {
+                style = "color: rgb(100,149,237);"; // light blue
             } else {
-                values[12]->setText("");
+                style = "color: rgb(165,42,42);";   // brown for max-swing helper (future)
             }
         }
-        // Color the box value light blue to match the plot accents
-        values[12]->setStyleSheet("color: rgb(100,149,237);");
+        labels[12]->setStyleSheet(style);
+        values[12]->setStyleSheet(style);
         labels[12]->setVisible(true);
         values[12]->setVisible(true);
-        values[12]->setReadOnly(true);
+        values[12]->setReadOnly(false);
+    }
+
+    // Input sensitivity (Vpp) as an extra Designer value in row 13
+    const int sensIndex = 13;
+    if (labels[sensIndex] && values[sensIndex]) {
+        labels[sensIndex]->setText("Input sensitivity (Vpp):");
+        if (device1 == nullptr) {
+            values[sensIndex]->setText("N/A");
+        } else {
+            const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
+            double vpp_out = 0.0;
+            if (headroomManual > 0.0) {
+                vpp_out = 2.0 * headroomManual;
+            } else if (showSymSwing && lastSymVpp > 0.0) {
+                vpp_out = lastSymVpp; // symmetric helper
+            }
+
+            double vpp_in = 0.0;
+            if (vpp_out > 0.0) {
+                double gain = (sensitivityGainMode == 1)
+                                  ? parameter[TRI_CC_GAIN_B]->getValue()
+                                  : parameter[TRI_CC_GAIN]->getValue();
+                if (std::isfinite(gain) && std::abs(gain) > 1e-12) {
+                    vpp_in = vpp_out / std::abs(gain);
+                }
+            }
+
+            if (vpp_in > 0.0) {
+                values[sensIndex]->setText(QString::number(vpp_in, 'f', 1));
+            } else {
+                values[sensIndex]->setText("");
+            }
+        }
+
+        // Colour to match headroom source: bright blue for manual, light blue for symmetric helper
+        QString style;
+        const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
+        if (headroomManual > 0.0) {
+            style = "color: rgb(0,0,255);";
+        } else if (lastSymVpp > 0.0) {
+            if (showSymSwing) {
+                style = "color: rgb(100,149,237);";
+            } else {
+                style = "color: rgb(165,42,42);";
+            }
+        }
+        values[sensIndex]->setStyleSheet(style);
+        labels[sensIndex]->setStyleSheet(style);
+        labels[sensIndex]->setVisible(true);
+        values[sensIndex]->setVisible(true);
+        values[sensIndex]->setReadOnly(true);
     }
 
     // Hide unused parameters
-    for (int i = 13; i < 16; i++) {
+    for (int i = 14; i < 16; i++) {
         if (labels[i] && values[i]) {
             labels[i]->setVisible(false);
             values[i]->setVisible(false);

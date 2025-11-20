@@ -239,6 +239,15 @@ private:
     QGraphicsItemGroup *modelledCurves = nullptr;
     QGraphicsItemGroup *modelledCurvesSecondary = nullptr;
 
+    // Per-tab overlay state for measurement, model, and screen visibility.
+    // Logical roles: 0 = Designer, 1 = Modeller, 2 = Analyser.
+    struct TabOverlayState {
+        bool showMeasurement;
+        bool showModel;
+        bool showScreen;
+    };
+    TabOverlayState overlayStates[3];
+
     Measurement *currentMeasurement = nullptr;
     Sweep *currentSweep = nullptr;
     QTreeWidgetItem *currentMeasurementItem = nullptr;

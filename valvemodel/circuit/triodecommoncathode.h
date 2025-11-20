@@ -14,7 +14,8 @@ enum eTriodeCommonCathodeParameter {
     TRI_CC_GAIN,
     TRI_CC_GAIN_B,
     TRI_CC_MU,
-    TRI_CC_GM
+    TRI_CC_GM,
+    TRI_CC_HEADROOM
 };
 
 #include <QPointF>
