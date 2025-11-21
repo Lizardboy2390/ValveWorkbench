@@ -202,6 +202,7 @@ private:
     int samplingType = 0;
 
     double heaterVoltage;
+    int badRetryCount = 0;
 
     double anodeStart;
     double anodeStop;

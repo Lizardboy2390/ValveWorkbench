@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-18 (Tube-style device presets with embedded measurement/triodeModel; Designer SE bias from measurement; shared presets still honoured)
+Last updated: 2025-11-21 (Tube-style presets, Designer SE bias from measurement, analyser auto-averaging with VH/IH metadata)
 
 ## Project Snapshot
 - Qt/C++ vacuum tube modelling and circuit design app (Designer, Modeller, Analyser tabs)
@@ -87,6 +87,59 @@ Last updated: 2025-11-18 (Tube-style device presets with embedded measurement/tr
 ### 4) Segment clipping
 - File: `valvemodel/ui/plot.cpp` (pre-existing fix retained)
 - `Plot::createSegment` uses Liang–Barsky clipping against axes in data space to avoid null segments.
+
+### 5) Analyser: auto-averaging and VH/IH metadata (2025-11-21)
+- **Intent:** Improve measurement integrity by adopting a uTmax-style automatic current-averaging scheme while repurposing legacy heater fields (VH/IH) for averaging diagnostics.
+- **Desktop (ValveWorkbench / analyser):**
+  - Heater control is fully decoupled from the analyser:
+    - `Analyser::setIsHeatersOn(bool)` now only updates the `isHeatersOn` flag and no longer sends any `S0` heater commands.
+    - `OK: Get(VH/IH)` responses are still recognised in `Analyser::checkResponse` but no longer update `aveHeaterVoltage`/`aveHeaterCurrent`.
+  - Mode(2) VH/IH fields are now treated as **metadata**, not heater telemetry:
+    - `Analyser::createSample` parses VH/IH as raw numeric values (`double vh = match.captured(1).toDouble(); double ih = match.captured(2).toDouble();`) instead of scaling them as heater volts/amps.
+    - `Sample::getVh()/getIh()` for analyser measurements therefore expose the firmware’s averaging factor and per-point retry information.
+  - Test start configures firmware-side averaging based on expected max anode current (`iaMax`, in mA):
+    - In `Analyser::startTest`, we compute `avgSamples` as:
+      - `iaMax  5 mA`    `avgSamples = 8`  (small-signal tubes).
+      - `5 < iaMax  30 mA`    `avgSamples = 5`  (medium-current tubes).
+      - `iaMax > 30 mA`    `avgSamples = 3`  (high-current / power tubes).
+    - We then send `S0 <avgSamples>` once per run via `sendCommand(buildSetCommand("S0 ", avgSamples));`, repurposing S0 as an averaging configuration channel (no longer heater voltage).
+  - Analyser UI repurposes the heater display area:
+    - Left LCD (`heaterVlcd`) now labelled **“Avg per sample”** and shows the current averaging factor (`iaSamples`) reported as VH for each Mode(2) sample.
+    - Right LCD (`heaterIlcd`) now labelled **“Max Retry Points”** and shows the **count of samples in the current run that hit the retry limit**:
+      - `ValveWorkbench::updateHeater(double vh, double ih)` increments `badRetryCount` whenever IH 3 `IA_RETRY_LIMIT` (currently 4) and displays `badRetryCount`.
+      - `badRetryCount` is reset to 0 at the start of each run in `on_runButton_clicked()`.
+
+- **Firmware (Arduino analyser sketch):**
+  - `AnalyserValve.h`:
+    - `IA_SAMPLES` increased to 8 to act as the **maximum** current-averaging window size; arrays are dimensioned to this, while the actual runtime count is controlled by `iaSamples`.
+    - VH/IH array indices remain unchanged (`VH = 0`, `IH = 1`), but their semantics are now metadata rather than heater ADC.
+  - Global state:
+    - New `int iaSamples = 3;` tracks the **active** number of current samples per reading.
+  - `setCommand(int index, int intParam)` repurposes `Set(VH, ...)` as an averaging control:
+    - On `index == VH`, we clamp and store `iaSamples`:
+      - `< 1`   `iaSamples = 1`.
+      - `> IA_SAMPLES`   `iaSamples = IA_SAMPLES` (currently 8).
+      - Otherwise `iaSamples = intParam`.
+    - Other Set indices (VG1/VG2/HV1/HV2) retain their original behaviour.
+  - `runTest2()` current sampling:
+    - The `sampleCurrents` lambda now captures `iaSamples` by reference and uses it as the loop bound (capped at `IA_SAMPLES`) for both sampling and consistency checks.
+    - For each attempt, it:
+      - Takes `iaSamples` double-sampled readings on the hi/lo current pins.
+      - Verifies all pairs are within `IA_ACCURACY` counts; on success, averages the `iaSamples` readings into `hiOut/loOut` and reports the number of retries used via `*retriesOut = attempt`.
+      - On failure after `IA_RETRY_LIMIT` attempts, averages the collected samples anyway and sets `*retriesOut = IA_RETRY_LIMIT` to indicate a fallback.
+    - The two channels (anode 1/anode 2) are sampled independently; their retry counts are combined into a **worst-case** per-point metric.
+  - Mode(2) metadata population:
+    - After both channels are sampled, we compute:
+      - `int worstRetries = max(retries1, retries2);`.
+      - `measuredValues[VH] = iaSamples;`    **actual averaging factor used for this point**.
+      - `measuredValues[IH] = worstRetries;`    **per-point worst retry count** (0..`IA_RETRY_LIMIT`).
+
+- **Resulting VH/IH semantics (Mode(2)):**
+  - `VH` (field 1)    **Avg per sample**    number of ADC readings averaged into each anode current point (typically 3, 5, or 8, auto-chosen from `iaMax`).
+  - `IH` (field 2)    **Per-point worst retry count**    how many extra attempts were needed to achieve a consistent set of current samples, with `IH == IA_RETRY_LIMIT` indicating that consistency was never achieved and the fallback average was used.
+  - The desktop UI:
+    - Displays VH directly as an integer in the **“Avg per sample”** LCD.
+    - Uses IH only to increment the **“Max Retry Points”** counter when IH 3 `IA_RETRY_LIMIT`, giving an at-a-glance count of problematic points in the current sweep.
 
 ## Current Behaviour
 - Gardiner/Reefman pentode fit runs through threaded solve stages without "parameter block not found" or QByteArray crashes.
@@ -220,6 +273,11 @@ Additional (2025-11-05):
 - [ ] Capture before/after plots showing pentode overlay alignment for documentation.
 - [ ] If needed, clamp cathode sweep (e.g., limit |Vg| to device range) to avoid solver edge-cases.
 - [ ] Finalize model grid-family labeling (Vg labels) strictly for visible families; ensure zero regression errors across compilers.
+ 
+### Future Analyser Firmware Idea  Pre-fire current safety check
+- Current `Mode(2)  runTest2()` sequence charges the HT banks to their targets, then asserts `FIRE1/FIRE2` to connect the DUT before any anode current (Ia) samples are taken.
+- A future enhancement is to add an optional prefire safety pass that briefly samples anode current while `CHARGEx` is active and `FIREx` is still LOW, to detect unexpected current paths (e.g. shorted tube or wiring fault) before applying full HT to the tube.
+- On detecting excessive prefire current, the firmware should abort the measurement, discharge the banks, and return `ERR_UNSAFE` so the desktop application can discard the point, warn the user, and avoid contaminating measurement datasets.
 
 ## Environment Notes
 - Qt 6.9.3 (moc output seen), MSVC 2022 64-bit build config present.

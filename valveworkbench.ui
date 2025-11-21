@@ -1709,7 +1709,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Heater Voltage (V)</string>
+               <string>Avg per sample</string>
               </property>
              </widget>
             </item>
@@ -1767,7 +1767,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Heater Current (A)</string>
+               <string>Max Retry Points</string>
               </property>
              </widget>
             </item>

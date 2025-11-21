@@ -70,8 +70,8 @@ Sample *Analyser::createSample(QString response)
         qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
               match.captured(5).toInt(), match.captured(6).toInt(), ia);
     }
-    double vh = convertMeasuredVoltage(HEATER, match.captured(1).toInt());
-    double ih = convertMeasuredCurrent(HEATER, match.captured(2).toInt());
+    double vh = match.captured(1).toDouble();
+    double ih = match.captured(2).toDouble();
 
     // Debug raw ADC values
     int rawCurrent = match.captured(5).toInt();
@@ -280,12 +280,6 @@ void Analyser::setHeaterVoltage(double newHeaterVoltage)
 void Analyser::setIsHeatersOn(bool newIsHeatersOn)
 {
     isHeatersOn = newIsHeatersOn;
-
-    if (isHeatersOn) {
-        sendCommand(buildSetCommand("S0 ", convertTargetVoltage(HEATER, heaterVoltage)));
-    } else {
-        sendCommand("S0 0");
-    }
 }
 
 double Analyser::getMeasuredIaMax() const
@@ -326,6 +320,17 @@ void Analyser::startTest()
     }
     result->setIaMax(iaMax);
     result->setPMax(pMax);
+
+    // Select firmware-side current averaging factor based on expected max anode current (iaMax, in mA)
+    int avgSamples = 3;
+    if (iaMax <= 5.0) {
+        avgSamples = 8;  // small-signal tubes
+    } else if (iaMax <= 30.0) {
+        avgSamples = 5;  // medium-current tubes
+    } else {
+        avgSamples = 3;  // high-current / power tubes
+    }
+    sendCommand(buildSetCommand("S0 ", avgSamples));
 
     measuredIaMax = 0.0;
     measuredIg2Max = 0.0;
@@ -815,19 +820,6 @@ void Analyser::checkResponse(QString response)
     }
 
     if (response.startsWith("OK: Get")) {
-        QRegularExpressionMatch match = getMatcher->match(response);
-        if (match.lastCapturedIndex() == 2) {
-            int variable = match.captured(1).toInt();
-            int value = match.captured(2).toInt();
-
-            if (variable == VH) {
-                double measuredHeaterVoltage = convertMeasuredVoltage(HEATER, value);
-                aveHeaterVoltage = aveHeaterVoltage * 0.75 + measuredHeaterVoltage;
-            } else if (variable == IH) {
-                double measuredHeaterCurrent = convertMeasuredCurrent(HEATER, value);
-                aveHeaterCurrent = aveHeaterCurrent * 0.75 + measuredHeaterCurrent;
-            }
-        }
     } else if (response.startsWith("OK: Info")) {
         QRegularExpressionMatch match = infoMatcher->match(response);
         if (match.lastCapturedIndex() == 2) {
@@ -851,6 +843,9 @@ void Analyser::checkResponse(QString response)
     } else if (response.startsWith("OK: Mode(2)")) {
         if (isTestRunning) {
             Sample *sample = createSample(response);
+            if (sample && client) {
+                client->updateHeater(sample->getVh(), sample->getIh());
+            }
 
             double va = sample->getVa();
             double ia = sample->getIa();

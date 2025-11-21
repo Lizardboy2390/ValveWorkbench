@@ -2249,12 +2249,15 @@ void ValveWorkbench::updateHeater(double vh, double ih)
 {
     // Update the heater display
     if (vh >= 0.0) {
-        QString vhValue = QString {"%1"}.arg(vh, -6, 'f', 3, '0');
+        QString vhValue = QString::number(static_cast<int>(vh));
         ui->heaterVlcd->display(vhValue);
     }
 
     if (ih >= 0.0) {
-        QString ihValue = QString {"%1"}.arg(ih, -6, 'f', 3, '0');
+        if (ih >= 4.0) {
+            badRetryCount++;
+        }
+        QString ihValue = QString::number(badRetryCount);
         ui->heaterIlcd->display(ihValue);
     }
 }
@@ -3815,6 +3818,7 @@ void ValveWorkbench::on_runButton_clicked()
     ui->progressBar->setVisible(true);
     ui->btnAddToProject->setEnabled(false);
 
+    badRetryCount = 0;
     log("Configuring analyser");
     analyser->setDeviceType(deviceType);
     analyser->setTestType(testType);

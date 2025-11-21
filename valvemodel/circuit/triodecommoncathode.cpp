@@ -123,18 +123,23 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
     const int sensIndex = 13;
     if (labels[sensIndex] && values[sensIndex]) {
         labels[sensIndex]->setText("Input sensitivity (Vpp):");
-        if (device1 == nullptr) {
-            values[sensIndex]->setText("N/A");
-        } else {
+        double vpp_in = 0.0;
+
+        if (device1 != nullptr) {
             const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
             double vpp_out = 0.0;
+
+            // Manual headroom takes precedence when > 0
             if (headroomManual > 0.0) {
                 vpp_out = 2.0 * headroomManual;
             } else if (showSymSwing && lastSymVpp > 0.0) {
-                vpp_out = lastSymVpp; // symmetric helper
+                // Symmetric swing helper when enabled
+                vpp_out = lastSymVpp;
+            } else if (!showSymSwing && lastMaxVpp > 0.0) {
+                // Max swing helper when symmetric swing is disabled
+                vpp_out = lastMaxVpp;
             }
 
-            double vpp_in = 0.0;
             if (vpp_out > 0.0) {
                 double gain = (sensitivityGainMode == 1)
                                   ? parameter[TRI_CC_GAIN_B]->getValue()
@@ -143,30 +148,38 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
                     vpp_in = vpp_out / std::abs(gain);
                 }
             }
-
-            if (vpp_in > 0.0) {
-                values[sensIndex]->setText(QString::number(vpp_in, 'f', 1));
-            } else {
-                values[sensIndex]->setText("");
-            }
         }
 
-        // Colour to match headroom source: bright blue for manual, light blue for symmetric helper
-        QString style;
-        const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
-        if (headroomManual > 0.0) {
-            style = "color: rgb(0,0,255);";
-        } else if (lastSymVpp > 0.0) {
-            if (showSymSwing) {
+        if (vpp_in > 0.0) {
+            values[sensIndex]->setText(QString::number(vpp_in, 'f', 1));
+
+            // Colour to match headroom source: bright blue for manual,
+            // light blue for symmetric helper, brown for max swing. Only apply colour when we
+            // actually have a sensitivity value.
+            QString style;
+            const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
+            if (headroomManual > 0.0) {
+                style = "color: rgb(0,0,255);";
+            } else if (showSymSwing && lastSymVpp > 0.0) {
                 style = "color: rgb(100,149,237);";
-            } else {
+            } else if (!showSymSwing && lastMaxVpp > 0.0) {
                 style = "color: rgb(165,42,42);";
             }
+            values[sensIndex]->setStyleSheet(style);
+            labels[sensIndex]->setStyleSheet(style);
+
+            labels[sensIndex]->setVisible(true);
+            values[sensIndex]->setVisible(true);
+        } else {
+            // No valid swing (no manual headroom and symmetric swing off, or
+            // no gain): hide the row entirely to avoid stale values.
+            values[sensIndex]->setText("");
+            values[sensIndex]->setStyleSheet("");
+            labels[sensIndex]->setStyleSheet("");
+            labels[sensIndex]->setVisible(false);
+            values[sensIndex]->setVisible(false);
         }
-        values[sensIndex]->setStyleSheet(style);
-        labels[sensIndex]->setStyleSheet(style);
-        labels[sensIndex]->setVisible(true);
-        values[sensIndex]->setVisible(true);
+
         values[sensIndex]->setReadOnly(true);
     }
 
@@ -798,7 +811,7 @@ void TriodeCommonCathode::plot(Plot *plot)
     }
 
     qInfo("Designer: TriodeCC plot() entering symmetric swing block");
-    // Symmetrical swing helper and input sensitivity (Vpp), conditional
+    // Symmetrical and max swing helpers (Vpp), conditional
     if (op.x() >= 0.0 && op.y() >= 0.0 && device1) {
         double ra = parameter[TRI_CC_RA]->getValue();
         double rl = parameter[TRI_CC_RL]->getValue();
@@ -860,6 +873,15 @@ void TriodeCommonCathode::plot(Plot *plot)
                 }
             }
             const double vaRight = std::min(vaZero, vaPa);
+
+            // Cache maximum peak-to-peak swing along the AC line between
+            // the left Vg=0 cutoff and the rightmost valid point (either
+            // Ia=0 or Pa limit). This is used when Max Sym Swing is off.
+            if (vaCut >= 0.0 && vaRight > vaCut) {
+                lastMaxVpp = std::max(0.0, vaRight - vaCut);
+            } else {
+                lastMaxVpp = 0.0;
+            }
 
             if (showSymSwing && vaCut >= 0.0 && vaRight > op.x() && vaCut < op.x()) {
                 const double vpk = std::min(op.x() - vaCut, vaRight - op.x());

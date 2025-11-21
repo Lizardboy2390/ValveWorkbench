@@ -1423,8 +1423,8 @@ public:
         label_18->setText(QCoreApplication::translate("ValveWorkbench", "Max Ia (mA):", nullptr));
         label_19->setText(QCoreApplication::translate("ValveWorkbench", "Max P (W):", nullptr));
         heaterButton->setText(QCoreApplication::translate("ValveWorkbench", "Heater", nullptr));
-        heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage (V)", nullptr));
-        heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (A)", nullptr));
+        heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Averages (N)", nullptr));
+        heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Max Retry Points", nullptr));
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
         btnImportFromDevice->setText(QCoreApplication::translate("ValveWorkbench", "Import from Device", nullptr));

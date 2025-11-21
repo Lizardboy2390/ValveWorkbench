@@ -63,6 +63,8 @@ private:
 
     // Cached symmetric output swing (Vpp) computed during plot
     double lastSymVpp = 0.0;
+    // Cached maximum output swing (Vpp) along AC line computed during plot
+    double lastMaxVpp = 0.0;
 
     // Circuit calculation methods
     void calculateAnodeLoadLine();
