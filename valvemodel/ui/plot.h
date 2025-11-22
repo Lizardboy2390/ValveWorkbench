@@ -20,6 +20,12 @@ public:
     void clear();
     void add(QGraphicsItem *item);
     void remove(QGraphicsItem *item);
+    
+    // Public getters for coordinate transformation
+    double getXScale() const { return xScale; }
+    double getYScale() const { return yScale; }
+    double getXStart() const { return xStart; }
+    double getYStart() const { return yStart; }
 
 private:
     QGraphicsScene *scene;

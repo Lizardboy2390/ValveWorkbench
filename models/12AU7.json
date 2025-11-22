@@ -1,18 +1,27 @@
 {
-	"name": "12AU7",
-	"vaMax": 300.0,
-	"vg1Max": 5.0,
-	"iaMax": 5.0,
-	"paMax": 1.125,
-	"model": {
-		"device": "triode",
-		"type": "cohenHelie",
-		"kg1": 0.899682072661792,
-		"mu": 20,
-		"x": 1.52,
-		"kp": 806,
-		"kvb": 3,
-		"kvb1": 12.5,
-		"vct": 0.505
-	}
+    "analyserDefaults": {
+        "anode": {
+            "start": 0,
+            "step": 6.666666666666667,
+            "stop": 300
+        },
+        "doubleTriode": true,
+        "grid": {
+            "start": 0,
+            "step": 1,
+            "stop": 30
+        },
+        "limits": {
+            "iaMax": 15,
+            "pMax": 2.5
+        },
+        "screen": {
+            "start": 0,
+            "step": 0,
+            "stop": 0
+        },
+        "testType": 0
+    },
+    "deviceType": "TRIODE",
+    "name": "12AU7"
 }

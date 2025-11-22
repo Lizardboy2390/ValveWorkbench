@@ -243,7 +243,16 @@ private:
     // Harmonics tab UI elements (created programmatically)
     QWidget *harmonicsTab = nullptr;
     QPushButton *harmonicsRunButton = nullptr;
+    QPushButton *harmonicsBiasSweepButton = nullptr;
+    QPushButton *harmonicsHeatmapButton = nullptr;
+    QPushButton *harmonicsWaterfallButton = nullptr;
     class QTextEdit *harmonicsText = nullptr;
+    Plot harmonicsPlot;
+    class QGraphicsView *harmonicsView = nullptr;
+    
+    // 3D rotation controls
+    class QSlider *harmonicsRotationXSlider = nullptr;
+    class QSlider *harmonicsRotationYSlider = nullptr;
 
     // Per-tab overlay state for measurement, model, and screen visibility.
     // Logical roles: 0 = Designer, 1 = Modeller, 2 = Analyser.
@@ -355,4 +364,11 @@ private:
     void populateDataTableFromMeasurement(Measurement *measurement);
 
     void runHarmonicsScan();
+    void runHarmonicsBiasSweep();
+    void runHarmonicsHeatmap();
+    void runHarmonicsWaterfall();
+    void runHarmonicsClippingAnalysis();
+    void onHarmonicsRotationChanged(); // Handle 3D rotation slider changes
+    void hideRotationControls(); // Hide rotation controls for non-3D plots
+    void refreshHarmonicsPlots();
 };

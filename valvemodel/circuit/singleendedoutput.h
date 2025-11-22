@@ -41,6 +41,34 @@ public:
     // results to the application output. Intended for manual use only.
     void debugScanHeadroomTimeDomain() const;
 
+    // Helper for the Harmonics tab: compute a time-domain THD scan over
+    // headroom and return the sampled headroom values and harmonic contents
+    // so that the caller can graph operating point vs harmonic content.
+    void computeTimeDomainHarmonicScan(QVector<double> &headroomVals,
+                                       QVector<double> &hd2Vals,
+                                       QVector<double> &hd3Vals,
+                                       QVector<double> &hd4Vals,
+                                       QVector<double> &thdVals) const;
+
+    // Helper for the Harmonics tab: compute a bias-sweep harmonic curve over
+    // a range of bias currents Ia at a fixed headroom, returning the sampled
+    // Ia values and harmonic contents so that the caller can graph harmonic
+    // level vs bias current.
+    void computeBiasSweepHarmonicCurve(QVector<double> &iaVals,
+                                       QVector<double> &hd2Vals,
+                                       QVector<double> &hd3Vals,
+                                       QVector<double> &hd4Vals,
+                                       QVector<double> &hd5Vals,
+                                       QVector<double> &thdVals) const;
+
+    void computeHarmonicHeatmapData(QVector<double> &operatingPoints,
+                                   QVector<QVector<double>> &harmonicMatrix,
+                                   bool sweepBias = true) const;
+
+    void computeHarmonicSurfaceData(QVector<double> &biasPoints,
+                                   QVector<double> &headroomPoints,
+                                   QVector<QVector<QVector<double>>> &harmonicSurface) const;
+
 protected:
     void update(int index) override;
 
@@ -88,6 +116,7 @@ private:
                                      double &hd2,
                                      double &hd3,
                                      double &hd4,
+                                     double &hd5,
                                      double &thd) const;
 
     bool showSymSwing = true;

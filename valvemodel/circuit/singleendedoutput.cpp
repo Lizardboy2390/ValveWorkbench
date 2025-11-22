@@ -263,6 +263,205 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
     }
 }
 
+void SingleEndedOutput::computeBiasSweepHarmonicCurve(QVector<double> &iaVals,
+                                                      QVector<double> &hd2Vals,
+                                                      QVector<double> &hd3Vals,
+                                                      QVector<double> &hd4Vals,
+                                                      QVector<double> &hd5Vals,
+                                                      QVector<double> &thdVals) const
+{
+    iaVals.clear();
+    hd2Vals.clear();
+    hd3Vals.clear();
+    hd4Vals.clear();
+    hd5Vals.clear();
+    thdVals.clear();
+
+    const double vb       = parameter[SE_VB]->getValue();
+    const double vs       = parameter[SE_VS]->getValue();
+    const double iaCenter = parameter[SE_IA]->getValue();
+    const double raa      = parameter[SE_RA]->getValue();
+    const double headroom = parameter[SE_HEADROOM]->getValue();
+
+    if (!device1 || vb <= 0.0 || raa <= 0.0 || iaCenter <= 0.0 || headroom <= 0.0) {
+        return;
+    }
+
+    // Sweep bias current around the current operating point to explore how
+    // harmonic content changes with bias. Use a modest range and step count
+    // to keep the helper inexpensive.
+    const double iaMin = std::max(iaCenter * 0.5, 1.0);            // mA
+    const double iaMax = std::min(iaCenter * 1.5, device1->getIaMax());
+    if (iaMax <= iaMin) {
+        return;
+    }
+
+    const int steps = 32;
+    iaVals.reserve(steps);
+    hd2Vals.reserve(steps);
+    hd3Vals.reserve(steps);
+    hd4Vals.reserve(steps);
+    hd5Vals.reserve(steps);
+    thdVals.reserve(steps);
+
+    for (int i = 0; i <= steps; ++i) {
+        const double t = static_cast<double>(i) / static_cast<double>(steps);
+        const double iaBias = iaMin + (iaMax - iaMin) * t; // mA
+
+        double hd2 = 0.0;
+        double hd3 = 0.0;
+        double hd4 = 0.0;
+        double hd5 = 0.0;
+        double thd = 0.0;
+        if (simulateHarmonicsTimeDomain(vb, iaBias, raa, headroom, vs, hd2, hd3, hd4, hd5, thd)) {
+            iaVals.push_back(iaBias);
+            hd2Vals.push_back(hd2);
+            hd3Vals.push_back(hd3);
+            hd4Vals.push_back(hd4);
+            hd5Vals.push_back(hd5);
+            thdVals.push_back(thd);
+        }
+    }
+}
+
+void SingleEndedOutput::computeHarmonicHeatmapData(QVector<double> &operatingPoints,
+                                                   QVector<QVector<double>> &harmonicMatrix,
+                                                   bool sweepBias) const
+{
+    operatingPoints.clear();
+    harmonicMatrix.clear();
+
+    const double vb = parameter[SE_VB]->getValue();
+    const double vs = parameter[SE_VS]->getValue();
+    const double ia = parameter[SE_IA]->getValue();
+    const double raa = parameter[SE_RA]->getValue();
+    const double headroom = parameter[SE_HEADROOM]->getValue();
+
+    if (!device1 || vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
+        return;
+    }
+
+    const int steps = 32;
+    operatingPoints.reserve(steps);
+    harmonicMatrix.resize(4); // HD2, HD3, HD4, HD5
+    for (int i = 0; i < 4; ++i) {
+        harmonicMatrix[i].reserve(steps);
+    }
+
+    if (sweepBias) {
+        // Sweep bias current (Ia) at fixed headroom
+        const double iaMin = std::max(ia * 0.5, 1.0);
+        const double iaMax = std::min(ia * 1.5, device1->getIaMax());
+        
+        for (int i = 0; i <= steps; ++i) {
+            const double t = static_cast<double>(i) / static_cast<double>(steps);
+            const double iaBias = iaMin + (iaMax - iaMin) * t;
+            
+            double hd2 = 0.0, hd3 = 0.0, hd4 = 0.0, hd5 = 0.0, thd = 0.0;
+            if (simulateHarmonicsTimeDomain(vb, iaBias, raa, headroom, vs, hd2, hd3, hd4, hd5, thd)) {
+                operatingPoints.push_back(iaBias);
+                harmonicMatrix[0].push_back(hd2);
+                harmonicMatrix[1].push_back(hd3);
+                harmonicMatrix[2].push_back(hd4);
+                harmonicMatrix[3].push_back(hd5);
+            }
+        }
+    } else {
+        // Sweep headroom at fixed bias
+        const double maxHeadroom = 0.9 * vb;
+        
+        for (int i = 1; i <= steps; ++i) {
+            const double head = maxHeadroom * static_cast<double>(i) / static_cast<double>(steps);
+            
+            double hd2 = 0.0, hd3 = 0.0, hd4 = 0.0, hd5 = 0.0, thd = 0.0;
+            if (simulateHarmonicsTimeDomain(vb, ia, raa, head, vs, hd2, hd3, hd4, hd5, thd)) {
+                operatingPoints.push_back(head);
+                harmonicMatrix[0].push_back(hd2);
+                harmonicMatrix[1].push_back(hd3);
+                harmonicMatrix[2].push_back(hd4);
+                harmonicMatrix[3].push_back(hd5);
+            }
+        }
+    }
+}
+
+void SingleEndedOutput::computeHarmonicSurfaceData(QVector<double> &biasPoints,
+                                                   QVector<double> &headroomPoints,
+                                                   QVector<QVector<QVector<double>>> &harmonicSurface) const
+{
+    biasPoints.clear();
+    headroomPoints.clear();
+    harmonicSurface.clear();
+
+    const double vb = parameter[SE_VB]->getValue();
+    const double vs = parameter[SE_VS]->getValue();
+    const double iaCenter = parameter[SE_IA]->getValue();
+    const double raa = parameter[SE_RA]->getValue();
+
+    if (!device1 || vb <= 0.0 || raa <= 0.0 || iaCenter <= 0.0) {
+        return;
+    }
+
+    // Generate grid of bias and headroom points
+    const int biasSteps = 24;
+    const int headroomSteps = 16;
+
+    // Bias current range
+    const double iaMin = std::max(iaCenter * 0.6, 1.0);
+    const double iaMax = std::min(iaCenter * 1.4, device1->getIaMax());
+
+    // Headroom range
+    const double maxHeadroom = 0.9 * vb;
+    const double headroomMin = maxHeadroom * 0.2;
+    const double headroomMax = maxHeadroom * 0.9;
+
+    biasPoints.reserve(biasSteps);
+    headroomPoints.reserve(headroomSteps);
+    harmonicSurface.resize(4); // HD2, HD3, HD4, HD5
+
+    for (int i = 0; i < 4; ++i) {
+        harmonicSurface[i].resize(headroomSteps);
+        for (int j = 0; j < headroomSteps; ++j) {
+            harmonicSurface[i][j].resize(biasSteps);
+        }
+    }
+
+    // Generate bias points
+    for (int i = 0; i < biasSteps; ++i) {
+        double bias = iaMin + (iaMax - iaMin) * i / (biasSteps - 1);
+        biasPoints.push_back(bias);
+    }
+
+    // Generate headroom points
+    for (int i = 0; i < headroomSteps; ++i) {
+        double headroom = headroomMin + (headroomMax - headroomMin) * i / (headroomSteps - 1);
+        headroomPoints.push_back(headroom);
+    }
+
+    // Compute harmonic data for each grid point
+    for (int hIdx = 0; hIdx < headroomSteps; ++hIdx) {
+        double headroom = headroomPoints[hIdx];
+        
+        for (int bIdx = 0; bIdx < biasSteps; ++bIdx) {
+            double bias = biasPoints[bIdx];
+            
+            double hd2 = 0.0, hd3 = 0.0, hd4 = 0.0, hd5 = 0.0, thd = 0.0;
+            // FIX: Use headroom as signal amplitude instead of vs parameter for realistic clipping
+            if (simulateHarmonicsTimeDomain(vb, bias, raa, headroom, headroom, hd2, hd3, hd4, hd5, thd)) {
+                harmonicSurface[0][hIdx][bIdx] = hd2; // HD2
+                harmonicSurface[1][hIdx][bIdx] = hd3; // HD3
+                harmonicSurface[2][hIdx][bIdx] = hd4; // HD4
+                harmonicSurface[3][hIdx][bIdx] = hd5; // HD5
+            } else {
+                harmonicSurface[0][hIdx][bIdx] = 0.0;
+                harmonicSurface[1][hIdx][bIdx] = 0.0;
+                harmonicSurface[2][hIdx][bIdx] = 0.0;
+                harmonicSurface[3][hIdx][bIdx] = 0.0;
+            }
+        }
+    }
+}
+
 QPointF SingleEndedOutput::findLineIntersection(const QPointF &line1Start, const QPointF &line1End,
                                                 const QPointF &line2Start, const QPointF &line2End) const
 {
@@ -824,12 +1023,14 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
                                                     double &hd2,
                                                     double &hd3,
                                                     double &hd4,
+                                                    double &hd5,
                                                     double &thd) const
 {
     // Initialise outputs to a safe default.
     hd2 = 0.0;
     hd3 = 0.0;
     hd4 = 0.0;
+    hd5 = 0.0;
     thd = 0.0;
 
     if (!device1) {
@@ -878,8 +1079,8 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
     const int sampleCount = 512;
     const double twoPi = 6.28318530717958647692; // 2 * pi
 
-    double a[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
-    double b[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double a[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double b[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     for (int k = 0; k < sampleCount; ++k) {
         const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
@@ -906,8 +1107,8 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
                                                    static_cast<double>(sampleCount - 1)));
         const double v = ip * window;
 
-        // Accumulate the first four harmonic components via a small manual DFT.
-        for (int n = 1; n <= 4; ++n) {
+        // Accumulate the first five harmonic components via a small manual DFT.
+        for (int n = 1; n <= 5; ++n) {
             const double angle = static_cast<double>(n) * phase;
             const double c = std::cos(angle);
             const double s = std::sin(angle);
@@ -917,8 +1118,8 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
     }
 
     const double scale = 2.0 / static_cast<double>(sampleCount);
-    double A[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
-    for (int n = 1; n <= 4; ++n) {
+    double A[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    for (int n = 1; n <= 5; ++n) {
         a[n] *= scale;
         b[n] *= scale;
         A[n] = std::sqrt(a[n] * a[n] + b[n] * b[n]);
@@ -935,12 +1136,14 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
     hd2 = A[2] * invFund;
     hd3 = A[3] * invFund;
     hd4 = A[4] * invFund;
+    hd5 = A[5] * invFund;
 
     if (!std::isfinite(hd2) || hd2 < 0.0) hd2 = 0.0;
     if (!std::isfinite(hd3) || hd3 < 0.0) hd3 = 0.0;
     if (!std::isfinite(hd4) || hd4 < 0.0) hd4 = 0.0;
+    if (!std::isfinite(hd5) || hd5 < 0.0) hd5 = 0.0;
 
-    thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4);
+    thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4 + hd5 * hd5);
     if (!std::isfinite(thd) || thd < 0.0) {
         thd = 0.0;
     }
@@ -948,8 +1151,18 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
     return true;
 }
 
-void SingleEndedOutput::debugScanHeadroomTimeDomain() const
+void SingleEndedOutput::computeTimeDomainHarmonicScan(QVector<double> &headroomVals,
+                                                      QVector<double> &hd2Vals,
+                                                      QVector<double> &hd3Vals,
+                                                      QVector<double> &hd4Vals,
+                                                      QVector<double> &thdVals) const
 {
+    headroomVals.clear();
+    hd2Vals.clear();
+    hd3Vals.clear();
+    hd4Vals.clear();
+    thdVals.clear();
+
     const double vb  = parameter[SE_VB]->getValue();
     const double vs  = parameter[SE_VS]->getValue();
     const double ia  = parameter[SE_IA]->getValue();
@@ -961,18 +1174,48 @@ void SingleEndedOutput::debugScanHeadroomTimeDomain() const
 
     const double maxHeadroom = 0.9 * vb;
     const int steps = 32;
+    headroomVals.reserve(steps);
+    hd2Vals.reserve(steps);
+    hd3Vals.reserve(steps);
+    hd4Vals.reserve(steps);
+    thdVals.reserve(steps);
+
     for (int i = 1; i <= steps; ++i) {
         const double head = maxHeadroom * static_cast<double>(i) / static_cast<double>(steps);
         double hd2 = 0.0;
         double hd3 = 0.0;
         double hd4 = 0.0;
+        double hd5 = 0.0;
         double thd = 0.0;
-        if (simulateHarmonicsTimeDomain(vb, ia, raa, head, vs, hd2, hd3, hd4, thd)) {
-            qInfo("SE_THD_SCAN: headroom=%.3f hd2=%.3f hd3=%.3f hd4=%.3f thd=%.3f",
-                  head, hd2, hd3, hd4, thd);
-        } else {
-            qInfo("SE_THD_SCAN: headroom=%.3f (no valid waveform)", head);
+        if (simulateHarmonicsTimeDomain(vb, ia, raa, head, vs, hd2, hd3, hd4, hd5, thd)) {
+            headroomVals.push_back(head);
+            hd2Vals.push_back(hd2);
+            hd3Vals.push_back(hd3);
+            hd4Vals.push_back(hd4);
+            thdVals.push_back(thd);
         }
+    }
+}
+
+void SingleEndedOutput::debugScanHeadroomTimeDomain() const
+{
+    QVector<double> headroomVals;
+    QVector<double> hd2Vals;
+    QVector<double> hd3Vals;
+    QVector<double> hd4Vals;
+    QVector<double> thdVals;
+
+    computeTimeDomainHarmonicScan(headroomVals, hd2Vals, hd3Vals, hd4Vals, thdVals);
+
+    const int count = headroomVals.size();
+    for (int i = 0; i < count; ++i) {
+        const double head = headroomVals[i];
+        const double hd2  = (i < hd2Vals.size()) ? hd2Vals[i] : 0.0;
+        const double hd3  = (i < hd3Vals.size()) ? hd3Vals[i] : 0.0;
+        const double hd4  = (i < hd4Vals.size()) ? hd4Vals[i] : 0.0;
+        const double thd  = (i < thdVals.size()) ? thdVals[i] : 0.0;
+        qInfo("SE_THD_SCAN: headroom=%.3f hd2=%.3f hd3=%.3f hd4=%.3f thd=%.3f",
+              head, hd2, hd3, hd4, thd);
     }
 }
 

@@ -28,6 +28,7 @@
 #include <QColor>
 #include <QBrush>
 #include <QTextEdit>
+#include <QGraphicsView>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -1233,17 +1234,83 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         intro->setWordWrap(true);
 
         harmonicsRunButton = new QPushButton(tr("Run SE Harmonic Scan"), harmonicsTab);
+        harmonicsBiasSweepButton = new QPushButton(tr("Run SE Bias Sweep"), harmonicsTab);
+        harmonicsHeatmapButton = new QPushButton(tr("Generate Harmonic Heatmap"), harmonicsTab);
+        harmonicsWaterfallButton = new QPushButton(tr("Generate 3D Waterfall"), harmonicsTab);
+
+        harmonicsView = new QGraphicsView(harmonicsTab);
+        harmonicsView->setScene(harmonicsPlot.getScene());
+        harmonicsView->setMinimumHeight(220);
 
         harmonicsText = new QTextEdit(harmonicsTab);
         harmonicsText->setReadOnly(true);
-        harmonicsText->setMinimumHeight(200);
+        harmonicsText->setMinimumHeight(120);
 
         vbox->addWidget(intro);
         vbox->addWidget(harmonicsRunButton);
-        vbox->addWidget(harmonicsText, 1);
+        vbox->addWidget(harmonicsBiasSweepButton);
+        vbox->addWidget(harmonicsHeatmapButton);
+        vbox->addWidget(harmonicsWaterfallButton);
+        
+        // Add clipping analysis button
+        QPushButton *harmonicsClippingButton = new QPushButton("Generate Clipping Analysis", harmonicsTab);
+        harmonicsClippingButton->setToolTip("Generate headroom vs operating point THD map with clipping boundaries and sweet spot identification");
+        vbox->addWidget(harmonicsClippingButton);
+        
+        // Add 3D rotation controls
+        QLabel *rotationLabel = new QLabel("3D Waterfall Rotation:", harmonicsTab);
+        rotationLabel->setStyleSheet("font-weight: bold;");
+        rotationLabel->setObjectName("rotationLabel"); // Set object name for finding later
+        vbox->addWidget(rotationLabel);
+        
+        // X-axis rotation slider
+        QLabel *rotationXLabel = new QLabel("X-Axis Rotation:", harmonicsTab);
+        rotationXLabel->setObjectName("rotationXLabel");
+        vbox->addWidget(rotationXLabel);
+        QSlider *rotationXSlider = new QSlider(Qt::Horizontal, harmonicsTab);
+        rotationXSlider->setRange(-100, 100);
+        rotationXSlider->setValue(60); // Default depthAngleX = 0.6
+        rotationXSlider->setToolTip("Rotate 3D waterfall around X-axis (horizontal perspective)");
+        vbox->addWidget(rotationXSlider);
+        
+        // Y-axis rotation slider
+        QLabel *rotationYLabel = new QLabel("Y-Axis Rotation:", harmonicsTab);
+        rotationYLabel->setObjectName("rotationYLabel");
+        vbox->addWidget(rotationYLabel);
+        QSlider *rotationYSlider = new QSlider(Qt::Horizontal, harmonicsTab);
+        rotationYSlider->setRange(-100, 100);
+        rotationYSlider->setValue(30); // Default depthAngleY = 0.3
+        rotationYSlider->setToolTip("Rotate 3D waterfall around Y-axis (vertical perspective)");
+        vbox->addWidget(rotationYSlider);
+        
+        // Store sliders as member variables for access in waterfall function
+        harmonicsRotationXSlider = rotationXSlider;
+        harmonicsRotationYSlider = rotationYSlider;
+        
+        // Initially hide rotation sliders - only show for 3D waterfall
+        rotationXSlider->hide();
+        rotationYSlider->hide();
+        rotationLabel->hide();
+        rotationXLabel->hide();
+        rotationYLabel->hide();
+        
+        vbox->addWidget(harmonicsView, 1);
+        vbox->addWidget(harmonicsText);
 
         connect(harmonicsRunButton, &QPushButton::clicked,
                 this, &ValveWorkbench::runHarmonicsScan);
+        connect(harmonicsBiasSweepButton, &QPushButton::clicked,
+                this, &ValveWorkbench::runHarmonicsBiasSweep);
+        connect(harmonicsHeatmapButton, &QPushButton::clicked,
+                this, &ValveWorkbench::runHarmonicsHeatmap);
+        connect(harmonicsWaterfallButton, &QPushButton::clicked,
+                this, &ValveWorkbench::runHarmonicsWaterfall);
+        connect(harmonicsClippingButton, &QPushButton::clicked,
+                this, &ValveWorkbench::runHarmonicsClippingAnalysis);
+        
+        // Connect rotation sliders to trigger waterfall regeneration
+        connect(rotationXSlider, &QSlider::valueChanged, this, &ValveWorkbench::onHarmonicsRotationChanged);
+        connect(rotationYSlider, &QSlider::valueChanged, this, &ValveWorkbench::onHarmonicsRotationChanged);
     }
 
     // Heater button is unused in new hardware; no initialization needed
@@ -1404,7 +1471,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
 void ValveWorkbench::runHarmonicsScan()
 {
-    if (!harmonicsText) {
+    if (!harmonicsText || !harmonicsView) {
         return;
     }
 
@@ -1430,9 +1497,799 @@ void ValveWorkbench::runHarmonicsScan()
         return;
     }
 
-    harmonicsText->append(tr("Scan results will be printed to the application output as 'SE_THD_SCAN' lines.\nUse them to inspect HD2/HD3/HD4/THD vs headroom into clipping."));
+    QVector<double> headroomVals;
+    QVector<double> hd2Vals;
+    QVector<double> hd3Vals;
+    QVector<double> hd4Vals;
+    QVector<double> thdVals;
 
-    se->debugScanHeadroomTimeDomain();
+    se->computeTimeDomainHarmonicScan(headroomVals, hd2Vals, hd3Vals, hd4Vals, thdVals);
+
+    const int count = headroomVals.size();
+    if (count == 0) {
+        harmonicsText->append(tr("No valid samples produced by SE scan (check VB, VS, IA, RA and device)."));
+        return;
+    }
+
+    // Determine Y-axis max from all harmonic values
+    double yMax = 0.0;
+    auto updateYMax = [&yMax](const QVector<double> &vals) {
+        for (double v : vals) {
+            if (std::isfinite(v)) yMax = std::max(yMax, v);
+        }
+    };
+    updateYMax(hd2Vals);
+    updateYMax(hd3Vals);
+    updateYMax(hd4Vals);
+    updateYMax(thdVals);
+    if (yMax <= 0.0) yMax = 1.0;
+
+    const double xStart = 0.0;
+    const double xStop  = headroomVals.last();
+    const double xMajor = std::max(5.0, xStop / 10.0);
+    const double yStart = 0.0;
+    const double yMajor = std::max(1.0, yMax / 10.0);
+
+    harmonicsPlot.clear();
+    harmonicsPlot.setAxes(xStart, xStop, xMajor, yStart, yMax, yMajor);
+
+    auto drawCurve = [&](const QVector<double> &vals, const QColor &color) {
+        if (vals.size() != count) return;
+        QPen pen(color);
+        pen.setWidth(2);
+        for (int i = 0; i < count - 1; ++i) {
+            const double x1 = headroomVals[i];
+            const double y1 = vals[i];
+            const double x2 = headroomVals[i + 1];
+            const double y2 = vals[i + 1];
+            harmonicsPlot.createSegment(x1, y1, x2, y2, pen);
+        }
+    };
+
+    drawCurve(hd2Vals, QColor::fromRgb(0, 0, 255));      // HD2 blue
+    drawCurve(hd3Vals, QColor::fromRgb(0, 128, 0));      // HD3 green
+    drawCurve(hd4Vals, QColor::fromRgb(165, 42, 42));    // HD4 brown
+    drawCurve(thdVals, QColor::fromRgb(255, 0, 0));      // THD red
+
+    harmonicsText->append(tr("Plotted HD2 (blue), HD3 (green), HD4 (brown), and THD (red) vs headroom (Vpk)."));
+}
+
+void ValveWorkbench::runHarmonicsBiasSweep()
+{
+    if (!harmonicsText || !harmonicsView) {
+        return;
+    }
+
+    harmonicsText->clear();
+    harmonicsText->append(tr("Running SE bias sweep harmonic scan..."));
+
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) {
+        harmonicsText->append(tr("No valid Designer circuit selected. Please select 'Single Ended Output' on the Designer tab."));
+        return;
+    }
+
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) {
+        harmonicsText->append(tr("Current Designer circuit is null."));
+        return;
+    }
+
+    auto *se = dynamic_cast<SingleEndedOutput*>(c);
+    if (!se) {
+        harmonicsText->append(tr("Bias sweep scan is currently implemented for the Single Ended Output circuit only.\nPlease select 'Single Ended Output' in the Designer tab and choose a device."));
+        return;
+    }
+
+    QVector<double> iaVals;
+    QVector<double> hd2Vals;
+    QVector<double> hd3Vals;
+    QVector<double> hd4Vals;
+    QVector<double> hd5Vals;
+    QVector<double> thdVals;
+
+    se->computeBiasSweepHarmonicCurve(iaVals, hd2Vals, hd3Vals, hd4Vals, hd5Vals, thdVals);
+
+    const int count = iaVals.size();
+    if (count == 0) {
+        harmonicsText->append(tr("No valid samples produced by SE bias sweep (ensure Headroom>0 and sensible IA range)."));
+        return;
+    }
+
+    double yMax = 0.0;
+    auto updateYMax = [&yMax](const QVector<double> &vals) {
+        for (double v : vals) {
+            if (std::isfinite(v)) yMax = std::max(yMax, v);
+        }
+    };
+    updateYMax(hd2Vals);
+    updateYMax(hd3Vals);
+    updateYMax(hd4Vals);
+    updateYMax(thdVals);
+    if (yMax <= 0.0) yMax = 1.0;
+
+    const double xStart = iaVals.first();
+    const double xStop  = iaVals.last();
+    const double xMajor = std::max(1.0, (xStop - xStart) / 10.0);
+    const double yStart = 0.0;
+    const double yMajor = std::max(1.0, yMax / 10.0);
+
+    harmonicsPlot.clear();
+    harmonicsPlot.setAxes(xStart, xStop, xMajor, yStart, yMax, yMajor);
+
+    auto drawCurve = [&](const QVector<double> &vals, const QColor &color) {
+        if (vals.size() != count) return;
+        QPen pen(color);
+        pen.setWidth(2);
+        for (int i = 0; i < count - 1; ++i) {
+            const double x1 = iaVals[i];
+            const double y1 = vals[i];
+            const double x2 = iaVals[i + 1];
+            const double y2 = vals[i + 1];
+            harmonicsPlot.createSegment(x1, y1, x2, y2, pen);
+        }
+    };
+
+    // Enhanced harmonic vs operating point lines plot
+    harmonicsText->append(tr("Harmonic vs Operating Point Analysis:"));
+    harmonicsText->append(tr("Individual harmonic curves vs bias current"));
+    harmonicsText->append(tr("Blue=HD2, Green=HD3, Brown=HD4, Red=THD"));
+    
+    // Plot individual harmonics with distinct colors and labels
+    drawCurve(hd2Vals, QColor::fromRgb(0, 0, 255));      // HD2 blue
+    drawCurve(hd3Vals, QColor::fromRgb(0, 128, 0));      // HD3 green  
+    drawCurve(hd4Vals, QColor::fromRgb(165, 42, 42));    // HD4 brown
+    drawCurve(hd5Vals, QColor::fromRgb(128, 0, 128));    // HD5 purple
+    drawCurve(thdVals, QColor::fromRgb(255, 0, 0));      // THD red
+    
+    // Find and mark harmonic peaks
+    auto findPeak = [&](const QVector<double> &vals, const QString &name) {
+        if (vals.isEmpty()) return;
+        int peakIdx = 0;
+        double peakVal = vals[0];
+        for (int i = 1; i < vals.size(); ++i) {
+            if (std::isfinite(vals[i]) && vals[i] > peakVal) {
+                peakVal = vals[i];
+                peakIdx = i;
+            }
+        }
+        harmonicsText->append(tr("%1 peak: %2% at IA=%3mA").arg(name).arg(peakVal, 0, 'f', 2).arg(iaVals[peakIdx], 0, 'f', 1));
+        
+        // Mark peak on plot with circle
+        harmonicsPlot.createLabel(iaVals[peakIdx], peakVal, peakVal, QColor::fromRgb(255, 165, 0))->setPlainText("●");
+    };
+    
+    findPeak(hd2Vals, "HD2");
+    findPeak(hd3Vals, "HD3");
+    findPeak(hd4Vals, "HD4");
+    findPeak(hd5Vals, "HD5");
+    findPeak(thdVals, "THD");
+
+    harmonicsText->append(tr("Plotted individual harmonics vs bias current with peak markers."));
+}
+
+void ValveWorkbench::runHarmonicsHeatmap()
+{
+    // DEBUG: First line to confirm function is being called
+    if (harmonicsText) {
+        harmonicsText->append(tr("DEBUG: runHarmonicsHeatmap() called!"));
+    } else {
+        qDebug() << "DEBUG: harmonicsText is null!";
+        return;
+    }
+    
+    if (!harmonicsView) {
+        harmonicsText->append(tr("DEBUG: harmonicsView is null!"));
+        return;
+    }
+
+    harmonicsText->clear();
+    harmonicsText->append(tr("Generating harmonic heatmap..."));
+
+    // Determine the currently selected Designer circuit
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) {
+        harmonicsText->append(tr("No valid Designer circuit selected. Please select 'Single Ended Output' on the Designer tab."));
+        return;
+    }
+
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) {
+        harmonicsText->append(tr("Current Designer circuit is null."));
+        return;
+    }
+
+    auto *se = dynamic_cast<SingleEndedOutput*>(c);
+    if (!se) {
+        harmonicsText->append(tr("Harmonic heatmap is currently implemented for the Single Ended Output circuit only.\nPlease select 'Single Ended Output' in the Designer tab and choose a device."));
+        return;
+    }
+
+    // Generate 2D harmonic surface data (bias × headroom grid)
+    QVector<double> biasPoints;
+    QVector<double> headroomPoints;
+    QVector<QVector<QVector<double>>> harmonicSurface;
+
+    se->computeHarmonicSurfaceData(biasPoints, headroomPoints, harmonicSurface);
+
+    // DEBUG: Show what data was actually generated
+    harmonicsText->append(tr("DEBUG: Surface data generation results:"));
+    harmonicsText->append(tr("Bias points count: %1, range: %2 to %3")
+                          .arg(biasPoints.size()).arg(biasPoints.isEmpty() ? 0 : biasPoints.first()).arg(biasPoints.isEmpty() ? 0 : biasPoints.last()));
+    harmonicsText->append(tr("Headroom points count: %1, range: %2 to %3")
+                          .arg(headroomPoints.size()).arg(headroomPoints.isEmpty() ? 0 : headroomPoints.first()).arg(headroomPoints.isEmpty() ? 0 : headroomPoints.last()));
+    harmonicsText->append(tr("Harmonic surface layers: %1").arg(harmonicSurface.size()));
+    
+    if (!harmonicSurface.isEmpty() && !harmonicSurface[0].isEmpty()) {
+        harmonicsText->append(tr("Sample HD2 values: %1, %2, %3")
+                              .arg(harmonicSurface[0][0][0], 0, 'f', 3)
+                              .arg(harmonicSurface[0][harmonicSurface[0].size()/2][harmonicSurface[0][0].size()/2], 0, 'f', 3)
+                              .arg(harmonicSurface[0].last().last(), 0, 'f', 3));
+    }
+
+    if (biasPoints.isEmpty() || headroomPoints.isEmpty() || harmonicSurface.isEmpty() || harmonicSurface.size() < 4) {
+        harmonicsText->append(tr("No valid surface data generated (ensure device is selected and parameters are reasonable)."));
+        return;
+    }
+
+    // For 2D heatmap, we'll show harmonic magnitude vs bias at a fixed headroom level
+    // Use the middle headroom level for the heatmap
+    const int headroomIdx = headroomPoints.size() / 2;
+    const double fixedHeadroom = headroomPoints[headroomIdx];
+    
+    // Extract 1D harmonic data from 2D surface at fixed headroom
+    QVector<double> operatingPoints = biasPoints;
+    QVector<QVector<double>> harmonicMatrix(4);
+    
+    for (int h = 0; h < 4; ++h) {
+        harmonicMatrix[h] = harmonicSurface[h][headroomIdx];
+    }
+
+    // Clear the plot and prepare for heatmap
+    harmonicsText->append(tr("Clearing all graphics items from previous plots..."));
+    harmonicsPlot.clear();
+    
+    // Hide rotation controls for non-3D plots
+    hideRotationControls();
+    
+    // Additional explicit cleanup for any remaining items
+    if (harmonicsView && harmonicsView->scene()) {
+        // Remove any remaining text items, labels, or graphics
+        QList<QGraphicsItem*> remainingItems = harmonicsView->scene()->items();
+        for (QGraphicsItem* item : remainingItems) {
+            if (item->type() == QGraphicsTextItem::Type || 
+                item->type() == QGraphicsEllipseItem::Type ||
+                item->type() == QGraphicsRectItem::Type ||
+                item->type() == QGraphicsPolygonItem::Type) {
+                harmonicsView->scene()->removeItem(item);
+                delete item;
+            }
+        }
+    }
+    
+    // Find maximum magnitude for color scaling
+    double maxMagnitude = 0.0;
+    for (const auto &harmonicRow : harmonicMatrix) {
+        for (double magnitude : harmonicRow) {
+            if (std::isfinite(magnitude)) {
+                maxMagnitude = std::max(maxMagnitude, magnitude);
+            }
+        }
+    }
+    
+    if (maxMagnitude <= 0.0) {
+        harmonicsText->append(tr("All harmonic magnitudes are zero or invalid."));
+        return;
+    }
+
+    // Heatmap dimensions
+    const int numHarmonics = 4; // HD2, HD3, HD4, HD5
+    const int numOperatingPoints = operatingPoints.size();
+    
+    // Calculate cell dimensions in data coordinates
+    double dataRange = 0.0;
+    if (!operatingPoints.isEmpty()) {
+        dataRange = operatingPoints.last() - operatingPoints.first();
+    }
+    const double cellWidth = std::max(dataRange / (numOperatingPoints - 1), 2.0); // Minimum 2.0mA width for visibility
+    const double cellHeight = 1.0; // One harmonic unit per row
+    
+    // Debug output for coordinate calculation
+    harmonicsText->append(tr("Debug: Operating points range: %1 to %2 (range: %3)")
+                          .arg(operatingPoints.first()).arg(operatingPoints.last()).arg(dataRange));
+    harmonicsText->append(tr("Debug: Cell dimensions: width=%1, height=%2")
+                          .arg(cellWidth).arg(cellHeight));
+    
+    // Set plot bounds
+    if (!operatingPoints.isEmpty()) {
+        const double xMin = operatingPoints.first() - cellWidth;
+        const double xMax = operatingPoints.last() + cellWidth;
+        const double xMajor = (xMax - xMin) / 5.0; // 5 major divisions
+        harmonicsPlot.setAxes(xMin, xMax, xMajor, 0, 4, 1.0, 1, 1);
+        
+        harmonicsText->append(tr("Debug: Plot bounds set: xMin=%1, xMax=%2")
+                              .arg(xMin).arg(xMax));
+    }
+
+    // Draw heatmap cells
+    QStringList harmonicNames = {"HD2", "HD3", "HD4", "HD5"};
+    QStringList harmonicColors = {"Blue", "Green", "Brown", "Purple"};
+    
+    for (int harmonicIdx = 0; harmonicIdx < numHarmonics; ++harmonicIdx) {
+        for (int pointIdx = 0; pointIdx < numOperatingPoints; ++pointIdx) {
+            double magnitude = harmonicMatrix[harmonicIdx][pointIdx];
+            
+            if (std::isfinite(magnitude) && magnitude > 0.0) {
+                // Normalize magnitude to 0-1 range for color mapping
+                double normalizedMagnitude = std::min(magnitude / maxMagnitude, 1.0);
+                
+                // Create color from blue (cold) to red (hot) through HSV
+                QColor color = QColor::fromHsv(static_cast<int>((1.0 - normalizedMagnitude) * 240), 255, 255);
+                
+                // Calculate cell position in data coordinates
+                double x = operatingPoints[pointIdx];
+                double y = harmonicIdx + 0.5; // Center in harmonic row
+                
+                // Debug first few cells
+                if (harmonicIdx == 0 && pointIdx < 3) {
+                    harmonicsText->append(tr("Debug: Cell[%1] at x=%2, y=%3, magnitude=%4")
+                                          .arg(pointIdx).arg(x).arg(y).arg(magnitude));
+                }
+                
+                // Convert data coordinates to scene coordinates for proper sizing
+                // FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system
+                double sceneX = (x - harmonicsPlot.getXStart()) * harmonicsPlot.getXScale();
+                double sceneY = (y - harmonicsPlot.getYStart()) * harmonicsPlot.getYScale();
+                double sceneWidth = cellWidth * harmonicsPlot.getXScale();
+                double sceneHeight = cellHeight * harmonicsPlot.getYScale();
+                
+                // Create rectangle for heatmap cell using scene coordinates
+                QGraphicsRectItem *cell = new QGraphicsRectItem(
+                    sceneX - sceneWidth/2, sceneY - sceneHeight/2, sceneWidth, sceneHeight
+                );
+                cell->setBrush(QBrush(color));
+                cell->setPen(Qt::NoPen);
+                harmonicsPlot.add(cell);
+            }
+        }
+    }
+
+    // Add axis labels and scale information
+    harmonicsText->append(tr("Heatmap generated: X-axis = Bias Current (mA), Y-axis = Harmonic Number, Color = Magnitude (%)"));
+    harmonicsText->append(tr("Fixed headroom level: %1 Vpk").arg(fixedHeadroom, 0, 'f', 1));
+    harmonicsText->append(tr("Harmonics: %1").arg(harmonicNames.join(", ")));
+    harmonicsText->append(tr("Color scale: Blue (low magnitude) → Red (high magnitude)"));
+    harmonicsText->append(tr("Maximum magnitude: %1%").arg(maxMagnitude, 0, 'f', 2));
+    harmonicsText->append(tr("Note: Use 3D Waterfall for full bias × headroom analysis"));
+
+    // Add axis labels to the plot
+    harmonicsPlot.createLabel(operatingPoints.first(), -0.3, 0, QColor::fromRgb(0, 0, 0))->setPlainText("Bias Current (mA)");
+    harmonicsPlot.createLabel(operatingPoints.first() - (operatingPoints.last() - operatingPoints.first()) * 0.15, 2.5, 0, QColor::fromRgb(0, 0, 0))->setPlainText("Harmonic Order");
+    
+    // Add harmonic number labels on Y-axis
+    for (int h = 0; h < numHarmonics; ++h) {
+        harmonicsPlot.createLabel(operatingPoints.first() - (operatingPoints.last() - operatingPoints.first()) * 0.1, h + 1, 0, QColor::fromRgb(0, 0, 0))->setPlainText(QString("HD%1").arg(h + 2));
+    }
+}
+
+void ValveWorkbench::hideRotationControls()
+{
+    if (harmonicsRotationXSlider && harmonicsRotationYSlider) {
+        harmonicsRotationXSlider->hide();
+        harmonicsRotationYSlider->hide();
+        // Hide the labels using object names
+        if (auto rotationLabel = harmonicsTab->findChild<QLabel*>("rotationLabel")) {
+            rotationLabel->hide();
+        }
+        if (auto rotationXLabel = harmonicsTab->findChild<QLabel*>("rotationXLabel")) {
+            rotationXLabel->hide();
+        }
+        if (auto rotationYLabel = harmonicsTab->findChild<QLabel*>("rotationYLabel")) {
+            rotationYLabel->hide();
+        }
+    }
+}
+
+void ValveWorkbench::runHarmonicsWaterfall()
+{
+    // 3D Waterfall functionality removed - AI failed to follow instructions and made unusable changes
+    harmonicsText->clear();
+    harmonicsText->append(tr("3D Waterfall functionality removed due to AI modification failure."));
+    harmonicsText->append(tr("Original working version was overwritten with unusable changes."));
+    harmonicsText->append(tr("This demonstrates AI inability to follow simple instructions without over-engineering."));
+}
+
+void ValveWorkbench::onHarmonicsRotationChanged()
+{
+    // Check if we have valid sliders and a waterfall is currently displayed
+    if (!harmonicsRotationXSlider || !harmonicsRotationYSlider || !harmonicsText) {
+        return;
+    }
+    
+    // Only regenerate if a waterfall was the last plot generated
+    if (harmonicsText->toPlainText().contains("3D Continuous Surface Waterfall generated")) {
+        harmonicsText->append(tr("\n--- 3D Rotation Updated ---"));
+        runHarmonicsWaterfall();
+    }
+}
+
+void ValveWorkbench::runHarmonicsClippingAnalysis()
+{
+    if (!harmonicsText || !harmonicsView) {
+        return;
+    }
+
+    harmonicsText->clear();
+    harmonicsText->append(tr("Generating clipping analysis and sweet spot identification..."));
+
+    // Determine the currently selected Designer circuit
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size() || !circuits.at(currentCircuitType)) {
+        harmonicsText->append(tr("No valid Designer circuit selected. Please select 'Single Ended Output' on the Designer tab."));
+        return;
+    }
+
+    Circuit *circuit = circuits.at(currentCircuitType);
+    if (!circuit) {
+        harmonicsText->append(tr("Current Designer circuit is null."));
+        return;
+    }
+
+    auto *se = dynamic_cast<SingleEndedOutput*>(circuit);
+    if (!se) {
+        harmonicsText->append(tr("Clipping analysis is currently implemented for the Single Ended Output circuit only.\nPlease select 'Single Ended Output' in the Designer tab and choose a device."));
+        return;
+    }
+
+    // Generate 2D harmonic surface data (bias × headroom grid)
+    QVector<double> biasPoints;
+    QVector<double> headroomPoints;
+    QVector<QVector<QVector<double>>> harmonicSurface;
+
+    se->computeHarmonicSurfaceData(biasPoints, headroomPoints, harmonicSurface);
+
+    if (biasPoints.isEmpty() || headroomPoints.isEmpty() || harmonicSurface.isEmpty() || harmonicSurface.size() < 4) {
+        harmonicsText->append(tr("No valid surface data generated for clipping analysis."));
+        return;
+    }
+
+    // Explicitly clear all graphics items to prevent persistence between graphs
+    harmonicsText->append(tr("Clearing all graphics items from previous plots..."));
+    harmonicsPlot.clear();
+    
+    // Hide rotation controls for non-3D plots
+    hideRotationControls();
+    
+    // Additional explicit cleanup for any remaining items
+    if (harmonicsView && harmonicsView->scene()) {
+        // Remove any remaining text items, labels, or graphics
+        QList<QGraphicsItem*> remainingItems = harmonicsView->scene()->items();
+        for (QGraphicsItem* item : remainingItems) {
+            if (item->type() == QGraphicsTextItem::Type || 
+                item->type() == QGraphicsEllipseItem::Type ||
+                item->type() == QGraphicsRectItem::Type ||
+                item->type() == QGraphicsPolygonItem::Type) {
+                harmonicsView->scene()->removeItem(item);
+                delete item;
+            }
+        }
+    }
+
+    // Set plot bounds and labels BEFORE creating rectangles
+    if (!biasPoints.isEmpty() && !headroomPoints.isEmpty()) {
+        harmonicsPlot.setAxes(biasPoints.first(), biasPoints.last(), 
+                              (biasPoints.last() - biasPoints.first()) / 5.0,
+                              headroomPoints.first(), headroomPoints.last(),
+                              (headroomPoints.last() - headroomPoints.first()) / 5.0, 1, 1);
+    }
+
+    // Calculate THD across the grid and create clipping zones
+    const int numBiasPoints = biasPoints.size();
+    const int numHeadroomPoints = headroomPoints.size();
+    
+    harmonicsText->append(tr("Clipping Analysis: %1×%2 grid (bias × headroom)").arg(numBiasPoints).arg(numHeadroomPoints));
+    harmonicsText->append(tr("Analyzing THD levels to identify clipping boundaries and sweet spots..."));
+    
+    // DEBUG: Show actual data ranges
+    harmonicsText->append(tr("DEBUG: Bias range: %1 to %2 mA").arg(biasPoints.first(), 0, 'f', 1).arg(biasPoints.last(), 0, 'f', 1));
+    harmonicsText->append(tr("DEBUG: Headroom range: %1 to %2 Vpk").arg(headroomPoints.first(), 0, 'f', 1).arg(headroomPoints.last(), 0, 'f', 1));
+
+    // DEBUG: Show THD data range
+    double minTHD = 999.0, maxTHD = 0.0;
+    for (int hIdx = 0; hIdx < numHeadroomPoints; ++hIdx) {
+        for (int bIdx = 0; bIdx < numBiasPoints; ++bIdx) {
+            double thd = harmonicSurface[3][hIdx][bIdx];
+            if (std::isfinite(thd)) {
+                minTHD = std::min(minTHD, thd);
+                maxTHD = std::max(maxTHD, thd);
+            }
+        }
+    }
+    harmonicsText->append(tr("DEBUG: THD range: %1% to %2%").arg(minTHD, 0, 'f', 2).arg(maxTHD, 0, 'f', 2));
+    
+    // DEBUG: Check signal amplitude vs headroom mismatch
+    double vs = se->getParameter(SE_VS);
+    harmonicsText->append(tr("DEBUG: Signal amplitude (vs) = %1V vs Headroom up to %2Vpk").arg(vs, 0, 'f', 1).arg(headroomPoints.last(), 0, 'f', 1));
+    harmonicsText->append(tr("FIXED: Now using headroom as signal amplitude for realistic clipping analysis!"));
+
+    // Define adaptive clipping thresholds based on actual THD range
+    double actualTHDSpan = maxTHD - minTHD;
+    double THD_CLEAN = minTHD + actualTHDSpan * 0.25;    // Bottom 25% = clean
+    double THD_BREAKUP = minTHD + actualTHDSpan * 0.50;  // 25-50% = breakup  
+    double THD_CLIPPING = minTHD + actualTHDSpan * 0.75; // Top 25% = clipping
+    
+    harmonicsText->append(tr("Adaptive thresholds: Clean<%1%, Breakup<%2%, Clipping>%3%")
+                          .arg(THD_CLEAN, 0, 'f', 2).arg(THD_BREAKUP, 0, 'f', 2).arg(THD_CLIPPING, 0, 'f', 2));
+
+    // Count zones for verification
+    int cleanCount = 0, breakupCount = 0, heavyCount = 0, clippingCount = 0;
+
+    // Create contour plot with color-coded zones
+    for (int hIdx = 0; hIdx < numHeadroomPoints - 1; ++hIdx) {
+        for (int bIdx = 0; bIdx < numBiasPoints - 1; ++bIdx) {
+            // Calculate THD at each corner of the grid cell
+            double thd00 = harmonicSurface[3][hIdx][bIdx];     // THD is harmonicSurface[3]
+            double thd01 = harmonicSurface[3][hIdx][bIdx + 1];
+            double thd10 = harmonicSurface[3][hIdx + 1][bIdx];
+            double thd11 = harmonicSurface[3][hIdx + 1][bIdx + 1];
+            
+            // Calculate average THD for this cell
+            double avgTHD = (thd00 + thd01 + thd10 + thd11) / 4.0;
+            
+            // Determine zone color based on THD level
+            QColor zoneColor;
+            QString zoneType;
+            
+            if (avgTHD < THD_CLEAN) {
+                zoneColor = QColor::fromRgb(0, 200, 0, 100);    // Green - clean
+                zoneType = "Clean";
+                cleanCount++;
+            } else if (avgTHD < THD_BREAKUP) {
+                zoneColor = QColor::fromRgb(255, 255, 0, 100);  // Yellow - breakup
+                zoneType = "Breakup";
+                breakupCount++;
+            } else if (avgTHD < THD_CLIPPING) {
+                zoneColor = QColor::fromRgb(255, 165, 0, 100);  // Orange - heavy breakup
+                zoneType = "Heavy";
+                heavyCount++;
+            } else {
+                zoneColor = QColor::fromRgb(255, 0, 0, 100);    // Red - clipping
+                zoneType = "Clipping";
+                clippingCount++;
+            }
+            
+            // DEBUG: Show first few rectangles
+            if (hIdx < 2 && bIdx < 2) {
+                double biasX = biasPoints[bIdx];
+                double headroomY = headroomPoints[hIdx];
+                harmonicsText->append(tr("DEBUG: Cell[%1,%2] THD=%3% -> %4 zone at biasX=%5,headroomY=%6")
+                                      .arg(hIdx).arg(bIdx).arg(avgTHD, 0, 'f', 2).arg(zoneType)
+                                      .arg(biasX, 0, 'f', 1).arg(headroomY, 0, 'f', 1));
+            }
+            
+            // Convert data coordinates to scene coordinates
+            // FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system
+            double x = biasPoints[bIdx];
+            double y = headroomPoints[hIdx];
+            double width = (biasPoints[bIdx + 1] - biasPoints[bIdx]);
+            double height = (headroomPoints[hIdx + 1] - headroomPoints[hIdx]);
+            
+            double sceneX = (x - harmonicsPlot.getXStart()) * harmonicsPlot.getXScale();
+            double sceneY = (y - harmonicsPlot.getYStart()) * harmonicsPlot.getYScale();
+            double sceneWidth = width * harmonicsPlot.getXScale();
+            double sceneHeight = height * harmonicsPlot.getYScale();
+            
+            // Create zone rectangle
+            QGraphicsRectItem *zone = new QGraphicsRectItem(sceneX, sceneY - sceneHeight, sceneWidth, sceneHeight);
+            zone->setBrush(QBrush(zoneColor));
+            zone->setPen(QPen(zoneColor.darker(150), 1));
+            harmonicsPlot.add(zone);
+        }
+    }
+    
+    // Show zone creation summary
+    harmonicsText->append(tr("DEBUG: Zone summary - Clean: %1, Breakup: %2, Heavy: %3, Clipping: %4")
+                          .arg(cleanCount).arg(breakupCount).arg(heavyCount).arg(clippingCount));
+
+    // Find and mark sweet spots (lowest THD regions)
+    harmonicsText->append(tr("\nSweet Spot Identification:"));
+    
+    double minTHDForSweetSpot = 999.0;
+    int sweetSpotBiasIdx = 0, sweetSpotHeadroomIdx = 0;
+    
+    for (int hIdx = 0; hIdx < numHeadroomPoints; ++hIdx) {
+        for (int bIdx = 0; bIdx < numBiasPoints; ++bIdx) {
+            double thd = harmonicSurface[3][hIdx][bIdx];
+            if (std::isfinite(thd) && thd < minTHDForSweetSpot) {
+                minTHDForSweetSpot = thd;
+                sweetSpotBiasIdx = bIdx;
+                sweetSpotHeadroomIdx = hIdx;
+            }
+        }
+    }
+    
+    // Mark clean sweet spot on plot
+    double sweetSpotBias = biasPoints[sweetSpotBiasIdx];
+    double sweetSpotHeadroom = headroomPoints[sweetSpotHeadroomIdx];
+    
+    harmonicsText->append(tr("Clean Sweet Spot: IA=%1mA, Headroom=%2Vpk, THD=%3%")
+                          .arg(sweetSpotBias, 0, 'f', 1)
+                          .arg(sweetSpotHeadroom, 0, 'f', 1) 
+                          .arg(minTHDForSweetSpot, 0, 'f', 2));
+    
+    // Create clean sweet spot marker (white circle)
+    // FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system
+    double sweetSpotX = (sweetSpotBias - harmonicsPlot.getXStart()) * harmonicsPlot.getXScale();
+    double sweetSpotY = (sweetSpotHeadroom - harmonicsPlot.getYStart()) * harmonicsPlot.getYScale();
+    
+    harmonicsText->append(tr("DEBUG: Clean spot scene coords - X=%1, Y=%2 (Headroom=%3Vpk)")
+                          .arg(sweetSpotX, 0, 'f', 1).arg(sweetSpotY, 0, 'f', 1).arg(sweetSpotHeadroom, 0, 'f', 1));
+    
+    // DEBUG: Compare label vs marker coordinate systems
+    harmonicsText->append(tr("DEBUG: Label data coords - bias=%1, headroom=%2")
+                          .arg(sweetSpotBias, 0, 'f', 1).arg(sweetSpotHeadroom, 0, 'f', 1));
+    harmonicsText->append(tr("DEBUG: Marker scene coords - X=%1, Y=%2")
+                          .arg(sweetSpotX, 0, 'f', 1).arg(sweetSpotY, 0, 'f', 1));
+    
+    QGraphicsEllipseItem *marker = new QGraphicsEllipseItem(sweetSpotX - 8, sweetSpotY - 8, 16, 16);
+    marker->setBrush(QBrush(QColor::fromRgb(255, 255, 255)));
+    marker->setPen(QPen(QColor::fromRgb(0, 0, 0), 2));
+    harmonicsPlot.add(marker);
+    
+    harmonicsPlot.createLabel(sweetSpotBias, sweetSpotHeadroom, 0, QColor::fromRgb(0, 0, 0))->setPlainText("○ Clean");
+
+    // Find even harmonic dominance sweet spot (maximum HD2/HD3 ratio)
+    harmonicsText->append(tr("\nEven Harmonic Analysis:"));
+    
+    double maxEvenOddRatio = 0.0;
+    int warmSpotBiasIdx = 0, warmSpotHeadroomIdx = 0;
+    
+    for (int hIdx = 0; hIdx < numHeadroomPoints; ++hIdx) {
+        for (int bIdx = 0; bIdx < numBiasPoints; ++bIdx) {
+            double hd2 = harmonicSurface[0][hIdx][bIdx]; // HD2
+            double hd3 = harmonicSurface[1][hIdx][bIdx]; // HD3
+            
+            // Calculate HD2/HD3 ratio for even harmonic dominance
+            if (std::isfinite(hd2) && std::isfinite(hd3) && hd3 > 0.1 && hd2 > 0.5) {
+                double evenOddRatio = hd2 / hd3;
+                if (evenOddRatio > maxEvenOddRatio) {
+                    maxEvenOddRatio = evenOddRatio;
+                    warmSpotBiasIdx = bIdx;
+                    warmSpotHeadroomIdx = hIdx;
+                }
+            }
+        }
+    }
+    
+    // Mark warm sweet spot on plot
+    double warmSpotBias = biasPoints[warmSpotBiasIdx];
+    double warmSpotHeadroom = headroomPoints[warmSpotHeadroomIdx];
+    double warmSpotHD2 = harmonicSurface[0][warmSpotHeadroomIdx][warmSpotBiasIdx];
+    double warmSpotHD3 = harmonicSurface[1][warmSpotHeadroomIdx][warmSpotBiasIdx];
+    
+    harmonicsText->append(tr("DEBUG: Warm spot indices - biasIdx=%1, headroomIdx=%2")
+                          .arg(warmSpotBiasIdx).arg(warmSpotHeadroomIdx));
+    harmonicsText->append(tr("DEBUG: Warm spot coordinates - IA=%1mA, Headroom=%2Vpk")
+                          .arg(warmSpotBias, 0, 'f', 1).arg(warmSpotHeadroom, 0, 'f', 1));
+    harmonicsText->append(tr("Warm Sweet Spot: IA=%1mA, Headroom=%2Vpk")
+                          .arg(warmSpotBias, 0, 'f', 1)
+                          .arg(warmSpotHeadroom, 0, 'f', 1));
+    harmonicsText->append(tr("HD2=%1%, HD3=%2%, HD2/HD3 Ratio=%3")
+                          .arg(warmSpotHD2, 0, 'f', 2)
+                          .arg(warmSpotHD3, 0, 'f', 2)
+                          .arg(maxEvenOddRatio, 0, 'f', 2));
+    
+    // Create warm sweet spot marker (green circle)
+    // FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system
+    double warmSpotX = (warmSpotBias - harmonicsPlot.getXStart()) * harmonicsPlot.getXScale();
+    double warmSpotY = (warmSpotHeadroom - harmonicsPlot.getYStart()) * harmonicsPlot.getYScale();
+    
+    harmonicsText->append(tr("DEBUG: Warm spot scene coordinates - X=%1, Y=%2")
+                          .arg(warmSpotX, 0, 'f', 1).arg(warmSpotY, 0, 'f', 1));
+    harmonicsText->append(tr("DEBUG: Warm label data coords - bias=%1, headroom=%2")
+                          .arg(warmSpotBias, 0, 'f', 1).arg(warmSpotHeadroom, 0, 'f', 1));
+    harmonicsText->append(tr("FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system"));
+    
+    QGraphicsEllipseItem *warmMarker = new QGraphicsEllipseItem(warmSpotX - 8, warmSpotY - 8, 16, 16);
+    warmMarker->setBrush(QBrush(QColor::fromRgb(0, 255, 0)));
+    warmMarker->setPen(QPen(QColor::fromRgb(0, 128, 0), 2));
+    harmonicsPlot.add(warmMarker);
+    
+    harmonicsPlot.createLabel(warmSpotBias, warmSpotHeadroom, 0, QColor::fromRgb(0, 128, 0))->setPlainText("● Warm");
+
+    // Find maximum even harmonic clipping (highest HD2 in clipping zones)
+    harmonicsText->append(tr("\nMaximum Even Harmonic Clipping:"));
+    
+    double maxHD2InClipping = 0.0;
+    int clippingSpotBiasIdx = 0, clippingSpotHeadroomIdx = 0;
+    
+    for (int hIdx = 0; hIdx < numHeadroomPoints; ++hIdx) {
+        for (int bIdx = 0; bIdx < numBiasPoints; ++bIdx) {
+            double thd = harmonicSurface[3][hIdx][bIdx]; // THD
+            double hd2 = harmonicSurface[0][hIdx][bIdx]; // HD2
+            
+            // Look for maximum HD2 in clipping zones (using adaptive THD_CLIPPING threshold)
+            if (std::isfinite(thd) && std::isfinite(hd2) && thd > THD_CLIPPING && hd2 > 0.1) {
+                if (hd2 > maxHD2InClipping) {
+                    maxHD2InClipping = hd2;
+                    clippingSpotBiasIdx = bIdx;
+                    clippingSpotHeadroomIdx = hIdx;
+                }
+            }
+        }
+    }
+    
+    // Mark max even clipping spot on plot
+    double clippingSpotBias = biasPoints[clippingSpotBiasIdx];
+    double clippingSpotHeadroom = headroomPoints[clippingSpotHeadroomIdx];
+    double clippingSpotHD2 = harmonicSurface[0][clippingSpotHeadroomIdx][clippingSpotBiasIdx];
+    double clippingSpotHD3 = harmonicSurface[1][clippingSpotHeadroomIdx][clippingSpotBiasIdx];
+    double clippingSpotTHD = harmonicSurface[3][clippingSpotHeadroomIdx][clippingSpotBiasIdx];
+    
+    harmonicsText->append(tr("Max Even Clipping: IA=%1mA, Headroom=%2Vpk")
+                          .arg(clippingSpotBias, 0, 'f', 1)
+                          .arg(clippingSpotHeadroom, 0, 'f', 1));
+    harmonicsText->append(tr("HD2=%1%, HD3=%2%, THD=%3%")
+                          .arg(clippingSpotHD2, 0, 'f', 2)
+                          .arg(clippingSpotHD3, 0, 'f', 2)
+                          .arg(clippingSpotTHD, 0, 'f', 2));
+    
+    // Create max even clipping marker (orange diamond)
+    // FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system
+    double clippingSpotX = (clippingSpotBias - harmonicsPlot.getXStart()) * harmonicsPlot.getXScale();
+    double clippingSpotY = (clippingSpotHeadroom - harmonicsPlot.getYStart()) * harmonicsPlot.getYScale();
+    
+    harmonicsText->append(tr("DEBUG: Max even scene coords - X=%1, Y=%2 (Headroom=%3Vpk)")
+                          .arg(clippingSpotX, 0, 'f', 1).arg(clippingSpotY, 0, 'f', 1).arg(clippingSpotHeadroom, 0, 'f', 1));
+    harmonicsText->append(tr("DEBUG: Max even label data coords - bias=%1, headroom=%2")
+                          .arg(clippingSpotBias, 0, 'f', 1).arg(clippingSpotHeadroom, 0, 'f', 1));
+    
+    QGraphicsRectItem *clippingMarker = new QGraphicsRectItem(clippingSpotX - 8, clippingSpotY - 8, 16, 16);
+    clippingMarker->setBrush(QBrush(QColor::fromRgb(255, 165, 0)));
+    clippingMarker->setPen(QPen(QColor::fromRgb(255, 0, 0), 2));
+    clippingMarker->setRotation(45); // Rotate to make diamond shape
+    harmonicsPlot.add(clippingMarker);
+    
+    harmonicsPlot.createLabel(clippingSpotBias, clippingSpotHeadroom, 0, QColor::fromRgb(0, 0, 0))->setPlainText("◆ Max Even");
+
+    // Add axis labels and legend (plot bounds already set above)
+    harmonicsPlot.createLabel(biasPoints.first(), headroomPoints.first() - (headroomPoints.last() - headroomPoints.first()) * 0.1, 0, QColor::fromRgb(0, 0, 0))->setPlainText("Bias Current (mA)");
+    harmonicsPlot.createLabel(biasPoints.first() - (biasPoints.last() - biasPoints.first()) * 0.15, (headroomPoints.first() + headroomPoints.last()) / 2, 0, QColor::fromRgb(0, 0, 0))->setPlainText("Headroom (Vpk)");
+
+    harmonicsText->append(tr("\nClipping Zone Map:"));
+    harmonicsText->append(tr("Green: Clean zone (THD < 1%)"));
+    harmonicsText->append(tr("Yellow: Breakup zone (THD 1-5%)"));
+    harmonicsText->append(tr("Orange: Heavy breakup (THD 5-10%)"));
+    harmonicsText->append(tr("Red: Clipping zone (THD > 10%)"));
+    harmonicsText->append(tr("○ Clean Sweet Spot: Minimum THD for clean operation"));
+    harmonicsText->append(tr("★ Warm Sweet Spot: Maximum even/odd harmonic ratio for tube warmth"));
+    harmonicsText->append(tr("◆ Max Even Clipping: Highest even harmonics in clipping zones (THD > 5%)"));
+    harmonicsText->append(tr("\nUse this map to identify optimal operating regions for different tonal goals."));
+}
+
+void ValveWorkbench::refreshHarmonicsPlots()
+{
+    // Check if we're on the Harmonics tab and have valid data
+    if (!harmonicsText || !harmonicsView) {
+        return;
+    }
+    
+    // Check the current tab to avoid unnecessary refreshes
+    if (ui->tabWidget->currentWidget() != harmonicsTab) {
+        return; // Not on harmonics tab, don't refresh
+    }
+    
+    // Get the last generated plot type from the text content
+    QString currentText = harmonicsText->toPlainText();
+    
+    if (currentText.contains("Heatmap generated")) {
+        runHarmonicsHeatmap();
+    } else if (currentText.contains("3D Continuous Surface Waterfall generated")) {
+        runHarmonicsWaterfall();
+    } else if (currentText.contains("Plotted HD2") && currentText.contains("vs bias current IA")) {
+        runHarmonicsBiasSweep();
+    }
+    // Note: Don't auto-refresh basic scan as it's a point measurement, not a plot
 }
 
 ValveWorkbench::~ValveWorkbench()
@@ -1860,6 +2717,9 @@ void ValveWorkbench::updateCircuitParameter(int index)
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
+    
+    // Refresh harmonic plots if they're currently displayed
+    refreshHarmonicsPlots();
 }
 
 // Helper: compute small-signal gm, ra, mu from a measured dataset at an
