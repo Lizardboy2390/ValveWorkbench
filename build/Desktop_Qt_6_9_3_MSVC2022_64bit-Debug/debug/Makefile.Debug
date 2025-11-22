@@ -9588,6 +9588,7 @@ debug\preferencesdialog.obj: ..\..\..\preferencesdialog.cpp ..\..\..\preferences
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qtextdocument.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QWidget \
 		..\..\..\valvemodel\model\model.h \
@@ -12112,6 +12113,8 @@ debug\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.h 
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QBrush \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTextEdit \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtextedit.h \
 		..\..\..\valvemodel\data\sample.h \
 		..\..\..\valvemodel\data\sweep.h \
 		..\..\..\valvemodel\circuit\triodecommoncathode.h \

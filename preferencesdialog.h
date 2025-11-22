@@ -26,6 +26,8 @@ public:
 
     int getPentodeModelType();
     int getSamplingType();
+    int getAveragingMode();
+    int getAveragingFixedSamples();
     bool useRemodelling();
     bool useSecondaryEmission();
     bool fixSecondaryEmission();

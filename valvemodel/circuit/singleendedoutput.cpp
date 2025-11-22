@@ -816,6 +816,166 @@ void SingleEndedOutput::computeHarmonics(double Ia,
     thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4);
 }
 
+bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
+                                                    double iaBias_mA,
+                                                    double raa,
+                                                    double headroomVpk,
+                                                    double vs,
+                                                    double &hd2,
+                                                    double &hd3,
+                                                    double &hd4,
+                                                    double &thd) const
+{
+    // Initialise outputs to a safe default.
+    hd2 = 0.0;
+    hd3 = 0.0;
+    hd4 = 0.0;
+    thd = 0.0;
+
+    if (!device1) {
+        return false;
+    }
+
+    // Basic sanity checks: require a valid operating point and positive headroom.
+    if (vb <= 0.0 || raa <= 0.0 || iaBias_mA <= 0.0 || headroomVpk <= 0.0) {
+        return false;
+    }
+
+    // Reuse the existing VTADIY-style 5-point helper to obtain the base current
+    // samples along the AC load line. These are expressed as currents on the
+    // DC load line at five effective swing positions.
+    double Ia = 0.0;  // I_max
+    double Ib = 0.0;  // I_max_mid_distorted
+    double Ic = 0.0;  // I_bias
+    double Id = 0.0;  // I_min_mid_distorted
+    double Ie = 0.0;  // I_min_distorted
+    if (!computeHeadroomHarmonicCurrents(vb,
+                                         iaBias_mA,
+                                         raa,
+                                         headroomVpk,
+                                         vs,
+                                         Ia,
+                                         Ib,
+                                         Ic,
+                                         Id,
+                                         Ie)) {
+        return false;
+    }
+
+    // Arrange the five samples (in amps) as one period of a periodic waveform.
+    // The samples are treated as equally spaced over the cycle and interpolated
+    // linearly for higher-resolution time-domain sampling.
+    double samples[5];
+    samples[0] = Ia;
+    samples[1] = Ib;
+    samples[2] = Ic;
+    samples[3] = Id;
+    samples[4] = Ie;
+
+    // Use a modest number of samples to keep this helper inexpensive while
+    // providing a smooth waveform for the DFT. A Hann window is applied to
+    // reduce spectral leakage, following the style used in Cavern QuickEQ.
+    const int sampleCount = 512;
+    const double twoPi = 6.28318530717958647692; // 2 * pi
+
+    double a[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double b[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    for (int k = 0; k < sampleCount; ++k) {
+        const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
+        const double u = phase / twoPi; // normalised phase in [0, 1)
+
+        // Map the normalised phase to the five base samples, then linearly
+        // interpolate between neighbouring samples to obtain a dense waveform.
+        const double pos = u * 5.0; // 5 samples per period
+        const double indexF = std::floor(pos);
+        int i0 = static_cast<int>(indexF);
+        if (i0 < 0) {
+            i0 = 0;
+        }
+        if (i0 >= 5) {
+            i0 = i0 % 5;
+        }
+        const int i1 = (i0 + 1) % 5;
+        const double frac = pos - indexF;
+
+        const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+
+        // Hann window across the full set of samples.
+        const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
+                                                   static_cast<double>(sampleCount - 1)));
+        const double v = ip * window;
+
+        // Accumulate the first four harmonic components via a small manual DFT.
+        for (int n = 1; n <= 4; ++n) {
+            const double angle = static_cast<double>(n) * phase;
+            const double c = std::cos(angle);
+            const double s = std::sin(angle);
+            a[n] += v * c;
+            b[n] += v * s;
+        }
+    }
+
+    const double scale = 2.0 / static_cast<double>(sampleCount);
+    double A[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    for (int n = 1; n <= 4; ++n) {
+        a[n] *= scale;
+        b[n] *= scale;
+        A[n] = std::sqrt(a[n] * a[n] + b[n] * b[n]);
+    }
+
+    const double fundamental = A[1];
+    if (!(fundamental > 0.0) || !std::isfinite(fundamental)) {
+        return false;
+    }
+
+    // Express harmonic levels as percentages relative to the fundamental,
+    // mirroring the interpretation used by the existing 5-point helper.
+    const double invFund = 100.0 / fundamental;
+    hd2 = A[2] * invFund;
+    hd3 = A[3] * invFund;
+    hd4 = A[4] * invFund;
+
+    if (!std::isfinite(hd2) || hd2 < 0.0) hd2 = 0.0;
+    if (!std::isfinite(hd3) || hd3 < 0.0) hd3 = 0.0;
+    if (!std::isfinite(hd4) || hd4 < 0.0) hd4 = 0.0;
+
+    thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4);
+    if (!std::isfinite(thd) || thd < 0.0) {
+        thd = 0.0;
+    }
+
+    return true;
+}
+
+void SingleEndedOutput::debugScanHeadroomTimeDomain() const
+{
+    const double vb  = parameter[SE_VB]->getValue();
+    const double vs  = parameter[SE_VS]->getValue();
+    const double ia  = parameter[SE_IA]->getValue();
+    const double raa = parameter[SE_RA]->getValue();
+
+    if (!device1 || vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
+        return;
+    }
+
+    const double maxHeadroom = 0.9 * vb;
+    const int steps = 32;
+    for (int i = 1; i <= steps; ++i) {
+        const double head = maxHeadroom * static_cast<double>(i) / static_cast<double>(steps);
+        double hd2 = 0.0;
+        double hd3 = 0.0;
+        double hd4 = 0.0;
+        double thd = 0.0;
+        if (simulateHarmonicsTimeDomain(vb, ia, raa, head, vs, hd2, hd3, hd4, thd)) {
+            qInfo("SE_THD_SCAN: headroom=%.3f hd2=%.3f hd3=%.3f hd4=%.3f thd=%.3f",
+                  head, hd2, hd3, hd4, thd);
+        } else {
+            qInfo("SE_THD_SCAN: headroom=%.3f (no valid waveform)", head);
+        }
+    }
+}
+
 void SingleEndedOutput::plot(Plot *plot)
 {
     if (!device1) {
@@ -849,9 +1009,12 @@ void SingleEndedOutput::plot(Plot *plot)
     const double xMajor = std::max(5.0, vaMax / 10.0);
     const double yMajor = std::max(0.5, iaMax / 10.0);
 
-    // Always set axes based on the current device's limits so SE output plots
-    // do not inherit stale ranges (e.g., 300V/5mA) from previous circuits.
-    plot->setAxes(0.0, vaMax, xMajor, 0.0, iaMax, yMajor);
+    // Only set axes when the scene is empty so that re-plotting (for example
+    // when toggling Max Sym Swing) does not clear existing model or
+    // measurement overlays that the Designer shares with Modeller/Analyser.
+    if (plot->getScene()->items().isEmpty()) {
+        plot->setAxes(0.0, vaMax, xMajor, 0.0, iaMax, yMajor);
+    }
 
     const double vb  = parameter[SE_VB]->getValue();
     const double vs  = parameter[SE_VS]->getValue();

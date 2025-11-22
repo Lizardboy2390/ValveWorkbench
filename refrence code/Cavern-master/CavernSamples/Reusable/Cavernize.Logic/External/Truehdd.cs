@@ -1,0 +1,164 @@
+﻿using System.Diagnostics;
+using System.IO.Compression;
+
+using Cavern.Format;
+using Cavern.Format.Common;
+using Cavern.Format.Operations;
+using Cavern.Utilities;
+
+using Cavernize.Logic.Language;
+using Cavernize.Logic.Models;
+using VoidX.WPF;
+
+namespace Cavernize.Logic.External;
+
+/// <summary>
+/// Perform MLP conversions with truehdd by first extracting the MLP track, then using truehdd to create a DAMF, then loading that DAMF to Cavern for render.
+/// </summary>
+public class Truehdd(ExternalConverterStrings language) : ExternalConverter(language) {
+    /// <summary>
+    /// The DAMF track after truehdd's run.
+    /// </summary>
+    CavernizeTrack track;
+
+    /// <summary>
+    /// Path to the extracted MLP track.
+    /// </summary>
+    string tempTrack;
+
+    /// <summary>
+    /// Where to save the truehdd zip file.
+    /// </summary>
+    string cacheZip;
+
+    /// <summary>
+    /// If this folder exists, truehdd was properly downloaded and unpacked.
+    /// </summary>
+    string unpackDir;
+
+    /// <summary>
+    /// Save the downloaded truehdd version to this file so it can be checked later.
+    /// </summary>
+    string versionFile;
+
+    /// <inheritdoc/>
+    public override void PrepareOnUI() {
+        versionFile = Path.Combine(cavernizeData, "truehdd.version");
+        unpackDir = Path.Combine(cavernizeData, "truehdd");
+        if (File.Exists(versionFile)) {
+            return;
+        }
+        cacheZip = Path.Combine(cavernizeData, "truehdd.zip");
+
+        UpdateStatusMessage(language.LicenceFetch);
+        string licence = HTTP.GET(licenceUrl) ?? throw new NetworkException(language.LicenceFail);
+        UpdateStatusMessage(language.WaitingUserAccept);
+        LicenceDisplay.SetDescription(string.Format(language.LicenceNeeded, "truehdd", "Meridian Lossless Packing"));
+        LicenceDisplay.SetLicenceText(licence);
+        if (!LicenceDisplay.Prompt()) {
+            throw new OperationCanceledException(language.UserCancelled);
+        }
+    }
+
+    /// <summary>
+    /// Convert the <paramref name="source"/> track with truehdd to DAMF and load it for rendering.
+    /// </summary>
+    public override CavernizeTrack Convert(CavernizeTrack source) {
+        Download(); // Convert can only be called after the licence was accepted
+
+        if (source.Codec != Codec.TrueHD) {
+            throw new CodecNotFoundException(Codec.TrueHD);
+        }
+
+        bool needTempTrack = source.Container != Container.NotContainer;
+        string folder = Path.GetDirectoryName(source.Path);
+        tempTrack = Path.Combine(folder, tempFile);
+        if (needTempTrack) {
+            UpdateStatusMessage(language.ExtractingBitstream);
+            using ExtractTrackFromContainer extractor = new(source.Track, File.OpenWrite(tempTrack));
+            while (extractor.Process()) {
+                // Extraction in progress
+            }
+        }
+
+        UpdateStatusMessage(string.Format(language.Converting, "truehdd"));
+        string toDecode = needTempTrack ? tempTrack : source.Path;
+        ProcessStartInfo truehdd = new() {
+            FileName = Path.Combine(unpackDir, "truehdd.exe"),
+            WorkingDirectory = unpackDir,
+            Arguments = $"decode --progress \"{toDecode}\" --output-path \"{tempTrack}\""
+        };
+        using (Process runner = Process.Start(truehdd)) {
+            runner.WaitForExit();
+        }
+
+        if (needTempTrack) {
+            File.Delete(tempTrack);
+        }
+
+        track = new CavernizeTrack(AudioReader.Open(tempTrack + ".atmos"), Codec.DAMF, 0, new TrackStrings());
+        return track;
+    }
+
+    /// <inheritdoc/>
+    public override void Cleanup() {
+        track.Dispose();
+        QFile.DeleteIfExists(tempTrack + ".atmos");
+        QFile.DeleteIfExists(tempTrack + ".atmos.audio");
+        QFile.DeleteIfExists(tempTrack + ".atmos.metadata");
+    }
+
+    /// <summary>
+    /// Download the latest truehdd release from GitHub and unpack it to the <see cref="unpackDir"/>.
+    /// </summary>
+    void Download() {
+        if (File.Exists(versionFile)) {
+            return; // Already downloaded
+        }
+
+        Directory.CreateDirectory(cavernizeData);
+        if (File.Exists(cacheZip)) {
+            File.Delete(cacheZip);
+        }
+        if (Directory.Exists(unpackDir)) {
+            Directory.Delete(unpackDir, true);
+        }
+
+        string downloading = string.Format(language.Downloading, "truehdd");
+        UpdateStatusMessage(downloading);
+        string zip;
+        try {
+            zip = Downloader.GetLatestGitHubVersion("truehdd/truehdd", version);
+            Task downloader = Downloader.Download(zip, cacheZip,
+                progress => UpdateStatusMessage($"{downloading} {progress:0.00%}"));
+            downloader.Wait();
+        } catch (Exception e) {
+            throw new NetworkException($"{language.NetworkError}{Environment.NewLine}{e.Message}");
+        }
+
+        UpdateStatusMessage(string.Format(language.Extracting, "truehdd"));
+        try {
+            ZipFile.ExtractToDirectory(cacheZip, unpackDir);
+            File.Delete(cacheZip);
+        } catch (Exception e) {
+            throw new NetworkException($"{language.NetworkError}{Environment.NewLine}{e.Message}");
+        }
+
+        File.WriteAllText(versionFile, zip);
+    }
+
+    /// <summary>
+    /// Temporary file used to store the extracted MLP track before truehdd processes it.
+    /// </summary>
+    const string tempFile = "_extracted.thd";
+
+    /// <summary>
+    /// Where to fetch the truehdd licence from.
+    /// </summary>
+    const string licenceUrl = "https://raw.githubusercontent.com/truehdd/truehdd/refs/heads/main/LICENSE";
+
+    /// <summary>
+    /// Which release to download on this platform.
+    /// </summary>
+    const string version = "x86_64-pc-windows-msvc.zip";
+}

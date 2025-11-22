@@ -26,8 +26,16 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
     ui->pentodeFit->addItem("Reefman (DerkE)", REEFMAN_DERK_E_PENTODE);
     ui->pentodeFit->addItem("Simple Manual Pentode", SIMPLE_MANUAL_PENTODE);
 
-    ui->sampling->addItem("Simple", SMP_LINEAR);
-    ui->sampling->addItem("Optimised", SMP_LOGARITHMIC);
+    ui->sampling->addItem("Linear", SMP_LINEAR);
+    ui->sampling->addItem("Logarithmic", SMP_LOGARITHMIC);
+
+    ui->avgMode->addItem("Auto");
+    ui->avgMode->addItem("Fixed");
+    ui->avgMode->setCurrentIndex(0);
+
+    ui->avgSamples->setMinimum(1);
+    ui->avgSamples->setMaximum(8);
+    ui->avgSamples->setValue(5);
 
     auto createCalibrationSpin = [this]() {
         auto *spin = new QDoubleSpinBox(this);
@@ -204,6 +212,16 @@ int PreferencesDialog::getSamplingType()
     return ui->sampling->currentData().toInt();
 }
 
+int PreferencesDialog::getAveragingMode()
+{
+    return ui->avgMode->currentIndex();
+}
+
+int PreferencesDialog::getAveragingFixedSamples()
+{
+    return ui->avgSamples->value();
+}
+
 bool PreferencesDialog::useRemodelling()
 {
     return ui->checkRemodel->isChecked();
@@ -319,6 +337,15 @@ void PreferencesDialog::loadFromSettings()
     int idxSamp = ui->sampling->findData(savedSampling);
     if (idxSamp >= 0) ui->sampling->setCurrentIndex(idxSamp);
 
+    int savedAvgMode = s.value("preferences/avgMode", 0).toInt();
+    if (savedAvgMode < 0 || savedAvgMode > 1) {
+        savedAvgMode = 0;
+    }
+    ui->avgMode->setCurrentIndex(savedAvgMode);
+
+    int savedAvgSamples = s.value("preferences/avgSamples", 5).toInt();
+    ui->avgSamples->setValue(savedAvgSamples);
+
     ui->checkScreenCurrent->setChecked(s.value("preferences/showScreenCurrent", true).toBool());
     ui->checkRemodel->setChecked(s.value("preferences/useRemodelling", false).toBool());
     ui->checkSecondary->setChecked(s.value("preferences/useSecondaryEmission", true).toBool());
@@ -347,6 +374,8 @@ void PreferencesDialog::saveToSettings() const
     s.setValue("preferences/port", ui->portSelect->currentText());
     s.setValue("preferences/pentodeFit", ui->pentodeFit->currentData().toInt());
     s.setValue("preferences/sampling", ui->sampling->currentData().toInt());
+    s.setValue("preferences/avgMode", ui->avgMode->currentIndex());
+    s.setValue("preferences/avgSamples", ui->avgSamples->value());
     s.setValue("preferences/showScreenCurrent", ui->checkScreenCurrent->isChecked());
     s.setValue("preferences/useRemodelling", ui->checkRemodel->isChecked());
     s.setValue("preferences/useSecondaryEmission", ui->checkSecondary->isChecked());

@@ -37,6 +37,10 @@ public:
     void setGainMode(int mode);
     void setSymSwingEnabled(bool enabled);
 
+    // Debug helper: scan time-domain THD vs headroom into clipping and log
+    // results to the application output. Intended for manual use only.
+    void debugScanHeadroomTimeDomain() const;
+
 protected:
     void update(int index) override;
 
@@ -75,6 +79,16 @@ private:
 
     void computeHarmonics(double Ia, double Ib, double Ic, double Id, double Ie,
                           double &hd2, double &hd3, double &hd4, double &thd) const;
+
+    bool simulateHarmonicsTimeDomain(double vb,
+                                     double iaBias_mA,
+                                     double raa,
+                                     double headroomVpk,
+                                     double vs,
+                                     double &hd2,
+                                     double &hd3,
+                                     double &hd4,
+                                     double &thd) const;
 
     bool showSymSwing = true;
     double effectiveHeadroomVpk = 0.0;

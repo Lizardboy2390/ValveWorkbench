@@ -64,6 +64,50 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
     - Push-Pull Output (pentode)
     - Push-Pull UL Output (pentode, UL tap)
 
+## Preferences (Options → Preferences)
+
+The **Preferences** dialog controls analyser and model behaviour:
+
+- **Analyser Port**
+  - Serial port used to talk to the hardware analyser.
+
+- **Pentode Fit**
+  - Selects the pentode model family used for Modeller fits (Gardiner, Reefman, Simple Manual Pentode).
+
+- **Sweep spacing**
+  - `Linear`: evenly spaced voltage points along analyser sweeps.
+  - `Logarithmic`: log-pot style spacing with more points near the pentode knee (low Va) for anode-characteristics tests.
+
+- **Averaging mode / Fixed samples** (analyser auto-averaging)
+  - `Averaging mode = Auto`:
+    - The analyser chooses the firmware-side current averaging window based on expected max anode current (`iaMax` from the tube template):
+      - `iaMax ≤ 5 mA` → 8 samples per point.
+      - `5 < iaMax ≤ 30 mA` → 5 samples per point.
+      - `iaMax > 30 mA` → 3 samples per point.
+  - `Averaging mode = Fixed`:
+    - Ignores `iaMax` and always uses the number in **Fixed samples** (1–8) for the firmware averaging window.
+  - The active sample count is sent to the firmware via `S0` and reported back as VH in Mode(2) responses (displayed as **Avg per sample** in the analyser UI).
+
+- **Show screen current on anode plots**
+  - When checked, Ig2 curves are drawn alongside Ia on analyser and Designer plots (where applicable).
+  - When unchecked, only anode current is shown.
+
+- **Pentode remodel after screen modelling**
+  - Enables an extra Gardiner pentode "remodel" pass after the screen-current fit.
+  - When off, the model is used directly after the main screen fit.
+
+- **Use secondary emissions in model**
+  - When checked, the Gardiner pentode model includes secondary-emission shaping parameters (ω, λ, ν) and uses them during fitting and plotting.
+  - When unchecked, secondary emission is ignored and those parameters are held out of the solve.
+
+- **Fix triode parameters for pentode modelling**
+  - When checked, triode-like parameters in the unified pentode model (e.g. μ, kp, x) are treated as fixed when fitting pentodes (typically taken from a prior triode fit or triode-connected measurement).
+  - When unchecked, pentode fits are allowed to adjust those parameters.
+
+- **Fix secondary emission parameters for screen modelling**
+  - Only applies when *Use secondary emissions in model* is enabled.
+  - When checked, secondary-emission parameters are held fixed during screen-current and remodel stages; when unchecked, they may be adjusted.
+
 ## Features
 - Double‑triode workflow with A/B overlays and color‑coded labels
 - Robust fitting with multiple model families (Triode/Pentode)

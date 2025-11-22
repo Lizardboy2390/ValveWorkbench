@@ -240,6 +240,11 @@ private:
     QGraphicsItemGroup *modelledCurves = nullptr;
     QGraphicsItemGroup *modelledCurvesSecondary = nullptr;
 
+    // Harmonics tab UI elements (created programmatically)
+    QWidget *harmonicsTab = nullptr;
+    QPushButton *harmonicsRunButton = nullptr;
+    class QTextEdit *harmonicsText = nullptr;
+
     // Per-tab overlay state for measurement, model, and screen visibility.
     // Logical roles: 0 = Designer, 1 = Modeller, 2 = Analyser.
     struct TabOverlayState {
@@ -348,4 +353,6 @@ private:
     void queueTriodeModelRun(Model *modelToRun);
     bool measurementHasValidSamples(Measurement *measurement) const;
     void populateDataTableFromMeasurement(Measurement *measurement);
+
+    void runHarmonicsScan();
 };

@@ -27,6 +27,7 @@
 #include <QVector>
 #include <QColor>
 #include <QBrush>
+#include <QTextEdit>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -1204,6 +1205,47 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         dataTab->setLayout(dataLayout);
     }
 
+    // Add a Harmonics tab programmatically for experimental spectral analysis
+    harmonicsTab = nullptr;
+    bool harmonicsTabExists = false;
+    for (int i = 0; i < ui->tabWidget->count(); ++i) {
+        if (ui->tabWidget->tabText(i) == QLatin1String("Harmonics")) {
+            harmonicsTab = ui->tabWidget->widget(i);
+            harmonicsTabExists = true;
+            break;
+        }
+    }
+
+    if (!harmonicsTabExists) {
+        harmonicsTab = new QWidget();
+        ui->tabWidget->addTab(harmonicsTab, QLatin1String("Harmonics"));
+    }
+
+    if (harmonicsTab) {
+        QLayout *harmLayout = harmonicsTab->layout();
+        QVBoxLayout *vbox = qobject_cast<QVBoxLayout*>(harmLayout);
+        if (!vbox) {
+            vbox = new QVBoxLayout(harmonicsTab);
+            harmonicsTab->setLayout(vbox);
+        }
+
+        QLabel *intro = new QLabel(tr("Harmonic Explorer (SE output, time-domain THD scan)"), harmonicsTab);
+        intro->setWordWrap(true);
+
+        harmonicsRunButton = new QPushButton(tr("Run SE Harmonic Scan"), harmonicsTab);
+
+        harmonicsText = new QTextEdit(harmonicsTab);
+        harmonicsText->setReadOnly(true);
+        harmonicsText->setMinimumHeight(200);
+
+        vbox->addWidget(intro);
+        vbox->addWidget(harmonicsRunButton);
+        vbox->addWidget(harmonicsText, 1);
+
+        connect(harmonicsRunButton, &QPushButton::clicked,
+                this, &ValveWorkbench::runHarmonicsScan);
+    }
+
     // Heater button is unused in new hardware; no initialization needed
 
     // Device type combo: the itemData carries the logical eDevice type used by
@@ -1358,6 +1400,39 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     circuits[ULTRALINEAR_PUSH_PULL]   = new PushPullUlOutput();
     circuits[AC_CATHODE_FOLLOWER]     = new TriodeACCathodeFollower();
     circuits[DC_CATHODE_FOLLOWER]     = new TriodeDCCathodeFollower();
+}
+
+void ValveWorkbench::runHarmonicsScan()
+{
+    if (!harmonicsText) {
+        return;
+    }
+
+    harmonicsText->clear();
+    harmonicsText->append(tr("Running SE time-domain harmonic scan..."));
+
+    // Determine the currently selected Designer circuit
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) {
+        harmonicsText->append(tr("No valid Designer circuit selected. Please select 'Single Ended Output' on the Designer tab."));
+        return;
+    }
+
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) {
+        harmonicsText->append(tr("Current Designer circuit is null."));
+        return;
+    }
+
+    auto *se = dynamic_cast<SingleEndedOutput*>(c);
+    if (!se) {
+        harmonicsText->append(tr("Harmonic scan is currently implemented for the Single Ended Output circuit only.\nPlease select 'Single Ended Output' in the Designer tab and choose a device."));
+        return;
+    }
+
+    harmonicsText->append(tr("Scan results will be printed to the application output as 'SE_THD_SCAN' lines.\nUse them to inspect HD2/HD3/HD4/THD vs headroom into clipping."));
+
+    se->debugScanHeadroomTimeDomain();
 }
 
 ValveWorkbench::~ValveWorkbench()
@@ -4852,6 +4927,12 @@ void ValveWorkbench::on_useBypassedGainCheck_stateChanged(int arg1)
         se->setGainMode(useBypassed ? 1 : 0);
         se->plot(&plot);
         se->updateUI(circuitLabels, circuitValues);
+    } else if (auto *pp = dynamic_cast<PushPullOutput*>(c)) {
+        // Apply K-bypass choice to the PP output stage so that its
+        // input sensitivity and THD reflect bypassed vs unbypassed cathode.
+        pp->setGainMode(useBypassed ? 1 : 0);
+        pp->plot(&plot);
+        pp->updateUI(circuitLabels, circuitValues);
     }
 }
 

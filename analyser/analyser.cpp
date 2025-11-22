@@ -321,15 +321,29 @@ void Analyser::startTest()
     result->setIaMax(iaMax);
     result->setPMax(pMax);
 
-    // Select firmware-side current averaging factor based on expected max anode current (iaMax, in mA)
-    int avgSamples = 3;
+    // Select firmware-side current averaging factor.
+    // Default behaviour is automatic based on expected max anode current (iaMax, in mA),
+    // but a Fixed mode in Preferences can override this with a user-specified sample count.
+    int autoSamples = 3;
     if (iaMax <= 5.0) {
-        avgSamples = 8;  // small-signal tubes
+        autoSamples = 8;  // small-signal tubes
     } else if (iaMax <= 30.0) {
-        avgSamples = 5;  // medium-current tubes
+        autoSamples = 5;  // medium-current tubes
     } else {
-        avgSamples = 3;  // high-current / power tubes
+        autoSamples = 3;  // high-current / power tubes
     }
+
+    int avgSamples = autoSamples;
+    if (preferences) {
+        int mode = preferences->getAveragingMode();   // 0 = Auto, 1 = Fixed
+        int fixedN = preferences->getAveragingFixedSamples();
+        if (mode == 1) {
+            if (fixedN < 1) fixedN = 1;
+            if (fixedN > 8) fixedN = 8;
+            avgSamples = fixedN;
+        }
+    }
+
     sendCommand(buildSetCommand("S0 ", avgSamples));
 
     measuredIaMax = 0.0;
