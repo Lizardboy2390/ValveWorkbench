@@ -705,10 +705,18 @@ void Analyser::nextSample() {
                 sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(stepIndex)));
             }
 
-            // Set anode voltage to 0 for verification
+            // Set anode (and, where applicable, screen) voltage to 0 V for
+            // verification so we can confirm a true zero-current baseline.
             // qInfo("Setting anode voltage to 0V for verification");
             sendCommand(buildSetCommand("S3 ", 0));
-            if (isDoubleTriode) {
+
+            // For double-triode tests we already mirror S3->S7. In
+            // triode-connected pentode mode we also want the hardware screen
+            // rail (S7) at 0 V during verification, otherwise residual
+            // screen voltage can keep Ia/Ig2 non-zero and cause spurious
+            // verification failures.
+            if (isDoubleTriode ||
+                (isTriodeConnectedPentode && deviceType == PENTODE && testType == ANODE_CHARACTERISTICS)) {
                 sendCommand(buildSetCommand("S7 ", 0));
             }
 
@@ -946,8 +954,13 @@ void Analyser::checkResponse(QString response)
                             sendCommand(buildSetCommand("S2 ", firstGridCode));
                             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                         }
+
+                        // During verification retries for pentode anode characteristics,
+                        // keep the screen supply at 0 V so Ia/Ig2 can genuinely settle
+                        // near zero. The fixed screen test voltage (screenStart) is
+                        // reasserted only after a PASS in the block above.
                         if (deviceType == PENTODE && testType == ANODE_CHARACTERISTICS) {
-                            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
+                            sendCommand(buildSetCommand("S7 ", 0));
                         }
 
                         sendCommand("M2");

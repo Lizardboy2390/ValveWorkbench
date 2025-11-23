@@ -2695,7 +2695,9 @@ void ValveWorkbench::updateCircuitParameter(int index)
         #include "valvemodel/circuit/triodecommoncathode.h"
         if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
             if (index == TRI_CC_RA || index == TRI_CC_RL) {
-                circuit->setParameter(index, value * 1000.0); // convert kΩ → Ω for storage/calculation
+                // Circuit::setParameter already calls update(index), so we only
+                // need to scale the user value from kΩ to Ω here.
+                circuit->setParameter(index, value * 1000.0);
             } else {
                 circuit->setParameter(index, value);
             }
@@ -2746,7 +2748,10 @@ void ValveWorkbench::updateCircuitParameter(int index)
         }
     }
 
-    // Default path for all other circuits
+    // Default path for all other circuits. Circuit::setParameter already
+    // calls the protected virtual update(index), so all derived metrics
+    // (including effective headroom and THD in SingleEndedOutput) are
+    // recomputed automatically here.
     circuit->setParameter(index, value);
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);

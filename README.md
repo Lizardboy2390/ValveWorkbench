@@ -94,6 +94,12 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - **Input sensitivity (Vpp)** field below the SE panel:
     - Shows the approximate **signal swing at the input** needed to reach the chosen headroom swing at the anode, using a small-signal gm·Ra estimate and the current K-bypass/headroom settings.
     - Text colour follows the headroom source: bright blue for manual Headroom, light blue for symmetric helper, brown for max-swing helper.
+  - **Harmonic metrics (HD2/HD3/HD4/THD):**
+    - Both the SE Designer numeric panel and the **Harmonics** tab now use a **sine-driven time-domain simulation**:
+      - A pure sine is applied at the grid around the DC bias.
+      - For each time sample, the tube model plus AC load line are solved (via `findVaFromVg`) to obtain Va(t) and Ia(t).
+      - A Hann-windowed FFT of Ia(t) yields the first few harmonics; HD2/HD3/HD4 and THD are reported as percentages of the fundamental.
+    - This allows you to explore harmonic structure from small signal all the way into heavy clipping using the same engine for both Designer and Harmonics plots.
 
 ## Preferences (Options → Preferences)
 

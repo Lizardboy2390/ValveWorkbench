@@ -90,29 +90,34 @@ Last updated: 2025-11-22 (CRITICAL: AI violated user approval rule THIRD TIME, m
 - Centralise Gardiner vs Reefman pentode parameter bounds in `Model::setEstimate` so fits stay inside model-appropriate corridors.
 
 ### 2025-11-21 Summary (Harmonics Explorer / time-domain THD helpers)
-- **Intent:** Provide an isolated, non-invasive place to experiment with time-domain harmonic analysis around a tube operating point, and to visualise how **headroom** and **bias current** affect harmonic content (2nd, 3rd, 4th, THD) without destabilising the existing Designer plots.
+- **Intent:** Provide an isolated, non-invasive place to experiment with time-domain harmonic analysis around a tube operating point, and to visualise how **headroom** and **bias current** affect harmonic content (2nd, 3rd, 4th, 5th, THD) without destabilising the existing Designer plots.
 
 - **Architecture:**
   - New **Harmonics** tab added to the left-hand `QTabWidget` next to Designer/Modeller/Analyser/Data.
   - The Harmonics tab owns its own `Plot harmonicsPlot` and `QGraphicsView harmonicsView`, completely separate from the shared Designer `plot` scene, to avoid interference with load-line overlays and model curves.
   - All SE harmonic scans are currently driven from the **SingleEndedOutput** circuit model only; Push-Pull integration is postponed for stability.
 
-- **Time-domain THD helper (SE):**
+- **Time-domain THD helper (SE, sine-driven, grid-excited):**
   - Files: `valvemodel/circuit/singleendedoutput.h/.cpp`
-  - New method: `bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb, double iaBias_mA, double raa, double headroomVpk, double vs, double &hd2, double &hd3, double &hd4, double &thd) const;`
-  - Behaviour:
-    - Reuses the existing VTADIY 5-point helper (`computeHeadroomHarmonicCurrents`) to obtain five DC load-line samples along the AC swing for a given headroom.
-    - Arranges those as a one-period waveform, interpolates to 512 samples, applies a **Hann window**, and performs a small manual DFT for harmonics 1–4.
-    - Returns **HD2, HD3, HD4, THD** as percentages of the fundamental (`A2/A1`, `A3/A1`, `A4/A1`, sqrt-sum-of-squares), robust into clipping via existing Va clamping.
+  - Method: `bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb, double iaBias_mA, double raa, double headroomVpk, double vs, double &hd2, double &hd3, double &hd4, double &hd5, double &thd) const;`
+  - Behaviour (current implementation):
+    - Estimates small-signal gain **Av** around the current bias using a gm·Ra approximation evaluated at the actual DC anode voltage (`vaBias = vb - Ia·Ra`) with optional cathode-feedback factor `(1 + gm·Rk)` when the K‑bypass box is off.
+    - Maps the requested **anode headroom** (Vpk) to a grid drive amplitude: `Vpp_out = 2·headroomVpk`, `Vpp_in ≈ Vpp_out / Av`.
+    - Drives the tube with a **pure sine at the grid**: `vg(t) = vgBias + 0.5·Vpp_in·sin(ωt)`, clamped at `vg ≤ 0 V` so the model is not forced into unphysical positive-grid conduction.
+    - For each sample `t` in a 512‑point cycle:
+      - Uses `findVaFromVg(vg1_mag, vb, vs, raa)` to solve for the instantaneous anode voltage **Va(t)** on the AC load line at that grid bias.
+      - Converts it to an instantaneous anode current **Ia(t)** via the DC load line `dcLoadlineCurrent(vb, raa, Va)`.
+    - Applies a **Hann window** to Ia(t) and performs a small manual DFT to extract the amplitudes of the first five harmonics (A1..A5).
+    - Returns **HD2, HD3, HD4, HD5, THD** as percentages of the fundamental (`100·A_n/A1` for HDn, and `sqrt(HD2²+HD3²+HD4²+HD5²)` for THD).
 
-- **SE scan helpers:**
+- **SE scan helpers (unchanged API, now using sine-driven engine):**
   - `void computeTimeDomainHarmonicScan(QVector<double> &headroomVals, QVector<double> &hd2Vals, QVector<double> &hd3Vals, QVector<double> &hd4Vals, QVector<double> &thdVals) const;`
     - Sweeps **Headroom at anode (Vpk)** from a small value up to ~`0.9 * VB` for the current SE Designer settings (`VB, VS, IA, RA`).
     - For each headroom step, calls `simulateHarmonicsTimeDomain(...)` and fills parallel vectors with headroom and harmonic levels.
-  - `void computeBiasSweepHarmonicCurve(QVector<double> &iaVals, QVector<double> &hd2Vals, QVector<double> &hd3Vals, QVector<double> &hd4Vals, QVector<double> &thdVals) const;`
+  - `void computeBiasSweepHarmonicCurve(QVector<double> &iaVals, QVector<double> &hd2Vals, QVector<double> &hd3Vals, QVector<double> &hd4Vals, QVector<double> &hd5Vals, QVector<double> &thdVals) const;`
     - Requires a **non-zero SE Headroom** (fixed swing).
     - Sweeps **bias current IA** around the current operating point (roughly 0.5×IA..1.5×IA, clamped to `device1->getIaMax()`), at fixed VB/VS/RA and Headroom.
-    - For each IA step, calls `simulateHarmonicsTimeDomain(...)` and stores HD2/3/4/THD vs IA.
+    - For each IA step, calls `simulateHarmonicsTimeDomain(...)` and stores HD2/3/4/HD5/THD vs IA.
   - `void debugScanHeadroomTimeDomain() const;`
     - Thin wrapper around `computeTimeDomainHarmonicScan` that logs the scan as `SE_THD_SCAN: headroom=... hd2=... hd3=... hd4=... thd=...` to the application output for manual inspection.
 
@@ -131,11 +136,11 @@ Last updated: 2025-11-22 (CRITICAL: AI violated user approval rule THIRD TIME, m
 4. **Proceed with caution** - Make minimal, well-documented changes only
 
 ### Time-Domain Harmonic Analysis Status (Pre-Incident):
-- **Basic scan functions**: ✅ Working (`computeTimeDomainHarmonicScan`, `computeBiasSweepHarmonicCurve`)
-- **UI integration**: ✅ Working (Harmonics tab with buttons)
-- **Plotting**: ✅ Working for basic scans
-- **Heatmap**: ❌ Corrupted during failed edit attempt
-- **3D Waterfall**: ❌ Removed due to previous failures
+- **Basic scan functions**: Working (`computeTimeDomainHarmonicScan`, `computeBiasSweepHarmonicCurve`)
+- **UI integration**: Working (Harmonics tab with buttons)
+- **Plotting**: Working for basic scans
+- **Heatmap**: Corrupted during failed edit attempt
+- **3D Waterfall**: Removed due to previous failures
 
 ## Open Items (For Successor)
 - [ ] Verify valveworkbench.cpp file integrity after manual revert
@@ -195,29 +200,34 @@ Last updated: 2025-11-22 (CRITICAL: AI violated user approval rule THIRD TIME, m
 
 ### 2025-11-21 Summary (Harmonics Explorer / time-domain THD helpers)
 
-- **Intent:** Provide an isolated, non-invasive place to experiment with time-domain harmonic analysis around a tube operating point, and to visualise how **headroom** and **bias current** affect harmonic content (2nd, 3rd, 4th, THD) without destabilising the existing Designer plots.
+- **Intent:** Provide an isolated, non-invasive place to experiment with time-domain harmonic analysis around a tube operating point, and to visualise how **headroom** and **bias current** affect harmonic content (2nd, 3rd, 4th, 5th, THD) without destabilising the existing Designer plots.
 
 - **Architecture:**
   - New **Harmonics** tab added to the left-hand `QTabWidget` next to Designer/Modeller/Analyser/Data.
   - The Harmonics tab owns its own `Plot harmonicsPlot` and `QGraphicsView harmonicsView`, completely separate from the shared Designer `plot` scene, to avoid interference with load-line overlays and model curves.
   - All SE harmonic scans are currently driven from the **SingleEndedOutput** circuit model only; Push-Pull integration is postponed for stability.
 
-- **Time-domain THD helper (SE):**
+- **Time-domain THD helper (SE, sine-driven, grid-excited):**
   - Files: `valvemodel/circuit/singleendedoutput.h/.cpp`
-  - New method: `bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb, double iaBias_mA, double raa, double headroomVpk, double vs, double &hd2, double &hd3, double &hd4, double &thd) const;`
-  - Behaviour:
-    - Reuses the existing VTADIY 5-point helper (`computeHeadroomHarmonicCurrents`) to obtain five DC load-line samples along the AC swing for a given headroom.
-    - Arranges those as a one-period waveform, interpolates to 512 samples, applies a **Hann window**, and performs a small manual DFT for harmonics 1–4.
-    - Returns **HD2, HD3, HD4, THD** as percentages of the fundamental (`A2/A1`, `A3/A1`, `A4/A1`, sqrt-sum-of-squares), robust into clipping via existing Va clamping.
+  - Method: `bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb, double iaBias_mA, double raa, double headroomVpk, double vs, double &hd2, double &hd3, double &hd4, double &hd5, double &thd) const;`
+  - Behaviour (current implementation):
+    - Estimates small-signal gain **Av** around the current bias using a gm·Ra approximation evaluated at the actual DC anode voltage (`vaBias = vb - Ia·Ra`) with optional cathode-feedback factor `(1 + gm·Rk)` when the K‑bypass box is off.
+    - Maps the requested **anode headroom** (Vpk) to a grid drive amplitude: `Vpp_out = 2·headroomVpk`, `Vpp_in ≈ Vpp_out / Av`.
+    - Drives the tube with a **pure sine at the grid**: `vg(t) = vgBias + 0.5·Vpp_in·sin(ωt)`, clamped at `vg ≤ 0 V` so the model is not forced into unphysical positive-grid conduction.
+    - For each sample `t` in a 512‑point cycle:
+      - Uses `findVaFromVg(vg1_mag, vb, vs, raa)` to solve for the instantaneous anode voltage **Va(t)** on the AC load line at that grid bias.
+      - Converts it to an instantaneous anode current **Ia(t)** via the DC load line `dcLoadlineCurrent(vb, raa, Va)`.
+    - Applies a **Hann window** to Ia(t) and performs a small manual DFT to extract the amplitudes of the first five harmonics (A1..A5).
+    - Returns **HD2, HD3, HD4, HD5, THD** as percentages of the fundamental (`100·A_n/A1` for HDn, and `sqrt(HD2²+HD3²+HD4²+HD5²)` for THD).
 
-- **SE scan helpers:**
+- **SE scan helpers (unchanged API, now using sine-driven engine):**
   - `void computeTimeDomainHarmonicScan(QVector<double> &headroomVals, QVector<double> &hd2Vals, QVector<double> &hd3Vals, QVector<double> &hd4Vals, QVector<double> &thdVals) const;`
     - Sweeps **Headroom at anode (Vpk)** from a small value up to ~`0.9 * VB` for the current SE Designer settings (`VB, VS, IA, RA`).
     - For each headroom step, calls `simulateHarmonicsTimeDomain(...)` and fills parallel vectors with headroom and harmonic levels.
-  - `void computeBiasSweepHarmonicCurve(QVector<double> &iaVals, QVector<double> &hd2Vals, QVector<double> &hd3Vals, QVector<double> &hd4Vals, QVector<double> &thdVals) const;`
+  - `void computeBiasSweepHarmonicCurve(QVector<double> &iaVals, QVector<double> &hd2Vals, QVector<double> &hd3Vals, QVector<double> &hd4Vals, QVector<double> &hd5Vals, QVector<double> &thdVals) const;`
     - Requires a **non-zero SE Headroom** (fixed swing).
     - Sweeps **bias current IA** around the current operating point (roughly 0.5×IA..1.5×IA, clamped to `device1->getIaMax()`), at fixed VB/VS/RA and Headroom.
-    - For each IA step, calls `simulateHarmonicsTimeDomain(...)` and stores HD2/3/4/THD vs IA.
+    - For each IA step, calls `simulateHarmonicsTimeDomain(...)` and stores HD2/3/4/HD5/THD vs IA.
   - `void debugScanHeadroomTimeDomain() const;`
     - Thin wrapper around `computeTimeDomainHarmonicScan` that logs the scan as `SE_THD_SCAN: headroom=... hd2=... hd3=... hd4=... thd=...` to the application output for manual inspection.
 
