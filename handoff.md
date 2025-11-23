@@ -453,13 +453,7 @@ Additional (2025-11-05):
   - No Ceres fitting in the manual path; the user is in full control of parameter values once seeded.
   - No shared mutable state with Gardiner/Reefman fitting beyond reading the same Measurement; changing sliders must not affect Gardiner in any way.
 
-3) **Reefman Pentode – alignment with ExtractModel_3p0 (experimental branch only)**
-   - Goal: Bring the `ReefmanPentode` model’s static Ia/Ig2 behaviour closer to Derk Reefman’s ExtractModel tool located at `C:\Users\lizar\Documents\ExtractModel_3p0` for representative tubes.
-   - Process (high level):
-     - Create a dedicated branch (e.g. `feature/reefman-extractmodel`) and keep all Reefman/uTracer work isolated there.
-     - For a chosen tube, take a trusted parameter set from ExtractModel_3p0 and record Ia/Ig2 values at a small grid of (Va, Vg1, Vg2) points.
-     - In that branch, compare `ReefmanPentode::anodeCurrent` (and screen-current path) against ExtractModel outputs at those points:
-       - Confirm unit conventions (mA vs A, kg1/kg2 scaling, exponents alpha/beta/gamma, any clipping or offsets).
+### Planned Feature – Operating Point Lock for μ/gm/ra (Modeller/Designer)
        - Adjust the Reefman equations only in that branch until Ia/Ig2 match ExtractModel within a small tolerance for the test grid, *before* enabling Ceres fitting.
      - Once static behaviour matches, carefully reintroduce Ceres bounds and seeding for Reefman, still on the experimental branch, and verify that Gardiner behaviour is unchanged.
    - Mainline policy:

@@ -2831,56 +2831,197 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
     double mu      = 0.0;
 
     if (testType == ANODE_CHARACTERISTICS) {
-        // ra from anode sweep: dVa/dIa at roughly constant Vg
-        const double vaPrev = samplePrev->getVa();
-        const double iaPrev = samplePrev->getIa();
-        const double vaNext = sampleNext->getVa();
-        const double iaNext = sampleNext->getIa();
+        // --- ra: LS fit of Ia vs Va in a local window, with two-point fallback ---
+        {
+            int iStart = std::max(0, sampleIdx - 2);
+            int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
 
-        const double dIa_mA = iaNext - iaPrev;
-        const double dVa    = vaNext - vaPrev;
-        if (std::abs(dIa_mA) > 1e-9) {
-            const double dVa_dIa_V_per_mA = dVa / dIa_mA;
-            ra_ohms = dVa_dIa_V_per_mA * 1000.0; // V/mA → Ohms
+            double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+            int N = 0;
+
+            for (int i = iStart; i <= iEnd; ++i) {
+                Sample *s = sweep->at(i);
+                if (!s) {
+                    continue;
+                }
+                const double ia = s->getIa(); // mA
+                if (ia <= 0.0) {
+                    continue; // skip non-conducting points
+                }
+                const double va = s->getVa(); // V
+                Sx  += va;
+                Sy  += ia;
+                Sxx += va * va;
+                Sxy += va * ia;
+                ++N;
+            }
+
+            const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+            if (N >= 3 && std::fabs(den) > 1e-12) {
+                const double slope_dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+                if (std::fabs(slope_dIa_dVa) > 1e-12) {
+                    // ra = dVa/dIa = 1 / (dIa/dVa)
+                    ra_ohms = 1000.0 / slope_dIa_dVa; // V/mA → Ohms
+                }
+            }
+
+            // Fallback: if LS failed or ra is non-positive, use existing two-point estimate
+            if (ra_ohms <= 0.0) {
+                const double vaPrev = samplePrev->getVa();
+                const double iaPrev = samplePrev->getIa();
+                const double vaNext = sampleNext->getVa();
+                const double iaNext = sampleNext->getIa();
+
+                const double dIa_mA = iaNext - iaPrev;
+                const double dVa    = vaNext - vaPrev;
+                if (std::fabs(dIa_mA) > 1e-9) {
+                    const double dVa_dIa_V_per_mA = dVa / dIa_mA;
+                    ra_ohms = dVa_dIa_V_per_mA * 1000.0;
+                }
+            }
         }
 
-        // gm from neighbouring sweeps at the same sample index (vary Vg, hold Va)
+        // --- gm: LS fit of Ia vs Vg1 across nearby sweeps, with two-sweep fallback ---
         if (sweepCount >= 3) {
-            const int sweepPrevIdx = clampIndex(sweepIdx - 1, sweepCount);
-            const int sweepNextIdx = clampIndex(sweepIdx + 1, sweepCount);
-            Sweep *sPrev = measurement->at(sweepPrevIdx);
-            Sweep *sNext = measurement->at(sweepNextIdx);
-            if (sPrev && sNext && sPrev->count() > sampleIdx && sNext->count() > sampleIdx) {
-                Sample *spPrev = sPrev->at(sampleIdx);
-                Sample *spNext = sNext->at(sampleIdx);
-                if (spPrev && spNext) {
-                    const double iaPrevSweep = spPrev->getIa();
-                    const double iaNextSweep = spNext->getIa();
-                    const double vgPrev      = sPrev->getVg1Nominal();
-                    const double vgNext      = sNext->getVg1Nominal();
-                    const double dVg         = vgNext - vgPrev;
-                    if (std::abs(dVg) > 1e-6) {
-                        gm_mA_V = (iaNextSweep - iaPrevSweep) / dVg; // mA/V
+            int swStart = clampIndex(sweepIdx - 2, sweepCount);
+            int swEnd   = clampIndex(sweepIdx + 2, sweepCount);
+
+            double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+            int N = 0;
+
+            for (int sw = swStart; sw <= swEnd; ++sw) {
+                Sweep *sRow = measurement->at(sw);
+                if (!sRow || sRow->count() <= sampleIdx) {
+                    continue;
+                }
+                Sample *sp = sRow->at(sampleIdx);
+                if (!sp) {
+                    continue;
+                }
+                const double ia = sp->getIa(); // mA
+                if (ia <= 0.0) {
+                    continue;
+                }
+                const double vg = sRow->getVg1Nominal(); // V
+                Sx  += vg;
+                Sy  += ia;
+                Sxx += vg * vg;
+                Sxy += vg * ia;
+                ++N;
+            }
+
+            const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+            if (N >= 3 && std::fabs(den) > 1e-12) {
+                gm_mA_V = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+            }
+
+            // Fallback: if LS failed or gm is non-positive, use existing two-sweep method
+            if (gm_mA_V <= 0.0) {
+                const int sweepPrevIdx = clampIndex(sweepIdx - 1, sweepCount);
+                const int sweepNextIdx = clampIndex(sweepIdx + 1, sweepCount);
+                Sweep *sPrev = measurement->at(sweepPrevIdx);
+                Sweep *sNext = measurement->at(sweepNextIdx);
+                if (sPrev && sNext && sPrev->count() > sampleIdx && sNext->count() > sampleIdx) {
+                    Sample *spPrev = sPrev->at(sampleIdx);
+                    Sample *spNext = sNext->at(sampleIdx);
+                    if (spPrev && spNext) {
+                        const double iaPrevSweep = spPrev->getIa();
+                        const double iaNextSweep = spNext->getIa();
+                        const double vgPrev      = sPrev->getVg1Nominal();
+                        const double vgNext      = sNext->getVg1Nominal();
+                        const double dVg         = vgNext - vgPrev;
+                        if (std::fabs(dVg) > 1e-6) {
+                            gm_mA_V = (iaNextSweep - iaPrevSweep) / dVg; // mA/V
+                        }
                     }
                 }
             }
         }
     } else if (testType == TRANSFER_CHARACTERISTICS) {
-        // gm from transfer: dIa/dVg1 within a single sweep (Va fixed)
-        const double iaPrev = samplePrev->getIa();
-        const double iaNext = sampleNext->getIa();
-        const double vgPrev = samplePrev->getVg1();
-        const double vgNext = sampleNext->getVg1();
-        const double dVg    = vgNext - vgPrev;
-        if (std::abs(dVg) > 1e-6) {
-            gm_mA_V = (iaNext - iaPrev) / dVg; // mA/V
+        // --- gm: LS fit of Ia vs Vg1 in a local window (this sweep), with two-point fallback ---
+        {
+            int iStart = std::max(0, sampleIdx - 2);
+            int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+
+            double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+            int N = 0;
+
+            for (int i = iStart; i <= iEnd; ++i) {
+                Sample *s = sweep->at(i);
+                if (!s) {
+                    continue;
+                }
+                const double ia = s->getIa(); // mA
+                if (ia <= 0.0) {
+                    continue;
+                }
+                const double vg = s->getVg1(); // V
+                Sx  += vg;
+                Sy  += ia;
+                Sxx += vg * vg;
+                Sxy += vg * ia;
+                ++N;
+            }
+
+            const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+            if (N >= 3 && std::fabs(den) > 1e-12) {
+                gm_mA_V = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+            }
+
+            // Fallback: original two-point dIa/dVg within this sweep
+            if (gm_mA_V <= 0.0) {
+                const double iaPrev = samplePrev->getIa();
+                const double iaNext = sampleNext->getIa();
+                const double vgPrev = samplePrev->getVg1();
+                const double vgNext = sampleNext->getVg1();
+                const double dVg    = vgNext - vgPrev;
+                if (std::fabs(dVg) > 1e-6) {
+                    gm_mA_V = (iaNext - iaPrev) / dVg; // mA/V
+                }
+            }
         }
 
-        // Approximate ra from DC operating point: Va / Ia
-        const double vaMid = sampleMid->getVa();
-        const double iaMid = sampleMid->getIa();
-        if (iaMid > 1e-9) {
-            ra_ohms = (vaMid / iaMid) * 1000.0; // V / (mA) → Ohms
+        // --- ra: LS fit of Ia vs Va in a local window, with Va/Ia fallback ---
+        {
+            int iStart = std::max(0, sampleIdx - 2);
+            int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+
+            double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+            int N = 0;
+
+            for (int i = iStart; i <= iEnd; ++i) {
+                Sample *s = sweep->at(i);
+                if (!s) {
+                    continue;
+                }
+                const double ia = s->getIa(); // mA
+                if (ia <= 0.0) {
+                    continue;
+                }
+                const double va = s->getVa(); // V
+                Sx  += va;
+                Sy  += ia;
+                Sxx += va * va;
+                Sxy += va * ia;
+                ++N;
+            }
+
+            const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+            if (N >= 3 && std::fabs(den) > 1e-12) {
+                const double slope_dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+                if (std::fabs(slope_dIa_dVa) > 1e-12) {
+                    ra_ohms = 1000.0 / slope_dIa_dVa; // V/mA → Ohms
+                }
+            }
+
+            // Fallback: original Va/Ia mid-point estimate
+            if (ra_ohms <= 0.0) {
+                const double vaMid = sampleMid->getVa();
+                const double iaMid = sampleMid->getIa();
+                if (iaMid > 1e-9) {
+                    ra_ohms = (vaMid / iaMid) * 1000.0; // V / (mA) → Ohms
+                }
+            }
         }
     }
 
@@ -3117,6 +3258,29 @@ void ValveWorkbench::on_mes_mod_select_stateChanged(int state)
     safeDisplayText(ui->gmLcd, "--");
     safeDisplayText(ui->raLcd, "--");
     safeDisplayText(ui->lcdNumber_3, "--");
+
+    // Visually distinguish measured vs model mode:
+    // - Checkbox text: normal for measured, red for model
+    // - gm/ra/mu labels: black for measured, red for model
+    // - gm/ra/mu LCD digits: black for measured, red for model
+    if (ui->mes_mod_select) {
+        ui->mes_mod_select->setStyleSheet(modelMode ? "color: rgb(200,0,0);" : "");
+    }
+    auto setLabelColor = [modelMode](QLabel *label) {
+        if (!label) return;
+        label->setStyleSheet(modelMode ? "color: rgb(200,0,0);" : "");
+    };
+    setLabelColor(ui->gmLabel);
+    setLabelColor(ui->raLabel);
+    setLabelColor(ui->muLabel);
+
+    auto setLcdColor = [modelMode](QLCDNumber *lcd) {
+        if (!lcd) return;
+        lcd->setStyleSheet(modelMode ? "color: rgb(200,0,0);" : "");
+    };
+    setLcdColor(ui->gmLcd);
+    setLcdColor(ui->raLcd);
+    setLcdColor(ui->lcdNumber_3);
 
     if (!modelMode) {
         // Measured mode: recompute from current measurement if available
