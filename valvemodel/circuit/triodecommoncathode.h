@@ -38,6 +38,14 @@ public:
     // SPICE export functionality
     QJsonObject exportSPICE();
 
+    // Headroom scan helper used by the Harmonics tab. Returns parallel
+    // vectors of headroom (Vpk) and harmonic levels (% of fundamental).
+    void computeTimeDomainHarmonicScan(QVector<double> &headroomVals,
+                                       QVector<double> &hd2Vals,
+                                       QVector<double> &hd3Vals,
+                                       QVector<double> &hd4Vals,
+                                       QVector<double> &thdVals) const;
+
 protected:
     virtual void update(int index);
 
@@ -66,6 +74,22 @@ private:
     // Cached maximum output swing (Vpp) along AC line computed during plot
     double lastMaxVpp = 0.0;
 
+    // Time-domain harmonic helpers (triode-specific) used for Designer
+    // panel metrics and the Harmonics tab headroom scan.
+    bool computeHeadroomHarmonicCurrents(double headroomVpk,
+                                         double &Ia,
+                                         double &Ib,
+                                         double &Ic,
+                                         double &Id,
+                                         double &Ie) const;
+
+    bool simulateHarmonicsTimeDomain(double headroomVpk,
+                                     double &hd2,
+                                     double &hd3,
+                                     double &hd4,
+                                     double &hd5,
+                                     double &thd) const;
+
     // Circuit calculation methods
     void calculateAnodeLoadLine();
     void calculateCathodeLoadLine();
@@ -89,5 +113,17 @@ public:
         if (paLimitGroup) paLimitGroup->setVisible(visible);
         if (symSwingGroup) symSwingGroup->setVisible(visible);
         if (sensitivityGroup) sensitivityGroup->setVisible(visible);
+    }
+
+    // Ensure all Designer overlay pointers are dropped when the shared
+    // Plot scene is cleared externally (e.g., via Plot::setAxes in
+    // selectStdDevice). This avoids dangling pointers into items that
+    // have already been destroyed by QGraphicsScene::clear().
+    void resetOverlays() override {
+        Circuit::resetOverlays();
+        swingGroup = nullptr;
+        paLimitGroup = nullptr;
+        symSwingGroup = nullptr;
+        sensitivityGroup = nullptr;
     }
 };

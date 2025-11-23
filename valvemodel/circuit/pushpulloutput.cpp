@@ -313,24 +313,15 @@ void PushPullOutput::update(int index)
         // scale headroom power by ~2× compared to a simple SE helper.
         phead_W = 2.0 * (effectiveHeadroomVpk * effectiveHeadroomVpk) / raa;
 
-        // Base 5-point currents along the load line (SE-style):
-        double Ia_base = 0.0;  // I_max
-        double Ib_base = 0.0;  // I_max_mid_distorted
-        double Ic_base = 0.0;  // I_bias
-        double Id_base = 0.0;  // I_min_mid_distorted
-        double Ie_base = 0.0;  // I_min_distorted
-        if (computeHeadroomHarmonicCurrents(vb, ia, raa, effectiveHeadroomVpk, vs,
-                                            Ia_base, Ib_base, Ic_base, Id_base, Ie_base)) {
-            // VTADIY PP mapping: treat the waveform as the difference between
-            // top and bottom half-cycles so even harmonics cancel correctly.
-            // See Tube.createHeadroom() PP branch.
-            const double Ia_pp = Ia_base - Ie_base;
-            const double Ib_pp = Ib_base - Id_base;
-            const double Ic_pp = 0.0;                  // bias symmetric around zero
-            const double Id_pp = Id_base - Ib_base;
-            const double Ie_pp = Ie_base - Ia_base;
-
-            computeHarmonics(Ia_pp, Ib_pp, Ic_pp, Id_pp, Ie_pp, hd2, hd3, hd4, thd);
+        if (simulateHarmonicsTimeDomain(vb,
+                                        ia,
+                                        raa,
+                                        effectiveHeadroomVpk,
+                                        vs,
+                                        hd2,
+                                        hd3,
+                                        hd4,
+                                        thd)) {
 
             // If cathode is unbypassed (gainMode == 0), approximate the effect
             // of local feedback by reducing the harmonic amplitudes by a simple
@@ -339,11 +330,13 @@ void PushPullOutput::update(int index)
                 const double vk      = bestVg1;
                 const double vgBias  = -vk;
                 const double dVg     = std::max(0.05, std::abs(vgBias) * 0.02);
-                double iaPlus_A      = device1->anodeCurrent(vb, vgBias + dVg, vs);
-                double iaMinus_A     = device1->anodeCurrent(vb, vgBias - dVg, vs);
+                double iaPlus_mA     = device1->anodeCurrent(vb, vgBias + dVg, vs);
+                double iaMinus_mA    = device1->anodeCurrent(vb, vgBias - dVg, vs);
                 double gm_mA_per_V   = 0.0;
-                if (std::isfinite(iaPlus_A) && std::isfinite(iaMinus_A) && dVg > 0.0) {
-                    gm_mA_per_V = (iaPlus_A - iaMinus_A) * 1000.0 / (2.0 * dVg);
+                if (std::isfinite(iaPlus_mA) && std::isfinite(iaMinus_mA) && dVg > 0.0) {
+                    // Device::anodeCurrent already returns mA, so the central difference
+                    // directly yields gm in mA/V without additional scaling.
+                    gm_mA_per_V = (iaPlus_mA - iaMinus_mA) / (2.0 * dVg);
                 }
                 if (std::isfinite(gm_mA_per_V)) {
                     const double gm_A_per_V = gm_mA_per_V / 1000.0;
@@ -381,7 +374,9 @@ void PushPullOutput::update(int index)
         double iaMinus = device1->anodeCurrent(vbEff, vgBias - dVg, vsEff);
         double gm_mA_per_V = 0.0;
         if (std::isfinite(iaPlus) && std::isfinite(iaMinus) && dVg > 0.0) {
-            gm_mA_per_V = (iaPlus - iaMinus) * 1000.0 / (2.0 * dVg);
+            // Device::anodeCurrent already returns mA, so the central difference
+            // directly yields gm in mA/V without additional scaling.
+            gm_mA_per_V = (iaPlus - iaMinus) / (2.0 * dVg);
         }
 
         double gain = 0.0;

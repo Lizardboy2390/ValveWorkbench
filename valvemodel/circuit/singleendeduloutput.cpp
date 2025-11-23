@@ -17,10 +17,16 @@ SingleEndedUlOutput::SingleEndedUlOutput()
     parameter[SEUL_RA]  = new Parameter("Anode load (\u03a9)", 8000.0);
 
     // Calculated values
-    parameter[SEUL_VK]   = new Parameter("Bias point Vk (V)", 0.0);
-    parameter[SEUL_IK]   = new Parameter("Cathode current (mA)", 0.0);
-    parameter[SEUL_RK]   = new Parameter("Cathode resistor (\u03a9)", 0.0);
-    parameter[SEUL_POUT] = new Parameter("Max output power (W)", 0.0);
+    parameter[SEUL_HEADROOM] = new Parameter("Headroom at anode (Vpk)", 0.0);
+    parameter[SEUL_VK]       = new Parameter("Bias point Vk (V)", 0.0);
+    parameter[SEUL_IK]       = new Parameter("Cathode current (mA)", 0.0);
+    parameter[SEUL_RK]       = new Parameter("Cathode resistor (\u03a9)", 0.0);
+    parameter[SEUL_POUT]     = new Parameter("Max output power (W)", 0.0);
+    parameter[SEUL_PHEAD]    = new Parameter("Power at headroom (W)", 0.0);
+    parameter[SEUL_HD2]      = new Parameter("2nd harmonic (%)", 0.0);
+    parameter[SEUL_HD3]      = new Parameter("3rd harmonic (%)", 0.0);
+    parameter[SEUL_HD4]      = new Parameter("4th harmonic (%)", 0.0);
+    parameter[SEUL_THD]      = new Parameter("Total harmonic (%)", 0.0);
 }
 
 int SingleEndedUlOutput::getDeviceType(int index)
@@ -36,29 +42,58 @@ QTreeWidgetItem *SingleEndedUlOutput::buildTree(QTreeWidgetItem *parent)
     return nullptr;
 }
 
+void SingleEndedUlOutput::setGainMode(int mode)
+{
+    gainMode = mode ? 1 : 0;
+    update(SEUL_HEADROOM);
+}
+
 void SingleEndedUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
 {
-    // Inputs: first 4 fields
-    for (int i = 0; i < 4; ++i) {
+    // Inputs: first 5 fields (including manual Headroom)
+    for (int i = 0; i <= SEUL_HEADROOM; ++i) {
         if (parameter[i] && labels[i] && values[i]) {
             labels[i]->setText(parameter[i]->getName());
             values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 2));
             labels[i]->setVisible(true);
             values[i]->setVisible(true);
             values[i]->setReadOnly(false);
+
+            if (i == SEUL_HEADROOM) {
+                const double headroomManual = parameter[SEUL_HEADROOM]->getValue();
+                const bool overrideActive   = (headroomManual > 0.0);
+                QString style;
+                if (overrideActive) {
+                    // Manual override for UL headroom: bright blue, mirroring SE behaviour.
+                    style = "color: rgb(0,0,255);";
+                }
+                labels[i]->setStyleSheet(style);
+                values[i]->setStyleSheet(style);
+            } else {
+                labels[i]->setStyleSheet("");
+                values[i]->setStyleSheet("");
+            }
         }
     }
 
-    // Outputs: next 4 fields
-    for (int i = 4; i <= SEUL_POUT; ++i) {
+    const double headroomManual = parameter[SEUL_HEADROOM]->getValue();
+    const bool overrideActive   = (headroomManual > 0.0);
+
+    // Outputs: SEUL_VK..SEUL_THD
+    for (int i = SEUL_VK; i <= SEUL_THD; ++i) {
         if (!labels[i] || !values[i]) continue;
 
         QString labelText;
         switch (i) {
-        case SEUL_VK:   labelText = "Bias point Vk (V):"; break;
-        case SEUL_IK:   labelText = "Cathode current (mA):"; break;
-        case SEUL_RK:   labelText = "Cathode resistor (\u03a9):"; break;
-        case SEUL_POUT: labelText = "Max output power (W):"; break;
+        case SEUL_VK:    labelText = "Bias point Vk (V):"; break;
+        case SEUL_IK:    labelText = "Cathode current (mA):"; break;
+        case SEUL_RK:    labelText = "Cathode resistor (\u03a9):"; break;
+        case SEUL_POUT:  labelText = "Max output power (W):"; break;
+        case SEUL_PHEAD: labelText = "Power at headroom (W):"; break;
+        case SEUL_HD2:   labelText = "2nd harmonic (%):"; break;
+        case SEUL_HD3:   labelText = "3rd harmonic (%):"; break;
+        case SEUL_HD4:   labelText = "4th harmonic (%):"; break;
+        case SEUL_THD:   labelText = "Total harmonic (%):"; break;
         default: break;
         }
 
@@ -66,7 +101,10 @@ void SingleEndedUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         if (!device1) {
             values[i]->setText("N/A");
         } else if (parameter[i]) {
-            int decimals = (i == SEUL_POUT) ? 3 : 3;
+            int decimals = 3;
+            if (i == SEUL_POUT || i == SEUL_PHEAD || i == SEUL_HD2 || i == SEUL_HD3 || i == SEUL_HD4 || i == SEUL_THD) {
+                decimals = 2;
+            }
             values[i]->setText(QString::number(parameter[i]->getValue(), 'f', decimals));
         } else {
             values[i]->setText("-");
@@ -75,10 +113,41 @@ void SingleEndedUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         labels[i]->setVisible(true);
         values[i]->setVisible(true);
         values[i]->setReadOnly(true);
+
+        // Colour distortion-related outputs when manual headroom is active.
+        if (i == SEUL_PHEAD || i == SEUL_HD2 || i == SEUL_HD3 || i == SEUL_HD4 || i == SEUL_THD) {
+            if (overrideActive) {
+                values[i]->setStyleSheet("color: rgb(0,0,255);");
+            } else {
+                values[i]->setStyleSheet("");
+            }
+        } else {
+            values[i]->setStyleSheet("");
+        }
+    }
+
+    // Input sensitivity (Vpp) field after SEUL_THD
+    const int sensIndex = SEUL_THD + 1;
+    if (sensIndex < 16 && labels[sensIndex] && values[sensIndex]) {
+        labels[sensIndex]->setText("Input sensitivity (Vpp):");
+        if (inputSensitivityVpp > 0.0) {
+            values[sensIndex]->setText(QString::number(inputSensitivityVpp, 'f', 2));
+        } else {
+            values[sensIndex]->setText("");
+        }
+        labels[sensIndex]->setVisible(true);
+        values[sensIndex]->setVisible(true);
+        values[sensIndex]->setReadOnly(true);
+
+        if (overrideActive && inputSensitivityVpp > 0.0) {
+            values[sensIndex]->setStyleSheet("color: rgb(0,0,255);");
+        } else {
+            values[sensIndex]->setStyleSheet("");
+        }
     }
 
     // Hide remaining parameter slots
-    for (int i = SEUL_POUT + 1; i < 16; ++i) {
+    for (int i = sensIndex + 1; i < 16; ++i) {
         if (labels[i] && values[i]) {
             labels[i]->setVisible(false);
             values[i]->setVisible(false);
@@ -111,6 +180,253 @@ QPointF SingleEndedUlOutput::findLineIntersection(const QPointF &line1Start, con
     return QPointF(ix, iy);
 }
 
+double SingleEndedUlOutput::dcLoadlineCurrent(double vb, double raa, double va) const
+{
+    const double q = vb / raa;
+    const double m = -q / vb;
+    return m * va + q;
+}
+
+double SingleEndedUlOutput::findGridBiasForCurrent(double targetIa_A,
+                                                    double vb,
+                                                    double tap,
+                                                    double raa) const
+{
+    const double va = vb - targetIa_A * raa;
+    if (va <= 0.0 || !std::isfinite(va)) {
+        return 0.0;
+    }
+
+    const double vg1Max = device1->getVg1Max() * 2.0;
+    double bestVg1 = 0.0;
+    double minErr = std::numeric_limits<double>::infinity();
+    const int vgSteps = 400;
+
+    const double vsBias = va * tap + vb * (1.0 - tap);
+
+    for (int i = 0; i <= vgSteps; ++i) {
+        const double vg1 = vg1Max * static_cast<double>(i) / vgSteps;
+        const double iaTest = device1->anodeCurrent(va, -vg1, vsBias);
+        if (!std::isfinite(iaTest) || iaTest < 0.0) {
+            continue;
+        }
+        const double err = std::abs(targetIa_A - iaTest);
+        if (err < minErr) {
+            minErr = err;
+            bestVg1 = vg1;
+        }
+    }
+
+    return bestVg1;
+}
+
+double SingleEndedUlOutput::findVaFromVg(double vg1,
+                                         double vb,
+                                         double tap,
+                                         double raa) const
+{
+    double va = 0.0;
+    double incr = vb / 10.0;
+
+    for (;;) {
+        const double iaLine = dcLoadlineCurrent(vb, raa, va);
+        const double vs = va * tap + vb * (1.0 - tap);
+        const double it = device1->anodeCurrent(va, -vg1, vs);
+
+        if (!std::isfinite(it) || !std::isfinite(iaLine)) {
+            break;
+        }
+
+        if (it >= iaLine && incr <= 1e-6) {
+            break;
+        } else if (it >= iaLine) {
+            va -= incr;
+            incr *= 0.1;
+        }
+
+        va += incr;
+
+        if (va < 0.0 || va > 2.0 * vb) {
+            break;
+        }
+    }
+
+    return va;
+}
+
+bool SingleEndedUlOutput::computeHeadroomHarmonicCurrents(double vb,
+                                                           double ia_mA,
+                                                           double raa,
+                                                           double headroom,
+                                                           double tap,
+                                                           double &Ia,
+                                                           double &Ib,
+                                                           double &Ic,
+                                                           double &Id,
+                                                           double &Ie) const
+{
+    const double biasCurrent_A = ia_mA / 1000.0;
+
+    const double qA = vb / raa;
+    const double mA = -qA / vb;
+    const double vOperating = (biasCurrent_A - qA) / mA;
+
+    double vMin = vOperating - headroom;
+    double vMax = vOperating + headroom;
+
+    const double kMinVa = 1e-3;
+    const double kMaxVa = 2.0 * vb;
+    vMin = std::max(vMin, kMinVa);
+    vMax = std::clamp(vMax, vMin + 1e-6, kMaxVa);
+
+    const double I_max = dcLoadlineCurrent(vb, raa, vMin);
+    const double I_min = dcLoadlineCurrent(vb, raa, vMax);
+    if (!std::isfinite(I_max) || !std::isfinite(I_min)) {
+        return false;
+    }
+
+    const double Vg_bias = findGridBiasForCurrent(biasCurrent_A, vb, tap, raa);
+    const double Vg_max  = findGridBiasForCurrent(I_max,          vb, tap, raa);
+
+    const double Vg_max_mid = Vg_bias + (Vg_max - Vg_bias) / 2.0;
+    const double Vg_min_mid = Vg_bias - (Vg_max - Vg_bias) / 2.0;
+    const double Vg_min     = Vg_bias - (Vg_max - Vg_bias);
+
+    const double V_min_mid_distorted = findVaFromVg(Vg_max_mid, vb, tap, raa);
+    const double V_max_mid_distorted = findVaFromVg(Vg_min_mid, vb, tap, raa);
+    const double V_max_distorted     = findVaFromVg(Vg_min,     vb, tap, raa);
+
+    const double I_max_mid_distorted = dcLoadlineCurrent(vb, raa, V_min_mid_distorted);
+    const double I_min_mid_distorted = dcLoadlineCurrent(vb, raa, V_max_mid_distorted);
+    const double I_min_distorted     = dcLoadlineCurrent(vb, raa, V_max_distorted);
+
+    if (!std::isfinite(I_max_mid_distorted) ||
+        !std::isfinite(I_min_mid_distorted) ||
+        !std::isfinite(I_min_distorted)) {
+        return false;
+    }
+
+    Ia = I_max;
+    Ib = I_max_mid_distorted;
+    Ic = biasCurrent_A;
+    Id = I_min_mid_distorted;
+    Ie = I_min_distorted;
+
+    return true;
+}
+
+bool SingleEndedUlOutput::simulateHarmonicsTimeDomain(double vb,
+                                                      double iaBias_mA,
+                                                      double raa,
+                                                      double headroomVpk,
+                                                      double tap,
+                                                      double &hd2,
+                                                      double &hd3,
+                                                      double &hd4,
+                                                      double &thd) const
+{
+    hd2 = hd3 = hd4 = thd = 0.0;
+
+    if (!device1) {
+        return false;
+    }
+
+    if (vb <= 0.0 || raa <= 0.0 || iaBias_mA <= 0.0 || headroomVpk <= 0.0) {
+        return false;
+    }
+
+    double Ia = 0.0;
+    double Ib = 0.0;
+    double Ic = 0.0;
+    double Id = 0.0;
+    double Ie = 0.0;
+    if (!computeHeadroomHarmonicCurrents(vb,
+                                         iaBias_mA,
+                                         raa,
+                                         headroomVpk,
+                                         tap,
+                                         Ia,
+                                         Ib,
+                                         Ic,
+                                         Id,
+                                         Ie)) {
+        return false;
+    }
+
+    double samples[5];
+    samples[0] = Ia;
+    samples[1] = Ib;
+    samples[2] = Ic;
+    samples[3] = Id;
+    samples[4] = Ie;
+
+    const int sampleCount = 512;
+    const double twoPi = 6.28318530717958647692; // 2 * pi
+
+    double a[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double b[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    for (int k = 0; k < sampleCount; ++k) {
+        const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
+        const double u = phase / twoPi;
+
+        const double pos = u * 5.0;
+        const double indexF = std::floor(pos);
+        int i0 = static_cast<int>(indexF);
+        if (i0 < 0) {
+            i0 = 0;
+        }
+        if (i0 >= 5) {
+            i0 = i0 % 5;
+        }
+        const int i1 = (i0 + 1) % 5;
+        const double frac = pos - indexF;
+
+        const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+
+        const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
+                                                   static_cast<double>(sampleCount - 1)));
+        const double v = ip * window;
+
+        for (int n = 1; n <= 4; ++n) {
+            const double angle = static_cast<double>(n) * phase;
+            const double c = std::cos(angle);
+            const double s = std::sin(angle);
+            a[n] += v * c;
+            b[n] += v * s;
+        }
+    }
+
+    const double scale = 2.0 / static_cast<double>(sampleCount);
+    double A[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    for (int n = 1; n <= 4; ++n) {
+        a[n] *= scale;
+        b[n] *= scale;
+        A[n] = std::sqrt(a[n] * a[n] + b[n] * b[n]);
+    }
+
+    const double fundamental = A[1];
+    if (!(fundamental > 0.0) || !std::isfinite(fundamental)) {
+        return false;
+    }
+
+    const double invFund = 100.0 / fundamental;
+    hd2 = A[2] * invFund;
+    hd3 = A[3] * invFund;
+    hd4 = A[4] * invFund;
+
+    if (!std::isfinite(hd2) || hd2 < 0.0) hd2 = 0.0;
+    if (!std::isfinite(hd3) || hd3 < 0.0) hd3 = 0.0;
+    if (!std::isfinite(hd4) || hd4 < 0.0) hd4 = 0.0;
+
+    thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4);
+    if (!std::isfinite(thd) || thd < 0.0) {
+        thd = 0.0;
+    }
+
+    return true;
+}
+
 void SingleEndedUlOutput::update(int index)
 {
     Q_UNUSED(index);
@@ -120,6 +436,11 @@ void SingleEndedUlOutput::update(int index)
         parameter[SEUL_IK]->setValue(0.0);
         parameter[SEUL_RK]->setValue(0.0);
         parameter[SEUL_POUT]->setValue(0.0);
+        parameter[SEUL_PHEAD]->setValue(0.0);
+        parameter[SEUL_HD2]->setValue(0.0);
+        parameter[SEUL_HD3]->setValue(0.0);
+        parameter[SEUL_HD4]->setValue(0.0);
+        parameter[SEUL_THD]->setValue(0.0);
         return;
     }
 
@@ -133,6 +454,11 @@ void SingleEndedUlOutput::update(int index)
         parameter[SEUL_IK]->setValue(0.0);
         parameter[SEUL_RK]->setValue(0.0);
         parameter[SEUL_POUT]->setValue(0.0);
+        parameter[SEUL_PHEAD]->setValue(0.0);
+        parameter[SEUL_HD2]->setValue(0.0);
+        parameter[SEUL_HD3]->setValue(0.0);
+        parameter[SEUL_HD4]->setValue(0.0);
+        parameter[SEUL_THD]->setValue(0.0);
         return;
     }
 
@@ -220,6 +546,112 @@ void SingleEndedUlOutput::update(int index)
     parameter[SEUL_IK]->setValue(ik_mA);
     parameter[SEUL_RK]->setValue(rk_ohms);
     parameter[SEUL_POUT]->setValue(pout_W);
+
+    // Headroom / harmonics / sensitivity
+    effectiveHeadroomVpk = 0.0;
+    inputSensitivityVpp  = 0.0;
+    double phead_W = 0.0;
+    double hd2 = 0.0;
+    double hd3 = 0.0;
+    double hd4 = 0.0;
+    double thd = 0.0;
+
+    const double headroom = parameter[SEUL_HEADROOM]->getValue();
+    if (headroom > 0.0 && raa > 0.0) {
+        effectiveHeadroomVpk = headroom;
+        // Single-ended UL behaves like SE for power at headroom with respect to the
+        // anode load.
+        phead_W = (effectiveHeadroomVpk * effectiveHeadroomVpk) / (2.0 * raa);
+
+        if (simulateHarmonicsTimeDomain(vb,
+                                        ia,
+                                        raa,
+                                        effectiveHeadroomVpk,
+                                        tap,
+                                        hd2,
+                                        hd3,
+                                        hd4,
+                                        thd)) {
+
+            // If cathode is unbypassed (gainMode == 0), approximate the effect
+            // of local feedback by reducing harmonic amplitudes by (1 + gm*Rk)
+            // based on a small-signal gm estimate around the operating point.
+            if (gainMode == 0 && rk_ohms > 0.0) {
+                const double ia_A   = ia / 1000.0;
+                const double vaBias = vb - ia_A * raa;
+                const double vgBias = -bestVg1;
+                const double vsBias = vaBias * tap + vb * (1.0 - tap);
+                const double dVg    = std::max(0.05, std::abs(vgBias) * 0.02);
+
+                double iaPlus_mA  = device1->anodeCurrent(vaBias, vgBias + dVg, vsBias);
+                double iaMinus_mA = device1->anodeCurrent(vaBias, vgBias - dVg, vsBias);
+                double gm_mA_per_V = 0.0;
+                if (std::isfinite(iaPlus_mA) && std::isfinite(iaMinus_mA) && dVg > 0.0) {
+                    gm_mA_per_V = (iaPlus_mA - iaMinus_mA) / (2.0 * dVg);
+                }
+                if (std::isfinite(gm_mA_per_V)) {
+                    const double gm_A_per_V = gm_mA_per_V / 1000.0;
+                    const double feedback   = 1.0 + gm_A_per_V * rk_ohms;
+                    if (feedback > 1.0 && std::isfinite(feedback)) {
+                        hd2 /= feedback;
+                        hd3 /= feedback;
+                        hd4 /= feedback;
+                        thd /= feedback;
+                    }
+                }
+            }
+        }
+    }
+
+    parameter[SEUL_PHEAD]->setValue(phead_W);
+    parameter[SEUL_HD2]->setValue(hd2);
+    parameter[SEUL_HD3]->setValue(hd3);
+    parameter[SEUL_HD4]->setValue(hd4);
+    parameter[SEUL_THD]->setValue(thd);
+
+    // Input sensitivity: approximate gain from small-signal gm·Ra around the UL
+    // operating point, respecting K-bypass.
+    double vppIn = 0.0;
+    if (device1 && effectiveHeadroomVpk > 0.0 && raa > 0.0) {
+        const double ia_A   = ia / 1000.0;
+        const double vaBias = vb - ia_A * raa;
+        const double vgBias = -bestVg1;
+        const double vsBias = vaBias * tap + vb * (1.0 - tap);
+        const double dVg    = std::max(0.05, std::abs(vgBias) * 0.02);
+
+        const double Vpp = 2.0 * effectiveHeadroomVpk;
+
+        double iaPlus  = device1->anodeCurrent(vaBias, vgBias + dVg, vsBias);
+        double iaMinus = device1->anodeCurrent(vaBias, vgBias - dVg, vsBias);
+        double gm_mA_per_V = 0.0;
+        if (std::isfinite(iaPlus) && std::isfinite(iaMinus) && dVg > 0.0) {
+            // anodeCurrent returns mA, so this is directly gm in mA/V.
+            gm_mA_per_V = (iaPlus - iaMinus) / (2.0 * dVg);
+        }
+
+        double gain = 0.0;
+        if (std::isfinite(gm_mA_per_V) && raa > 0.0) {
+            const double gm_A_per_V = gm_mA_per_V / 1000.0;
+            gain = std::abs(gm_A_per_V * raa);
+
+            if (gainMode == 0 && rk_ohms > 0.0) {
+                const double feedback = 1.0 + gm_A_per_V * rk_ohms;
+                if (feedback > 1.0 && std::isfinite(feedback)) {
+                    gain /= feedback;
+                }
+            }
+        }
+
+        if (std::isfinite(gain) && gain > 1e-6) {
+            vppIn = Vpp / gain;
+        }
+    }
+
+    if (vppIn > 0.0) {
+        inputSensitivityVpp = vppIn;
+    } else {
+        inputSensitivityVpp = 0.0;
+    }
 }
 
 void SingleEndedUlOutput::plot(Plot *plot)

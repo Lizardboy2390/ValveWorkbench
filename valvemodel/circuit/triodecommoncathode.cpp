@@ -183,11 +183,99 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
         values[sensIndex]->setReadOnly(true);
     }
 
-    // Hide unused parameters
-    for (int i = 14; i < 16; i++) {
-        if (labels[i] && values[i]) {
-            labels[i]->setVisible(false);
-            values[i]->setVisible(false);
+    // Harmonic content at effective headroom (HD2–HD5 and THD)
+    const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
+    double effectiveHeadroomVpk = 0.0;
+    if (headroomManual > 0.0) {
+        effectiveHeadroomVpk = headroomManual;
+    } else if (showSymSwing && lastSymVpp > 0.0) {
+        effectiveHeadroomVpk = 0.5 * lastSymVpp; // Vpk from symmetric Vpp
+    } else if (!showSymSwing && lastMaxVpp > 0.0) {
+        effectiveHeadroomVpk = 0.5 * lastMaxVpp; // Vpk from max Vpp
+    }
+
+    auto colourForSource = [&](void) -> QString {
+        if (headroomManual > 0.0) {
+            return "color: rgb(0,0,255);"; // manual: bright blue
+        } else if (showSymSwing && lastSymVpp > 0.0) {
+            return "color: rgb(100,149,237);"; // symmetric helper: light blue
+        } else if (!showSymSwing && lastMaxVpp > 0.0) {
+            return "color: rgb(165,42,42);"; // max swing helper: brown
+        }
+        return QString();
+    };
+
+    const int harmIndex1 = 14; // HD2/HD3
+    const int harmIndex2 = 15; // HD4/HD5
+    const int thdIndex   = 9;  // reuse hidden row 9 for THD at headroom
+
+    if (device1 && effectiveHeadroomVpk > 0.0 &&
+        labels[harmIndex1] && values[harmIndex1] &&
+        labels[harmIndex2] && values[harmIndex2] &&
+        labels[thdIndex]   && values[thdIndex]) {
+
+        double hd2 = 0.0, hd3 = 0.0, hd4 = 0.0, hd5 = 0.0, thd = 0.0;
+        if (simulateHarmonicsTimeDomain(effectiveHeadroomVpk, hd2, hd3, hd4, hd5, thd)) {
+            const QString style = colourForSource();
+
+            // Row 14: HD2/HD4 (even harmonics)
+            labels[harmIndex1]->setText("HD2/HD4 at headroom (%):");
+            values[harmIndex1]->setText(
+                QString("%1 / %2")
+                    .arg(hd2, 0, 'f', 1)
+                    .arg(hd4, 0, 'f', 1));
+            labels[harmIndex1]->setStyleSheet(style);
+            values[harmIndex1]->setStyleSheet(style);
+            // Allow extra space for larger even-harmonic values
+            values[harmIndex1]->setMinimumWidth(110);
+            values[harmIndex1]->setMaximumWidth(180);
+            labels[harmIndex1]->setVisible(true);
+            values[harmIndex1]->setVisible(true);
+            values[harmIndex1]->setReadOnly(true);
+
+            // Row 15: HD3/HD5 (odd harmonics)
+            labels[harmIndex2]->setText("HD3/HD5 at headroom (%):");
+            values[harmIndex2]->setText(
+                QString("%1 / %2")
+                    .arg(hd3, 0, 'f', 1)
+                    .arg(hd5, 0, 'f', 1));
+            labels[harmIndex2]->setStyleSheet(style);
+            values[harmIndex2]->setStyleSheet(style);
+            // Allow extra space for larger odd-harmonic values
+            values[harmIndex2]->setMinimumWidth(110);
+            values[harmIndex2]->setMaximumWidth(180);
+            labels[harmIndex2]->setVisible(true);
+            values[harmIndex2]->setVisible(true);
+            values[harmIndex2]->setReadOnly(true);
+
+            // Row 9: THD
+            labels[thdIndex]->setText("THD at headroom (%):");
+            values[thdIndex]->setText(QString::number(thd, 'f', 1));
+            labels[thdIndex]->setStyleSheet(style);
+            values[thdIndex]->setStyleSheet(style);
+            labels[thdIndex]->setVisible(true);
+            values[thdIndex]->setVisible(true);
+            values[thdIndex]->setReadOnly(true);
+        } else {
+            // Harmonic computation failed; hide rows to avoid stale data.
+            for (int i : {harmIndex1, harmIndex2, thdIndex}) {
+                if (labels[i] && values[i]) {
+                    labels[i]->setVisible(false);
+                    values[i]->setVisible(false);
+                    labels[i]->setStyleSheet("");
+                    values[i]->setStyleSheet("");
+                }
+            }
+        }
+    } else {
+        // No valid headroom or device; hide harmonic rows.
+        for (int i : {harmIndex1, harmIndex2, thdIndex}) {
+            if (labels[i] && values[i]) {
+                labels[i]->setVisible(false);
+                values[i]->setVisible(false);
+                labels[i]->setStyleSheet("");
+                values[i]->setStyleSheet("");
+            }
         }
     }
 }
@@ -463,6 +551,220 @@ void TriodeCommonCathode::update(int index)
     // TODO: Trigger plot update when UI is connected
 }
 
+bool TriodeCommonCathode::computeHeadroomHarmonicCurrents(double headroomVpk,
+                                                          double &Ia,
+                                                          double &Ib,
+                                                          double &Ic,
+                                                          double &Id,
+                                                          double &Ie) const
+{
+    Ia = Ib = Ic = Id = Ie = 0.0;
+
+    if (!device1 || headroomVpk <= 0.0) {
+        return false;
+    }
+
+    const double vb = parameter[TRI_CC_VB]->getValue();
+    const double vaOp = parameter[TRI_CC_VA]->getValue();
+    const double iaOp_mA = parameter[TRI_CC_IA]->getValue();
+    const double rk = parameter[TRI_CC_RK]->getValue();
+
+    if (!(vb > 0.0) || !(iaOp_mA > 0.0) || !(rk >= 0.0)) {
+        return false;
+    }
+
+    // Clamp headroom to a sensible fraction of the available B+ range so the
+    // swing does not exceed physical limits.
+    const double maxHeadroom = 0.9 * std::max(1.0, std::min(vb, device1->getVaMax()));
+    const double vpk = std::min(std::max(0.0, headroomVpk), maxHeadroom);
+    if (vpk <= 0.0) {
+        return false;
+    }
+
+    const double iaOp_A = iaOp_mA / 1000.0;
+    const double vg0 = -iaOp_A * rk; // grid-to-cathode bias (self-bias, grid at 0V)
+
+    auto sampleCurrent = [&](double va) -> double {
+        // Clamp Va into [0, Va_max]
+        const double vaClamped = std::clamp(va, 0.0, device1->getVaMax());
+        const double ia_mA = device1->anodeCurrent(vaClamped, vg0);
+        if (!std::isfinite(ia_mA) || ia_mA < 0.0) {
+            return 0.0;
+        }
+        return ia_mA / 1000.0; // convert to amps
+    };
+
+    const double va0 = vaOp + vpk;        // positive peak
+    const double va1 = vaOp + 0.5 * vpk;  // positive mid
+    const double va2 = vaOp;              // bias point
+    const double va3 = vaOp - 0.5 * vpk;  // negative mid
+    const double va4 = vaOp - vpk;        // negative peak
+
+    Ia = sampleCurrent(va0);
+    Ib = sampleCurrent(va1);
+    Ic = sampleCurrent(va2);
+    Id = sampleCurrent(va3);
+    Ie = sampleCurrent(va4);
+
+    if (!(Ia > 0.0) || !(Ic > 0.0)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool TriodeCommonCathode::simulateHarmonicsTimeDomain(double headroomVpk,
+                                                       double &hd2,
+                                                       double &hd3,
+                                                       double &hd4,
+                                                       double &hd5,
+                                                       double &thd) const
+{
+    hd2 = hd3 = hd4 = hd5 = thd = 0.0;
+
+    if (!device1 || headroomVpk <= 0.0) {
+        return false;
+    }
+
+    double Ia = 0.0;
+    double Ib = 0.0;
+    double Ic = 0.0;
+    double Id = 0.0;
+    double Ie = 0.0;
+    if (!computeHeadroomHarmonicCurrents(headroomVpk,
+                                         Ia,
+                                         Ib,
+                                         Ic,
+                                         Id,
+                                         Ie)) {
+        return false;
+    }
+
+    // Arrange the five samples (in amps) as one period of a periodic waveform.
+    double samples[5];
+    samples[0] = Ia;
+    samples[1] = Ib;
+    samples[2] = Ic;
+    samples[3] = Id;
+    samples[4] = Ie;
+
+    const int sampleCount = 512;
+    const double twoPi = 6.28318530717958647692; // 2 * pi
+
+    double a[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double b[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+    for (int k = 0; k < sampleCount; ++k) {
+        const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
+        const double u = phase / twoPi; // normalised phase in [0, 1)
+
+        const double pos = u * 5.0; // 5 samples per period
+        const double indexF = std::floor(pos);
+        int i0 = static_cast<int>(indexF);
+        if (i0 < 0) {
+            i0 = 0;
+        }
+        if (i0 >= 5) {
+            i0 = i0 % 5;
+        }
+        const int i1 = (i0 + 1) % 5;
+        const double frac = pos - indexF;
+
+        const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+
+        const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
+                                                   static_cast<double>(sampleCount - 1)));
+        const double v = ip * window;
+
+        for (int n = 1; n <= 5; ++n) {
+            const double angle = static_cast<double>(n) * phase;
+            const double c = std::cos(angle);
+            const double s = std::sin(angle);
+            a[n] += v * c;
+            b[n] += v * s;
+        }
+    }
+
+    const double scale = 2.0 / static_cast<double>(sampleCount);
+    double A[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    for (int n = 1; n <= 5; ++n) {
+        a[n] *= scale;
+        b[n] *= scale;
+        A[n] = std::sqrt(a[n] * a[n] + b[n] * b[n]);
+    }
+
+    const double fundamental = A[1];
+    if (!(fundamental > 0.0) || !std::isfinite(fundamental)) {
+        return false;
+    }
+
+    const double invFund = 100.0 / fundamental;
+    hd2 = A[2] * invFund;
+    hd3 = A[3] * invFund;
+    hd4 = A[4] * invFund;
+    hd5 = A[5] * invFund;
+
+    if (!std::isfinite(hd2) || hd2 < 0.0) hd2 = 0.0;
+    if (!std::isfinite(hd3) || hd3 < 0.0) hd3 = 0.0;
+    if (!std::isfinite(hd4) || hd4 < 0.0) hd4 = 0.0;
+    if (!std::isfinite(hd5) || hd5 < 0.0) hd5 = 0.0;
+
+    thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4 + hd5 * hd5);
+    if (!std::isfinite(thd) || thd < 0.0) {
+        thd = 0.0;
+    }
+
+    return true;
+}
+
+void TriodeCommonCathode::computeTimeDomainHarmonicScan(QVector<double> &headroomVals,
+                                                        QVector<double> &hd2Vals,
+                                                        QVector<double> &hd3Vals,
+                                                        QVector<double> &hd4Vals,
+                                                        QVector<double> &thdVals) const
+{
+    headroomVals.clear();
+    hd2Vals.clear();
+    hd3Vals.clear();
+    hd4Vals.clear();
+    thdVals.clear();
+
+    if (!device1) {
+        return;
+    }
+
+    const double vb  = parameter[TRI_CC_VB]->getValue();
+    const double va  = parameter[TRI_CC_VA]->getValue();
+
+    if (!(vb > 0.0) || !(va > 0.0)) {
+        return;
+    }
+
+    const double maxHeadroom = 0.9 * std::max(1.0, std::min(vb, device1->getVaMax()));
+    const int steps = 32;
+    headroomVals.reserve(steps);
+    hd2Vals.reserve(steps);
+    hd3Vals.reserve(steps);
+    hd4Vals.reserve(steps);
+    thdVals.reserve(steps);
+
+    for (int i = 1; i <= steps; ++i) {
+        const double head = maxHeadroom * static_cast<double>(i) / static_cast<double>(steps);
+        double hd2 = 0.0;
+        double hd3 = 0.0;
+        double hd4 = 0.0;
+        double hd5 = 0.0;
+        double thd = 0.0;
+        if (simulateHarmonicsTimeDomain(head, hd2, hd3, hd4, hd5, thd)) {
+            headroomVals.push_back(head);
+            hd2Vals.push_back(hd2);
+            hd3Vals.push_back(hd3);
+            hd4Vals.push_back(hd4);
+            thdVals.push_back(thd);
+        }
+    }
+}
+
 void TriodeCommonCathode::plot(Plot *plot)
 {
     qInfo("Designer: TriodeCC plot() start. Device=%s, Vb=%.2f, Ra=%.0f, Rk=%.0f, RL=%.0f",
@@ -471,44 +773,67 @@ void TriodeCommonCathode::plot(Plot *plot)
           parameter[TRI_CC_RA]->getValue(),
           parameter[TRI_CC_RK]->getValue(),
           parameter[TRI_CC_RL]->getValue());
-    // Clear any existing circuit overlays (Designer-only)
+    // Clear any existing circuit overlays (Designer-only). Guard against cases
+    // where the shared Plot scene has been cleared externally (e.g., via
+    // Plot::setAxes in selectStdDevice) by only removing items that still
+    // belong to this scene, then dropping our pointers. We intentionally do
+    // NOT delete the groups here; QGraphicsScene owns and destroys them when
+    // they are cleared from the scene.
     lastSymVpp = 0.0;
+
     if (anodeLoadLine != nullptr) {
-        plot->getScene()->removeItem(anodeLoadLine);
-        delete anodeLoadLine;
+        if (anodeLoadLine->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(anodeLoadLine);
+        }
         anodeLoadLine = nullptr;
     }
 
     if (cathodeLoadLine != nullptr) {
-        plot->getScene()->removeItem(cathodeLoadLine);
-        delete cathodeLoadLine;
+        if (cathodeLoadLine->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(cathodeLoadLine);
+        }
         cathodeLoadLine = nullptr;
     }
 
     if (acSignalLine != nullptr) {
-        plot->getScene()->removeItem(acSignalLine);
-        delete acSignalLine;
+        if (acSignalLine->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(acSignalLine);
+        }
         acSignalLine = nullptr;
     }
 
     if (opMarker != nullptr) {
-        plot->getScene()->removeItem(opMarker);
-        delete opMarker;
+        if (opMarker->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(opMarker);
+        }
         opMarker = nullptr;
     }
+
+    if (swingGroup != nullptr) {
+        if (swingGroup->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(swingGroup);
+        }
+        swingGroup = nullptr;
+    }
+
     if (symSwingGroup != nullptr) {
-        plot->getScene()->removeItem(symSwingGroup);
-        delete symSwingGroup;
+        if (symSwingGroup->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(symSwingGroup);
+        }
         symSwingGroup = nullptr;
     }
+
     if (sensitivityGroup != nullptr) {
-        plot->getScene()->removeItem(sensitivityGroup);
-        delete sensitivityGroup;
+        if (sensitivityGroup->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(sensitivityGroup);
+        }
         sensitivityGroup = nullptr;
     }
+
     if (paLimitGroup != nullptr) {
-        plot->getScene()->removeItem(paLimitGroup);
-        delete paLimitGroup;
+        if (paLimitGroup->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(paLimitGroup);
+        }
         paLimitGroup = nullptr;
     }
 

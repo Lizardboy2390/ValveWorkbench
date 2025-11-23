@@ -64,6 +64,37 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
     - Push-Pull Output (pentode)
     - Push-Pull UL Output (pentode, UL tap)
 
+### Small-signal & harmonic controls (Modeller / Designer)
+
+- **Modeller μ/gm/ra (mes/mod toggle)**
+  - On the Modeller tab, the small-signal μ/gm/ra LCDs can show either **measured** or **modelled** values at a single operating point near 50% of the tube's Ia_max.
+  - Use the **mes/mod** checkbox above the LCDs:
+    - **Unchecked (measured mode)**: LCDs and labels are **black**. Values are computed from the current measurement using a least-squares estimate over samples near the OP.
+    - **Checked (model mode, plain model)**: LCDs and labels turn **red**. Values are computed from the fitted model at the **same** operating point as the measurement, so you can directly compare μ/gm/ra.
+    - **Checked (Designer override active)**: when the Designer Triode Common Cathode circuit is active and shares a suitable triode measurement, LCDs and labels turn **green** and show the Designer's μ/gm/ra at its operating point. This keeps Designer and Modeller in sync when you are biasing a triode stage.
+
+- **Designer Triode Common Cathode (TriodeCC)**
+  - **Max Sym Swing** checkbox: chooses which helper drives the *Headroom* and μ/gm/ra context when Headroom is zero:
+    - Checked: use **symmetric swing** around the OP (blue helper line/zones in the plot).
+    - Unchecked: use **maximum swing** into clipping limits (brown helper).
+  - **K bypass** checkbox: selects whether cathode bypass is assumed for gain and input-sensitivity calculations:
+    - Checked: **bypassed** cathode (higher gain, lower input sensitivity).
+    - Unchecked: **unbypassed** cathode (lower gain, higher input sensitivity via local feedback).
+
+- **Designer Single-Ended Output (SE Output)**
+  - **Headroom (Vpk)** box:
+    - When set to **0.0**, headroom is taken from the plot helpers:
+      - Max Sym Swing checked → headroom from symmetric swing around OP.
+      - Max Sym Swing unchecked → headroom from maximum possible swing along the AC load line.
+    - When set to **> 0**, this manual value overrides the helpers and is used directly for PHEAD, harmonics, and sensitivity.
+  - **Max Sym Swing** checkbox: same meaning as TriodeCC; selects whether **symmetric** or **max** swing is used when Headroom is 0. Overlay colours match (blue for symmetric, brown for max).
+  - **K bypass** checkbox: sets SE stage gain mode for both **harmonics** and **Input sensitivity (Vpp)**:
+    - Checked: cathode **bypassed**, higher gain, lower input sensitivity.
+    - Unchecked: cathode **unbypassed**, gain reduced by (1 + gm·Rk), so input sensitivity increases.
+  - **Input sensitivity (Vpp)** field below the SE panel:
+    - Shows the approximate **signal swing at the input** needed to reach the chosen headroom swing at the anode, using a small-signal gm·Ra estimate and the current K-bypass/headroom settings.
+    - Text colour follows the headroom source: bright blue for manual Headroom, light blue for symmetric helper, brown for max-swing helper.
+
 ## Preferences (Options → Preferences)
 
 The **Preferences** dialog controls analyser and model behaviour:

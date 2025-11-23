@@ -1491,19 +1491,22 @@ void ValveWorkbench::runHarmonicsScan()
         return;
     }
 
-    auto *se = dynamic_cast<SingleEndedOutput*>(c);
-    if (!se) {
-        harmonicsText->append(tr("Harmonic scan is currently implemented for the Single Ended Output circuit only.\nPlease select 'Single Ended Output' in the Designer tab and choose a device."));
-        return;
-    }
-
     QVector<double> headroomVals;
     QVector<double> hd2Vals;
     QVector<double> hd3Vals;
     QVector<double> hd4Vals;
     QVector<double> thdVals;
 
-    se->computeTimeDomainHarmonicScan(headroomVals, hd2Vals, hd3Vals, hd4Vals, thdVals);
+    if (auto *se = dynamic_cast<SingleEndedOutput*>(c)) {
+        harmonicsText->append(tr("Running SE time-domain harmonic scan..."));
+        se->computeTimeDomainHarmonicScan(headroomVals, hd2Vals, hd3Vals, hd4Vals, thdVals);
+    } else if (auto *tri = dynamic_cast<TriodeCommonCathode*>(c)) {
+        harmonicsText->append(tr("Running Triode CC time-domain harmonic scan..."));
+        tri->computeTimeDomainHarmonicScan(headroomVals, hd2Vals, hd3Vals, hd4Vals, thdVals);
+    } else {
+        harmonicsText->append(tr("Harmonic scan is currently implemented for the Single Ended Output and Triode Common Cathode circuits only.\nPlease select one of these circuits in the Designer tab and choose a device."));
+        return;
+    }
 
     const int count = headroomVals.size();
     if (count == 0) {
@@ -2389,6 +2392,29 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         qWarning("selectStdDevice: devices[%d] is null", deviceNumber);
         return;
     }
+
+    // Before clearing/rewriting the scene axes, drop all cached overlay
+    // pointers so we never dereference QGraphicsItems that have been deleted
+    // by Plot::setAxes (which calls scene->clear()). Circuits will rebuild
+    // their overlays on the next plot() call.
+    if (measuredCurves)             measuredCurves = nullptr;
+    if (measuredCurvesSecondary)    measuredCurvesSecondary = nullptr;
+    if (estimatedCurves)            estimatedCurves = nullptr;
+    if (modelledCurves)             modelledCurves = nullptr;
+    if (modelledCurvesSecondary)    modelledCurvesSecondary = nullptr;
+    for (Circuit *c : std::as_const(circuits)) {
+        if (c) {
+            c->resetOverlays();
+        }
+    }
+
+    // Update plot axes to match the new device's vaMax/iaMax
+    double vaMax = device->getVaMax();
+    double iaMax = device->getIaMax();
+    double vaInterval = device->interval(vaMax);
+    double iaInterval = device->interval(iaMax);
+    plot.setAxes(0.0, vaMax, vaInterval, 0.0, iaMax, iaInterval, 0, 0);
+
     currentDevice = device;
     // For Designer, do not set model axes or draw model curves here to avoid overriding
     // the circuit load-line axes. The circuit plot will set appropriate axes.
@@ -2409,15 +2435,23 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     }
     circuit->updateUI(circuitLabels, circuitValues);
 
-    // Auto-plot device model curves in Designer (no measurements required)
-    // Revertable: remove this block to disable auto model plotting on selection
-    plot.remove(modelledCurves);
-    modelledCurves = nullptr;
+    // Auto-plot device model curves in Designer (no measurements required).
+    // To avoid subtle crashes when switching triode devices in TriodeCC, we
+    // currently restrict this auto-plot path to **pentode** devices only.
+    // Triode model overlays are still available via the Modeller plotting
+    // path and do not need automatic Designer plotting.
+    if (modelledCurves) {
+        if (modelledCurves->scene() == plot.getScene()) {
+            plot.remove(modelledCurves);
+        }
+        modelledCurves = nullptr;
+    }
     if (ui->modelCheck->isChecked() && device) {
-        // Draw the model family (red) using the device's model
+        // Draw the model family (red) using the device's pentode model.
+        // anodePlot() already creates the QGraphicsItemGroup in the scene via
+        // QGraphicsScene::createItemGroup, so we must NOT add it again.
         modelledCurves = device->anodePlot(&plot);
         if (modelledCurves) {
-            plot.add(modelledCurves);
             modelledCurves->setVisible(ui->modelCheck->isChecked());
         }
     }
@@ -5986,6 +6020,18 @@ void ValveWorkbench::on_useBypassedGainCheck_stateChanged(int arg1)
         pp->setGainMode(useBypassed ? 1 : 0);
         pp->plot(&plot);
         pp->updateUI(circuitLabels, circuitValues);
+    } else if (auto *seul = dynamic_cast<SingleEndedUlOutput*>(c)) {
+        // Apply K-bypass choice to the SE-UL output stage so that its
+        // input sensitivity and THD reflect bypassed vs unbypassed cathode.
+        seul->setGainMode(useBypassed ? 1 : 0);
+        seul->plot(&plot);
+        seul->updateUI(circuitLabels, circuitValues);
+    } else if (auto *ppul = dynamic_cast<PushPullUlOutput*>(c)) {
+        // Apply K-bypass choice to the PP-UL output stage so that its
+        // input sensitivity and THD reflect bypassed vs unbypassed cathode.
+        ppul->setGainMode(useBypassed ? 1 : 0);
+        ppul->plot(&plot);
+        ppul->updateUI(circuitLabels, circuitValues);
     }
 }
 
@@ -6405,6 +6451,16 @@ void ValveWorkbench::exportFittedModelToDevices()
     }
     outFile.write(QJsonDocument(root).toJson());
     outFile.close();
+
+    // Before throwing away Device instances, clear any Circuit->Device pointers
+    // so Designer circuits (e.g. TriodeCC) do not hold dangling device1/device2
+    // references after we repopulate the devices list.
+    for (Circuit *c : std::as_const(circuits)) {
+        if (!c) continue;
+        c->setDevice1(nullptr);
+        c->setDevice2(nullptr);
+    }
+    currentDevice = nullptr;
 
     // Refresh devices and repopulate dropdowns
     for (Device *d : devices) { delete d; }

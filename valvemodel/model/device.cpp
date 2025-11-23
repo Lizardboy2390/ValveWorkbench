@@ -364,55 +364,101 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
     int vgIndex = 0; // used to stagger labels to avoid overlap
 
     while (vg1 <= 0.0) {
-        const double vgLabel = vg1; // preserve for label text
-        double va = 0.0;
-        double ia = 0.0;
-        if (deviceType == PENTODE) {
-            ia = model->anodeCurrent(va, vg1, vg2Max);
-        } else {
-            ia = model->anodeCurrent(va, vg1);
-        }
+        if (deviceType == TRIODE) {
+            const double vaStart = 0.0;
+            const double vaStop = vaMax;
+            const double vaInc = (vaStop - vaStart) / 60.0;
+            const double yMaxAxis = iaMax;
 
-        for (int j = 1; j < 61; j++) {
-            double vaNext = (vaMax * j) / 60.0;
-            double iaNext = 0.0;
-            if (deviceType == PENTODE) {
-                iaNext = model->anodeCurrent(vaNext, vg1, vg2Max);
-            } else {
-                iaNext = model->anodeCurrent(vaNext, vg1);
+            double vaPrev = vaStart;
+            double iaPrev = model->anodeCurrent(vaPrev, vg1);
+
+            double va = vaStart + vaInc;
+            QList<QGraphicsItem*> triodeSegments;
+            while (va <= vaStop) {
+                double ia = model->anodeCurrent(va, vg1);
+                QGraphicsLineItem *seg = plot->createSegment(vaPrev, iaPrev, va, ia, modelPen);
+                if (seg) {
+                    triodeSegments.append(seg);
+                }
+                vaPrev = va;
+                iaPrev = ia;
+                va += vaInc;
             }
-            items.append(plot->createSegment(va, ia, vaNext, iaNext, modelPen));
 
-            va = vaNext;
-            ia = iaNext;
-        }
+            const double vaLabel = vaStart + 0.7 * (vaStop - vaStart);
+            const double iaLabel = model->anodeCurrent(vaLabel, vg1);
+            if (std::isfinite(vaLabel) && std::isfinite(iaLabel)) {
+                double iaClamped = std::min(yMaxAxis, std::max(0.0, iaLabel));
+                QGraphicsItem *label = plot->createLabel(vaLabel, iaClamped, vg1, modelPen.color());
+                if (label) {
+                    QRectF r = label->boundingRect();
+                    QPointF p = label->pos();
+                    const double halfW = r.width() * 0.5;
+                    const double halfH = r.height() * 0.5;
+                    label->setPos(p.x() - 5.0 - halfW,
+                                  p.y() + 10.0 - halfH);
 
-        // Add a label near the right edge of the plot for this grid line.
-        // Avoid calling Model::anodeVoltage here, since some steep Gardiner
-        // parameter sets require many iterations to invert Ia(Va) and can
-        // stall the UI. Instead, clamp the right-edge current into range and
-        // place the label there.
-        const double epsX = std::max(0.5, vaMax * 0.01);   // 1% inset or 0.5V minimum
-        const double epsY = std::max(0.05, iaMax * 0.01);  // 1% inset or 0.05mA minimum
+                    QRectF labelSceneRect = label->sceneBoundingRect();
+                    for (QGraphicsItem *seg : triodeSegments) {
+                        QRectF segRect = seg->sceneBoundingRect();
+                        QPointF mid = segRect.center();
+                        if (labelSceneRect.contains(mid)) {
+                            plot->remove(seg);
+                            delete seg;
+                            continue;
+                        }
+                        items.append(seg);
+                    }
 
-        double x = vaMax - epsX;
-        double yAtRight = 0.0;
-        if (deviceType == PENTODE) {
-            yAtRight = model->anodeCurrent(vaMax, vg1, vg2Max);
+                    items.append(label);
+                } else {
+                    for (QGraphicsItem *seg : triodeSegments) {
+                        items.append(seg);
+                    }
+                }
+            } else {
+                for (QGraphicsItem *seg : triodeSegments) {
+                    items.append(seg);
+                }
+            }
         } else {
-            yAtRight = model->anodeCurrent(vaMax, vg1);
-        }
-        double y = iaMax - epsY;
-        if (std::isfinite(yAtRight)) {
-            y = std::min(iaMax - epsY, std::max(0.0, yAtRight));
-        }
-        QGraphicsTextItem *label = plot->createLabel(x, y, vgLabel, QColor::fromRgb(255, 0, 0));
-        if (label) {
-            label->setPlainText(QString("%1V").arg(vgLabel, 0, 'f', 1));
-            QFont f = label->font();
-            f.setPointSizeF(std::max(7.0, f.pointSizeF()));
-            label->setFont(f);
-            items.append(label);
+            const double vgLabel = vg1; // preserve for label text
+            double va = 0.0;
+            double ia = 0.0;
+            ia = model->anodeCurrent(va, vg1, vg2Max);
+
+            for (int j = 1; j < 61; j++) {
+                double vaNext = (vaMax * j) / 60.0;
+                double iaNext = model->anodeCurrent(vaNext, vg1, vg2Max);
+
+                QGraphicsLineItem *seg = plot->createSegment(va, ia, vaNext, iaNext, modelPen);
+                if (seg) {
+                    items.append(seg);
+                }
+
+                va = vaNext;
+                ia = iaNext;
+            }
+
+            const double epsX = std::max(0.5, vaMax * 0.01);
+            const double epsY = std::max(0.05, iaMax * 0.01);
+
+            const double vaLabel = std::max(0.0, vaMax * 0.7);
+            double x = std::min(vaMax - epsX, std::max(0.0, vaLabel));
+            double yAtLine = model->anodeCurrent(x, vg1, vg2Max);
+            double y = iaMax - epsY;
+            if (std::isfinite(yAtLine)) {
+                y = std::min(iaMax - epsY, std::max(0.0, yAtLine));
+            }
+            QGraphicsTextItem *label = plot->createLabel(x, y, vgLabel, QColor::fromRgb(255, 0, 0));
+            if (label) {
+                label->setPlainText(QString("%1V").arg(vgLabel, 0, 'f', 1));
+                QFont f = label->font();
+                f.setPointSizeF(std::max(7.0, f.pointSizeF()));
+                label->setFont(f);
+                items.append(label);
+            }
         }
 
         vg1 += vgInterval;

@@ -11,16 +11,22 @@
 PushPullUlOutput::PushPullUlOutput()
 {
     // Input parameters mirroring web PushPullUL defaults
-    parameter[PPUL_VB]  = new Parameter("Supply voltage (V)", 300.0);
-    parameter[PPUL_TAP] = new Parameter("Screen tap", 0.3);
-    parameter[PPUL_IA]  = new Parameter("Bias current (anode) (mA)", 30.0);
-    parameter[PPUL_RAA] = new Parameter("Anode-to-anode load (\u03a9)", 8000.0);
+    parameter[PPUL_VB]       = new Parameter("Supply voltage (V)", 300.0);
+    parameter[PPUL_TAP]      = new Parameter("Screen tap", 0.3);
+    parameter[PPUL_IA]       = new Parameter("Bias current (anode) (mA)", 30.0);
+    parameter[PPUL_RAA]      = new Parameter("Anode-to-anode load (\u03a9)", 8000.0);
 
     // Calculated values
-    parameter[PPUL_VK]   = new Parameter("Bias point Vk (V)", 0.0);
-    parameter[PPUL_IK]   = new Parameter("Cathode current (mA)", 0.0);
-    parameter[PPUL_RK]   = new Parameter("Cathode resistor (\u03a9)", 0.0);
-    parameter[PPUL_POUT] = new Parameter("Max output power (W)", 0.0);
+    parameter[PPUL_HEADROOM] = new Parameter("Headroom at anode (Vpk)", 0.0);
+    parameter[PPUL_VK]       = new Parameter("Bias point Vk (V)", 0.0);
+    parameter[PPUL_IK]       = new Parameter("Cathode current (mA)", 0.0);
+    parameter[PPUL_RK]       = new Parameter("Cathode resistor (\u03a9)", 0.0);
+    parameter[PPUL_POUT]     = new Parameter("Max output power (W)", 0.0);
+    parameter[PPUL_PHEAD]    = new Parameter("Power at headroom (W)", 0.0);
+    parameter[PPUL_HD2]      = new Parameter("2nd harmonic (%)", 0.0);
+    parameter[PPUL_HD3]      = new Parameter("3rd harmonic (%)", 0.0);
+    parameter[PPUL_HD4]      = new Parameter("4th harmonic (%)", 0.0);
+    parameter[PPUL_THD]      = new Parameter("Total harmonic (%)", 0.0);
 }
 
 int PushPullUlOutput::getDeviceType(int index)
@@ -35,29 +41,57 @@ QTreeWidgetItem *PushPullUlOutput::buildTree(QTreeWidgetItem *parent)
     return nullptr;
 }
 
+void PushPullUlOutput::setGainMode(int mode)
+{
+    gainMode = mode ? 1 : 0;
+    update(PPUL_HEADROOM);
+}
+
 void PushPullUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
 {
-    // Inputs: first 4 fields
-    for (int i = 0; i < 4; ++i) {
+    // Inputs: first 5 fields (including manual Headroom)
+    for (int i = 0; i <= PPUL_HEADROOM; ++i) {
         if (parameter[i] && labels[i] && values[i]) {
             labels[i]->setText(parameter[i]->getName());
             values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 2));
             labels[i]->setVisible(true);
             values[i]->setVisible(true);
             values[i]->setReadOnly(false);
+
+            if (i == PPUL_HEADROOM) {
+                const double headroomManual = parameter[PPUL_HEADROOM]->getValue();
+                const bool overrideActive   = (headroomManual > 0.0);
+                QString style;
+                if (overrideActive) {
+                    style = "color: rgb(0,0,255);";
+                }
+                labels[i]->setStyleSheet(style);
+                values[i]->setStyleSheet(style);
+            } else {
+                labels[i]->setStyleSheet("");
+                values[i]->setStyleSheet("");
+            }
         }
     }
 
-    // Outputs: next 4 fields
-    for (int i = 4; i <= PPUL_POUT; ++i) {
+    const double headroomManual = parameter[PPUL_HEADROOM]->getValue();
+    const bool overrideActive   = (headroomManual > 0.0);
+
+    // Outputs: PPUL_VK..PPUL_THD
+    for (int i = PPUL_VK; i <= PPUL_THD; ++i) {
         if (!labels[i] || !values[i]) continue;
 
         QString labelText;
         switch (i) {
-        case PPUL_VK:   labelText = "Bias point Vk (V):"; break;
-        case PPUL_IK:   labelText = "Cathode current (mA):"; break;
-        case PPUL_RK:   labelText = "Cathode resistor (\u03a9):"; break;
-        case PPUL_POUT: labelText = "Max output power (W):"; break;
+        case PPUL_VK:    labelText = "Bias point Vk (V):"; break;
+        case PPUL_IK:    labelText = "Cathode current (mA):"; break;
+        case PPUL_RK:    labelText = "Cathode resistor (\u03a9):"; break;
+        case PPUL_POUT:  labelText = "Max output power (W):"; break;
+        case PPUL_PHEAD: labelText = "Power at headroom (W):"; break;
+        case PPUL_HD2:   labelText = "2nd harmonic (%):"; break;
+        case PPUL_HD3:   labelText = "3rd harmonic (%):"; break;
+        case PPUL_HD4:   labelText = "4th harmonic (%):"; break;
+        case PPUL_THD:   labelText = "Total harmonic (%):"; break;
         default: break;
         }
 
@@ -65,7 +99,10 @@ void PushPullUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         if (!device1) {
             values[i]->setText("N/A");
         } else if (parameter[i]) {
-            int decimals = (i == PPUL_POUT) ? 3 : 3;
+            int decimals = 3;
+            if (i == PPUL_POUT || i == PPUL_PHEAD || i == PPUL_HD2 || i == PPUL_HD3 || i == PPUL_HD4 || i == PPUL_THD) {
+                decimals = 2;
+            }
             values[i]->setText(QString::number(parameter[i]->getValue(), 'f', decimals));
         } else {
             values[i]->setText("-");
@@ -74,10 +111,39 @@ void PushPullUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         labels[i]->setVisible(true);
         values[i]->setVisible(true);
         values[i]->setReadOnly(true);
+
+        if (i == PPUL_PHEAD || i == PPUL_HD2 || i == PPUL_HD3 || i == PPUL_HD4 || i == PPUL_THD) {
+            if (overrideActive) {
+                values[i]->setStyleSheet("color: rgb(0,0,255);");
+            } else {
+                values[i]->setStyleSheet("");
+            }
+        } else {
+            values[i]->setStyleSheet("");
+        }
+    }
+
+    const int sensIndex = PPUL_THD + 1;
+    if (sensIndex < 16 && labels[sensIndex] && values[sensIndex]) {
+        labels[sensIndex]->setText("Input sensitivity (Vpp):");
+        if (inputSensitivityVpp > 0.0) {
+            values[sensIndex]->setText(QString::number(inputSensitivityVpp, 'f', 2));
+        } else {
+            values[sensIndex]->setText("");
+        }
+        labels[sensIndex]->setVisible(true);
+        values[sensIndex]->setVisible(true);
+        values[sensIndex]->setReadOnly(true);
+
+        if (overrideActive && inputSensitivityVpp > 0.0) {
+            values[sensIndex]->setStyleSheet("color: rgb(0,0,255);");
+        } else {
+            values[sensIndex]->setStyleSheet("");
+        }
     }
 
     // Hide remaining parameter slots
-    for (int i = PPUL_POUT + 1; i < 16; ++i) {
+    for (int i = sensIndex + 1; i < 16; ++i) {
         if (labels[i] && values[i]) {
             labels[i]->setVisible(false);
             values[i]->setVisible(false);

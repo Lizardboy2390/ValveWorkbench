@@ -40,7 +40,7 @@ public:
     // Drop references to any overlay groups (load lines, OP markers) without
     // touching the scene. This is used when the shared Plot scene is cleared
     // externally (e.g., when switching circuits) to avoid dangling pointers.
-    void resetOverlays();
+    virtual void resetOverlays();
 
     void setParameter(int index, double value);
     double getParameter(int index);
