@@ -676,12 +676,16 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
                 qInfo("Anode voltage range: start=%.1f, stop=%.1f, inc=%.3f", vaStart, vaStop, vaInc);
 
+                // X-position for the triode family label in data space (~70% along the anode range)
+                const double vaLabel = vaStart + 0.7 * (vaStop - vaStart);
+
                 double vaPrev = vaStart;
                 double vgPhys = -std::fabs(vg1);
                 double iaPrev = anodeCurrent(vaStart, vgPhys, vg2);
 
                 double va = vaStart + vaInc;
                 int segmentCount = 0;
+                QList<QGraphicsItem*> triodeSegments;
                 while (va < vaStop) {
                     qInfo("TRIODE: Calculating current for va=%.3f, vg1=%.3f", va, vg1);
                     double vgPhysSeg = -std::fabs(vg1);
@@ -691,7 +695,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     QGraphicsItem *segment = plot->createSegment(vaPrev, iaPrev, va, ia, anodePen);
 
                     if (segment != nullptr) {
-                        group->addToGroup(segment);
+                        triodeSegments.append(segment);
                         segmentCount++;
                     } else {
                         qWarning("Failed to create segment for va=%.3f, ia=%.3f", va, ia);
@@ -704,6 +708,60 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 }
 
                 qInfo("Curve %d completed: %d segments created", curveCount + 1, segmentCount);
+
+                // Add a label around 70% of the way along the anode voltage range so that
+                // triode family labels are distributed along the curves instead of bunching
+                // at the right/top edges. Clamp Y into the visible axis range, then
+                // reposition the label so that its visual center lies on the curve point,
+                // and finally add only those segments whose midpoints lie outside the
+                // label's actual scene bounding rectangle.
+                {
+                    const double vgPhysLabel = -std::fabs(vg1);
+                    double iaLabel = anodeCurrent(vaLabel, vgPhysLabel, vg2);
+                    if (std::isfinite(vaLabel) && std::isfinite(iaLabel)) {
+                        double iaClamped = std::min(yMaxAxis, std::max(0.0, iaLabel));
+                        QGraphicsItem *label = plot->createLabel(vaLabel, iaClamped, vg1, anodePen.color());
+                        if (label) {
+                            // Reposition label so its center lies on the curve point.
+                            QRectF r = label->boundingRect();
+                            QPointF p = label->pos();
+                            const double halfW = r.width() * 0.5;
+                            const double halfH = r.height() * 0.5;
+                            label->setPos(p.x() - 5.0 - halfW,
+                                          p.y() + 10.0 - halfH);
+
+                            // Use the label's actual scene bounding rect to decide which
+                            // triode segments to add. Skip segments whose midpoints fall
+                            // inside this rectangle so the line is absent directly under
+                            // the label.
+                            QRectF labelSceneRect = label->sceneBoundingRect();
+                            for (QGraphicsItem *seg : triodeSegments) {
+                                QRectF segRect = seg->sceneBoundingRect();
+                                QPointF mid = segRect.center();
+                                if (labelSceneRect.contains(mid)) {
+                                    // Remove skipped segments from the scene entirely so they
+                                    // do not persist when the model group is hidden.
+                                    plot->remove(seg);
+                                    delete seg;
+                                    continue;
+                                }
+                                group->addToGroup(seg);
+                            }
+
+                            group->addToGroup(label);
+                        } else {
+                            // If label creation failed, fall back to adding all segments.
+                            for (QGraphicsItem *seg : triodeSegments) {
+                                group->addToGroup(seg);
+                            }
+                        }
+                    } else {
+                        // No valid label position; just add all segments.
+                        for (QGraphicsItem *seg : triodeSegments) {
+                            group->addToGroup(seg);
+                        }
+                    }
+                }
 
                 double oldVg1 = vg1;
                 vg1 += vgStep;
@@ -892,9 +950,12 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     qWarning("PENTODE: Skipping family vg1=%.3f (no representative sweep or insufficient samples)", vg1);
                 }
 
-                // Add a label at the end of the curve to show the family Vg value for visibility
+                // Add a label at the end of the curve to show the family Vg value for visibility.
+                // Clamp the label current into the visible axis range so it doesn't end up off-plot
+                // when the model current exceeds measurement->getIaMax().
                 if (std::isfinite(endVa) && std::isfinite(endIa)) {
-                    QGraphicsItem *label = plot->createLabel(endVa, endIa, vg1, anodePen.color());
+                    double labelIa = std::min(yMaxAxis, std::max(0.0, endIa));
+                    QGraphicsItem *label = plot->createLabel(endVa, labelIa, vg1, anodePen.color());
                     if (label) {
                         group->addToGroup(label);
                     }

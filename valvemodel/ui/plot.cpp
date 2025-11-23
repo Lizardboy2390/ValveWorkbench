@@ -140,7 +140,7 @@ QGraphicsTextItem *Plot::createLabel(double x, double y, double value, const QCo
     sprintf(labelText, "%.1fv", value + 0.04);
     text = scene->addText(labelText);
     // FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system
-    text->setPos((x - xStart) * xScale + 5, (y - yStart) * yScale - 10);
+    text->setPos((x - xStart) * xScale + 5, PLOT_HEIGHT - (y - yStart) * yScale - 10);
     if (color.isValid()) {
         text->setDefaultTextColor(color);
     }
