@@ -26,7 +26,8 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
   - Designer overlays cleared before replot; triode hides Screen Current
   - Auto model plotting on device select (Show Fitted Model)
   - Axes clamped to device `vaMax`/`iaMax`
-  - Triode CC Designer overlays and UI complete (Max/Max Sym Swing, Input Sensitivity)
+  - Triode CC Designer overlays and UI complete (Max/Max Sym Swing, Input Sensitivity, shared OP with Modeller μ/gm/ra and mes/mod colour cues)
+  - Triode CC and SE Designer small-signal/harmonic work complete
 - M3: Documentation & Release prep (in progress)
   - Updated README (end user), plan, tasks
   - Curated change log and screenshots
@@ -49,6 +50,7 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
 - Later: once the Simple Manual Pentode path mirrors the web tool and Gardiner in both shape and scale for representative tubes (6L6, EL34), consider a minimal auto-fit layer over a subset of parameters.
 - New: **Triode-Connected Pentode** analyser mode added as a dedicated device type. This drives the pentode’s anode and screen together to generate triode-like anode characteristics per tube, which are then used as high-quality triode seeds for `Estimate::estimatePentode`.
 - New: Centralised pentode parameter bounds in `Model::setEstimate` now distinguish between **Gardiner** (wider, stable envelope) and **Reefman/DerkE** (tighter UTmax-style corridor) to improve fit stability without constraining the main Gardiner path.
+- New (SE Designer): Single-Ended Output harmonic panel now uses the same time-domain DFT helper as the Harmonics tab for HD2/3/4/THD, and SE input sensitivity is computed from effective headroom and a correctly scaled gm, with K-bypass mode selecting bypassed vs unbypassed gain.
 - New: **Tube-style device presets**: Export to Devices now writes a single JSON that contains both the fitted `model` and the originating `measurement` sweeps (when the export comes from a measurement-based fit). Designer SE output prefers this embedded measurement to derive idle Vk/Ik/Ig2 numerically from data, with a safe fallback to the tube model for legacy or hand-authored presets.
 
 #### Option 3 (future): Manual Gardiner-style pentode

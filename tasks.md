@@ -17,6 +17,9 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - [x] Stabilised Gardiner/Reefman pentode fitting: reapply deferred bounds to all solve stages and null-initialise parameter array for safe logging (2025-11-13).
 - [x] Designer (Single-Ended Output): extend SE Designer circuit beyond Pout/Vk/Ik/Rk/headroom/THD by adding **max symmetric clean swing (Vpp_sym)** and **max possible swing (Vpp_max)** metrics, and draw corresponding blue (symmetric) and brown (max) zones on the SE AC load line. Sym Swing checkbox now selects which swing mode drives the effective headroom and overlay colours.
 - [x] Designer (Single-Ended Output): compute SE stage **input sensitivity** using the effective headroom swing and appropriate small-signal gain (respecting K-bypass mode), display the active sensitivity value in the Designer panel, and color the text to match the active swing mode (blue/brown for helpers, bright blue for manual override). Triode CC behaviour remains unchanged.
+- [x] Designer/Modeller small-signal and harmonics (2025-11-22):
+    - Modeller triode μ/gm/ra now use a local least-squares estimator over measurement data at the ~0.5·Ia_max operating point, with the same OP used for model μ/gm/ra and clear mes/mod vs Designer override colour cues on the Modeller small-signal LCDs.
+    - SE Designer harmonic panel (HD2/3/4/THD) now uses the same time-domain DFT helper as the Harmonics tab, and SE **input sensitivity (Vpp)** is computed from effective headroom and correctly scaled gm, with K-bypass selecting bypassed vs unbypassed gain rather than collapsing to zero.
 
 ## Change log (highlights)
 - 2025-11-14: Further experimental Reefman/pentode plotting changes caused regressions; all such changes were reverted via VCS and baseline behaviour restored, with Gardiner as reference.

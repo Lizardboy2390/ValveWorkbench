@@ -429,6 +429,10 @@ Additional (2025-11-05):
   - `Designer: plot() start. Device=..., Vb=..., Ra=..., Rk=..., RL=...`
 - After OP:
   - `Designer: Operating point estimate Va=... V, Ia=... mA`
+- SE time-domain / sensitivity diagnostics:
+  - `SE_OUTPUT HEADROOM_HELPERS: showSymSwing=... symVpp=... maxVpp=... effectiveHeadroomVpk=...`
+  - `SE_OUTPUT HARMONICS_PANEL: headroomVpk=... hd2=... hd3=... hd4=... hd5=... thd=...`
+  - `SE_OUTPUT SENSITIVITY: gainMode=... headroomVpk=... gm_mA_per_V=... raa=... rk=... gain=... vppIn=...`
 
 ## Likely Root Causes for "only green line"
 - Device not selected (plot returns early).

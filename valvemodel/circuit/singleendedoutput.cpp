@@ -203,7 +203,9 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
                 double iaMinus = device1->anodeCurrent(vb, vgBias - dVg, vs);
                 double gm_mA_per_V = 0.0;
                 if (std::isfinite(iaPlus) && std::isfinite(iaMinus) && dVg > 0.0) {
-                    gm_mA_per_V = (iaPlus - iaMinus) * 1000.0 / (2.0 * dVg);
+                    // anodeCurrent already returns mA, so the central difference
+                    // directly yields gm in mA/V without additional scaling.
+                    gm_mA_per_V = (iaPlus - iaMinus) / (2.0 * dVg);
                 }
 
                 double gain = 0.0;
@@ -225,6 +227,15 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
                 if (std::isfinite(gain) && gain > 1e-6) {
                     vppIn = Vpp / gain;
                 }
+
+                qInfo("SE_OUTPUT SENSITIVITY: gainMode=%d headroomVpk=%.3f gm_mA_per_V=%.3f raa=%.1f rk=%.1f gain=%.3f vppIn=%.3f",
+                      gainMode,
+                      effectiveHeadroomVpk,
+                      gm_mA_per_V,
+                      raa,
+                      rk,
+                      gain,
+                      vppIn);
             }
         }
 
@@ -742,6 +753,12 @@ void SingleEndedOutput::update(int index)
     }
     effectiveHeadroomVpk = effective;
 
+    qInfo("SE_OUTPUT HEADROOM_HELPERS: showSymSwing=%d symVpp=%.3f maxVpp=%.3f effectiveHeadroomVpk=%.3f",
+          showSymSwing ? 1 : 0,
+          symVpp,
+          maxVpp,
+          effectiveHeadroomVpk);
+
     // Simple power-at-headroom helper using linear load assumption around OP.
     double phead_W = 0.0;
     if (effectiveHeadroomVpk > 0.0 && raa > 0.0) {
@@ -753,6 +770,7 @@ void SingleEndedOutput::update(int index)
     double hd2 = 0.0;
     double hd3 = 0.0;
     double hd4 = 0.0;
+    double hd5 = 0.0;
     double thd = 0.0;
 
     parameter[SE_HD2]->setValue(0.0);
@@ -762,12 +780,19 @@ void SingleEndedOutput::update(int index)
 
     // THD should be computed whenever we have a positive effective headroom,
     // regardless of whether it came from the manual Headroom parameter or from
-    // the max/sym swing helpers.
+    // the max/sym swing helpers. Use the time-domain FFT-style helper so that
+    // panel values match the Harmonics tools.
     if (effectiveHeadroomVpk > 0.0 && raa > 0.0) {
-        double Ia = 0.0, Ib = 0.0, Ic = 0.0, Id = 0.0, Ie = 0.0;
-        if (computeHeadroomHarmonicCurrents(vb, ia, raa, effectiveHeadroomVpk, vs,
-                                            Ia, Ib, Ic, Id, Ie)) {
-            computeHarmonics(Ia, Ib, Ic, Id, Ie, hd2, hd3, hd4, thd);
+        if (simulateHarmonicsTimeDomain(vb,
+                                        ia,
+                                        raa,
+                                        effectiveHeadroomVpk,
+                                        vs,
+                                        hd2,
+                                        hd3,
+                                        hd4,
+                                        hd5,
+                                        thd)) {
 
             // If cathode is unbypassed (gainMode == 0), approximate the effect of
             // local feedback by reducing the harmonic amplitudes by a simple
@@ -795,6 +820,14 @@ void SingleEndedOutput::update(int index)
                     }
                 }
             }
+
+            qInfo("SE_OUTPUT HARMONICS_PANEL: headroomVpk=%.3f hd2=%.3f hd3=%.3f hd4=%.3f hd5=%.3f thd=%.3f",
+                  effectiveHeadroomVpk,
+                  hd2,
+                  hd3,
+                  hd4,
+                  hd5,
+                  thd);
 
             parameter[SE_HD2]->setValue(hd2);
             parameter[SE_HD3]->setValue(hd3);

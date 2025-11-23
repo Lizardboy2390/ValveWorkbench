@@ -3259,31 +3259,19 @@ void ValveWorkbench::on_mes_mod_select_stateChanged(int state)
     safeDisplayText(ui->raLcd, "--");
     safeDisplayText(ui->lcdNumber_3, "--");
 
-    // Visually distinguish measured vs model mode:
-    // - Checkbox text: normal for measured, red for model
-    // - gm/ra/mu labels: black for measured, red for model
-    // - gm/ra/mu LCD digits: black for measured, red for model
-    if (ui->mes_mod_select) {
-        ui->mes_mod_select->setStyleSheet(modelMode ? "color: rgb(200,0,0);" : "");
-    }
-    auto setLabelColor = [modelMode](QLabel *label) {
-        if (!label) return;
-        label->setStyleSheet(modelMode ? "color: rgb(200,0,0);" : "");
-    };
-    setLabelColor(ui->gmLabel);
-    setLabelColor(ui->raLabel);
-    setLabelColor(ui->muLabel);
-
-    auto setLcdColor = [modelMode](QLCDNumber *lcd) {
-        if (!lcd) return;
-        lcd->setStyleSheet(modelMode ? "color: rgb(200,0,0);" : "");
-    };
-    setLcdColor(ui->gmLcd);
-    setLcdColor(ui->raLcd);
-    setLcdColor(ui->lcdNumber_3);
-
     if (!modelMode) {
-        // Measured mode: recompute from current measurement if available
+        // Measured mode: reset colours to defaults (black) and recompute
+        // from current measurement if available.
+        if (ui->mes_mod_select) {
+            ui->mes_mod_select->setStyleSheet("");
+        }
+        if (ui->gmLabel) ui->gmLabel->setStyleSheet("");
+        if (ui->raLabel) ui->raLabel->setStyleSheet("");
+        if (ui->muLabel) ui->muLabel->setStyleSheet("");
+        if (ui->gmLcd) ui->gmLcd->setStyleSheet("");
+        if (ui->raLcd) ui->raLcd->setStyleSheet("");
+        if (ui->lcdNumber_3) ui->lcdNumber_3->setStyleSheet("");
+
         if (currentMeasurement) {
             updateSmallSignalFromMeasurement(currentMeasurement);
         }
@@ -3335,6 +3323,47 @@ void ValveWorkbench::on_mes_mod_select_stateChanged(int state)
             usedDesigner = true;
         }
     }
+
+    // Visually distinguish measured vs model mode and whether the Designer
+    // (Triode Common Cathode) is driving the small-signal values:
+    // - Measured mode (modelMode == false): default colours (black)
+    // - Model mode, plain model (usedDesigner == false): red
+    // - Model mode, Designer-driven (usedDesigner == true): green
+    QColor modeColor;
+    if (!modelMode) {
+        modeColor = QColor(); // invalid -> default palette
+    } else if (usedDesigner) {
+        modeColor = QColor::fromRgb(0, 128, 0);      // Designer-controlled small-signal
+    } else {
+        modeColor = QColor::fromRgb(200, 0, 0);      // Plain model-based small-signal
+    }
+
+    QString style;
+    if (modeColor.isValid()) {
+        style = QString("color: rgb(%1,%2,%3);")
+                    .arg(modeColor.red())
+                    .arg(modeColor.green())
+                    .arg(modeColor.blue());
+    }
+
+    if (ui->mes_mod_select) {
+        ui->mes_mod_select->setStyleSheet(style);
+    }
+    auto setLabelColor = [&style](QLabel *label) {
+        if (!label) return;
+        label->setStyleSheet(style);
+    };
+    setLabelColor(ui->gmLabel);
+    setLabelColor(ui->raLabel);
+    setLabelColor(ui->muLabel);
+
+    auto setLcdColor = [&style](QLCDNumber *lcd) {
+        if (!lcd) return;
+        lcd->setStyleSheet(style);
+    };
+    setLcdColor(ui->gmLcd);
+    setLcdColor(ui->raLcd);
+    setLcdColor(ui->lcdNumber_3);
 
     // If no Designer triode circuit was used, fall back to the fitted model
     // directly (triode or pentode) if one is available and a measurement is
