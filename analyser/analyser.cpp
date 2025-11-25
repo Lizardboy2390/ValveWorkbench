@@ -80,21 +80,6 @@ Sample *Analyser::createSample(QString response)
 
     // qInfo("Raw ADC values - Current: %d, CurrentLo: %d, CurrentHi: %d", rawCurrent, rawCurrentLo, rawCurrentHi);
 
-    // This line adjusts the anode current measurement to account for the current that always flows through the voltage sense network
-    // The resistance of the voltage sense network (3 x 470k + 2 * 4k7) is 1.4194M and the current needs to be adjusted for mA
-    ia = ia - va / 1419.4;
-    // For very low anode currents, this could lead to very small negative values, hence...
-    if (ia < 0.0) {
-        ia = 0.0;
-    }
-
-    // Apply the same correction for the second triode section
-   
-    ia2 = ia2 - va2 / 1419.4;
-    if (ia2 < 0.0) {
-        ia2 = 0.0;
-    }
-
     if (ia > measuredIaMax) {
         measuredIaMax = ia;
     }

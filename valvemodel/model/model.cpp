@@ -302,31 +302,11 @@ void Model::setEstimate(Estimate *estimate)
     switch (modelType) {
     case GARDINER_PENTODE:
     case SIMPLE_MANUAL_PENTODE:
-        // Gardiner / manual pentode: keep a relatively wide envelope so the
-        // unified Gardiner model can explore its richer shaping space without
-        // hitting hard walls too early. These are essentially the original
-        // global guardrails.
-        setBound(PAR_KG1,   0.05,  5.0);
-        setBound(PAR_KP,   20.0, 400.0);
-        setBound(PAR_KVB,  50.0, 800.0);
-        setBound(PAR_KVB1,  1.0,  80.0);
-        setBound(PAR_VCT,   0.0,   5.0);
-        setBound(PAR_X,     1.0,   2.0);
-        setBound(PAR_MU,    1.0,  50.0);
-        setBound(PAR_KG2,   0.1,  25.0);
-        // Screen current scale: keep Kg2a in a moderate range so Ig2 cannot
-        // collapse toward zero or explode due to extreme denominator values.
-        setBound(PAR_KG2A,  0.1,  50.0);
-        setBound(PAR_A,     0.0,   0.1);
-        setBound(PAR_ALPHA, 0.0,   0.6);
-        setBound(PAR_BETA,  0.0,   0.6);
-        setBound(PAR_GAMMA, 0.3,   3.0);
-        setBound(PAR_PSI,   0.0,  10.0);
-        setBound(PAR_OMEGA, 0.0, 1000.0);
-        setBound(PAR_LAMBDA,0.0, 300.0);
-        setBound(PAR_NU,    0.0, 150.0);
-        setBound(PAR_S,     0.0,   1.0);
-        setBound(PAR_AP,    0.0,   0.2);
+        // For Gardiner / manual pentode, rely on the model-specific bounds
+        // defined in GardinerPentode::setOptions (and related classes) rather
+        // than duplicating central guardrails here. This restores the original
+        // behaviour where Gardiner's shaping parameters (A/alpha/beta/gamma,
+        // etc.) were only constrained by its own setOptions logic.
         break;
 
     case REEFMAN_DERK_PENTODE:
@@ -834,6 +814,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 int segmentCount = 0;
                 double endVa = std::numeric_limits<double>::quiet_NaN();
                 double endIa = std::numeric_limits<double>::quiet_NaN();
+                QList<QGraphicsItem*> anodeSegments;
                 if (famSweep && famSweep->count() >= 2) {
                     Sample *s0 = famSweep->at(0);
                     // Determine family screen voltage (prefer sweep nominal; use raw volts)
@@ -907,7 +888,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                         double y2 = std::min(yMaxAxis, std::max(0.0, ia));
                         QGraphicsItem *segment = plot->createSegment(vaPrev, y1, va, y2, anodePen);
                         if (segment != nullptr) {
-                            group->addToGroup(segment);
+                            anodeSegments.append(segment);
                             segmentCount++;
                         }
                         // Update min/max diagnostics
@@ -946,19 +927,63 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     endIa = iaPrev;
                     qInfo("PENTODE DIAG: vg1=%.3f, vg2=%.3f, Va[first/mid/last]=[%.3f, %.3f, %.3f], Ia[first/mid/last]=[%.3f, %.3f, %.3f], Ia[min/max]=[%.3f, %.3f]",
                           vg1, vg2, vaFirst, vaMid, vaLast, iaFirst, iaMid, iaLast, iaMin, iaMax);
+
+                    // Add a label inside the curve (similar to triode plotting): place it around
+                    // mid/an upper portion of the Va range, clamp into the visible Ia axis, then
+                    // remove anode segments directly under the label so the text sits "inside" the
+                    // red family without being obscured.
+                    if (!anodeSegments.isEmpty()) {
+                        const double vaLabel = vaFirst + 0.7 * (vaLast - vaFirst);
+                        double vg2Op = sampleVg2(sm);
+                        double iaLabel = anodeCurrent(vaLabel, vg1, vg2Op) * iaScale;
+                        if (std::isfinite(vaLabel) && std::isfinite(iaLabel)) {
+                            double iaClamped = std::min(yMaxAxis, std::max(0.0, iaLabel));
+                            QGraphicsItem *label = plot->createLabel(vaLabel, iaClamped, vg1, anodePen.color());
+                            if (label) {
+                                // Reposition label so its center lies on the curve point.
+                                QRectF r = label->boundingRect();
+                                QPointF p = label->pos();
+                                const double halfW = r.width() * 0.5;
+                                const double halfH = r.height() * 0.5;
+                                label->setPos(p.x() - 5.0 - halfW,
+                                              p.y() + 10.0 - halfH);
+
+                                // Use the label's scene rect to decide which segments to add.
+                                // Skip/add segments based on whether their midpoint lies inside
+                                // the label rectangle, mirroring the triode plotting behaviour.
+                                QRectF labelSceneRect = label->sceneBoundingRect();
+                                for (QGraphicsItem *seg : anodeSegments) {
+                                    QRectF segRect = seg->sceneBoundingRect();
+                                    QPointF mid = segRect.center();
+                                    if (labelSceneRect.contains(mid)) {
+                                        plot->remove(seg);
+                                        delete seg;
+                                        continue;
+                                    }
+                                    group->addToGroup(seg);
+                                }
+
+                                group->addToGroup(label);
+                            } else {
+                                // If label creation failed, fall back to adding all segments.
+                                for (QGraphicsItem *seg : anodeSegments) {
+                                    group->addToGroup(seg);
+                                }
+                            }
+                        } else {
+                            // Invalid label point; just add all segments.
+                            for (QGraphicsItem *seg : anodeSegments) {
+                                group->addToGroup(seg);
+                            }
+                        }
+                    } else {
+                        // No label; just add all segments.
+                        for (QGraphicsItem *seg : anodeSegments) {
+                            group->addToGroup(seg);
+                        }
+                    }
                 } else {
                     qWarning("PENTODE: Skipping family vg1=%.3f (no representative sweep or insufficient samples)", vg1);
-                }
-
-                // Add a label at the end of the curve to show the family Vg value for visibility.
-                // Clamp the label current into the visible axis range so it doesn't end up off-plot
-                // when the model current exceeds measurement->getIaMax().
-                if (std::isfinite(endVa) && std::isfinite(endIa)) {
-                    double labelIa = std::min(yMaxAxis, std::max(0.0, endIa));
-                    QGraphicsItem *label = plot->createLabel(endVa, labelIa, vg1, anodePen.color());
-                    if (label) {
-                        group->addToGroup(label);
-                    }
                 }
 
                 if (drawScreen && showScreen && famSweep && famSweep->count() >= 2) {

@@ -4533,9 +4533,58 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                    currentMeasurementItem ? currentMeasurementItem->type() : -1,
                    currentMeasurementItem ? "false" : "true");
 
-            // Require a valid measurement selection before attempting model plotting
-            if (!currentMeasurementItem || !currentMeasurement) {
-                qInfo("MODEL PLOTTING: No current measurement selected - skipping model overlay");
+            // Require a valid measurement selection before attempting model plotting.
+            // If the currently selected measurement/device type does not match the
+            // selected model (e.g. a pentode model is selected while a triode
+            // measurement is active), try to switch to a matching measurement so
+            // that selecting a pentode model like Reefman DerkE automatically
+            // overlays it on the latest pentode data rather than leaving the
+            // previous triode Model A curves visible.
+
+            Model *model = (Model *) data;
+
+            if (!currentMeasurement && currentProject) {
+                // Try to find a default measurement in the current project if none
+                // is currently active.
+                if (model->getType() == COHEN_HELIE_TRIODE) {
+                    currentMeasurement = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
+                } else if (model->getType() == GARDINER_PENTODE ||
+                           model->getType() == SIMPLE_MANUAL_PENTODE ||
+                           model->getType() == REEFMAN_DERK_PENTODE ||
+                           model->getType() == REEFMAN_DERK_E_PENTODE) {
+                    currentMeasurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
+                }
+            } else if (currentMeasurement) {
+                const int mType = currentMeasurement->getDeviceType();
+                const int modelType = model->getType();
+
+                // If a pentode model is selected while a triode measurement is
+                // active, switch to a pentode measurement if available.
+                if (mType == TRIODE &&
+                    (modelType == GARDINER_PENTODE ||
+                     modelType == SIMPLE_MANUAL_PENTODE ||
+                     modelType == REEFMAN_DERK_PENTODE ||
+                     modelType == REEFMAN_DERK_E_PENTODE)) {
+                    Measurement *pentodeMeas = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
+                    if (pentodeMeas) {
+                        qInfo("MODEL PLOTTING: Switching currentMeasurement to pentode dataset for pentode model overlay");
+                        currentMeasurement = pentodeMeas;
+                    }
+                }
+
+                // Conversely, if a triode model is selected while a pentode
+                // measurement is active, prefer a triode measurement.
+                if (mType == PENTODE && modelType == COHEN_HELIE_TRIODE) {
+                    Measurement *triodeMeas = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
+                    if (triodeMeas) {
+                        qInfo("MODEL PLOTTING: Switching currentMeasurement to triode dataset for triode model overlay");
+                        currentMeasurement = triodeMeas;
+                    }
+                }
+            }
+
+            if (!currentMeasurement) {
+                qInfo("MODEL PLOTTING: No suitable measurement found for selected model - skipping model overlay");
                 ui->modelCheck->setChecked(true);
                 break;
             }
@@ -4552,10 +4601,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 }
                 // Otherwise, leave sweep as nullptr for full measurement plotting
             }
-
             qInfo("=== MODEL PLOTTING: sweep is %s, about to call plotModel ===", sweep ? "NOT null" : "null");
-
-            Model *model = (Model *) data;
             model->updateProperties(ui->properties);
 
             qInfo("=== VALVEWORKBENCH: Attempting model plotting ===");
@@ -5427,6 +5473,34 @@ void ValveWorkbench::loadModel()
         if (measuredCurvesSecondary != nullptr) {
             plot.add(measuredCurvesSecondary);
             measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+        }
+    }
+
+    // If the model that just finished is a pentode fit, prefer to show the
+    // latest pentode anode-characteristics measurement in the Designer plot
+    // so the red model curves immediately overlay the data we just fitted,
+    // rather than leaving the previous triode measurement visible.
+    if (model && (model->getType() == GARDINER_PENTODE ||
+                  model->getType() == REEFMAN_DERK_PENTODE ||
+                  model->getType() == REEFMAN_DERK_E_PENTODE ||
+                  model->getType() == SIMPLE_MANUAL_PENTODE)) {
+
+        Measurement *pentodeMeasurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
+        if (pentodeMeasurement) {
+            if (measuredCurves != nullptr) {
+                plot.remove(measuredCurves);
+                measuredCurves = nullptr;
+            }
+
+            measuredCurves = pentodeMeasurement->updatePlot(&plot);
+            if (measuredCurves != nullptr) {
+                plot.add(measuredCurves);
+                measuredCurves->setVisible(ui->measureCheck->isChecked());
+            }
+
+            // Make this pentode measurement the active one for subsequent
+            // overlay and small-signal calculations.
+            currentMeasurement = pentodeMeasurement;
         }
     }
 }

@@ -588,6 +588,22 @@ void GardinerPentode::setOptions()
         //problem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
         //problem.SetParameterBlockConstant(parameter[PAR_PSI]->getPointer());
 
+        anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.0);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.00001);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_GAMMA]->getPointer(), 0, 0.0);
+        anodeProblem.SetParameterUpperBound(parameter[PAR_GAMMA]->getPointer(), 0, 2.0);
+        anodeProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
+
+        if (preferences->useSecondaryEmission()) {
+            anodeProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 2.0 * parameter[PAR_MU]->getValue());
+            anodeProblem.SetParameterLowerBound(parameter[PAR_OMEGA]->getPointer(), 0, 0.0);
+            anodeProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 0.0);
+            anodeProblem.SetParameterLowerBound(parameter[PAR_NU]->getPointer(), 0, 0.0);
+            anodeProblem.SetParameterLowerBound(parameter[PAR_S]->getPointer(), 0, 0.0);
+            anodeProblem.SetParameterLowerBound(parameter[PAR_AP]->getPointer(), 0, 0.0);
+        }
+
         // Solver configuration only; bounds are now handled centrally via Model::setEstimate/setLimits.
         // Allow more iterations for difficult Gardiner pentode fits (e.g., near-cutoff sweeps)
         // before declaring non-convergence.
@@ -613,6 +629,9 @@ void GardinerPentode::setOptions()
                 screenProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
             }
         }
+
+        screenProblem.SetParameterLowerBound(parameter[PAR_TAU]->getPointer(), 0, 0.0);
+        screenProblem.SetParameterLowerBound(parameter[PAR_RHO]->getPointer(), 0, 0.00001);
     } else if (mode == ANODE_REMODEL_MODE) {
         anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
         //anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
@@ -624,7 +643,7 @@ void GardinerPentode::setOptions()
 
         anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
 
-        anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_OS]->getPointer());
+        anodeRemodelProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
 
         if (preferences->useSecondaryEmission()) {
             anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());

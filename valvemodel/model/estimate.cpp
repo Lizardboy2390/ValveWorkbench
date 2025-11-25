@@ -234,13 +234,33 @@ void Estimate::estimatePentode(Measurement *measurement, CohenHelieTriode *triod
 
     mu = clampToRange(mu, 3.0, 25.0);
     x = clampToRange(x, 1.1, 1.8);
-    kg1 = clampToRange(kg1, 0.05, 5.0);
     kp = clampToRange(kp, 20.0, 400.0);
     kvb = clampToRange(kvb, 50.0, 600.0);
     kvb1 = clampToRange(kvb1, 1.0, 40.0);
     vct = clampToRange(vct, 0.0, 3.0);
-    kg2 = clampToRange(kg2, 0.1, 20.0);
-    a = clampToRange(a, 0.0, 0.05);
+
+    // Parameter bounds differ slightly between Gardiner and Reefman models.
+    // Gardiner/SimpleManual keep the original tighter ranges; Reefman is
+    // allowed a bit more freedom on Kg1/Kg2/A, but not so much that currents
+    // can explode far beyond the measured range.
+    if (modelType == GARDINER_PENTODE || modelType == SIMPLE_MANUAL_PENTODE) {
+        kg1 = clampToRange(kg1, 0.05, 5.0);
+        kg2 = clampToRange(kg2, 0.1, 20.0);
+        a   = clampToRange(a,   0.0, 0.05);
+    } else {
+        // Reefman Derk / DerkE: slightly looser than Gardiner, but still
+        // bounded to prevent Ia shooting far above the measured currents.
+        // When seeded from a Cohen-Helie triode, Kg1 is typically O(10^3);
+        // convert that triode scale to an O(1) pentode Kg1 before clamping
+        // so the parameter remains effective instead of being pinned.
+        if (kg1 > 20.0) {
+            kg1 = kg1 / 1000.0;
+        }
+        kg1 = clampToRange(kg1, 0.02, 5.0);
+        kg2 = clampToRange(kg2, 0.1, 40.0);
+        a   = clampToRange(a,   0.0, 0.10);
+    }
+
     beta = clampToRange(beta, 0.01, 0.3);
     gamma = clampToRange(gamma, 0.5, 2.0);
     psi = clampToRange(psi, 0.5, 8.0);
@@ -576,28 +596,82 @@ void Estimate::estimateA(Measurement *measurement, CohenHelieTriode *triodeModel
 {
     int sweeps = measurement->count();
 
+    const double vaStop = measurement->getAnodeStop();
+    const double iaMax = measurement->getIaMax();
+
     double aSum = 0.0;
+    int validSweeps = 0;
 
     for (int sw = 0; sw < sweeps; sw++) {
         Sweep *sweep = measurement->at(sw);
+        if (!sweep || sweep->count() < 2) {
+            continue;
+        }
 
         double epk = triodeModel->cohenHelieEpk(sweep->getVg2Nominal(), sweep->getVg1Nominal());
+        if (!std::isfinite(epk) || epk <= 1e-9) {
+            continue;
+        }
 
         int endSampleIndex = sweep->count() - 1;
-        int startSampleIndex = endSampleIndex * 9 / 10;
-
         Sample *endSample = sweep->at(endSampleIndex);
+        if (!endSample) {
+            continue;
+        }
+
+        double vaEnd = endSample->getVa();
+        if (!std::isfinite(vaEnd) || vaEnd < 0.8 * vaStop) {
+            // Only use sweeps that actually reach the high-Va region
+            continue;
+        }
+
+        double iaEnd = endSample->getIa();
+        if (!std::isfinite(iaEnd) || iaEnd <= 0.0) {
+            continue;
+        }
+
+        if (iaMax > 0.0) {
+            double normIa = iaEnd / iaMax;
+            // Avoid using very small or saturated sweeps when estimating the tail slope
+            if (normIa < 0.1 || normIa > 0.9) {
+                continue;
+            }
+        }
+
+        int startSampleIndex = endSampleIndex * 9 / 10;
+        if (startSampleIndex < 0) {
+            startSampleIndex = 0;
+        }
+
         Sample *startSample = sweep->at(startSampleIndex);
+        if (!startSample) {
+            continue;
+        }
 
-        double endIk = endSample->getIa() + endSample->getIg2();
-        double startIk = startSample->getIa() + startSample->getIg2();
+        double vaStart = startSample->getVa();
+        double iaStart = startSample->getIa();
+        double dVa = vaEnd - vaStart;
+        if (!std::isfinite(dVa) || std::fabs(dVa) < 1e-6) {
+            continue;
+        }
 
-        double slope = (endIk - startIk) / (endSample->getVa() - startSample->getVa());
+        double slope = (iaEnd - iaStart) / dVa;
+        if (!std::isfinite(slope)) {
+            continue;
+        }
+
         aSum += slope * kg1 / epk;
+        validSweeps++;
     }
 
-    a = aSum / sweeps;
-    a = 0.0;
+    // Average the high-Va cathode-current slope into a, but keep the
+    // effective seed at 0.0 for now; Model::setEstimate will clamp this
+    // and the solver will adjust A during fitting.
+    if (validSweeps > 0) {
+        a = aSum / validSweeps;
+    } else {
+        a = 0.0;
+    }
 }
 
 /**
