@@ -6,6 +6,7 @@
 #include "reefmanpentode.h"
 #include "gardinerpentode.h"
 #include "simplemanualpentode.h"
+#include "extractmodelpentode.h"
 
 class ModelFactory
 {

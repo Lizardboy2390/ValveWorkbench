@@ -860,6 +860,14 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     double iaFirst = anodeCurrent(vaFirst, vg1, sampleVg2(sf)) * iaScale;
                     double iaMid   = anodeCurrent(vaMid,   vg1, sampleVg2(sm)) * iaScale;
                     double iaLast  = anodeCurrent(vaLast,  vg1, sampleVg2(sl)) * iaScale;
+
+                    // Explicit debug point: Ia at Va=90 V for this Vg1 family, so that
+                    // we can compare the numerical model value to what is read off the
+                    // red curve in the UI.
+                    const double vaDebug = 90.0;
+                    double iaDebug = anodeCurrent(vaDebug, vg1, sampleVg2(sm)) * iaScale;
+                    qInfo("PENTODE DEBUG POINT: vg1=%.3f, vg2=%.3f, Va=%.3f -> Ia=%.6f",
+                          vg1, sampleVg2(sm), vaDebug, iaDebug);
                     double iaMin   = iaFirst;
                     double iaMax   = iaFirst;
 

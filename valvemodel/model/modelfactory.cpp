@@ -13,6 +13,8 @@ Model *ModelFactory::createModel(int modelType)
         return new ReefmanPentode(DERK);
     case REEFMAN_DERK_E_PENTODE:
          return new ReefmanPentode(DERK_E);
+    case EXTRACT_DERK_E_PENTODE:
+        return new ExtractModelPentode();
     case GARDINER_PENTODE:
         return new GardinerPentode();
     case SIMPLE_MANUAL_PENTODE:

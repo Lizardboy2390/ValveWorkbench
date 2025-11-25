@@ -3132,7 +3132,8 @@ void ValveWorkbench::updateSmallSignalFromModel(Model *modelForSmallSignal, Meas
         // Pentode: accept any pentode family (Gardiner, Reefman, SimpleManual)
         if (deviceType == PENTODE) {
             return (t == GARDINER_PENTODE || t == SIMPLE_MANUAL_PENTODE ||
-                    t == REEFMAN_DERK_PENTODE || t == REEFMAN_DERK_E_PENTODE);
+                    t == REEFMAN_DERK_PENTODE || t == REEFMAN_DERK_E_PENTODE ||
+                    t == EXTRACT_DERK_E_PENTODE);
         }
         return false;
     };
@@ -4551,7 +4552,8 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 } else if (model->getType() == GARDINER_PENTODE ||
                            model->getType() == SIMPLE_MANUAL_PENTODE ||
                            model->getType() == REEFMAN_DERK_PENTODE ||
-                           model->getType() == REEFMAN_DERK_E_PENTODE) {
+                           model->getType() == REEFMAN_DERK_E_PENTODE ||
+                           model->getType() == EXTRACT_DERK_E_PENTODE) {
                     currentMeasurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
                 }
             } else if (currentMeasurement) {
@@ -4564,7 +4566,8 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                     (modelType == GARDINER_PENTODE ||
                      modelType == SIMPLE_MANUAL_PENTODE ||
                      modelType == REEFMAN_DERK_PENTODE ||
-                     modelType == REEFMAN_DERK_E_PENTODE)) {
+                     modelType == REEFMAN_DERK_E_PENTODE ||
+                     modelType == EXTRACT_DERK_E_PENTODE)) {
                     Measurement *pentodeMeas = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
                     if (pentodeMeas) {
                         qInfo("MODEL PLOTTING: Switching currentMeasurement to pentode dataset for pentode model overlay");
@@ -4615,7 +4618,8 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                  (model->getType() == GARDINER_PENTODE ||
                   model->getType() == SIMPLE_MANUAL_PENTODE ||
                   model->getType() == REEFMAN_DERK_PENTODE ||
-                  model->getType() == REEFMAN_DERK_E_PENTODE));
+                  model->getType() == REEFMAN_DERK_E_PENTODE ||
+                  model->getType() == EXTRACT_DERK_E_PENTODE));
 
             if (triodeMatch || pentodeMatch) {
                 qInfo("Type check PASSED - proceeding with model plotting");

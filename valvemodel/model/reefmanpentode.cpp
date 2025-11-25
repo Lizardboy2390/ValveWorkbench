@@ -46,12 +46,34 @@ private:
 
 double ReefmanPentode::anodeCurrent(double va, double vg1, double vg2)
 {
-    double epk = cohenHelieEpk(vg2, vg1);
-    double k = 1.0 / parameter[PAR_KG1]->getValue() - 1.0 / parameter[PAR_KG2]->getValue();
-    double shift = parameter[PAR_BETA]->getValue() * (1.0 - parameter[PAR_ALPHA]->getValue() * vg1);
-    double g = 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
-    double scale = 1.0 - g;
-    double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG1]->getValue());
+    // Use the same g(Va) formulation as the Derk/DerkE residuals so that the
+    // plotted anodeCurrent matches exactly what the Ceres solver is fitting.
+    // For DERK:  g = 1 / (1 + beta * Va)
+    // For DERK_E: g = exp( - (beta * Va)^(3/2) )
+
+    const double epk = cohenHelieEpk(vg2, vg1);
+    const double kg1 = parameter[PAR_KG1]->getValue();
+    const double kg2 = parameter[PAR_KG2]->getValue();
+    const double a   = parameter[PAR_A]->getValue();
+    const double beta = parameter[PAR_BETA]->getValue();
+
+    if (epk <= 0.0 || kg1 <= 0.0 || kg2 <= 0.0) {
+        return 0.0;
+    }
+
+    const double k = 1.0 / kg1 - 1.0 / kg2;
+
+    double g;
+    if (modelType == DERK_E) {
+        // DerkE / DEPIa-style knee
+        g = std::exp(-std::pow(beta * va, 1.5));
+    } else {
+        // Original Derk formulation
+        g = 1.0 / (1.0 + beta * va);
+    }
+
+    const double scale = 1.0 - g;
+    const double ia = epk * (k * scale + a * va / kg1);
 
     return ia;
 }
@@ -230,21 +252,14 @@ void ReefmanPentode::setModelType(int newModelType)
 
 void ReefmanPentode::setOptions()
 {
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
-    //problem.SetParameterBlockConstant(parameter[PAR_X]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_KG1]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
-    anodeProblem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
-
     // Keep A clearly non-zero so the Va term contributes a real tail slope
     // instead of collapsing to ~0 and making the curve appear vertical.
     anodeProblem.SetParameterLowerBound(parameter[PAR_A]->getPointer(), 0, 0.005);
     anodeProblem.SetParameterLowerBound(parameter[PAR_ALPHA]->getPointer(), 0, 0.0);
-    // Constrain beta so the knee cannot be extremely sharp.
+    // Constrain beta so the knee cannot be extremely sharp, but allow more
+    // range so Reefman can match earlier knees when required.
     anodeProblem.SetParameterLowerBound(parameter[PAR_BETA]->getPointer(), 0, 0.02);
-    anodeProblem.SetParameterUpperBound(parameter[PAR_BETA]->getPointer(), 0, 0.15);
+    anodeProblem.SetParameterUpperBound(parameter[PAR_BETA]->getPointer(), 0, 0.30);
 
     options.max_num_iterations = 200;
     options.max_num_consecutive_invalid_steps = 20;
