@@ -413,37 +413,45 @@ void Estimate::estimateMu(Measurement *measurement)
             if (iMu < 1) { // Set a minimum limit on iMu of 1mA
                 iMu = 1;
             }
-            Sweep *sweep = measurement->at(0);
-            double va = findVa(sweep, iMu);
-            double vg1 = sweep->getVg1Nominal();
-
-            QList<double> muValues;
+            QList<double> vg1Samples;
+            QList<double> vaSamples;
 
             int sweeps = measurement->count();
-            for (int sw = 1; sw < sweeps; sw++) {
-                sweep = measurement->at(sw);
-
-                double vaNew = findVa(sweep, iMu);
-                if (vaNew < 0) { // Sweep does not reach iMu so we can ignore this sweep (and further sweeps)
-                    break;
+            for (int sw = 0; sw < sweeps; sw++) {
+                Sweep *sweep = measurement->at(sw);
+                double vaAtIMu = findVa(sweep, iMu);
+                if (vaAtIMu < 0) {
+                    continue;
                 }
 
-                double vg1New = sweep->getVg1Nominal();
-
-                muValues.append((vaNew - va) / (vg1 - vg1New));
-
-                va = vaNew;
-                vg1 = vg1New;
+                double vg1Nom = sweep->getVg1Nominal();
+                vg1Samples.append(vg1Nom);
+                vaSamples.append(vaAtIMu);
             }
 
-            double mux = 0.0;
-            int values = muValues.count();
-            for (int i = 0; i < values; i++) {
-                mux += muValues.at(i);
-            }
+            int values = vg1Samples.count();
+            if (values >= 2) {
+                double meanVg1 = 0.0;
+                double meanVa  = 0.0;
+                for (int i = 0; i < values; ++i) {
+                    meanVg1 += vg1Samples.at(i);
+                    meanVa  += vaSamples.at(i);
+                }
+                meanVg1 /= values;
+                meanVa  /= values;
 
-            if (values > 0) {
-                mu = mux / values;
+                double num = 0.0;
+                double den = 0.0;
+                for (int i = 0; i < values; ++i) {
+                    double dv = vg1Samples.at(i) - meanVg1;
+                    double da = vaSamples.at(i) - meanVa;
+                    num += dv * da;
+                    den += dv * dv;
+                }
+                if (den != 0.0) {
+                    double slope = num / den;
+                    mu = -slope;
+                }
             }
         }
     }
