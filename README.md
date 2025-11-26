@@ -36,6 +36,11 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Select a measurement → Fit Triode/Pentode
   - Red curves (Triode A) and Green curves (Triode B) overlay when available
   - Positive grid voltages are auto-corrected negative for fitting
+  - Triode μ estimation for modelling:
+    - For triode and triode-connected pentode measurements, the internal Cohen–Helie triode seed uses a **common operating point** slice at `Ia ≈ 0.5 × Ia_max` (with a 1 mA minimum), instead of the older 5% slice.
+    - Along that slice the code interpolates, for each grid sweep, the anode voltage `Va` where the current equals that slice (`iMu`) and collects `(Vg1_nominal, Va_at_iMu)` pairs.
+    - A **least-squares linear regression** of `Va` vs `Vg1` then yields the slope `dVa/dVg1`, and μ is taken as `μ ≈ -dVa/dVg1` (the standard triode relation at constant Ia). This produces robust, ExtractModel-consistent μ values for use by the Kg1/X/Kp/Kvb estimators and as a seed for pentode fits.
+    - See `handoff.md` (section "2025-11-26 Summary (ExtractModel triode μ estimation – working details)") for the full derivation and historical notes (5% vs 50%, regression bug, and sign fix).
   - Export to Devices: after fitting, click "Export to Devices" to save the fitted model preset JSON into `models/` and refresh device dropdowns in Designer. The preset now acts as a **tube-style package**:
     - `model`: fitted parameters (e.g. Gardiner pentode) used by Designer and Modeller.
     - `triodeModel` (optional): embedded Cohen-Helie triode seed used by Modeller for pentode fits when no separate triode model node exists in the project.
@@ -216,6 +221,10 @@ The **Preferences** dialog controls analyser and model behaviour:
 ## Change log (highlights)
 - 2025‑11‑18: **Tube-style device JSON**: Export to Devices now optionally embeds the full analyser `measurement` (sweeps) alongside the fitted `model` in a single preset. Designer SE output uses embedded measurement data to compute Vk/Ik/Ig2 when available, with a safe fallback to the fitted tube model for legacy presets.
   - Also: Export to Devices now embeds an optional `triodeModel` seed, Modeller prefers a project triode model or this embedded triodeModel when fitting pentodes, Import from Device selects the corresponding Device so subsequent pentode fits seed from it automatically, and Designer pentode plotting uses a finer grid-family spacing with an explicit Screen Current toggle for Ig2.
+- 2025‑11‑26: Triode μ estimation for ExtractModel-style fits:
+  - Changed the μ estimation slice in `Estimate::estimateMu` from **5% of Ia_max** to **50% of Ia_max** (with a 1 mA floor) to better match a realistic common operating point for triode-connected pentodes and other power valves.
+  - Replaced the previous simple averaging heuristic with a **least-squares linear regression** of `Va` vs `Vg1` at that current slice, inferring μ from the relation `μ ≈ -dVa/dVg1` at constant Ia.
+  - Fixed a sign error in the first LS implementation (`μ = slope` instead of `μ = -slope`) which produced incorrect μ values and led to **severely squashed** triode and pentode fits. With the corrected maths and sweep handling, triode-connected 6L6-GC fits now reproduce the expected μ/Kg1 scale and the downstream pentode ExtractModel fits match the known-good Reefman test preset.
 - 2025‑11‑16: Designer circuits: added Pentode Common Cathode, AC/DC Cathode Follower, Single-Ended and Single-Ended UL outputs, Push-Pull and Push-Pull UL outputs; Designer plot now fully clears and resets overlays when switching circuits; Export to Devices now writes both `analyserDefaults` and `model` to preset JSONs so Designer and Analyser share a single device profile.
 - 2025‑11‑15: Added Triode-Connected Pentode analyser device type; triode-connected pentode measurements stored as triode tests with clear hints; centralised Gardiner vs Reefman pentode bounds aligned with UTmax-style seeding.
 - 2025‑11‑05: Modeller "Export to Devices"; Designer overlays checkbox; auto model plotting on device select; axes clamped to device limits; screen current toggle pentode‑only

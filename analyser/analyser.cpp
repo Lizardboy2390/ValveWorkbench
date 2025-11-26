@@ -664,13 +664,9 @@ void Analyser::nextSample() {
             result->nextSweep(v1Nominal, v2Nominal);
             // qInfo("Created new sweep for stepIndex: %d, v1Nominal: %f, v2Nominal: %f", stepIndex, v1Nominal, v2Nominal);
 
-            // Verify hardware is at safe 0V state before starting sweep
-            // qInfo("=== HARDWARE VERIFICATION ===");
-            if (deviceType == PENTODE && testType == ANODE_CHARACTERISTICS) {
-                // For pentode anode characteristics, ensure screen is at 0V during verification
-                sendCommand("S7 0");
-            }
-            sendCommand("M1"); // Discharge capacitors
+            // Always discharge capacitors between sweeps before re-applying start voltages
+            // qInfo("=== HARDWARE DISCHARGE BETWEEN SWEEPS ===");
+            sendCommand("M1");
 
             // Set grid voltage for new step
             // qInfo("Setting grid voltage for new step: S2 %d", stepParameter.at(stepIndex));
@@ -689,27 +685,64 @@ void Analyser::nextSample() {
                 }
                 sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(stepIndex)));
             }
+            // Determine target start voltages for the new sweep so verification
+            // can confirm the rails are at the intended bias instead of at 0 V.
+            double vaTarget = 0.0;
+            bool hasVaTarget = false;
+            double vg2Target = 0.0;
+            bool hasVg2Target = false;
 
-            // Set anode (and, where applicable, screen) voltage to 0 V for
-            // verification so we can confirm a true zero-current baseline.
-            // qInfo("Setting anode voltage to 0V for verification");
-            sendCommand(buildSetCommand("S3 ", 0));
+            if (testType == ANODE_CHARACTERISTICS) {
+                // Anode characteristics: each sweep starts at anodeStart; pentode keeps a fixed screenStart.
+                hasVaTarget = true;
+                vaTarget = anodeStart;
+                if (deviceType == PENTODE) {
+                    hasVg2Target = true;
+                    vg2Target = screenStart;
+                }
+            } else if (testType == TRANSFER_CHARACTERISTICS) {
+                // Transfer tests:
+                //  - Single/double triode: anode stepped (stepType == ANODE) or fixed (anodeStart).
+                //  - Pentode: either fixed-screen + anode step, or fixed-anode + screen step.
+                if (stepType == ANODE && stepIndex < stepValue.size()) {
+                    hasVaTarget = true;
+                    vaTarget = stepValue.at(stepIndex);
+                } else {
+                    hasVaTarget = true;
+                    vaTarget = anodeStart;
+                }
 
-            // For double-triode tests we already mirror S3->S7. In
-            // triode-connected pentode mode we also want the hardware screen
-            // rail (S7) at 0 V during verification, otherwise residual
-            // screen voltage can keep Ia/Ig2 non-zero and cause spurious
-            // verification failures.
-            if (isDoubleTriode ||
-                (isTriodeConnectedPentode && deviceType == PENTODE && testType == ANODE_CHARACTERISTICS)) {
-                sendCommand(buildSetCommand("S7 ", 0));
+                if (deviceType == PENTODE) {
+                    if (stepType == SCREEN && stepIndex < stepValue.size()) {
+                        hasVg2Target = true;
+                        vg2Target = stepValue.at(stepIndex);
+                    } else {
+                        hasVg2Target = true;
+                        vg2Target = screenStart;
+                    }
+                }
+            } else if (testType == SCREEN_CHARACTERISTICS) {
+                // Screen characteristics: anode fixed at anodeStart, screen sweeps from screenStart.
+                hasVaTarget = true;
+                vaTarget = anodeStart;
+                if (deviceType == PENTODE) {
+                    hasVg2Target = true;
+                    vg2Target = screenStart;
+                }
             }
 
-            // Take verification measurement
-            // qInfo("Taking verification measurement to confirm 0V state");
+            // Ensure anode and (where applicable) screen are at their start voltages
+            if (hasVaTarget) {
+                sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, vaTarget)));
+            }
+            if (hasVg2Target) {
+                sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, vg2Target)));
+            }
+
+            // Take a verification measurement at the configured start bias for
+            // the new sweep (not at 0 V). PASS/FAIL is handled in checkResponse().
             sendCommand("M2");
 
-            // Set verification state for next response
             isVerifyingHardware = true;
             verificationAttempts = 0;
         } else {
@@ -861,21 +894,38 @@ void Analyser::checkResponse(QString response)
 
             // Handle verification measurements
             if (isVerifyingHardware) {
-                // qInfo("=== VERIFICATION MEASUREMENT ===");
-                // qInfo("Verification measurement: va=%.1fV, ia=%.3fmA", va, ia);
+                // Determine the intended start anode voltage for this sweep so we
+                // can confirm the hardware is sitting at the configured bias
+                // (Va_start) before taking the first real sample.
+                double vaTarget = 0.0;
+                bool hasVaTarget = false;
 
-                if (va < 1.0 && ia < 0.001 && va2 < 1.0 && ia2 < 0.001) { // Close enough to 0V/0mA
-                    // qInfo("Verification PASSED - hardware at safe 0V state");
+                if (testType == ANODE_CHARACTERISTICS) {
+                    hasVaTarget = true;
+                    vaTarget = anodeStart;
+                } else if (testType == TRANSFER_CHARACTERISTICS) {
+                    if (sweepType == GRID && stepType == ANODE && stepIndex < stepValue.size()) {
+                        hasVaTarget = true;
+                        vaTarget = stepValue.at(stepIndex);
+                    } else {
+                        hasVaTarget = true;
+                        vaTarget = anodeStart;
+                    }
+                } else if (testType == SCREEN_CHARACTERISTICS) {
+                    hasVaTarget = true;
+                    vaTarget = anodeStart;
+                }
+
+                const double epsV = 1.0; // ±1 V window around start anode voltage
+                bool vaOk  = !hasVaTarget || std::fabs(va - vaTarget) <= epsV;
+
+                if (vaOk) {
+                    // Verification PASSED - hardware at configured start bias
                     isVerifyingHardware = false;
                     verificationAttempts = 0;
 
-                    // Reassert fixed screen voltage for pentode anode characteristics
-                    if (deviceType == PENTODE && testType == ANODE_CHARACTERISTICS) {
-                        sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
-                    }
-                    // Now send the first actual sample
+                    // Proceed with the first actual sweep point as before
                     int firstSampleValue = sweepParameter.at(stepIndex).at(0);
-                    // Ensure anode is asserted for Transfer mode before first actual sample
                     if (testType == TRANSFER_CHARACTERISTICS) {
                         if (stepType == ANODE) {
                             if (stepIndex < stepParameter.length()) {
@@ -885,71 +935,38 @@ void Analyser::checkResponse(QString response)
                             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
                         }
                     }
-                    // One-line fix for Anode Characteristics: re-assert grid (S2) after verification PASS
                     if (testType == ANODE_CHARACTERISTICS && stepCommandPrefix == "S2 " && stepIndex < stepParameter.length()) {
                         sendCommand(buildSetCommand("S2 ", stepParameter.at(stepIndex)));
                     }
-
-                    if (isDoubleTriode && stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()) {
+                    if (stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()) {
                         const int primaryGrid = stepParameter.at(stepIndex);
                         sendCommand(buildSetCommand("S2 ", primaryGrid));
                     }
 
                     QString resumeCommand = buildSetCommand(sweepCommandPrefix, firstSampleValue);
-                    // qInfo("Sending first actual sample after verification: %s", resumeCommand.toStdString().c_str());
                     sendCommand(resumeCommand);
                     if (isDoubleTriode) {
                         sendCommand(buildSetCommand("S7 ", firstSampleValue));
                     }
-                    // Important: refire before measuring the first actual point to allow DACs to settle
                     if (testType == TRANSFER_CHARACTERISTICS || testType == ANODE_CHARACTERISTICS) {
                         sendCommand("M6");
                     }
                     sendCommand("M2");
                 } else {
                     verificationAttempts++;
-                    // qInfo("Verification FAILED - attempt %d/%d", verificationAttempts, MAX_VERIFICATION_ATTEMPTS);
-
                     if (verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
                         qWarning("Verification failed after %d attempts - aborting sweep", MAX_VERIFICATION_ATTEMPTS);
                         isVerifyingHardware = false;
                         verificationAttempts = 0;
                         isEndSweep = true;
                         return;
-                    } else {
-                        // qInfo("Retrying hardware reset...");
-                        // Retry the reset sequence
-                        sendCommand("M1");
-                        if (isDoubleTriode) {
-                            const int primaryGrid = stepCommandPrefix == "S6 " && stepIndex < stepParameter.length()
-                                                    ? stepParameter.at(stepIndex)
-                                                    : convertTargetVoltage(GRID, gridStart);
-                            sendCommand(buildSetCommand("S2 ", primaryGrid));
-                            sendCommand(buildSetCommand("S6 ", stepParameter.at(stepIndex)));
-                            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-                            sendCommand(buildSetCommand("S7 ", 0)); // Set S7 to 0V during verification
-                        } else {
-                            // TRANSFER (single triode): set S2 to the first GRID sweep value, not an anode step code
-                            int firstGridCode = 0;
-                            if (stepIndex < sweepParameter.length() && !sweepParameter.at(stepIndex).isEmpty()) {
-                                firstGridCode = sweepParameter.at(stepIndex).at(0);
-                            } else {
-                                firstGridCode = convertTargetVoltage(GRID, gridStart);
-                            }
-                            sendCommand(buildSetCommand("S2 ", firstGridCode));
-                            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
-                        }
-
-                        // During verification retries for pentode anode characteristics,
-                        // keep the screen supply at 0 V so Ia/Ig2 can genuinely settle
-                        // near zero. The fixed screen test voltage (screenStart) is
-                        // reasserted only after a PASS in the block above.
-                        if (deviceType == PENTODE && testType == ANODE_CHARACTERISTICS) {
-                            sendCommand(buildSetCommand("S7 ", 0));
-                        }
-
-                        sendCommand("M2");
                     }
+
+                    // Retry: discharge and re-apply start anode voltage, then verify again
+                    sendCommand("M1");
+                    double vaRetry = hasVaTarget ? vaTarget : anodeStart;
+                    sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, vaRetry)));
+                    sendCommand("M2");
                 }
             } else {
                 // Normal sample processing

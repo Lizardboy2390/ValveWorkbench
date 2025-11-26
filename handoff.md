@@ -313,6 +313,232 @@ Last updated: 2025-11-22 (CRITICAL: AI violated user approval rule THIRD TIME, m
   - Gardiner/SimpleManual: wider envelope (original global guardrails) so the unified Gardiner model can explore its shaping space.
   - Reefman (Derk/DerkE): tighter UTmax-style corridor (mirroring `Estimate::estimatePentode` clamp ranges) to keep the DEPIa-style model physically realistic.
 
+### 2025-11-26 Summary (ExtractModel triode μ estimation – working details)
+
+This section documents the current, working implementation of triode μ estimation for ExtractModel-style triode and triode-connected pentode fits. It also records the previous behaviour and the specific bug that caused “severely squashed” fits.
+
+#### 1. Operating-point current slice: 5% → 50% of Ia_max
+
+Let:
+
+- `Ia_max = measurement->getIaMax()` (in mA, from analyser limits).
+- `iMu` = current slice used for μ estimation.
+
+**Old implementation:**
+
+```cpp
+double iMu = measurement->getIaMax() * 0.05;  // 5% of Ia_max
+```
+
+This samples very low on the curves, near the knee, where the behaviour is strongly non-linear and not representative of typical operating points for power valves (e.g. 6L6-GC).
+
+**Current implementation:**
+
+```cpp
+double iMu = measurement->getIaMax() * 0.5;
+if (iMu < 1.0) {
+    iMu = 1.0;    // floor at 1 mA for small-signal tubes
+}
+```
+
+So:
+
+- For a 50 mA Ia_max tube, `iMu = 25 mA`.
+- For small tubes where `0.5 * Ia_max < 1 mA`, we clip to 1 mA.
+
+**Rationale:** `0.5 × Ia_max` is treated as a “common operating point” slice – mid-range current where the curves are smoother, much closer to where the tube is biased in real circuits.
+
+#### 2. Interpolating Va at the chosen current (findVa)
+
+Each measurement consists of **sweeps** at different grid voltages:
+
+- For sweep `s`:
+  - Samples: `(Va_k, Ia_k)` for `k = 0 .. N-1`.
+  - Sweep nominal grid voltage: `Vg1_nom(s)` (from `Sweep::getVg1Nominal()`).
+
+We need, for each sweep, the **anode voltage Va where Ia crosses `iMu`**.
+
+`Estimate::findVa(sweep, iMu)` does this by **linear interpolation** between samples on the sweep:
+
+1. Scan all samples in the sweep, tracking the best lower/upper bracketing points around `iMu`:
+   - `(Va_lower, Ia_lower)` is the sample with largest `Ia < iMu`.
+   - `(Va_upper, Ia_upper)` is the sample with smallest `Ia ≥ iMu`.
+
+2. If no valid upper bracket is found (i.e. the sweep never reaches `iMu`), `findVa` returns `-1.0` to indicate “no crossing”.
+
+3. Otherwise, interpolate linearly:
+
+   \[
+   \text{slope} = \frac{I_{a,\mathrm{upper}} - I_{a,\mathrm{lower}}}{V_{a,\mathrm{upper}} - V_{a,\mathrm{lower}}}
+   \]
+
+   \[
+   V_{a}(i_\mu) = V_{a,\mathrm{lower}} + \frac{i_\mu - I_{a,\mathrm{lower}}}{\text{slope}}
+   \]
+
+In code:
+
+```cpp
+double slope = (upperIa - lowerIa) / (upperVa - lowerVa);
+double vaAtIMu = lowerVa + (iMu - lowerIa) / slope;
+```
+
+#### 3. Building (Vg1, Va) samples at the 50% Ia slice
+
+For a triode anode-characteristics measurement:
+
+```cpp
+QList<double> vg1Samples;
+QList<double> vaSamples;
+
+int sweeps = measurement->count();
+for (int sw = 0; sw < sweeps; ++sw) {
+    Sweep *sweep = measurement->at(sw);
+    double vaAtIMu = findVa(sweep, iMu);
+    if (vaAtIMu < 0) {
+        // Sweep did not reach iMu: skip it, but continue with later sweeps
+        continue;
+    }
+
+    double vg1Nom = sweep->getVg1Nominal();  // Vg1_nom(s)
+    vg1Samples.append(vg1Nom);
+    vaSamples.append(vaAtIMu);
+}
+```
+
+So after this loop we have a set of points:
+
+\[
+\{(V_{g1,j}, V_{a,j})\}_{j=1}^{N}
+\]
+
+where:
+
+- `Vg1_j` is the nominal grid voltage of sweep `j`.
+- `Va_j` is the interpolated anode voltage at `Ia = iMu` on that sweep.
+
+**Important fix:** previously, when `findVa` returned `< 0` for the **first** failing sweep, the code used `break;`, which aborted the entire loop and discarded all remaining sweeps – making the estimate extremely fragile. The current implementation uses `continue;` so valid later sweeps are still included.
+
+#### 4. Least-squares linear regression: Va vs Vg1
+
+We then fit a straight line of **Va as a function of Vg1** at that fixed current slice:
+
+\[
+V_{a} \approx m \cdot V_{g1} + b
+\]
+
+Steps:
+
+1. Compute means:
+
+   \[
+   \bar{V}_{g1} = \frac{1}{N} \sum_{j=1}^{N} V_{g1,j}, \quad
+   \bar{V}_{a}   = \frac{1}{N} \sum_{j=1}^{N} V_{a,j}
+   \]
+
+2. Compute numerator/denominator for the slope:
+
+   \[
+   \text{num} = \sum_{j=1}^{N} (V_{g1,j} - \bar{V}_{g1}) (V_{a,j} - \bar{V}_{a})
+   \]
+   \[
+   \text{den} = \sum_{j=1}^{N} (V_{g1,j} - \bar{V}_{g1})^2
+   \]
+
+3. If `den != 0`, define:
+
+   \[
+   \text{slope} = \frac{\text{num}}{\text{den}} = \frac{dV_a}{dV_{g1}} \ \text{(in the least-squares sense)}
+   \]
+
+Code:
+
+```cpp
+double meanVg1 = 0.0, meanVa = 0.0;
+// ... accumulate means ...
+// ... accumulate num, den ...
+double slope = num / den;
+```
+
+This is a **global** least-squares fit across all sweeps, not just a pairwise difference between two sweeps.
+
+#### 5. Mapping slope to μ and the sign convention
+
+In small-signal triode theory, at **constant Ia**:
+
+\[
+\mu = -\frac{\partial V_a}{\partial V_{g1}} \quad \Rightarrow \quad \frac{\partial V_a}{\partial V_{g1}} = -\mu
+\]
+
+So:
+
+- Our **slope** from the regression is:
+
+  \[
+  \text{slope} \approx \frac{dV_a}{dV_{g1}}
+  \]
+
+- Therefore the **physically correct** mapping is:
+
+  \[
+  \mu = -\text{slope}
+  \]
+
+**Buggy LS version (regression-era bug):**
+
+- Accidentally set:
+
+  ```cpp
+  mu = slope;   // WRONG
+  ```
+
+  which corresponds to:
+
+  \[
+  \mu \approx \frac{dV_a}{dV_{g1}}
+  \]
+
+- This often produced:
+
+  - Small or even negative μ values.
+  - Downstream numerical issues in `estimateKg1X`:
+
+    ```cpp
+    log(sample->getVa() / mu + sample->getVg1())
+    ```
+
+    which behaves very badly if `mu` is too small or has the wrong sign.
+
+- The result was triode fits with μ≈1 and distorted Kg1/X, and pentode fits that were **severely squashed** when seeded from those triode models.
+
+**Fixed implementation:**
+
+```cpp
+double slope = num / den;
+mu = -slope;   // μ ≈ -dVa/dVg1
+```
+
+With this fix, using the same triode-connected 6L6-GC data:
+
+- The Cohen–Helie triode seed lands at a µ and Kg1 that match the standalone ExtractModel reference very closely.
+- Pentode fits from that triode seed now visually match the known-good Reefman test preset instead of being squashed.
+
+#### 6. Summary of old vs new behaviour
+
+- **Old (5%, heuristic, sign issues in LS variant):**
+  - `iMu = 0.05 * Ia_max`.
+  - Curves sampled in a highly curved, low-current region.
+  - Earlier implementations used a pairwise slope/average between sweeps:
+    - Something like `μ ≈ (Va_k - Va_j) / (Vg1_j - Vg1_k)` averaged over sweep pairs.
+  - Regression-era bug: setting `μ = slope` instead of `μ = -slope` when LS was introduced.
+
+- **New (50%, LS, correct sign, robust sweep handling):**
+  - `iMu = 0.5 * Ia_max` (with `iMu >= 1 mA`).
+  - Use `findVa` for each sweep, **skip** sweeps that never reach `iMu`.
+  - Globally fit `Va` vs `Vg1` at that slice using least-squares.
+  - Set `μ = -slope` consistent with `dVa/dVg1 = -μ`.
+  - Produces stable, ExtractModel-consistent triode seeds and downstream pentode fits.
+
 ### 2025-11-14 Note (Reefman / plotting regressions)
 - Experimental changes to Reefman pentode bounds, defaults, and shared pentode plotting were found to destabilise all pentode model plots (diagonal / vertical families and inconsistent re-plots when toggling tree items).
 - These experiments were fully reverted via version control; the current baseline is the pre-experiment commit where Gardiner pentode overlays behaved correctly.
