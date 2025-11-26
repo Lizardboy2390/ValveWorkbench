@@ -140,6 +140,100 @@ private:
     const double ia_;
     const double vg2_;
 };
+
+// Residual for screen current Ig2 without secondary emission.
+// Implements Eq. (45) using the same Ip_Koren core as screenCurrent().
+struct ExtractDerkEPentodeIg2Residual {
+    ExtractDerkEPentodeIg2Residual(double va, double vg1, double ig2, double vg2)
+        : va_(va), vg1_(vg1), ig2_(ig2), vg2_(vg2) {}
+
+    template <typename T>
+    bool operator()(const T *const kp,
+                    const T *const kvb,
+                    const T *const x,
+                    const T *const mu,
+                    const T *const kg2,
+                    const T *const alpha_s,
+                    const T *const beta,
+                    T *residual) const
+    {
+        const T eps = T(1e-12);
+
+        // Ip_Koren(Vg2, Vg1; kp, kvb, x, mu)
+        T v2 = T(vg2_);
+        T f  = ceres::sqrt(tmax(kvb[0] + v2 * v2, eps));
+        T y  = kp[0] * (T(1.0) / tmax(mu[0], eps) + T(vg1_) / f);
+        y    = tmax(tmin(y, T(50.0)), T(-50.0));
+        T base = v2 / tmax(kp[0], eps) * ceres::log(T(1.0) + ceres::exp(y));
+        base   = tmax(base, eps);
+        T ip   = ceres::exp(x[0] * ceres::log(base));
+
+        // Eq. (45) without Psec: Ig2 = Ip / Kg2 * (1 + alpha_s * e^{-(beta Va)^{3/2}})
+        T invKg2 = T(1.0) / tmax(kg2[0], eps);
+        T g      = ceres::exp(-ceres::pow(beta[0] * T(va_), T(1.5)));
+        T ig2Model = ip * invKg2 * (T(1.0) + alpha_s[0] * g);
+
+        residual[0] = T(ig2_) - ig2Model;
+        return true;
+    }
+
+private:
+    const double va_;
+    const double vg1_;
+    const double ig2_;
+    const double vg2_;
+};
+
+// Residual for screen current Ig2 with secondary emission Psec(Va).
+struct ExtractDerkEPentodeIg2SEResidual {
+    ExtractDerkEPentodeIg2SEResidual(double va, double vg1, double ig2, double vg2)
+        : va_(va), vg1_(vg1), ig2_(ig2), vg2_(vg2) {}
+
+    template <typename T>
+    bool operator()(const T *const kp,
+                    const T *const kvb,
+                    const T *const x,
+                    const T *const mu,
+                    const T *const kg2,
+                    const T *const alpha_s,
+                    const T *const beta,
+                    const T *const omega,
+                    const T *const lambda,
+                    const T *const nu,
+                    const T *const S,
+                    const T *const ap,
+                    T *residual) const
+    {
+        const T eps = T(1e-12);
+
+        // Ip_Koren(Vg2, Vg1; kp, kvb, x, mu)
+        T v2 = T(vg2_);
+        T f  = ceres::sqrt(tmax(kvb[0] + v2 * v2, eps));
+        T y  = kp[0] * (T(1.0) / tmax(mu[0], eps) + T(vg1_) / f);
+        y    = tmax(tmin(y, T(50.0)), T(-50.0));
+        T base = v2 / tmax(kp[0], eps) * ceres::log(T(1.0) + ceres::exp(y));
+        base   = tmax(base, eps);
+        T ip   = ceres::exp(x[0] * ceres::log(base));
+
+        T invKg2 = T(1.0) / tmax(kg2[0], eps);
+        T g      = ceres::exp(-ceres::pow(beta[0] * T(va_), T(1.5)));
+
+        // Psec(Va) as in Eq. (42)/(46)
+        T psec = psec_term(T(va_), T(vg1_), T(vg2_), S[0], ap[0], lambda[0], nu[0], omega[0]);
+
+        // Eq. (45) with Psec: Ig2 = Ip / Kg2 * (1 + alpha_s * e^{-(beta Va)^{3/2}} + Psec)
+        T ig2Model = ip * invKg2 * (T(1.0) + alpha_s[0] * g + psec);
+
+        residual[0] = T(ig2_) - ig2Model;
+        return true;
+    }
+
+private:
+    const double va_;
+    const double vg1_;
+    const double ig2_;
+    const double vg2_;
+};
 } // namespace
 
 ExtractModelPentode::ExtractModelPentode()
@@ -180,10 +274,9 @@ double ExtractModelPentode::ipKoren(double vg2, double vg1,
 
 void ExtractModelPentode::addSample(double va, double ia, double vg1, double vg2, double ig2)
 {
-    Q_UNUSED(ig2);
-
     const bool useSE = (preferences && preferences->useSecondaryEmission());
 
+    // 1) Anode-current residual (existing ExtractModel Ia fit)
     if (useSE) {
         anodeProblem.AddResidualBlock(
             new AutoDiffCostFunction<ExtractDerkEPentodeSEResidual, 1,
@@ -219,6 +312,43 @@ void ExtractModelPentode::addSample(double va, double ia, double vg1, double vg2
             parameter[PAR_A]->getPointer(),
             parameter[PAR_ALPHA]->getPointer(),
             parameter[PAR_BETA]->getPointer());
+    }
+
+    // 2) Screen-current residual (Ig2) using the same ExtractModel equations.
+    const double eps = 1e-9;
+    if (std::isfinite(ig2) && std::fabs(ig2) > eps) {
+        if (useSE) {
+            anodeProblem.AddResidualBlock(
+                new AutoDiffCostFunction<ExtractDerkEPentodeIg2SEResidual, 1,
+                                          1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
+                    new ExtractDerkEPentodeIg2SEResidual(va, vg1, ig2, vg2)),
+                NULL,
+                parameter[PAR_KP]->getPointer(),
+                parameter[PAR_KVB]->getPointer(),
+                parameter[PAR_X]->getPointer(),
+                parameter[PAR_MU]->getPointer(),
+                parameter[PAR_KG2]->getPointer(),
+                parameter[PAR_ALPHA]->getPointer(),
+                parameter[PAR_BETA]->getPointer(),
+                parameter[PAR_OMEGA]->getPointer(),
+                parameter[PAR_LAMBDA]->getPointer(),
+                parameter[PAR_NU]->getPointer(),
+                parameter[PAR_S]->getPointer(),
+                parameter[PAR_AP]->getPointer());
+        } else {
+            anodeProblem.AddResidualBlock(
+                new AutoDiffCostFunction<ExtractDerkEPentodeIg2Residual, 1,
+                                          1, 1, 1, 1, 1, 1, 1>(
+                    new ExtractDerkEPentodeIg2Residual(va, vg1, ig2, vg2)),
+                NULL,
+                parameter[PAR_KP]->getPointer(),
+                parameter[PAR_KVB]->getPointer(),
+                parameter[PAR_X]->getPointer(),
+                parameter[PAR_MU]->getPointer(),
+                parameter[PAR_KG2]->getPointer(),
+                parameter[PAR_ALPHA]->getPointer(),
+                parameter[PAR_BETA]->getPointer());
+        }
     }
 }
 

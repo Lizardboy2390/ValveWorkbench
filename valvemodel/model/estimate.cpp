@@ -409,7 +409,7 @@ void Estimate::estimateMu(Measurement *measurement)
 {
     if (measurement->getDeviceType() == TRIODE) {
         if (measurement->getTestType() == ANODE_CHARACTERISTICS) {
-            double iMu = measurement->getIaMax() * 0.05;
+            double iMu = measurement->getIaMax() * 0.5;
             if (iMu < 1) { // Set a minimum limit on iMu of 1mA
                 iMu = 1;
             }
