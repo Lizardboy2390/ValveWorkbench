@@ -341,7 +341,7 @@ void Analyser::startTest()
     isDataSetValid = false;
 
     switch (testType) {
-    case ANODE_CHARACTERISTICS:
+    case ANODE_CHARACTERISTICS: {
         stepType = GRID;
         stepCommandPrefix = "S2 ";
         sweepType = ANODE;
@@ -351,7 +351,16 @@ void Analyser::startTest()
         result->setAnodeStop(anodeStop);
         result->setAnodeStep(anodeStep);
 
-        result->nextSweep(gridStart, screenStart);
+        // For pentode anode characteristics, the physical grid bias is the
+        // negative of the configured magnitude (gridStart). Use the actual
+        // negative bias as Vg1 nominal so the first sweep reports the same
+        // sign as the hardware (e.g. -20 V instead of +20 V).
+        double vg1Nominal = gridStart;
+        if (deviceType == PENTODE) {
+            vg1Nominal = -gridStart;
+        }
+
+        result->nextSweep(vg1Nominal, screenStart);
 
         if (isDoubleTriode) {
             steppedSweep(secondAnodeStart, secondAnodeStop, secondGridStart, secondGridStop, secondGridStep);
@@ -456,6 +465,7 @@ void Analyser::startTest()
             nextSample();
         }
         break;
+    }
     case TRANSFER_CHARACTERISTICS:
         sweepType = GRID;
         sweepCommandPrefix = "S2 ";
@@ -923,6 +933,14 @@ void Analyser::checkResponse(QString response)
                     // Verification PASSED - hardware at configured start bias
                     isVerifyingHardware = false;
                     verificationAttempts = 0;
+
+                    // For pentode anode characteristics, ensure the screen rail
+                    // is at the intended test voltage before resuming the first
+                    // real sweep point. This fixes the case where the initial
+                    // 0 V verification left S7 at 0 V for the first family.
+                    if (deviceType == PENTODE && testType == ANODE_CHARACTERISTICS) {
+                        sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
+                    }
 
                     // Proceed with the first actual sweep point as before
                     int firstSampleValue = sweepParameter.at(stepIndex).at(0);

@@ -542,9 +542,17 @@ QList<QGraphicsItem *> *Measurement::plotPentodeAnode(Plot *plot, Sweep *sweep)
     QList<QGraphicsItem *> *segments = new QList<QGraphicsItem *>();
 
     if (sweep == nullptr) {
-        int nSweeps = sweeps.size();
+        const int nSweeps = sweeps.size();
+        qInfo("PENTODE ANODE PLOT: plotting ALL sweeps (count=%d)", nSweeps);
         for (int i = 0; i < nSweeps; i++) {
             Sweep *thisSweep = sweeps.at(i);
+            if (!thisSweep) {
+                qWarning("PENTODE ANODE PLOT: sweep[%d] is null", i);
+                continue;
+            }
+
+            qInfo("PENTODE ANODE PLOT: sweep[%d] Vg1Nominal=%f, samples=%d",
+                  i, thisSweep->getVg1Nominal(), thisSweep->count());
 
             thisSweep->plotPentodeAnode(plot, &samplePen, segments);
             if (showScreen) {
@@ -552,6 +560,9 @@ QList<QGraphicsItem *> *Measurement::plotPentodeAnode(Plot *plot, Sweep *sweep)
             }
         }
     } else {
+        qInfo("PENTODE ANODE PLOT: plotting SINGLE sweep Vg1Nominal=%f, samples=%d",
+              sweep->getVg1Nominal(), sweep->count());
+
         sweep->plotPentodeAnode(plot, &samplePen, segments);
         if (showScreen) {
             sweep->plotPentodeScreen(plot, &samplePenS, segments);

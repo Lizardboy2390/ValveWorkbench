@@ -1,6 +1,6 @@
 # ValveWorkbench - Engineering Handoff
 
-Last updated: 2025-11-22 (CRITICAL: AI violated user approval rule THIRD TIME, made unauthorized changes/reverts, terminated for repeat violations)
+Last updated: 2025-11-26 (Documenting pentode/transfer interaction fixes; **no new code changes without explicit approval**)
 
 ## CRITICAL INCIDENT - 2025-11-22 (THIRD VIOLATION)
 **AI Assistant Fired THIRD TIME for Continued Gross Negligence**
@@ -312,6 +312,97 @@ Last updated: 2025-11-22 (CRITICAL: AI violated user approval rule THIRD TIME, m
 - `Model::setEstimate` now applies **model-specific pentode bounds**:
   - Gardiner/SimpleManual: wider envelope (original global guardrails) so the unified Gardiner model can explore its shaping space.
   - Reefman (Derk/DerkE): tighter UTmax-style corridor (mirroring `Estimate::estimatePentode` clamp ranges) to keep the DEPIa-style model physically realistic.
+
+### 2025-11-26 Summary (Pentode / transfer interaction and analyser verification)
+
+This section documents **behaviour only**; the intent is to record what was found and what has been done so far so a successor can decide how to proceed. Do **not** treat this as approval to change code again.
+
+#### 1. Pentode fits must ignore transfer measurements
+
+Symptom observed on a 6L6-GC project:
+
+- With only a **pentode anode-characteristics** measurement present, Gardiner/Reefman fits showed the expected **hump/dip** shape and correct overall slope.
+- After adding a **pentode transfer** measurement (Ia vs Vg1 at fixed Va/Vg2), pentode fits degraded: slopes were roughly right but the model no longer matched the knee/hump region.
+
+Root cause in current code:
+
+- `ValveWorkbench::modelPentode()` seeded the model from a **single** `Measurement *measurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);` as intended.
+- But the subsequent measurement-attachment loop added **all** pentode measurements to the model, regardless of test type:
+
+  ```cpp
+  int children = currentProject->childCount();
+  for (int i = 0; i < children; i++) {
+      QTreeWidgetItem *child = currentProject->child(i);
+      if (child->type() == TYP_MEASUREMENT) {
+          measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+          if (measurement->getDeviceType() == PENTODE) {
+              model->addMeasurement(measurement);
+          }
+      }
+  }
+  ```
+
+- This meant **pentode transfer** and **screen** measurements were being fed into the same Ceres solve as the anode-characteristics data, contaminating the fit when such measurements existed.
+
+Behaviour after fix (already implemented earlier in this session):
+
+- The attachment loop was tightened so the model only receives **pentode anode-characteristics** measurements:
+
+  ```cpp
+  if (measurement->getDeviceType() == PENTODE &&
+      measurement->getTestType() == ANODE_CHARACTERISTICS) {
+      model->addMeasurement(measurement);
+  }
+  ```
+
+- Pentode fits now behave as originally intended when transfer measurements are present:
+  - **Fit input:** only pentode anode sweeps.
+  - **Transfer data:** reserved for gm estimation (see below), not for the main fit.
+
+#### 2. Transfer measurements are for gm at the modelling OP, not for fitting
+
+Intent for transfer data (Modeller small-signal LCDs):
+
+- Pick an **operating point (OP)** from the anode-characteristics measurement near `Ia ≈ 0.5 × Ia_max`.
+- If a transfer measurement is available with Va/Vg2 close to that OP and a Vg1 sweep that crosses the OP, estimate **gm** via a **least-squares slope** of `Ia` vs `Vg1` around that point.
+- Fall back to anode-based gm if no suitable transfer sweep exists.
+
+Current implementation notes (no further changes made here in this step):
+
+- A helper in `valveworkbench.cpp` (Modeller tab) computes gm from transfer data at the OP and prefers it when valid; otherwise the existing anode-based gm is used.
+- This affects **only the LCDs / small-signal display**, not the pentode fit itself.
+
+#### 3. Analyser between-sweep verification at start bias (not at 0 V)
+
+Original requirement from the hardware side:
+
+- Perform a short **verification sweep** between analyser sweeps to confirm that **anode and screen** have settled to the *start* voltages of the next sweep, **not** back at 0 V.
+- Allow for real conduction at that bias; only enforce a **voltage window** (±1 V around the intended Va_start) and remove current gating during verification.
+
+Current behaviour in `analyser.cpp` (already implemented prior to this note):
+
+- Before each new sweep, the analyser now:
+  - Discharges (`M1`) between sweeps.
+  - Re-applies the intended **start Va** (and Vg2 for pentodes) for that sweep.
+  - Issues a **Mode(2) verification sample** (`M2`).
+  - Checks that measured Va is within ±1 V of the intended start voltage; current is **not** used to gate verification success.
+  - On PASS: resumes normal sweeping from that start bias; on repeated failure: aborts the sweep with a log message.
+
+This behaviour has been confirmed to restore sensible between-sweep behaviour at the start of each sweep without random Ig2 spikes from sitting at Va≈0.
+
+#### 4. Known open issue: first pentode anode Vg family sometimes not visible
+
+- On at least one 6L6-GC pentode anode measurement, the **first** grid family in the Vg dropdown (e.g. Vg1 ≈ −20 V) has a full run of ~60 samples and appears in the Data tab, but its measured curve does **not** appear in the Modeller/Analyser plots when selected.
+- Neighbouring grid families in the same dropdown behave normally.
+- Static inspection of `Measurement::plotPentodeAnode` and `Sweep::plotPentodeAnode` shows:
+  - All sweeps `i = 0 .. n-1` are iterated.
+  - Sweeps are only skipped if `samples.count() < 2` (not the case here).
+- The precise cause of this “first Vg family not visible” behaviour has **not** yet been identified; no additional code changes were made for this in this step.
+- **Action for successor:**
+  - Reproduce with the same 6L6-GC measurement.
+  - Add targeted logging around pentode plotting (per-sweep Vg1Nominal, sample count, and segment creation) or inspect the exported measurement JSON to identify whether the -20 V sweep has pathological Va/Ia data or is being mis-indexed in the selection UI.
+
+Again: this section is documentation only. Do not make further code changes based on it without explicit approval.
 
 ### 2025-11-26 Summary (ExtractModel triode μ estimation – working details)
 

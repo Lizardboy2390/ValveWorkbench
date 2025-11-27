@@ -358,6 +358,11 @@ void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem 
     // qInfo("First sample: vg1=%f, va=%f, ia=%f", vg, va, ia);
 
     int nSamples = samples.count();
+    if (nSamples == 1) {
+        segments->append(plot->createLabel(va, ia, vg1Nominal, samplePen->color()));
+        return;
+    }
+
     for (int j = 1; j < nSamples; j++) {
          Sample *sample = samples.at(j);
 

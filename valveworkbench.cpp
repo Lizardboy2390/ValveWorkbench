@@ -2761,6 +2761,209 @@ void ValveWorkbench::updateCircuitParameter(int index)
     refreshHarmonicsPlots();
 }
 
+// Helper: pick an operating point (sweepIdx, sampleIdx) from an ANODE_CHARACTERISTICS
+// measurement near 50% of Ia_max. Returns false on failure.
+static bool pickOperatingPointFromAnode(Measurement *measurement,
+                                        int &sweepIdx,
+                                        int &sampleIdx,
+                                        double &vaOp,
+                                        double &vg1Op,
+                                        double &vg2Op)
+{
+    if (!measurement) return false;
+
+    const int sweepCount = measurement->count();
+    if (sweepCount == 0) {
+        return false;
+    }
+
+    const double iaTarget = std::max(0.0, measurement->getIaMax() * 0.5);
+    double bestDiff = std::numeric_limits<double>::infinity();
+
+    sweepIdx  = sweepCount / 2;
+    sampleIdx = -1;
+    Sweep *sweep = nullptr;
+
+    for (int sw = 0; sw < sweepCount; ++sw) {
+        Sweep *s = measurement->at(sw);
+        if (!s || s->count() < 1) {
+            continue;
+        }
+        const int nSamples = s->count();
+        for (int sa = 0; sa < nSamples; ++sa) {
+            Sample *sample = s->at(sa);
+            if (!sample) continue;
+            const double ia = sample->getIa();
+            if (ia <= 0.0) {
+                continue; // skip non-conducting points
+            }
+            const double diff = std::fabs(ia - iaTarget);
+            if (diff < bestDiff) {
+                bestDiff = diff;
+                sweepIdx = sw;
+                sampleIdx = sa;
+                sweep = s;
+            }
+        }
+    }
+
+    if (!sweep) {
+        // Fallback: central sweep/sample
+        sweepIdx = sweepCount / 2;
+        sweep = measurement->at(sweepIdx);
+        if (!sweep || sweep->count() == 0) {
+            return false;
+        }
+        sampleIdx = sweep->count() / 2;
+    }
+
+    Sample *sampleMid = sweep->at(sampleIdx);
+    if (!sampleMid) {
+        return false;
+    }
+
+    vaOp   = sampleMid->getVa();
+    vg1Op  = sampleMid->getVg1();
+    vg2Op  = sampleMid->getVg2();
+    return std::isfinite(vaOp) && std::isfinite(vg1Op);
+}
+
+// Helper: compute gm from a TRANSFER_CHARACTERISTICS measurement at a desired
+// operating point (Va_op, Vg2_op, Vg1_op) using a local linear regression of
+// Ia vs Vg1. Returns gm in mA/V, or <= 0.0 on failure.
+static double gmFromTransferAtOP(Measurement *transfer,
+                                 double vaOp,
+                                 double vg2Op,
+                                 double vg1Op)
+{
+    if (!transfer) return 0.0;
+    if (transfer->getTestType() != TRANSFER_CHARACTERISTICS) return 0.0;
+
+    const int sweeps = transfer->count();
+    if (sweeps <= 0) return 0.0;
+
+    // Select the sweep whose nominal Va/Vg2 is closest to the desired OP.
+    int bestSweep = -1;
+    double bestDistance = std::numeric_limits<double>::infinity();
+
+    for (int sw = 0; sw < sweeps; ++sw) {
+        Sweep *s = transfer->at(sw);
+        if (!s || s->count() < 1) continue;
+
+        // Approximate sweep Va/Vg2 by the mid sample of that sweep.
+        Sample *mid = s->at(s->count() / 2);
+        if (!mid) continue;
+
+        const double vaMid  = mid->getVa();
+        const double vg2Mid = mid->getVg2();
+        if (!std::isfinite(vaMid) || !std::isfinite(vg2Mid)) continue;
+
+        const double dVa  = std::fabs(vaMid  - vaOp);
+        const double dVg2 = std::fabs(vg2Mid - vg2Op);
+        const double dist = dVa + dVg2;
+        if (dist < bestDistance) {
+            bestDistance = dist;
+            bestSweep = sw;
+        }
+    }
+
+    if (bestSweep < 0) {
+        return 0.0;
+    }
+
+    Sweep *sweep = transfer->at(bestSweep);
+    if (!sweep || sweep->count() < 3) {
+        return 0.0;
+    }
+
+    // Require that the chosen sweep is reasonably close to the desired
+    // operating Va/Vg2. If it's too far away, this transfer dataset is not
+    // representative of the modelling OP and we should fall back to the
+    // previous gm estimation path.
+    const double maxVaDelta  = 50.0;  // volts
+    const double maxVg2Delta = 50.0;  // volts
+    if (bestDistance > (maxVaDelta + maxVg2Delta)) {
+        return 0.0;
+    }
+
+    const int sampleCount = sweep->count();
+
+    auto clampIndex = [](int idx, int max) {
+        if (idx < 0) return 0;
+        if (idx >= max) return max - 1;
+        return idx;
+    };
+
+    // Find the sample whose Vg1 is closest to Vg1_op.
+    int centreIdx = 0;
+    double bestVgDiff = std::numeric_limits<double>::infinity();
+    for (int i = 0; i < sampleCount; ++i) {
+        Sample *s = sweep->at(i);
+        if (!s) continue;
+        const double vg = s->getVg1();
+        if (!std::isfinite(vg)) continue;
+        const double diff = std::fabs(vg - vg1Op);
+        if (diff < bestVgDiff) {
+            bestVgDiff = diff;
+            centreIdx = i;
+        }
+    }
+
+    // Require that the transfer sweep actually passes near the desired grid
+    // operating point; otherwise, gm at this Va/Vg2 will not be meaningful.
+    const double maxVgDelta = 1.5; // volts
+    if (!std::isfinite(bestVgDiff) || bestVgDiff > maxVgDelta) {
+        return 0.0;
+    }
+
+    const int iStart = clampIndex(centreIdx - 2, sampleCount);
+    const int iEnd   = clampIndex(centreIdx + 2, sampleCount);
+
+    double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+    int N = 0;
+
+    for (int i = iStart; i <= iEnd; ++i) {
+        Sample *s = sweep->at(i);
+        if (!s) continue;
+        const double ia = s->getIa();
+        const double vg = s->getVg1();
+        if (!std::isfinite(ia) || !std::isfinite(vg) || ia <= 0.0) {
+            continue;
+        }
+        Sx  += vg;
+        Sy  += ia;
+        Sxx += vg * vg;
+        Sxy += vg * ia;
+        ++N;
+    }
+
+    double gm_mA_V = 0.0;
+    const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+    if (N >= 3 && std::fabs(den) > 1e-12) {
+        gm_mA_V = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+    }
+
+    // Fallback: two-point dIa/dVg around the centre index.
+    if (gm_mA_V <= 0.0 && sampleCount >= 2) {
+        const int iPrev = clampIndex(centreIdx - 1, sampleCount);
+        const int iNext = clampIndex(centreIdx + 1, sampleCount);
+        Sample *sPrev = sweep->at(iPrev);
+        Sample *sNext = sweep->at(iNext);
+        if (sPrev && sNext) {
+            const double iaPrev = sPrev->getIa();
+            const double iaNext = sNext->getIa();
+            const double vgPrev = sPrev->getVg1();
+            const double vgNext = sNext->getVg1();
+            const double dVg    = vgNext - vgPrev;
+            if (std::fabs(dVg) > 1e-6) {
+                gm_mA_V = (iaNext - iaPrev) / dVg;
+            }
+        }
+    }
+
+    return gm_mA_V;
+}
+
 // Helper: compute small-signal gm, ra, mu from a measured dataset at an
 // automatically chosen operating point. This is used for tube matching in
 // Modeller when mes_mod_select is unchecked ("measured" mode).
@@ -2791,274 +2994,237 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
         }
     };
 
-    // Choose an operating point. For anode characteristics we prefer a point
-    // near the middle of the tube's current (around 50% of Ia_max), which is
-    // closer to a realistic bias than the geometric centre of the dataset.
-    int   sweepIdx  = sweepCount / 2;
-    int   sampleIdx = -1;
-    Sweep *sweep    = nullptr;
+    // Determine operating point from anode characteristics if available.
+    int   opSweepIdx  = -1;
+    int   opSampleIdx = -1;
+    double vaOp = 0.0, vg1Op = 0.0, vg2Op = 0.0;
 
-    if (testType == ANODE_CHARACTERISTICS) {
-        const double iaTarget = std::max(0.0, measurement->getIaMax() * 0.5);
-        double bestDiff = std::numeric_limits<double>::infinity();
-
-        for (int sw = 0; sw < sweepCount; ++sw) {
-            Sweep *s = measurement->at(sw);
-            if (!s || s->count() < 3) {
-                continue;
-            }
-            const int nSamples = s->count();
-            for (int sa = 0; sa < nSamples; ++sa) {
-                Sample *sample = s->at(sa);
-                if (!sample) continue;
-                const double ia = sample->getIa();
-                if (ia <= 0.0) {
-                    continue; // skip non-conducting points
-                }
-                const double diff = std::fabs(ia - iaTarget);
-                if (diff < bestDiff) {
-                    bestDiff = diff;
-                    sweepIdx = sw;
-                    sampleIdx = sa;
-                    sweep = s;
-                }
-            }
+    Measurement *anodeMeasurement = measurement;
+    if (testType != ANODE_CHARACTERISTICS) {
+        // If current measurement is not anode characteristics, try to find one
+        // in the project tree for the same device type to define the OP.
+        Measurement *candidate = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
+        if (candidate && measurementHasValidSamples(candidate)) {
+            anodeMeasurement = candidate;
         }
+    }
 
-        // Fallback: if we didn't find a suitable point, use the central
-        // sweep/sample as before.
-        if (!sweep) {
-            sweepIdx = sweepCount / 2;
-            sweep = measurement->at(sweepIdx);
-            if (!sweep || sweep->count() < 3) {
-                return;
-            }
-            sampleIdx = sweep->count() / 2;
-        }
-    } else {
-        // Transfer characteristics or other tests: retain the original
-        // central sweep/sample heuristic.
-        sweepIdx = sweepCount / 2;
-        sweep = measurement->at(sweepIdx);
-        if (!sweep || sweep->count() < 3) {
+    if (!anodeMeasurement ||
+        anodeMeasurement->getTestType() != ANODE_CHARACTERISTICS ||
+        !pickOperatingPointFromAnode(anodeMeasurement, opSweepIdx, opSampleIdx, vaOp, vg1Op, vg2Op)) {
+        // Fallback: original central sweep/sample heuristic on the provided measurement.
+        opSweepIdx  = sweepCount / 2;
+        Sweep *s    = measurement->at(opSweepIdx);
+        if (!s || s->count() < 3) {
             return;
         }
-        sampleIdx = sweep->count() / 2;
+        opSampleIdx = s->count() / 2;
+        Sample *mid = s->at(opSampleIdx);
+        if (!mid) return;
+        vaOp  = mid->getVa();
+        vg1Op = mid->getVg1();
+        vg2Op = mid->getVg2();
     }
 
-    const int sampleCount = sweep->count();
-
-    // Helper to clamp indices into valid range
-    auto clampIndex = [](int idx, int max) {
-        if (idx < 0) return 0;
-        if (idx >= max) return max - 1;
-        return idx;
-    };
-
-    const int iPrev = clampIndex(sampleIdx - 1, sampleCount);
-    const int iNext = clampIndex(sampleIdx + 1, sampleCount);
-
-    Sample *samplePrev = sweep->at(iPrev);
-    Sample *sampleNext = sweep->at(iNext);
-    Sample *sampleMid  = sweep->at(sampleIdx);
-    if (!samplePrev || !sampleNext || !sampleMid) {
-        return;
-    }
-
+    // Now compute ra from anode data near the OP, and gm from transfer data
+    // at the same OP when available.
     double gm_mA_V = 0.0;
     double ra_ohms = 0.0;
     double mu      = 0.0;
 
-    if (testType == ANODE_CHARACTERISTICS) {
-        // --- ra: LS fit of Ia vs Va in a local window, with two-point fallback ---
-        {
-            int iStart = std::max(0, sampleIdx - 2);
-            int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+    // --- ra from anode characteristics around OP (same LS logic as before) ---
+    if (anodeMeasurement && anodeMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
+        Sweep *sweep = anodeMeasurement->at(opSweepIdx);
+        if (sweep && sweep->count() >= 3) {
+            const int sampleCount = sweep->count();
 
-            double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
-            int N = 0;
+            auto clampIndex = [](int idx, int max) {
+                if (idx < 0) return 0;
+                if (idx >= max) return max - 1;
+                return idx;
+            };
 
-            for (int i = iStart; i <= iEnd; ++i) {
-                Sample *s = sweep->at(i);
-                if (!s) {
-                    continue;
+            const int sampleIdx = clampIndex(opSampleIdx, sampleCount);
+            const int iPrev     = clampIndex(sampleIdx - 1, sampleCount);
+            const int iNext     = clampIndex(sampleIdx + 1, sampleCount);
+
+            Sample *samplePrev = sweep->at(iPrev);
+            Sample *sampleNext = sweep->at(iNext);
+            if (samplePrev && sampleNext) {
+                int iStart = std::max(0, sampleIdx - 2);
+                int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+
+                double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+                int N = 0;
+
+                for (int i = iStart; i <= iEnd; ++i) {
+                    Sample *s = sweep->at(i);
+                    if (!s) continue;
+                    const double ia = s->getIa(); // mA
+                    if (ia <= 0.0) continue;
+                    const double va = s->getVa(); // V
+                    Sx  += va;
+                    Sy  += ia;
+                    Sxx += va * va;
+                    Sxy += va * ia;
+                    ++N;
                 }
-                const double ia = s->getIa(); // mA
-                if (ia <= 0.0) {
-                    continue; // skip non-conducting points
+
+                const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+                if (N >= 3 && std::fabs(den) > 1e-12) {
+                    const double slope_dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+                    if (std::fabs(slope_dIa_dVa) > 1e-12) {
+                        ra_ohms = 1000.0 / slope_dIa_dVa; // V/mA → Ohms
+                    }
                 }
-                const double va = s->getVa(); // V
-                Sx  += va;
-                Sy  += ia;
-                Sxx += va * va;
-                Sxy += va * ia;
-                ++N;
-            }
 
-            const double den = static_cast<double>(N) * Sxx - Sx * Sx;
-            if (N >= 3 && std::fabs(den) > 1e-12) {
-                const double slope_dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
-                if (std::fabs(slope_dIa_dVa) > 1e-12) {
-                    // ra = dVa/dIa = 1 / (dIa/dVa)
-                    ra_ohms = 1000.0 / slope_dIa_dVa; // V/mA → Ohms
-                }
-            }
+                // Fallback: two-point estimate
+                if (ra_ohms <= 0.0) {
+                    const double vaPrev = samplePrev->getVa();
+                    const double iaPrev = samplePrev->getIa();
+                    const double vaNext = sampleNext->getVa();
+                    const double iaNext = sampleNext->getIa();
 
-            // Fallback: if LS failed or ra is non-positive, use existing two-point estimate
-            if (ra_ohms <= 0.0) {
-                const double vaPrev = samplePrev->getVa();
-                const double iaPrev = samplePrev->getIa();
-                const double vaNext = sampleNext->getVa();
-                const double iaNext = sampleNext->getIa();
-
-                const double dIa_mA = iaNext - iaPrev;
-                const double dVa    = vaNext - vaPrev;
-                if (std::fabs(dIa_mA) > 1e-9) {
-                    const double dVa_dIa_V_per_mA = dVa / dIa_mA;
-                    ra_ohms = dVa_dIa_V_per_mA * 1000.0;
-                }
-            }
-        }
-
-        // --- gm: LS fit of Ia vs Vg1 across nearby sweeps, with two-sweep fallback ---
-        if (sweepCount >= 3) {
-            int swStart = clampIndex(sweepIdx - 2, sweepCount);
-            int swEnd   = clampIndex(sweepIdx + 2, sweepCount);
-
-            double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
-            int N = 0;
-
-            for (int sw = swStart; sw <= swEnd; ++sw) {
-                Sweep *sRow = measurement->at(sw);
-                if (!sRow || sRow->count() <= sampleIdx) {
-                    continue;
-                }
-                Sample *sp = sRow->at(sampleIdx);
-                if (!sp) {
-                    continue;
-                }
-                const double ia = sp->getIa(); // mA
-                if (ia <= 0.0) {
-                    continue;
-                }
-                const double vg = sRow->getVg1Nominal(); // V
-                Sx  += vg;
-                Sy  += ia;
-                Sxx += vg * vg;
-                Sxy += vg * ia;
-                ++N;
-            }
-
-            const double den = static_cast<double>(N) * Sxx - Sx * Sx;
-            if (N >= 3 && std::fabs(den) > 1e-12) {
-                gm_mA_V = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
-            }
-
-            // Fallback: if LS failed or gm is non-positive, use existing two-sweep method
-            if (gm_mA_V <= 0.0) {
-                const int sweepPrevIdx = clampIndex(sweepIdx - 1, sweepCount);
-                const int sweepNextIdx = clampIndex(sweepIdx + 1, sweepCount);
-                Sweep *sPrev = measurement->at(sweepPrevIdx);
-                Sweep *sNext = measurement->at(sweepNextIdx);
-                if (sPrev && sNext && sPrev->count() > sampleIdx && sNext->count() > sampleIdx) {
-                    Sample *spPrev = sPrev->at(sampleIdx);
-                    Sample *spNext = sNext->at(sampleIdx);
-                    if (spPrev && spNext) {
-                        const double iaPrevSweep = spPrev->getIa();
-                        const double iaNextSweep = spNext->getIa();
-                        const double vgPrev      = sPrev->getVg1Nominal();
-                        const double vgNext      = sNext->getVg1Nominal();
-                        const double dVg         = vgNext - vgPrev;
-                        if (std::fabs(dVg) > 1e-6) {
-                            gm_mA_V = (iaNextSweep - iaPrevSweep) / dVg; // mA/V
-                        }
+                    const double dIa_mA = iaNext - iaPrev;
+                    const double dVa    = vaNext - vaPrev;
+                    if (std::fabs(dIa_mA) > 1e-9) {
+                        const double dVa_dIa_V_per_mA = dVa / dIa_mA;
+                        ra_ohms = dVa_dIa_V_per_mA * 1000.0;
                     }
                 }
             }
         }
-    } else if (testType == TRANSFER_CHARACTERISTICS) {
-        // --- gm: LS fit of Ia vs Vg1 in a local window (this sweep), with two-point fallback ---
-        {
-            int iStart = std::max(0, sampleIdx - 2);
-            int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+    }
 
-            double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
-            int N = 0;
-
-            for (int i = iStart; i <= iEnd; ++i) {
-                Sample *s = sweep->at(i);
-                if (!s) {
-                    continue;
-                }
-                const double ia = s->getIa(); // mA
-                if (ia <= 0.0) {
-                    continue;
-                }
-                const double vg = s->getVg1(); // V
-                Sx  += vg;
-                Sy  += ia;
-                Sxx += vg * vg;
-                Sxy += vg * ia;
-                ++N;
-            }
-
-            const double den = static_cast<double>(N) * Sxx - Sx * Sx;
-            if (N >= 3 && std::fabs(den) > 1e-12) {
-                gm_mA_V = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
-            }
-
-            // Fallback: original two-point dIa/dVg within this sweep
-            if (gm_mA_V <= 0.0) {
-                const double iaPrev = samplePrev->getIa();
-                const double iaNext = sampleNext->getIa();
-                const double vgPrev = samplePrev->getVg1();
-                const double vgNext = sampleNext->getVg1();
-                const double dVg    = vgNext - vgPrev;
-                if (std::fabs(dVg) > 1e-6) {
-                    gm_mA_V = (iaNext - iaPrev) / dVg; // mA/V
-                }
-            }
+    // --- gm from transfer at the same OP when such a measurement exists ---
+    Measurement *transferMeasurement = findMeasurement(deviceType, TRANSFER_CHARACTERISTICS);
+    if (transferMeasurement && measurementHasValidSamples(transferMeasurement)) {
+        const double gmFromTransfer = gmFromTransferAtOP(transferMeasurement, vaOp, vg2Op, vg1Op);
+        if (gmFromTransfer > 0.0) {
+            gm_mA_V = gmFromTransfer;
         }
+    }
 
-        // --- ra: LS fit of Ia vs Va in a local window, with Va/Ia fallback ---
-        {
-            int iStart = std::max(0, sampleIdx - 2);
-            int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+    // Fallback: if we still don't have gm from transfer, fall back to the
+    // existing measurement-based logic on the active dataset.
+    if (gm_mA_V <= 0.0) {
+        const int localTestType = measurement->getTestType();
+        if (localTestType == ANODE_CHARACTERISTICS) {
+            // Reuse the original cross-sweep gm LS logic around the OP.
+            auto clampIndex = [](int idx, int max) {
+                if (idx < 0) return 0;
+                if (idx >= max) return max - 1;
+                return idx;
+            };
 
-            double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
-            int N = 0;
+            const int sweepIdx = clampIndex(opSweepIdx, sweepCount);
+            Sweep *sweep = measurement->at(sweepIdx);
+            if (sweep && sweep->count() >= 3) {
+                const int sampleCount = sweep->count();
+                const int sampleIdx  = clampIndex(opSampleIdx, sampleCount);
 
-            for (int i = iStart; i <= iEnd; ++i) {
-                Sample *s = sweep->at(i);
-                if (!s) {
-                    continue;
+                int swStart = clampIndex(sweepIdx - 2, sweepCount);
+                int swEnd   = clampIndex(sweepIdx + 2, sweepCount);
+
+                double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+                int N = 0;
+
+                for (int sw = swStart; sw <= swEnd; ++sw) {
+                    Sweep *sRow = measurement->at(sw);
+                    if (!sRow || sRow->count() <= sampleIdx) continue;
+                    Sample *sp = sRow->at(sampleIdx);
+                    if (!sp) continue;
+                    const double ia = sp->getIa();
+                    if (ia <= 0.0) continue;
+                    const double vg = sRow->getVg1Nominal();
+                    Sx  += vg;
+                    Sy  += ia;
+                    Sxx += vg * vg;
+                    Sxy += vg * ia;
+                    ++N;
                 }
-                const double ia = s->getIa(); // mA
-                if (ia <= 0.0) {
-                    continue;
+
+                const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+                if (N >= 3 && std::fabs(den) > 1e-12) {
+                    gm_mA_V = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
                 }
-                const double va = s->getVa(); // V
-                Sx  += va;
-                Sy  += ia;
-                Sxx += va * va;
-                Sxy += va * ia;
-                ++N;
+
+                // Two-sweep fallback as before
+                if (gm_mA_V <= 0.0) {
+                    const int sweepPrevIdx = clampIndex(sweepIdx - 1, sweepCount);
+                    const int sweepNextIdx = clampIndex(sweepIdx + 1, sweepCount);
+                    Sweep *sPrev = measurement->at(sweepPrevIdx);
+                    Sweep *sNext = measurement->at(sweepNextIdx);
+                    if (sPrev && sNext && sPrev->count() > sampleIdx && sNext->count() > sampleIdx) {
+                        Sample *spPrev = sPrev->at(sampleIdx);
+                        Sample *spNext = sNext->at(sampleIdx);
+                        if (spPrev && spNext) {
+                            const double iaPrevSweep = spPrev->getIa();
+                            const double iaNextSweep = spNext->getIa();
+                            const double vgPrev      = sPrev->getVg1Nominal();
+                            const double vgNext      = sNext->getVg1Nominal();
+                            const double dVg         = vgNext - vgPrev;
+                            if (std::fabs(dVg) > 1e-6) {
+                                gm_mA_V = (iaNextSweep - iaPrevSweep) / dVg; // mA/V
+                            }
+                        }
+                    }
+                }
             }
+        } else if (localTestType == TRANSFER_CHARACTERISTICS) {
+            // Use the original within-sweep gm LS logic around the OP.
+            Sweep *sweep = measurement->at(opSweepIdx);
+            if (sweep && sweep->count() >= 3) {
+                const int sampleCount = sweep->count();
 
-            const double den = static_cast<double>(N) * Sxx - Sx * Sx;
-            if (N >= 3 && std::fabs(den) > 1e-12) {
-                const double slope_dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
-                if (std::fabs(slope_dIa_dVa) > 1e-12) {
-                    ra_ohms = 1000.0 / slope_dIa_dVa; // V/mA → Ohms
-                }
-            }
+                auto clampIndex = [](int idx, int max) {
+                    if (idx < 0) return 0;
+                    if (idx >= max) return max - 1;
+                    return idx;
+                };
 
-            // Fallback: original Va/Ia mid-point estimate
-            if (ra_ohms <= 0.0) {
-                const double vaMid = sampleMid->getVa();
-                const double iaMid = sampleMid->getIa();
-                if (iaMid > 1e-9) {
-                    ra_ohms = (vaMid / iaMid) * 1000.0; // V / (mA) → Ohms
+                const int sampleIdx = clampIndex(opSampleIdx, sampleCount);
+                const int iPrev     = clampIndex(sampleIdx - 1, sampleCount);
+                const int iNext     = clampIndex(sampleIdx + 1, sampleCount);
+
+                Sample *samplePrev = sweep->at(iPrev);
+                Sample *sampleNext = sweep->at(iNext);
+                if (samplePrev && sampleNext) {
+                    int iStart = std::max(0, sampleIdx - 2);
+                    int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+
+                    double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+                    int N = 0;
+
+                    for (int i = iStart; i <= iEnd; ++i) {
+                        Sample *s = sweep->at(i);
+                        if (!s) continue;
+                        const double ia = s->getIa();
+                        if (ia <= 0.0) continue;
+                        const double vg = s->getVg1();
+                        Sx  += vg;
+                        Sy  += ia;
+                        Sxx += vg * vg;
+                        Sxy += vg * ia;
+                        ++N;
+                    }
+
+                    const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+                    if (N >= 3 && std::fabs(den) > 1e-12) {
+                        gm_mA_V = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+                    }
+
+                    // Two-point fallback
+                    if (gm_mA_V <= 0.0) {
+                        const double iaPrev = samplePrev->getIa();
+                        const double iaNext = sampleNext->getIa();
+                        const double vgPrev = samplePrev->getVg1();
+                        const double vgNext = sampleNext->getVg1();
+                        const double dVg    = vgNext - vgPrev;
+                        if (std::fabs(dVg) > 1e-6) {
+                            gm_mA_V = (iaNext - iaPrev) / dVg; // mA/V
+                        }
+                    }
                 }
             }
         }
@@ -5714,7 +5880,8 @@ void ValveWorkbench::modelPentode()
         QTreeWidgetItem *child = currentProject->child(i);
         if (child->type() == TYP_MEASUREMENT) {
             measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
-            if (measurement->getDeviceType() == PENTODE) {
+            if (measurement->getDeviceType() == PENTODE &&
+                measurement->getTestType() == ANODE_CHARACTERISTICS) {
                 model->addMeasurement(measurement);
             }
         }

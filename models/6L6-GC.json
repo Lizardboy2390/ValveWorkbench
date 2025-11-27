@@ -1,7 +1,7 @@
 {
     "analyserDefaults": {
         "anode": {
-            "start": 0,
+            "start": 300,
             "step": 6.666666666666667,
             "stop": 500
         },
@@ -16,11 +16,11 @@
             "pMax": 25
         },
         "screen": {
-            "start": 250,
-            "step": 0,
-            "stop": 0
+            "start": 100,
+            "step": 50,
+            "stop": 250
         },
-        "testType": 0
+        "testType": 2
     },
     "deviceType": "PENTODE",
     "name": "6l6-GC"
