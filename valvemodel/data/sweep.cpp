@@ -8,6 +8,12 @@ Sweep::Sweep(eSweepType type_) : type(type_)
 
 Sweep::Sweep(int deviceType, int testType, double v1Nominal, double v2Nominal)
 {
+    // Ensure all nominal fields are in a defined state before test-specific assignment
+    type = SWEEP_TRIODE_ANODE;
+    vg1Nominal = 0.0;
+    vg2Nominal = 0.0;
+    vaNominal = 0.0;
+
     if (deviceType == TRIODE) {
         switch (testType) {
         case ANODE_CHARACTERISTICS:
@@ -496,6 +502,16 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
          double iaNext = sample->getIa();
 
          // qInfo("Pentode transfer segment %d: vg=%f->%f, ia=%f->%f", j, vg, vgNext, ia, iaNext);
+
+         // Detect restart of the grid sweep (e.g. when moving from the end of one
+         // family back to the start of the next). In that case, do not draw a
+         // bridge segment; just start a new polyline at the new point.
+         const double restartThreshold = 0.5; // volts
+         if (vg - vgNext > restartThreshold) {
+             vg = vgNext;
+             ia = iaNext;
+             continue;
+         }
 
          QGraphicsLineItem *segment = plot->createSegment(vg, ia, vgNext, iaNext, *samplePen);
          if (segment != nullptr) {

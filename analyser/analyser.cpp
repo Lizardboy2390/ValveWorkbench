@@ -484,7 +484,7 @@ void Analyser::startTest()
 
             result->nextSweep(screenStart, anodeStart);
 
-            steppedSweep(gridStop, gridStart, screenStart, screenStop, screenStep); // Sweep is reversed to finish on low (absolute) value
+            steppedSweep(gridStop, gridStart, screenStart, screenStop, screenStep);
 
             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
         } else if (isDoubleTriode) { // Both anodes step, both grids sweep together
@@ -647,20 +647,19 @@ void Analyser::nextSample() {
         }
         sendCommand("M2");
     } else {
-        // qInfo("=== END OF SWEEP DEBUG ===");
-        // qInfo("End of sweep reached, moving to next step");
-        // qInfo("Before increment: stepIndex=%d, sweepIndex=%d", stepIndex, sweepIndex);
+        qInfo("=== END OF SWEEP DEBUG ===");
+        qInfo("End of sweep reached, moving to next step");
+        qInfo("Before increment: stepIndex=%d, sweepIndex=%d", stepIndex, sweepIndex);
         stepIndex++;
         sweepIndex = 0;
         isEndSweep = false;
         measuredIaMax = 0.0;      // ← ADD THIS
         measuredIg2Max = 0.0;     // ← ADD THIS
-        // qInfo("After increment: stepIndex=%d, sweepIndex=%d, isEndSweep=%d", stepIndex, sweepIndex, isEndSweep);
-        // qInfo("Reset isEndSweep to false for stepIndex=%d", stepIndex);
+        qInfo("After increment: stepIndex=%d, sweepIndex=%d, isEndSweep=%d", stepIndex, sweepIndex, isEndSweep);
 
         if (stepIndex < stepParameter.length()) {// There is another sweep to measure
-            // qInfo("=== NEW SWEEP DEBUG ===");
-            // qInfo("Creating new sweep - stepIndex: %d, total steps: %d", stepIndex, stepParameter.length());
+            qInfo("=== NEW SWEEP DEBUG ===");
+            qInfo("Creating new sweep - stepIndex: %d, total steps: %d", stepIndex, stepParameter.length());
             double v1Nominal = stepValue.at(stepIndex);
             double v2Nominal = 0.0;
             if (deviceType == PENTODE) {
@@ -671,18 +670,6 @@ void Analyser::nextSample() {
                 }
             }
 
-            result->nextSweep(v1Nominal, v2Nominal);
-            // qInfo("Created new sweep for stepIndex: %d, v1Nominal: %f, v2Nominal: %f", stepIndex, v1Nominal, v2Nominal);
-
-            // Always discharge capacitors between sweeps before re-applying start voltages
-            // qInfo("=== HARDWARE DISCHARGE BETWEEN SWEEPS ===");
-            sendCommand("M1");
-
-            // Set grid voltage for new step
-            // qInfo("Setting grid voltage for new step: S2 %d", stepParameter.at(stepIndex));
-            if (isDoubleTriode && stepCommandPrefix == "S6 ") {
-                qInfo("Command: S6 %d (secondary grid step)", stepParameter.at(stepIndex));
-            }
             if (isDoubleTriode && stepType == ANODE) {
                 // Double-triode TRANSFER: set both anodes to the new step code
                 sendCommand(buildSetCommand("S3 ", stepParameter.at(stepIndex))); // primary anode step
@@ -741,20 +728,31 @@ void Analyser::nextSample() {
                 }
             }
 
-            // Ensure anode and (where applicable) screen are at their start voltages
-            if (hasVaTarget) {
-                sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, vaTarget)));
-            }
-            if (hasVg2Target) {
-                sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, vg2Target)));
-            }
+            // Only perform per-sweep verification for anode characteristics.
+            // Transfer and screen tests resume directly without an extra M2 at
+            // the sweep start, so their first stored sample is the real point.
+            if (testType == ANODE_CHARACTERISTICS ||
+                (testType == TRANSFER_CHARACTERISTICS && deviceType == PENTODE && stepType == SCREEN)) {
+                // Ensure anode and (where applicable) screen are at their start voltages
+                if (hasVaTarget) {
+                    sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, vaTarget)));
+                }
+                if (hasVg2Target) {
+                    sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, vg2Target)));
+                }
 
-            // Take a verification measurement at the configured start bias for
-            // the new sweep (not at 0 V). PASS/FAIL is handled in checkResponse().
-            sendCommand("M2");
+                // Take a verification measurement at the configured start bias for
+                // the new sweep (not at 0 V). PASS/FAIL is handled in checkResponse().
+                sendCommand("M2");
 
-            isVerifyingHardware = true;
-            verificationAttempts = 0;
+                isVerifyingHardware = true;
+                verificationAttempts = 0;
+            } else {
+                // For transfer and screen characteristics we do not perform per-sweep
+                // verification; immediately start the next sweep by issuing the
+                // first point.
+                nextSample();
+            }
         } else {
             // qInfo("Test completed, sending M1");
             sendCommand("M1");
@@ -904,15 +902,21 @@ void Analyser::checkResponse(QString response)
 
             // Handle verification measurements
             if (isVerifyingHardware) {
-                // Determine the intended start anode voltage for this sweep so we
-                // can confirm the hardware is sitting at the configured bias
-                // (Va_start) before taking the first real sample.
+                // Determine the intended start anode/screen voltages for this sweep so we
+                // can confirm the hardware is sitting at the configured bias before taking
+                // the first real sample.
                 double vaTarget = 0.0;
                 bool hasVaTarget = false;
+                double vg2Target = 0.0;
+                bool hasVg2Target = false;
 
                 if (testType == ANODE_CHARACTERISTICS) {
                     hasVaTarget = true;
                     vaTarget = anodeStart;
+                    if (deviceType == PENTODE) {
+                        hasVg2Target = true;
+                        vg2Target = screenStart;
+                    }
                 } else if (testType == TRANSFER_CHARACTERISTICS) {
                     if (sweepType == GRID && stepType == ANODE && stepIndex < stepValue.size()) {
                         hasVaTarget = true;
@@ -921,15 +925,45 @@ void Analyser::checkResponse(QString response)
                         hasVaTarget = true;
                         vaTarget = anodeStart;
                     }
+
+                    // For pentode transfer tests, the screen rail is stepped (stepType == SCREEN)
+                    // or held at screenStart. Mirror the per-sweep target logic from nextSample().
+                    if (deviceType == PENTODE) {
+                        if (stepType == SCREEN && stepIndex < stepValue.size()) {
+                            hasVg2Target = true;
+                            vg2Target = stepValue.at(stepIndex);
+                        } else {
+                            hasVg2Target = true;
+                            vg2Target = screenStart;
+                        }
+                    }
                 } else if (testType == SCREEN_CHARACTERISTICS) {
                     hasVaTarget = true;
                     vaTarget = anodeStart;
+                    if (deviceType == PENTODE) {
+                        hasVg2Target = true;
+                        vg2Target = screenStart;
+                    }
                 }
 
-                const double epsV = 1.0; // ±1 V window around start anode voltage
-                bool vaOk  = !hasVaTarget || std::fabs(va - vaTarget) <= epsV;
+                // Use a relative tolerance of ±1%% of the target voltage for both anode and screen.
+                double epsV  = 0.0;
+                double epsV2 = 0.0;
+                if (hasVaTarget) {
+                    epsV = std::fabs(vaTarget) * 0.01; // ±1%% of Va target
+                }
+                if (hasVg2Target) {
+                    epsV2 = std::fabs(vg2Target) * 0.01; // ±1%% of Vg2 target
+                }
 
-                if (vaOk) {
+                bool vaOk   = !hasVaTarget || std::fabs(va  - vaTarget)  <= epsV;
+                bool vg2Ok  = true;
+                if (deviceType == PENTODE && hasVg2Target) {
+                    double vg2 = sample->getVg2();
+                    vg2Ok = std::fabs(vg2 - vg2Target) <= epsV2;
+                }
+
+                if (vaOk && vg2Ok) {
                     // Verification PASSED - hardware at configured start bias
                     isVerifyingHardware = false;
                     verificationAttempts = 0;
@@ -1002,6 +1036,8 @@ void Analyser::checkResponse(QString response)
                     isEndSweep = true;
                 }
 
+                qInfo("ADD SAMPLE: testType=%d stepIndex=%d sweepIndex=%d va=%.3f ia=%.3f",
+                      (int)testType, stepIndex, sweepIndex, va, ia);
                 result->addSample(sample);
 
                 if (!isEndSweep) {

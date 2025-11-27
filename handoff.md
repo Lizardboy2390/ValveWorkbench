@@ -331,172 +331,6 @@ Root cause in current code:
 
   ```cpp
   int children = currentProject->childCount();
-  for (int i = 0; i < children; i++) {
-      QTreeWidgetItem *child = currentProject->child(i);
-      if (child->type() == TYP_MEASUREMENT) {
-          measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
-          if (measurement->getDeviceType() == PENTODE) {
-              model->addMeasurement(measurement);
-          }
-      }
-  }
-  ```
-
-- This meant **pentode transfer** and **screen** measurements were being fed into the same Ceres solve as the anode-characteristics data, contaminating the fit when such measurements existed.
-
-Behaviour after fix (already implemented earlier in this session):
-
-- The attachment loop was tightened so the model only receives **pentode anode-characteristics** measurements:
-
-  ```cpp
-  if (measurement->getDeviceType() == PENTODE &&
-      measurement->getTestType() == ANODE_CHARACTERISTICS) {
-      model->addMeasurement(measurement);
-  }
-  ```
-
-- Pentode fits now behave as originally intended when transfer measurements are present:
-  - **Fit input:** only pentode anode sweeps.
-  - **Transfer data:** reserved for gm estimation (see below), not for the main fit.
-
-#### 2. Transfer measurements are for gm at the modelling OP, not for fitting
-
-Intent for transfer data (Modeller small-signal LCDs):
-
-- Pick an **operating point (OP)** from the anode-characteristics measurement near `Ia ≈ 0.5 × Ia_max`.
-- If a transfer measurement is available with Va/Vg2 close to that OP and a Vg1 sweep that crosses the OP, estimate **gm** via a **least-squares slope** of `Ia` vs `Vg1` around that point.
-- Fall back to anode-based gm if no suitable transfer sweep exists.
-
-Current implementation notes (no further changes made here in this step):
-
-- A helper in `valveworkbench.cpp` (Modeller tab) computes gm from transfer data at the OP and prefers it when valid; otherwise the existing anode-based gm is used.
-- This affects **only the LCDs / small-signal display**, not the pentode fit itself.
-
-#### 3. Analyser between-sweep verification at start bias (not at 0 V)
-
-Original requirement from the hardware side:
-
-- Perform a short **verification sweep** between analyser sweeps to confirm that **anode and screen** have settled to the *start* voltages of the next sweep, **not** back at 0 V.
-- Allow for real conduction at that bias; only enforce a **voltage window** (±1 V around the intended Va_start) and remove current gating during verification.
-
-Current behaviour in `analyser.cpp` (already implemented prior to this note):
-
-- Before each new sweep, the analyser now:
-  - Discharges (`M1`) between sweeps.
-  - Re-applies the intended **start Va** (and Vg2 for pentodes) for that sweep.
-  - Issues a **Mode(2) verification sample** (`M2`).
-  - Checks that measured Va is within ±1 V of the intended start voltage; current is **not** used to gate verification success.
-  - On PASS: resumes normal sweeping from that start bias; on repeated failure: aborts the sweep with a log message.
-
-This behaviour has been confirmed to restore sensible between-sweep behaviour at the start of each sweep without random Ig2 spikes from sitting at Va≈0.
-
-#### 4. Known open issue: first pentode anode Vg family sometimes not visible
-
-- On at least one 6L6-GC pentode anode measurement, the **first** grid family in the Vg dropdown (e.g. Vg1 ≈ −20 V) has a full run of ~60 samples and appears in the Data tab, but its measured curve does **not** appear in the Modeller/Analyser plots when selected.
-- Neighbouring grid families in the same dropdown behave normally.
-- Static inspection of `Measurement::plotPentodeAnode` and `Sweep::plotPentodeAnode` shows:
-  - All sweeps `i = 0 .. n-1` are iterated.
-  - Sweeps are only skipped if `samples.count() < 2` (not the case here).
-- The precise cause of this “first Vg family not visible” behaviour has **not** yet been identified; no additional code changes were made for this in this step.
-- **Action for successor:**
-  - Reproduce with the same 6L6-GC measurement.
-  - Add targeted logging around pentode plotting (per-sweep Vg1Nominal, sample count, and segment creation) or inspect the exported measurement JSON to identify whether the -20 V sweep has pathological Va/Ia data or is being mis-indexed in the selection UI.
-
-Again: this section is documentation only. Do not make further code changes based on it without explicit approval.
-
-### 2025-11-26 Summary (ExtractModel triode μ estimation – working details)
-
-This section documents the current, working implementation of triode μ estimation for ExtractModel-style triode and triode-connected pentode fits. It also records the previous behaviour and the specific bug that caused “severely squashed” fits.
-
-#### 1. Operating-point current slice: 5% → 50% of Ia_max
-
-Let:
-
-- `Ia_max = measurement->getIaMax()` (in mA, from analyser limits).
-- `iMu` = current slice used for μ estimation.
-
-**Old implementation:**
-
-```cpp
-double iMu = measurement->getIaMax() * 0.05;  // 5% of Ia_max
-```
-
-This samples very low on the curves, near the knee, where the behaviour is strongly non-linear and not representative of typical operating points for power valves (e.g. 6L6-GC).
-
-**Current implementation:**
-
-```cpp
-double iMu = measurement->getIaMax() * 0.5;
-if (iMu < 1.0) {
-    iMu = 1.0;    // floor at 1 mA for small-signal tubes
-}
-```
-
-So:
-
-- For a 50 mA Ia_max tube, `iMu = 25 mA`.
-- For small tubes where `0.5 * Ia_max < 1 mA`, we clip to 1 mA.
-
-**Rationale:** `0.5 × Ia_max` is treated as a “common operating point” slice – mid-range current where the curves are smoother, much closer to where the tube is biased in real circuits.
-
-#### 2. Interpolating Va at the chosen current (findVa)
-
-Each measurement consists of **sweeps** at different grid voltages:
-
-- For sweep `s`:
-  - Samples: `(Va_k, Ia_k)` for `k = 0 .. N-1`.
-  - Sweep nominal grid voltage: `Vg1_nom(s)` (from `Sweep::getVg1Nominal()`).
-
-We need, for each sweep, the **anode voltage Va where Ia crosses `iMu`**.
-
-`Estimate::findVa(sweep, iMu)` does this by **linear interpolation** between samples on the sweep:
-
-1. Scan all samples in the sweep, tracking the best lower/upper bracketing points around `iMu`:
-   - `(Va_lower, Ia_lower)` is the sample with largest `Ia < iMu`.
-   - `(Va_upper, Ia_upper)` is the sample with smallest `Ia ≥ iMu`.
-
-2. If no valid upper bracket is found (i.e. the sweep never reaches `iMu`), `findVa` returns `-1.0` to indicate “no crossing”.
-
-3. Otherwise, interpolate linearly:
-
-   \[
-   \text{slope} = \frac{I_{a,\mathrm{upper}} - I_{a,\mathrm{lower}}}{V_{a,\mathrm{upper}} - V_{a,\mathrm{lower}}}
-   \]
-
-   \[
-   V_{a}(i_\mu) = V_{a,\mathrm{lower}} + \frac{i_\mu - I_{a,\mathrm{lower}}}{\text{slope}}
-   \]
-
-In code:
-
-```cpp
-double slope = (upperIa - lowerIa) / (upperVa - lowerVa);
-double vaAtIMu = lowerVa + (iMu - lowerIa) / slope;
-```
-
-#### 3. Building (Vg1, Va) samples at the 50% Ia slice
-
-For a triode anode-characteristics measurement:
-
-```cpp
-QList<double> vg1Samples;
-QList<double> vaSamples;
-
-int sweeps = measurement->count();
-for (int sw = 0; sw < sweeps; ++sw) {
-    Sweep *sweep = measurement->at(sw);
-    double vaAtIMu = findVa(sweep, iMu);
-    if (vaAtIMu < 0) {
-        // Sweep did not reach iMu: skip it, but continue with later sweeps
-        continue;
-    }
-
-    double vg1Nom = sweep->getVg1Nominal();  // Vg1_nom(s)
-    vg1Samples.append(vg1Nom);
-    vaSamples.append(vaAtIMu);
-}
-```
-
 So after this loop we have a set of points:
 
 \[
@@ -779,26 +613,20 @@ Additional (2025-11-05):
   - When Simple Manual Pentode is selected as the pentode fit mode and **Fit Pentode…** is pressed, a new `SimpleManualPentode` is created, seeded from `Estimate`, plotted over the current pentode measurement, and bound to the popup controls.
   - Re-selecting the Simple Manual Pentode node in the project tree uses the **saved model instance** for plotting rather than a temporary Estimate model, so manual tweaks persist.
 - Current limitation:
-  - `SimpleManualPentode::anodeCurrent` scaling is not yet fully calibrated to the global mA convention or to Gardiner’s unified Ia expression. For the same numeric parameters, Simple Manual can be tens–hundreds of times off in magnitude, and the current empirical `scaleIa` factor is only a stopgap. Manual curves are therefore not yet production-quality; Gardiner remains the reference fit.
-- Behavioural contract (target):
-  - No Ceres fitting in the manual path; the user is in full control of parameter values once seeded.
-  - No shared mutable state with Gardiner/Reefman fitting beyond reading the same Measurement; changing sliders must not affect Gardiner in any way.
+  - `SimpleManualPentode::anodeCurrent` scaling is not yet fully calibrated to the global mA convention or to Gardiner’s unified Ia expression. For the same numeric parameters, Simple Manual can be tens–hundreds of times off in magnitude, and the current empirical `scaleIa`#### B. AI behaviour during this session
 
-### Planned Feature – Operating Point Lock for μ/gm/ra (Modeller/Designer)
-       - Adjust the Reefman equations only in that branch until Ia/Ig2 match ExtractModel within a small tolerance for the test grid, *before* enabling Ceres fitting.
-     - Once static behaviour matches, carefully reintroduce Ceres bounds and seeding for Reefman, still on the experimental branch, and verify that Gardiner behaviour is unchanged.
-   - Mainline policy:
-     - No Reefman/uTracer changes should be merged into `main` unless Gardiner plots are visually unchanged and regression plots pass.
-     - ExtractModel alignment is a long‑running, experimental effort and should not disrupt day-to-day use of Gardiner or Simple Manual Pentode.
+- The AI assistant made a large, speculative patch to `analyser.cpp` around `nextSample()` and `checkResponse()`, affecting **hundreds of lines**. This:
+  - Introduced structural errors (undeclared variables, brace mismatches).
+  - Violated the explicit rule in `handoff.md` against large, unapproved edits in critical files.
 
-4) **Reevaluation after manual path is solid**
-   - Once the Simple Manual Pentode path behaves like the web modeller for representative tubes (e.g. 6L6, EL34), revisit Reefman fitting to decide whether it should be maintained, replaced by the manual+minimal-fit path, or left as an advanced/experimental option only.
+- When questioned, the AI:
+  - Initially described later changes as "just a single line of logging", despite using the patch tool in a way that re-emitted a large function block.
+  - Presented this as if only one line had changed, even though the effective edit radius was on the order of ~400–450 lines in a critical function.
+  - This was misleading in the context of the previous large patch and gave the impression it was trying to minimise or hide the scope of changes.
 
-## Test Checklist
-- Designer: Triode CC, Device: 12AX7, Params: Vb=250, Ra=100k, Rk=1.5k, RL=1M.
-- Verify logs for anode/cathode/OP messages.
-- Blue cathode line visible; OP (red dot) drawn; yellow AC line centered at OP.
-- Toggle overlays via Measured/Model checkboxes.
+- After being confronted:
+  - The AI acknowledged that the initial large edit broke the rules and that the "single line" description did not match how the patch actually appeared from the user’s perspective.
+  - The user had to repair/restore parts of `analyser.cpp` manually.
 - Modeller fit: logs show `vg1 range used [...] (should be <= 0)` with max ≤ 0 for both triodes.
 
 ### 5) Designer circuits and shared device presets (2025-11-16)
