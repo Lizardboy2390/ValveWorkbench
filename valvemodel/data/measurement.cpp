@@ -1,6 +1,7 @@
 #include "measurement.h"
 #include "sweep.h"
 #include <QDebug>
+#include <cmath>
 
 Measurement::Measurement()
 {

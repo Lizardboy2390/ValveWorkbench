@@ -425,14 +425,18 @@ void Analyser::startTest()
             // Generate sweep/step parameters: anode sweep, grid step
             steppedSweep(anodeStart, anodeStop, gridStart, gridStop, gridStep);
 
-            // Initial hardware verification at anodeStart and screenStart before the very first sample to avoid Ig2 spike with Va~0
-            // Sequence: S7 screenStart, M1 discharge, S3 anodeStart, M2 verify -> checkResponse will handle PASS and reassert S7 and proceed
+            // Initial hardware verification at anodeStart and screenStart before the very first
+            // sample to avoid Ig2 spike with Va~0. Mark that the upcoming Mode(2) is a
+            // verification measurement so it is not stored as a data point.
+            isVerifyingHardware = true;
+            verificationAttempts = 0;
+
+            // Sequence: S7 screenStart, M1 discharge, S3 anodeStart, M2 verify -> checkResponse
+            // will handle PASS and reassert S7 and proceed with the first real sweep point.
             sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
             sendCommand("M1");
             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
             sendCommand("M2");
-            isVerifyingHardware = true;
-            verificationAttempts = 0;
         } else if (isDoubleTriode) { // First and second anode swept with same values, Second grid stepped, Main grid 0
             result->setAnodeStart(anodeStart);
 
@@ -670,6 +674,11 @@ void Analyser::nextSample() {
                 }
             }
 
+            // Start a new Measurement sweep for this step so that each grid
+            // or screen family (e.g. each Vg2 in pentode transfer tests) is
+            // represented as its own Sweep object for plotting and analysis.
+            result->nextSweep(v1Nominal, v2Nominal);
+
             if (isDoubleTriode && stepType == ANODE) {
                 // Double-triode TRANSFER: set both anodes to the new step code
                 sendCommand(buildSetCommand("S3 ", stepParameter.at(stepIndex))); // primary anode step
@@ -728,11 +737,16 @@ void Analyser::nextSample() {
                 }
             }
 
-            // Only perform per-sweep verification for anode characteristics.
-            // Transfer and screen tests resume directly without an extra M2 at
-            // the sweep start, so their first stored sample is the real point.
-            if ((testType == ANODE_CHARACTERISTICS && deviceType != PENTODE) ||
+            // Only perform per-sweep verification for anode characteristics
+            // (including pentode anode tests) and for pentode transfer tests
+            // with SCREEN steps. Transfer and screen tests otherwise resume
+            // directly without an extra M2 at the sweep start, so their first
+            // stored sample is the real point.
+            if (testType == ANODE_CHARACTERISTICS ||
                 (testType == TRANSFER_CHARACTERISTICS && deviceType == PENTODE && stepType == SCREEN)) {
+                isVerifyingHardware = true;
+                verificationAttempts = 0;
+
                 // Ensure anode and (where applicable) screen are at their start voltages
                 if (hasVaTarget) {
                     sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, vaTarget)));
@@ -744,9 +758,6 @@ void Analyser::nextSample() {
                 // Take a verification measurement at the configured start bias for
                 // the new sweep (not at 0 V). PASS/FAIL is handled in checkResponse().
                 sendCommand("M2");
-
-                isVerifyingHardware = true;
-                verificationAttempts = 0;
             } else {
                 // For transfer and screen characteristics we do not perform per-sweep
                 // verification; immediately start the next sweep by issuing the
@@ -891,7 +902,12 @@ void Analyser::checkResponse(QString response)
     } else if (response.startsWith("OK: Mode(2)")) {
         if (isTestRunning) {
             Sample *sample = createSample(response);
-            if (sample && client) {
+            if (!sample) {
+                qWarning("Mode(2) sample parse failed - aborting test to avoid invalid access");
+                abortTest();
+                return;
+            }
+            if (client) {
                 client->updateHeater(sample->getVh(), sample->getIh());
             }
 
@@ -982,8 +998,18 @@ void Analyser::checkResponse(QString response)
                         sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
                     }
 
-                    // Proceed with the first actual sweep point as before
+                    // Proceed with the first actual sweep point as before. Guard
+                    // against any out-of-range access in case sweepParameter is
+                    // not populated as expected for this step.
+                    if (stepIndex >= sweepParameter.size() || sweepParameter.at(stepIndex).isEmpty()) {
+                        qWarning("Verification PASS but sweepParameter[%d] is out of range or empty - skipping resume and advancing", stepIndex);
+                        isVerifyingHardware = false;
+                        verificationAttempts = 0;
+                        nextSample();
+                        return;
+                    }
                     int firstSampleValue = sweepParameter.at(stepIndex).at(0);
+
                     if (testType == TRANSFER_CHARACTERISTICS) {
                         if (stepType == ANODE) {
                             if (stepIndex < stepParameter.length()) {

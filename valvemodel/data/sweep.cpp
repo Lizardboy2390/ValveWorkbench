@@ -481,7 +481,7 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
     // qInfo("=== SWEEP::PLOTPENTODETRANSFER - Sample count: %d ===", samples.count());
 
     // ADD VALIDATION FOR EMPTY SWEEPS
-    if (samples.count() < 2) {
+    if (samples.count() == 0) {
         // qWarning("Sweep has insufficient samples (%d) for plotting - skipping", samples.count());
         return;
     }
@@ -495,6 +495,11 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
     // qInfo("First sample: vg1=%f, vg2=%f, ia=%f", vg, vg2, ia);
 
     int nSamples = samples.count();
+    if (nSamples == 1) {
+        segments->append(plot->createLabel(vg, ia, vg2, samplePen->color()));
+        return;
+    }
+
     for (int j = 1; j < nSamples; j++) {
          Sample *sample = samples.at(j);
 
@@ -526,7 +531,10 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
          ia = iaNext;
      }
 
-    segments->append(plot->createLabel(vg, ia, vg2Nominal, samplePen->color()));
+    // Label this transfer family using the measured screen voltage from the
+    // first sample so that the annotation reflects the actual Vg2 seen in
+    // the data, even if metadata and configuration get out of sync.
+    segments->append(plot->createLabel(vg, ia, vg2, samplePen->color()));
     // qInfo("Finished plotting pentode transfer sweep - %d segments created", nSamples - 1);
 }
 

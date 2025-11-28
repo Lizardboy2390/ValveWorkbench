@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-11-26 (analyser S/M protocol and transfer/verification behaviour)
+Last updated: 2025-11-27 (analyser S/M protocol, transfer and anode verification behaviour)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -23,6 +23,31 @@ while keeping the **rules** and current **technical state** clear.
     starting grid point**, not at a transient or verification state.
   - Voltage verification for anode and screen uses a **±1% relative window**
     around the target voltages when enabled.
+
+- **Per-sweep behaviour (anode characteristics)**
+  - Applies to **all** anode-characteristics tests (triode, triode-connected
+    pentode, pentode):
+    - At **test start**, a global verification M2 is taken at
+      `Va = anodeStart` (and `Vg2 = screenStart` for pentode) before the first
+      sweep point; this M2 is flagged as verification and **not stored**.
+    - For each new grid step (each new `Measurement::Sweep`):
+      - `Analyser::nextSample()` starts a new sweep via `result->nextSweep`
+        and programs the new grid code on S2.
+      - It then re-biases anode and, for pentodes, screen to their configured
+        start voltages (`anodeStart`, `screenStart`) and takes a **per-sweep
+        verification M2**.
+      - `Analyser::checkResponse()` uses the same ±1% (min 2 V) window on Va
+        and Vg2 to decide PASS/FAIL:
+        - On **PASS**, it clears `isVerifyingHardware`, reasserts S2 for the
+          current grid step, issues the first real sweep point on S3 together
+          with M6/M2, and only **that** Mode(2) sample becomes the first stored
+          sample of the new sweep.
+        - On **FAIL**, it retries (M1 + reapply Va/Vg2) up to
+          `MAX_VERIFICATION_ATTEMPTS` before aborting the sweep.
+  - Result: for anode-characteristics data, the first stored sample of each
+    sweep is always taken at the configured start bias for that sweep (correct
+    Vg1 and Va≈anodeStart), with no transient carry-over point from the end of
+    the previous sweep.
 
 - **Transfer plotting**
   - Measurement transfer plots (`Sweep::plotPentodeTransfer`) now:
