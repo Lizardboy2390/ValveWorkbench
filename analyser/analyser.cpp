@@ -425,11 +425,11 @@ void Analyser::startTest()
             // Generate sweep/step parameters: anode sweep, grid step
             steppedSweep(anodeStart, anodeStop, gridStart, gridStop, gridStep);
 
-            // Initial hardware verification at 0V before the very first sample to avoid Ig2 spike with Va~0
-            // Sequence: S7 0, M1 discharge, S3 0, M2 verify -> checkResponse will handle PASS and reassert S7 and proceed
-            sendCommand("S7 0");
+            // Initial hardware verification at anodeStart and screenStart before the very first sample to avoid Ig2 spike with Va~0
+            // Sequence: S7 screenStart, M1 discharge, S3 anodeStart, M2 verify -> checkResponse will handle PASS and reassert S7 and proceed
+            sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, screenStart)));
             sendCommand("M1");
-            sendCommand(buildSetCommand("S3 ", 0));
+            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
             sendCommand("M2");
             isVerifyingHardware = true;
             verificationAttempts = 0;
@@ -731,7 +731,7 @@ void Analyser::nextSample() {
             // Only perform per-sweep verification for anode characteristics.
             // Transfer and screen tests resume directly without an extra M2 at
             // the sweep start, so their first stored sample is the real point.
-            if (testType == ANODE_CHARACTERISTICS ||
+            if ((testType == ANODE_CHARACTERISTICS && deviceType != PENTODE) ||
                 (testType == TRANSFER_CHARACTERISTICS && deviceType == PENTODE && stepType == SCREEN)) {
                 // Ensure anode and (where applicable) screen are at their start voltages
                 if (hasVaTarget) {
@@ -951,9 +951,15 @@ void Analyser::checkResponse(QString response)
                 double epsV2 = 0.0;
                 if (hasVaTarget) {
                     epsV = std::fabs(vaTarget) * 0.01; // ±1%% of Va target
+                    if (epsV < 2.0) {
+                        epsV = 2.0;
+                    }
                 }
                 if (hasVg2Target) {
                     epsV2 = std::fabs(vg2Target) * 0.01; // ±1%% of Vg2 target
+                    if (epsV2 < 2.0) {
+                        epsV2 = 2.0;
+                    }
                 }
 
                 bool vaOk   = !hasVaTarget || std::fabs(va  - vaTarget)  <= epsV;

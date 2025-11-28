@@ -1722,6 +1722,7 @@ debug\moc_comparedialog.cpp: ..\..\..\comparedialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		debug\moc_predefs.h \
@@ -1991,6 +1992,7 @@ debug\moc_valveworkbench.cpp: ..\..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
@@ -2965,6 +2967,7 @@ debug\moc_circuit.cpp: ..\..\..\valvemodel\circuit\circuit.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -3585,6 +3588,7 @@ debug\moc_triodeaccathodefollower.cpp: ..\..\..\valvemodel\circuit\triodeaccatho
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -3618,7 +3622,6 @@ debug\moc_triodeaccathodefollower.cpp: ..\..\..\valvemodel\circuit\triodeaccatho
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		debug\moc_predefs.h \
@@ -4208,6 +4211,7 @@ debug\moc_triodecommoncathode.cpp: ..\..\..\valvemodel\circuit\triodecommoncatho
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -4241,7 +4245,6 @@ debug\moc_triodecommoncathode.cpp: ..\..\..\valvemodel\circuit\triodecommoncatho
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		debug\moc_predefs.h \
@@ -4831,6 +4834,7 @@ debug\moc_pentodecommoncathode.cpp: ..\..\..\valvemodel\circuit\pentodecommoncat
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -5453,6 +5457,7 @@ debug\moc_singleendedoutput.cpp: ..\..\..\valvemodel\circuit\singleendedoutput.h
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -6073,6 +6078,7 @@ debug\moc_singleendeduloutput.cpp: ..\..\..\valvemodel\circuit\singleendeduloutp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -6693,6 +6699,7 @@ debug\moc_pushpulloutput.cpp: ..\..\..\valvemodel\circuit\pushpulloutput.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -7313,6 +7320,7 @@ debug\moc_pushpulluloutput.cpp: ..\..\..\valvemodel\circuit\pushpulluloutput.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -7933,6 +7941,7 @@ debug\moc_triodedccathodefollower.cpp: ..\..\..\valvemodel\circuit\triodedccatho
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -8464,6 +8473,7 @@ debug\analyser.obj: ..\..\..\analyser\analyser.cpp ..\..\..\analyser\analyser.h 
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
@@ -8954,6 +8964,7 @@ debug\main.obj: ..\..\..\main.cpp ..\..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
@@ -9958,6 +9969,7 @@ debug\preferencesdialog.obj: ..\..\..\preferencesdialog.cpp ..\..\..\preferences
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\analyser\analyser.h \
@@ -10806,6 +10818,7 @@ debug\comparedialog.obj: ..\..\..\comparedialog.cpp ..\..\..\comparedialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\ui_comparedialog.h \
@@ -11065,6 +11078,7 @@ debug\project.obj: ..\..\..\project.cpp ..\..\..\project.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTableWidget \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtablewidget.h \
@@ -11694,6 +11708,7 @@ debug\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.h 
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
@@ -12121,10 +12136,10 @@ debug\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.h 
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QBrush \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTextEdit \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtextedit.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QMouseEvent \
 		..\..\..\valvemodel\data\sample.h \
 		..\..\..\valvemodel\data\sweep.h \
 		..\..\..\valvemodel\circuit\triodecommoncathode.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\circuit\pentodecommoncathode.h \
 		..\..\..\valvemodel\circuit\singleendedoutput.h \
 		..\..\..\valvemodel\circuit\singleendeduloutput.h \
@@ -12719,6 +12734,7 @@ debug\circuit.obj: ..\..\..\valvemodel\circuit\circuit.cpp ..\..\..\valvemodel\c
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -13338,6 +13354,7 @@ debug\triodeaccathodefollower.obj: ..\..\..\valvemodel\circuit\triodeaccathodefo
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -13371,7 +13388,6 @@ debug\triodeaccathodefollower.obj: ..\..\..\valvemodel\circuit\triodeaccathodefo
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
 
@@ -13958,6 +13974,7 @@ debug\triodecommoncathode.obj: ..\..\..\valvemodel\circuit\triodecommoncathode.c
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -13991,7 +14008,6 @@ debug\triodecommoncathode.obj: ..\..\..\valvemodel\circuit\triodecommoncathode.c
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
 
@@ -14578,6 +14594,7 @@ debug\pentodecommoncathode.obj: ..\..\..\valvemodel\circuit\pentodecommoncathode
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -14612,8 +14629,7 @@ debug\pentodecommoncathode.obj: ..\..\..\valvemodel\circuit\pentodecommoncathode
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
 
 debug\singleendedoutput.obj: ..\..\..\valvemodel\circuit\singleendedoutput.cpp ..\..\..\valvemodel\circuit\singleendedoutput.h \
 		..\..\..\valvemodel\circuit\circuit.h \
@@ -15198,6 +15214,7 @@ debug\singleendedoutput.obj: ..\..\..\valvemodel\circuit\singleendedoutput.cpp .
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -15231,7 +15248,6 @@ debug\singleendedoutput.obj: ..\..\..\valvemodel\circuit\singleendedoutput.cpp .
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsPolygonItem
@@ -15819,6 +15835,7 @@ debug\singleendeduloutput.obj: ..\..\..\valvemodel\circuit\singleendeduloutput.c
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -15852,7 +15869,6 @@ debug\singleendeduloutput.obj: ..\..\..\valvemodel\circuit\singleendeduloutput.c
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
 
@@ -16439,6 +16455,7 @@ debug\pushpulloutput.obj: ..\..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -16472,7 +16489,6 @@ debug\pushpulloutput.obj: ..\..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\.
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
 
@@ -17059,6 +17075,7 @@ debug\pushpulluloutput.obj: ..\..\..\valvemodel\circuit\pushpulluloutput.cpp ..\
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -17092,7 +17109,6 @@ debug\pushpulluloutput.obj: ..\..\..\valvemodel\circuit\pushpulluloutput.cpp ..\
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
 
@@ -17679,6 +17695,7 @@ debug\triodedccathodefollower.obj: ..\..\..\valvemodel\circuit\triodedccathodefo
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -17713,8 +17730,7 @@ debug\triodedccathodefollower.obj: ..\..\..\valvemodel\circuit\triodedccathodefo
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
 
 debug\dataset.obj: ..\..\..\valvemodel\data\dataset.cpp ..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
@@ -17955,7 +17971,8 @@ debug\dataset.obj: ..\..\..\valvemodel\data\dataset.cpp ..\..\..\valvemodel\data
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
-		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF
 
 debug\measurement.obj: ..\..\..\valvemodel\data\measurement.cpp ..\..\..\valvemodel\data\measurement.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \
@@ -18183,6 +18200,7 @@ debug\measurement.obj: ..\..\..\valvemodel\data\measurement.cpp ..\..\..\valvemo
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
@@ -18431,6 +18449,7 @@ debug\project.obj: ..\..\..\valvemodel\data\project.cpp ..\..\..\valvemodel\data
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
@@ -19054,7 +19073,8 @@ debug\sample.obj: ..\..\..\valvemodel\data\sample.cpp ..\..\..\valvemodel\data\s
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
-		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF
 
 debug\sweep.obj: ..\..\..\valvemodel\data\sweep.cpp ..\..\..\valvemodel\data\sweep.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QList \
@@ -19300,6 +19320,7 @@ debug\sweep.obj: ..\..\..\valvemodel\data\sweep.cpp ..\..\..\valvemodel\data\swe
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\measurement.h
 
 debug\cohenhelietriode.obj: ..\..\..\valvemodel\model\cohenhelietriode.cpp ..\..\..\valvemodel\model\cohenhelietriode.h \
@@ -19903,6 +19924,7 @@ debug\cohenhelietriode.obj: ..\..\..\valvemodel\model\cohenhelietriode.cpp ..\..
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h
 
@@ -20487,6 +20509,7 @@ debug\device.obj: ..\..\..\valvemodel\model\device.cpp ..\..\..\valvemodel\model
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -20764,6 +20787,7 @@ debug\estimate.obj: ..\..\..\valvemodel\model\estimate.cpp ..\..\..\valvemodel\m
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
@@ -21738,6 +21762,7 @@ debug\gardinerpentode.obj: ..\..\..\valvemodel\model\gardinerpentode.cpp ..\..\.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h
 
@@ -22342,6 +22367,7 @@ debug\extractmodelpentode.obj: ..\..\..\valvemodel\model\extractmodelpentode.cpp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h
 
@@ -22947,6 +22973,7 @@ debug\simplemanualpentode.obj: ..\..\..\valvemodel\model\simplemanualpentode.cpp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h
 
@@ -24017,6 +24044,7 @@ debug\model.obj: ..\..\..\valvemodel\model\model.cpp ..\..\..\valvemodel\model\m
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\estimate.h \
@@ -24628,6 +24656,7 @@ debug\modelfactory.obj: ..\..\..\valvemodel\model\modelfactory.cpp ..\..\..\valv
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\korentriode.h \
@@ -25237,6 +25266,7 @@ debug\korentriode.obj: ..\..\..\valvemodel\model\korentriode.cpp ..\..\..\valvem
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h
 
@@ -25842,6 +25872,7 @@ debug\reefmanpentode.obj: ..\..\..\valvemodel\model\reefmanpentode.cpp ..\..\..\
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h
 
@@ -26444,6 +26475,7 @@ debug\simpletriode.obj: ..\..\..\valvemodel\model\simpletriode.cpp ..\..\..\valv
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h
 
@@ -27638,6 +27670,7 @@ debug\moc_device.obj: ..\..\..\valvemodel\model\moc_device.cpp ..\..\..\valvemod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsLineItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\constants.h \
 		..\..\..\valvemodel\model\model.h \
 		..\..\..\PreferencesDialog.h \
@@ -28273,6 +28306,7 @@ debug\moc_model.obj: ..\..\..\valvemodel\model\moc_model.cpp ..\..\..\valvemodel
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmochelpers.h \
@@ -28881,6 +28915,7 @@ debug\moc_cohenhelietriode.obj: ..\..\..\valvemodel\model\moc_cohenhelietriode.c
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmochelpers.h \
@@ -29130,6 +29165,7 @@ debug\moc_estimate.obj: ..\..\..\valvemodel\model\moc_estimate.cpp ..\..\..\valv
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
@@ -30099,6 +30135,7 @@ debug\moc_gardinerpentode.obj: ..\..\..\valvemodel\model\moc_gardinerpentode.cpp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmochelpers.h \
@@ -30706,6 +30743,7 @@ debug\moc_korentriode.obj: ..\..\..\valvemodel\model\moc_korentriode.cpp ..\..\.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmochelpers.h \
@@ -31315,6 +31353,7 @@ debug\moc_reefmanpentode.obj: ..\..\..\valvemodel\model\moc_reefmanpentode.cpp .
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmochelpers.h \
@@ -31921,6 +31960,7 @@ debug\moc_simpletriode.obj: ..\..\..\valvemodel\model\moc_simpletriode.cpp ..\..
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmochelpers.h \
@@ -32320,7 +32360,8 @@ debug\plot.obj: ..\..\..\valvemodel\ui\plot.cpp ..\..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvarlengtharray.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
-		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF
 
 debug\parameter.obj: ..\..\..\valvemodel\ui\parameter.cpp ..\..\..\valvemodel\ui\parameter.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
@@ -33009,6 +33050,7 @@ debug\simplemanualpentodedialog.obj: ..\..\..\valvemodel\ui\simplemanualpentoded
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\dataset.h \
 		..\..\..\valvemodel\constants.h
 

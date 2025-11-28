@@ -29,6 +29,9 @@
 #include <QBrush>
 #include <QTextEdit>
 #include <QGraphicsView>
+#include <QMouseEvent>
+#include <QStatusBar>
+#include <QGraphicsTextItem>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -1428,6 +1431,11 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     ui->fitTriodeButton->setVisible(false);
 
     ui->graphicsView->setScene(plot.getScene());
+    if (ui->graphicsView && ui->graphicsView->viewport()) {
+        ui->graphicsView->setMouseTracking(true);
+        ui->graphicsView->viewport()->setMouseTracking(true);
+        ui->graphicsView->viewport()->installEventFilter(this);
+    }
 
     connect(&serialPort, &QSerialPort::readyRead, this, &ValveWorkbench::handleReadyRead);
     connect(&serialPort, &QSerialPort::errorOccurred, this, &ValveWorkbench::handleError);
@@ -2310,6 +2318,40 @@ ValveWorkbench::~ValveWorkbench()
     circuits.clear();
 }
 
+bool ValveWorkbench::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::MouseMove) {
+        if (ui && ui->graphicsView && obj == ui->graphicsView->viewport()) {
+            QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+            QGraphicsView *view = ui->graphicsView;
+            const QPointF scenePos = view->mapToScene(mouseEvent->pos());
+
+            if (scenePos.x() >= 0.0 && scenePos.x() <= PLOT_WIDTH &&
+                scenePos.y() >= 0.0 && scenePos.y() <= PLOT_HEIGHT) {
+
+                const QPointF dataPos = plot.sceneToData(scenePos);
+                const double x = dataPos.x();
+                const double y = dataPos.y();
+
+                if (plot.getScene()) {
+                    if (!cursorLabelItem) {
+                        cursorLabelItem = plot.getScene()->addText(QString());
+                    }
+                    cursorLabelItem->setPlainText(
+                        tr("V=%1 V\nI=%2 mA")
+                            .arg(x, 0, 'f', 1)
+                            .arg(y, 0, 'f', 2));
+                    cursorLabelItem->setPos(scenePos.x() + 8.0,
+                                             scenePos.y() - 28.0);
+                    cursorLabelItem->setVisible(true);
+                }
+            }
+        }
+    }
+
+    return QMainWindow::eventFilter(obj, event);
+}
+
 void ValveWorkbench::buildCircuitParameters()
 {
     circuitLabels[0] = ui->cir1Label;
@@ -2539,6 +2581,7 @@ void ValveWorkbench::selectCircuit(int circuitType)
     // switching circuits so load lines, operating point markers, and model
     // curves from the previous circuit do not linger on the shared scene.
     plot.clear();
+    cursorLabelItem = nullptr;
     measuredCurves = nullptr;
     measuredCurvesSecondary = nullptr;
     estimatedCurves = nullptr;
@@ -4598,6 +4641,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 // More aggressive clearing - clear plot completely before each update
                 qInfo("=== BEFORE PLOT CLEAR - Scene items count: %d ===", plot.getScene()->items().count());
                 plot.clear();
+                cursorLabelItem = nullptr;
                 qInfo("=== AFTER PLOT CLEAR - Scene items count: %d ===", plot.getScene()->items().count());
                 
                 // Also remove measuredCurves if it exists
@@ -4679,6 +4723,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             qInfo("=== BEFORE ESTIMATE PLOT - Scene items count: %d ===", plot.getScene()->items().count());
             // Clear plot before estimate plotting
             plot.clear();
+            cursorLabelItem = nullptr;
             qInfo("Cleared plot before estimate plotting");
             estimatedCurves = estimate->plotModel(&plot, currentMeasurement);
             qInfo("=== AFTER ESTIMATE PLOT - estimatedCurves items: %d, Scene items: %d ===", estimatedCurves ? estimatedCurves->childItems().count() : 0, plot.getScene()->items().count());

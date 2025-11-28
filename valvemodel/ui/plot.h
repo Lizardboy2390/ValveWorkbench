@@ -4,6 +4,7 @@
 #include <QGraphicsLineItem>
 #include <QGraphicsTextItem>
 #include <QColor>
+#include <QPointF>
 
 #define PLOT_WIDTH 430
 #define PLOT_HEIGHT 370
@@ -17,6 +18,7 @@ public:
     QGraphicsScene *getScene();
     QGraphicsLineItem *createSegment(double x1, double y1, double x2, double y2, QPen pen);
     QGraphicsTextItem *createLabel(double x, double y, double value, const QColor &color = QColor());
+    QPointF sceneToData(const QPointF &scenePos) const;
     void clear();
     void add(QGraphicsItem *item);
     void remove(QGraphicsItem *item);

@@ -214,6 +214,112 @@ The **Preferences** dialog controls analyser and model behaviour:
    - Confirm overwrite if prompted.
    - On the next application start, the updated JSON parameters become the default for that device in Modeller/Designer and are used when computing load lines.
 
+## Analyser serial protocol (S* and M* commands)
+
+The Analyser tab talks to the Valve Wizard Valve Analyzer over a simple ASCII command
+protocol. Commands beginning with `S` set voltages or configuration values on the
+hardware; commands beginning with `M` trigger measurement or housekeeping actions.
+
+The implementation of these commands lives in `analyser/analyser.cpp` and the
+semantics below are _derived from that code_ (no firmware documentation is
+assumed).
+
+### S* commands (setters)
+
+- **`S0 n` – averaging window**  
+  Sent once at the start of each test (`startTest()`), where `n` is the number
+  of firmware-side samples to average per Mode(2) reading (1–8). The app chooses
+  `n` automatically from the tube template’s `iaMax`, or uses the **Fixed
+  samples** value from Preferences when Averaging mode is set to `Fixed`.
+
+- **`S2 code` – primary grid DAC (Vg1)**  
+  Sets the main control-grid voltage for the first channel. The GUI works in
+  volts; the analyser converts that to a firmware DAC code with
+  `convertTargetVoltage(GRID, volts)` and wraps it in `S2 <code>`.  
+  Used as:
+  - Grid **step** command in anode-characteristics tests (`stepCommandPrefix = "S2 "`).
+  - Grid **sweep** command in transfer-characteristics tests
+    (`sweepCommandPrefix = "S2 "`).
+  - Grid reference for both channels in double-triode helpers.
+
+- **`S3 code` – primary anode DAC (Va1)**  
+  Sets the main anode (plate) supply. The app uses
+  `convertTargetVoltage(ANODE, volts)` to generate `code`.  
+  Used as:
+  - Anode **sweep** command in anode-characteristics tests
+    (`sweepCommandPrefix = "S3 "`).
+  - Fixed anode bias in pentode transfer-characteristics tests
+    (`sendCommand("S3 <code>")` at test start and when restarting sweeps).  
+  During hardware verification the code also uses `S3 0` to pull the anode to 0 V
+  before taking a verification sample.
+
+- **`S6 code` – secondary grid DAC (Vg1_B / Vg2_B)**  
+  Secondary grid command used for double-triode measurements. In
+  `applyGridReferenceBoth()` and double-triode transfer paths, `S6` mirrors
+  the primary grid commands (`S2`) to the second channel.
+
+- **`S7 code` – secondary anode / screen supply**  
+  Used in two distinct roles:
+  - **Secondary anode** in double-triode modes (tracks `S3`).
+  - **Screen (Vg2)** in pentode modes. For pentode anode-characteristics tests
+    the screen is normally held at `screenStart` and, during verification, is
+    temporarily driven to `0 V` via `S7 0`.
+
+### M* commands (measurement / housekeeping)
+
+- **`M1` – discharge / reset between points**  
+  Used whenever the analyser needs to discharge coupling capacitors and return
+  the hardware to a safe idle before re-applying a new bias. Examples:
+  - At the very start of a pentode anode-characteristics test: `S7 0`, `M1`,
+    `S3 0`, `M2` to verify the 0 V state.
+  - At the first grid point of each sweep in transfer tests, and the first
+    anode point in anode tests.
+  - When verification fails and the code wants to retry: `M1`, re-assert
+    anode/screen, then `M2`.
+
+- **`M2` – Mode(2) measurement sample**  
+  Triggers the firmware to take a measurement and return a line beginning with
+  `OK: Mode(2)`; `Analyser::checkResponse()` parses these into `Sample`
+  objects. `M2` is used both for:
+  - **Verification** samples (checking that anode/screen voltages are within
+    tolerance before starting a sweep).
+  - **Normal** measurement points during a sweep.
+
+- **`M6` – refire / pre-trigger**  
+  Used in combination with `M2` on each real sweep point for anode- and
+  transfer-characteristics tests:
+  - `M6` is sent first to "refire" the hardware at the current bias.
+  - `M2` immediately follows to read the resulting anode/screen currents and
+    voltages.
+  The analyser only sends `M6` when `testType` is ANODE_CHARACTERISTICS or
+  TRANSFER_CHARACTERISTICS.
+
+### Typical command flows
+
+These are simplified sequences; see `Analyser::startTest()` and
+`Analyser::nextSample()` for exact logic.
+
+- **Pentode anode-characteristics (Va swept, Vg1 stepped, Vg2 fixed)**
+  1. `S0 n` – set averaging window.
+  2. For first family (first grid step):
+     - `S7 0`, `M1`, `S3 0`, `M2` – verify safe 0 V state.
+     - On PASS: set screen to `screenStart` and grid to the first step.
+  3. For each anode sweep point:
+     - `S3 <code>` – new anode voltage.
+     - `M6`, `M2` – refire and measure.
+
+- **Pentode transfer-characteristics (Vg1 swept, Vg2 stepped, Va fixed)**
+  1. `S0 n` – set averaging window.
+  2. `S3 <code>` – set fixed anode voltage once at test start.
+  3. For each screen step (family):
+     - `S7 <code>` – set screen voltage.
+     - For each grid sweep point in that family:
+       - `S2 <code>` – grid DAC for Vg1.
+       - `M6`, `M2` – refire and measure.
+
+The GUI hides these details; they matter mainly if you are debugging analyser
+hardware or extending the serial protocol.
+
 ## Troubleshooting
 - No “Save to Project” prompt: The app now prompts every time before saving
 - Modeller fails to converge: Ensure grid voltages are within range; guard auto‑flips positive Vg to negative

@@ -148,6 +148,21 @@ QGraphicsTextItem *Plot::createLabel(double x, double y, double value, const QCo
     return text;
 }
 
+QPointF Plot::sceneToData(const QPointF &scenePos) const
+{
+    // Inverse of the mapping used in setAxes()/createSegment(). This allows
+    // callers (e.g. ValveWorkbench) to convert a scene position in pixels
+    // back into the underlying data coordinates.
+    if (xScale == 0.0 || yScale == 0.0) {
+        return QPointF(0.0, 0.0);
+    }
+
+    const double x = xStart + scenePos.x() / xScale;
+    const double y = yStart + (PLOT_HEIGHT - scenePos.y()) / yScale;
+
+    return QPointF(x, y);
+}
+
 void Plot::clear()
 {
     scene->clear();

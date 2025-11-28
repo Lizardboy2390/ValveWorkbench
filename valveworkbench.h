@@ -13,6 +13,10 @@
 #include <QCoreApplication>
 #include <QCheckBox>
 
+class QLabel;
+class QGraphicsView;
+class QGraphicsTextItem;
+
 #include "valvemodel/data/project.h"
 #include "valvemodel/model/estimate.h"
 #include "valvemodel/model/device.h"
@@ -40,6 +44,8 @@ class ValveWorkbench : public QMainWindow, public Client
 public:
     ValveWorkbench(QWidget *parent = nullptr);
     ~ValveWorkbench();
+
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
     // Methods required to be implemented by the Analyser Client class
     virtual void updateHeater(double vh, double ih);
@@ -185,6 +191,8 @@ private:
 
     Plot plot;
     QGraphicsItemGroup *modelPlot = nullptr;
+
+    QGraphicsTextItem *cursorLabelItem = nullptr;
 
     // Non-UI related member variables
     QList<Device *> devices;
