@@ -9,6 +9,9 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - [ ] Designer: ensure device selection auto-replots and axes clamp to device limits.
 - [ ] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
 - [ ] Experimental branch: on a separate branch (e.g. `feature/reefman-extractmodel`), work toward aligning `ReefmanPentode` behaviour with ExtractModel_3p0 located at `C:\Users\lizar\Documents\ExtractModel_3p0`, using common parameter sets and sample Ia/Ig2 points as reference.
+ - [ ] Integrated SPICE export via Devices:
+   - Extend **Export model to Device** so each device JSON optionally includes a SPICE representation of the fitted tube model (triode and pentode) suitable for `.inc`/`.subckt` use.
+   - Implement **File → Export to Spice...** so it uses the active Device's SPICE block to export (a) tube model only (`.inc`/`.lib`), and (b) optional Designer circuit wrappers (Triode CC, SE Output, PP, etc.) that reference that model.
 
 ## Recently completed
 - [x] Restored analyser and pentode modeller to baseline behaviour after experimental kg1/curvature changes.
@@ -20,6 +23,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - [x] Designer/Modeller small-signal and harmonics (2025-11-22):
     - Modeller triode μ/gm/ra now use a local least-squares estimator over measurement data at the ~0.5·Ia_max operating point, with the same OP used for model μ/gm/ra and clear mes/mod vs Designer override colour cues on the Modeller small-signal LCDs.
     - SE Designer harmonic panel (HD2/3/4/THD) now uses the same time-domain DFT helper as the Harmonics tab, and SE **input sensitivity (Vpp)** is computed from effective headroom and correctly scaled gm, with K-bypass selecting bypassed vs unbypassed gain rather than collapsing to zero.
+- [x] 2025-11-28: Documented task-tracking and commenting rules in `handoff.md` and `README.md`; clarified that `tasks.md` must be updated with each non-trivial change.
 
 ## Change log (highlights)
 - 2025-11-14: Further experimental Reefman/pentode plotting changes caused regressions; all such changes were reverted via VCS and baseline behaviour restored, with Gardiner as reference.
@@ -31,6 +35,50 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 ## Notes
 - A = red (Triode A), B = green (Triode B)
 - Measurements save into a Project; Modeller uses the selected measurement
+- Every non-trivial code or documentation change must be recorded here by updating *Active tasks* or *Recently completed* with a short, dated note.
 
 ## Contact
 AudioSmith — Darrin Smith, Nelson BC, Canada
+
+## Future Projects – Pentode Class A1 Designer Parity
+
+Reference: `refrence code/pentodeClassA1Designer-main`.
+
+- **Pd limit curve overlay**
+  - Add `Ia_max(Va) = Pmax / Va` plate-dissipation limit line to Designer plots.
+
+- **Main and alternate load lines**
+  - Draw the main AC load line for the current tube, supply, bias, and load.
+  - Add alternate load lines for `RL/2` and `2·RL` (and possibly other ratios).
+
+- **Inductive vs resistive load modes**
+  - Implement a mode toggle that changes the DC bias point and load-line geometry for transformer vs resistive load.
+
+- **Bias point marker**
+  - Show a clear marker at the DC operating point on the main load line.
+
+- **Screen-current overlay**
+  - Plot screen-current families with plate curves for pentode analysis.
+
+- **Axis scaling controls**
+  - Autoscale/fixed Y toggle.
+  - Smarter automatic X-max tied to supply voltage.
+
+- **Interactive swing/power measurement**
+  - Click–drag on the plot to measure `ΔV`, `ΔI`, and approximate Class A power over that swing.
+
+- **Tube preset library**
+  - Add a tube preset data file (similar to `tubes.csv`) with Pmax, recommended Vplate, Vscreen, Ibias, and load.
+  - Bind Designer controls to presets.
+
+- **SPICE export-only workflow**
+  - Generate SPICE netlists for Designer circuits (SE output, PP, Triode CC, etc.) without running ngspice internally, suitable for opening directly in LTspice/ngspice or other simulators.
+
+- **Optional SPICE-backed curve mode**
+  - Add an option to generate curves via ngspice from a netlist and `.inc` models, for comparison with internal models.
+
+- **UI/UX polish inspired by reference**
+  - Explore a compact “Pentode Class A1” view (toolbar+plot).
+  - Dual numeric+slider controls for main parameters.
+  - Keyboard shortcuts for fine adjustments.
+  - Simple “Inductive” checkbox that changes both math and labels.

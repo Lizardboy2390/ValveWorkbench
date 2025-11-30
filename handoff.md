@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-11-27 (analyser S/M protocol, transfer and anode verification behaviour)
+Last updated: 2025-11-28 (analyser S/M protocol, transfer and anode verification behaviour, documentation/tasks rules)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -92,6 +92,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 
 ## Global Rules (Authoritative Summary)
 - **Code Quality**
+  - Code should be exhaustively and accurately commented. When you touch a file, review existing comments, remove outdated or misleading ones, and add new comments so intent, assumptions, and edge cases are clear.
   - Comment public methods, complex algorithms, and non-obvious logic.
   - Functions ≤ 50 lines where practical.
   - Descriptive names (e.g., `anodeCurrent`, `gridVoltage`).
@@ -107,6 +108,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - Regression tests for core algorithm changes.
 - **Documentation & Version Control**
   - Doxygen for public APIs; README updates with feature changes.
+  - `tasks.md` must be updated for every non-trivial code or documentation change (add or adjust entries under Active tasks or Recently completed).
   - Commit format: `Component: Brief description of changes`.
   - Feature branches; PR review required; resolve conflicts immediately.
 - **Hardware Interface**
@@ -131,7 +133,6 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 - Cross-reference new diagnostics and testing checklists as they're added.
 
 ## Ownership and Pointers
-- **Previous AI**: Historical context only; do not reuse past patterns that broke these rules.
 - **Current Owner**: Project maintainer
 - **Successor Instructions**: Follow ALL rules without exception, verify file integrity before any changes
 - **Key files often touched in recent work**:
@@ -633,6 +634,68 @@ Additional (2025-11-05):
 - A future enhancement is to add an optional prefire safety pass that briefly samples anode current while `CHARGEx` is active and `FIREx` is still LOW, to detect unexpected current paths (e.g. shorted tube or wiring fault) before applying full HT to the tube.
 - On detecting excessive prefire current, the firmware should abort the measurement, discharge the banks, and return `ERR_UNSAFE` so the desktop application can discard the point, warn the user, and avoid contaminating measurement datasets.
 
+## Future Projects – Pentode Class A1 Designer Inspired Features
+ Source reference: `refrence code/pentodeClassA1Designer-main` (Python / PyQt5).
+ 
+ #### Plot & Analysis Enhancements
+ 
+ - [ ] **Plate dissipation limit curve overlay**  
+   Add a Pd limit line `Ia_max(Va) = Pmax / Va` to Designer plots so safe operating regions are visually obvious.
+ 
+ - [ ] **Explicit AC load line from tube + supply**  
+   Draw the main AC load line for the selected load `RL`, supply `Vb`, and bias current, clearly distinguished from the device curves.
+ 
+ - [ ] **Alternate load lines (0.5× and 2× RL)**  
+   Overlay additional load lines for `RL/2` and `2·RL` (and possibly more ratios) to quickly visualise the effect of different transformer primary impedances / taps.
+ 
+ - [ ] **Inductive vs resistive load modes**  
+   Provide a simple mode toggle that changes the load-line geometry: inductive (transformer-coupled, DC bias at `Va≈Vb`) vs resistive (DC bias at `Va = Vb − Ibias·RL`).
+ 
+ - [ ] **Bias point marker**  
+   Show a clearly styled marker at the DC operating point on the main load line, updated live as parameters change.
+ 
+ - [ ] **Screen-current family overlay**  
+   Plot screen current curves alongside plate curves for pentodes to support screen dissipation checks.
+ 
+ - [ ] **Autoscale vs fixed Y-range toggle**  
+   Allow the user to choose between automatic Y-axis scaling and a fixed Y-range that persists across parameter changes.
+ 
+ - [ ] **Automatic X-range choice tied to supply**  
+   Set the anode-voltage axis range automatically (e.g. ~2× supply voltage) so load lines and curves remain nicely framed.
+ 
+ - [ ] **Interactive measurement (drag ΔV, ΔI, Pout)**  
+   Implement a click–drag tool on the plot that reports `ΔV`, `ΔI`, and an approximate Class A output power (e.g. `P ≈ ΔV * ΔI / 8`) over the selected swing.
+ 
+ #### Data & Preset System
+ 
+ - [ ] **Per-tube recommended-conditions library**  
+   Create a small data set (CSV/JSON) similar to `tubes.csv` with per-tube fields: name, `Pmax`, `Vplate`, `Vscreen`, `Ibias`, `RL`. Use this to offer “datasheet-like” starting points in Designer.
+ 
+ - [ ] **Preset ↔ UI binding**  
+   When a tube preset is selected, automatically update Designer controls (supply, screen, bias, load) and optionally reset plot scaling.
+ 
+ #### SPICE Integration Enhancements
+ 
+ - [ ] **Ngspice-backed plate curve generation option**  
+   Add an optional workflow where Designer can generate a SPICE netlist, call ngspice, read `.raw`, and plot plate/screen curves based on vendor models, to compare with internal analytic models.
+ 
+ - [ ] **Simultaneous plate and screen curves from SPICE**  
+   Extend the SPICE export/import so both plate and screen currents are captured and displayed as separate families of curves.
+ 
+ #### UI / UX Enhancements
+ 
+ - [ ] **Compact “toolbar + plot” layout variant**  
+   Consider a focused “Pentode Class A1” view with a tight left-side control column (tube selector + numeric fields + sliders) and a large plot on the right, inspired by the reference UI.
+ 
+ - [ ] **Numeric + slider dual controls**  
+   For key parameters (supply voltage, screen voltage, bias current, load), provide both line edits and sliders that stay in sync, enabling fast sweeps and precise entry.
+ 
+ - [ ] **Keyboard shortcuts for fine nudge**  
+   Add keyboard bindings to nudge core parameters (e.g. supply up/down, screen up/down, bias up/down) for quick exploration without leaving the plot.
+ 
+ - [ ] **Simple “Inductive” checkbox UX**  
+   Mirror the reference’s single “Inductive” checkbox that simultaneously switches load-line mathematics and adjusts labels (e.g. `Iplate@Vplate` vs `Iplate`) so the UI explains what changed.
+ 
 ## Environment Notes
 - Qt 6.9.3 (moc output seen), MSVC 2022 64-bit build config present.
 - UI compiled to `ui_valveworkbench.h`. GraphicsView uses shared `Plot` scene.

@@ -348,5 +348,10 @@ hardware or extending the serial protocol.
 - AudioSmith — Darrin Smith, Nelson BC, Canada
 - For support: please include OS, Qt version, and steps to reproduce
 
+## Development workflow & internal docs
+- **Read `handoff.md` before making substantive changes.** It is the authoritative engineering snapshot and rule set.
+- **Update `tasks.md` with each non-trivial change.** Add or adjust entries under *Active tasks* and *Recently completed* so work and decisions are traceable over time.
+- **Keep code comments accurate.** When you touch a file, review existing comments, remove outdated or misleading ones, and add new comments so non-obvious logic, assumptions, and edge cases are clear. Use spare time to gradually bring the whole codebase up to this standard.
+
 ## License
 This project contains third‑party components. See `included-licences/` for details.

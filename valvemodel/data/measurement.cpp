@@ -176,6 +176,12 @@ QTreeWidgetItem *Measurement::buildTree(QTreeWidgetItem *parent)
     item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
     item->setData(0, Qt::UserRole, QVariant::fromValue((void *) this));
 
+    // Visually distinguish transfer measurements in the project tree so they
+    // match the blue gm LCD when gm is sourced from transfer data.
+    if (testType == TRANSFER_CHARACTERISTICS) {
+        item->setForeground(0, QBrush(QColor::fromRgb(0, 0, 192)));
+    }
+
     qDebug("Measurement has %d sweeps", sweeps.size());
     for (int i = 0; i < sweeps.size(); i++) {
         qDebug("Building tree for sweep %d", i);

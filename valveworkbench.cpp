@@ -2336,6 +2336,14 @@ bool ValveWorkbench::eventFilter(QObject *obj, QEvent *event)
                 if (plot.getScene()) {
                     if (!cursorLabelItem) {
                         cursorLabelItem = plot.getScene()->addText(QString());
+                        cursorLabelItem->setZValue(1000.0);
+                        cursorLabelItem->setDefaultTextColor(Qt::black);
+                        cursorLabelItem->setFlag(QGraphicsItem::ItemIsSelectable, false);
+                        cursorLabelItem->setFlag(QGraphicsItem::ItemIsMovable, false);
+                        cursorLabelItem->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+                        QObject::connect(cursorLabelItem, &QObject::destroyed, this, [this]() {
+                            cursorLabelItem = nullptr;
+                        });
                     }
                     cursorLabelItem->setPlainText(
                         tr("V=%1 V\nI=%2 mA")
@@ -3074,6 +3082,7 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
     double gm_mA_V = 0.0;
     double ra_ohms = 0.0;
     double mu      = 0.0;
+    bool   gmFromTransfer = false;
 
     // --- ra from anode characteristics around OP (same LS logic as before) ---
     if (anodeMeasurement && anodeMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
@@ -3142,9 +3151,10 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
     // --- gm from transfer at the same OP when such a measurement exists ---
     Measurement *transferMeasurement = findMeasurement(deviceType, TRANSFER_CHARACTERISTICS);
     if (transferMeasurement && measurementHasValidSamples(transferMeasurement)) {
-        const double gmFromTransfer = gmFromTransferAtOP(transferMeasurement, vaOp, vg2Op, vg1Op);
-        if (gmFromTransfer > 0.0) {
-            gm_mA_V = gmFromTransfer;
+        const double gmFromTransferVal = gmFromTransferAtOP(transferMeasurement, vaOp, vg2Op, vg1Op);
+        if (gmFromTransferVal > 0.0) {
+            gm_mA_V = gmFromTransferVal;
+            gmFromTransfer = true;
         }
     }
 
@@ -3282,7 +3292,23 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
     if (ui->gmLcd) {
         if (gm_mA_V > 0.0) {
             ui->gmLcd->display(QString("%1").arg(gm_mA_V, 0, 'f', 2));
+
+            if (gmFromTransfer) {
+                ui->gmLcd->setStyleSheet("color: rgb(0, 0, 192);");
+                if (ui->gmLabel) {
+                    ui->gmLabel->setStyleSheet("color: rgb(0, 0, 192);");
+                }
+            } else {
+                ui->gmLcd->setStyleSheet("");
+                if (ui->gmLabel) {
+                    ui->gmLabel->setStyleSheet("");
+                }
+            }
         } else {
+            ui->gmLcd->setStyleSheet("");
+            if (ui->gmLabel) {
+                ui->gmLabel->setStyleSheet("");
+            }
             safeDisplayText(ui->gmLcd, "--");
         }
     }
@@ -5303,12 +5329,21 @@ void ValveWorkbench::on_btnAddToProject_clicked()
 
     Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
     qDebug("Project pointer: %p", project);
-    Measurement *measurement = analyser->getResult();
-    qDebug("Measurement pointer: %p", measurement);
-    if (measurement == nullptr) {
-        qWarning("Measurement is null - cannot add to project");
+    if (!project) {
+        qWarning("AddToProject: currentProject has null Project* user data - aborting save");
         return;
     }
+
+    Measurement *measurement = analyser->getResult();
+    qDebug("Measurement pointer: %p", measurement);
+    if (!measurement) {
+        qWarning("AddToProject: analyser->getResult() returned null - cannot add to project");
+        return;
+    }
+
+    qDebug("AddToProject: measurement sweeps=%d, deviceType=%d, testType=%d",
+           measurement->count(), measurement->getDeviceType(), measurement->getTestType());
+
     if (project->addMeasurement(measurement)) {
         // Tag pentode measurements that were taken in triode-connected
         // mode so the UI can display a clear hint in the device name.
@@ -5316,9 +5351,10 @@ void ValveWorkbench::on_btnAddToProject_clicked()
             measurement->setTriodeConnectedPentode(true);
         }
         qDebug("Measurement added to project successfully");
-        qDebug("About to build tree");
+        qDebug("AddToProject: building measurement tree under project node '%s' (children before=%d)",
+               currentProject->text(0).toStdString().c_str(), currentProject->childCount());
         measurement->buildTree(currentProject);
-        qDebug("Tree built successfully");
+        qDebug("AddToProject: measurement tree built (children after=%d)", currentProject->childCount());
 
         // Treat this newly added measurement as the explicit current
         // measurement for Analyser/Modeller. Also try to locate and

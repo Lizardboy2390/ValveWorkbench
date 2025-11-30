@@ -161,7 +161,11 @@ QTreeWidgetItem *Sweep::buildTree(QTreeWidgetItem *parent)
     item->setData(0, Qt::UserRole, QVariant::fromValue((void *) this));
 
     for (int i = 0; i < samples.size(); i++) {
-        samples.at(i)->buildTree(item);
+        Sample *sample = samples.at(i);
+        if (!sample) {
+            continue;
+        }
+        sample->buildTree(item);
     }
 
     return item;

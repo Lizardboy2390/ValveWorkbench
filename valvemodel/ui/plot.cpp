@@ -79,6 +79,8 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
             text = scene->addText(labelText);
             double offset = 12.0 * strlen(labelText);
             text->setPos(-10 - offset, PLOT_HEIGHT - (y - yStart) * yScale - 10);
+            text->setFlag(QGraphicsItem::ItemIsSelectable, false);
+            text->setFlag(QGraphicsItem::ItemIsMovable, false);
         }
 
         y += yMajorDivision;
@@ -141,6 +143,8 @@ QGraphicsTextItem *Plot::createLabel(double x, double y, double value, const QCo
     text = scene->addText(labelText);
     // FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system
     text->setPos((x - xStart) * xScale + 5, PLOT_HEIGHT - (y - yStart) * yScale - 10);
+    text->setFlag(QGraphicsItem::ItemIsSelectable, false);
+    text->setFlag(QGraphicsItem::ItemIsMovable, false);
     if (color.isValid()) {
         text->setDefaultTextColor(color);
     }
