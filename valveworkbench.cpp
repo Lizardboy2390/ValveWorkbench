@@ -62,10 +62,280 @@
 #include "valvemodel/circuit/sharedspice.h"
 #include "valvemodel/model/simplemanualpentode.h"
 #include "valvemodel/ui/simplemanualpentodedialog.h"
+ 
+/**
+ * Helper namespace for SPICE export utilities.
+ *
+ * The goal is to keep all SPICE-related formatting and string construction
+ * together in one place so that:
+ *  - Export-to-Devices can embed a self-contained `spice` block into the
+ *    device JSON (tube-style preset), and
+ *  - Future File → Export to Spice and Designer-stage exporters can simply
+ *    read that block and write it to disk, without needing to know about
+ *    the underlying model types or parameter indices.
+ *
+ * For now we support two fitted model types as SPICE subcircuits:
+ *  - COHEN_HELIE_TRIODE  → format "cohenHelieTriode"
+ *  - GARDINER_PENTODE    → format "gardinerPentode"
+ *
+ * Each `spice` block looks roughly like:
+ *
+ *  {
+ *    "version": 1,
+ *    "format": "gardinerPentode",
+ *    "subcktName": "6L6GC_GardinerFit_AS",
+ *    "pins": ["P","G2","G1","K","H"],
+ *    "body": "... full .subckt text ..."
+ *  }
+ */
+namespace {
 
+    /**
+     * Sanitize an arbitrary device name into a SPICE-safe identifier.
+     *
+     * SPICE subcircuit names are typically limited to letters, digits and
+     * a few punctuation characters. To avoid surprises across simulators
+     * we conservatively map anything outside [A-Za-z0-9_] to '_', and
+     * ensure the first character is alphabetic when possible.
+     */
+    QString makeSpiceSafeIdentifier(const QString &rawName)
+    {
+        QString id = rawName;
+        if (id.isEmpty()) {
+            return QStringLiteral("FittedModel_AS");
+        }
+
+        // Replace all characters that are not alphanumeric or '_' with '_'.
+        for (int i = 0; i < id.size(); ++i) {
+            const QChar c = id.at(i);
+            if (!(c.isLetterOrNumber() || c == QLatin1Char('_'))) {
+                id[i] = QLatin1Char('_');
+            }
+        }
+
+        // Ensure leading character is a letter; if not, prepend a safe prefix.
+        if (!id.at(0).isLetter()) {
+            id.prepend(QStringLiteral("AS_"));
+        }
+
+        return id;
+    }
+
+    /**
+     * Build a SPICE `spice` JSON object for the given fitted model.
+     *
+     * This inspects the concrete model type (via Model::getType) and, for
+     * recognised types, emits a fully-formed .subckt body that implements
+     * the same Ia(Va, Vg1, Vg2) law used by ValveWorkbench:
+     *
+     *  - COHEN_HELIE_TRIODE  → behavioural triode current source using the
+     *    Cohen–Helie Epk law.
+     *  - GARDINER_PENTODE    → anode and screen currents based on the unified
+     *    Gardiner pentode, expressed as SPICE functions.
+     *
+     * The returned object is suitable for embedding into the device JSON as
+     * the `spice` property.
+     */
+    QJsonObject buildSpiceBlockForModel(Model *model,
+                                        int deviceType,
+                                        const QString &deviceName)
+    {
+        QJsonObject spice;
+
+        if (!model) {
+            return spice;
+        }
+
+        const int modelType = model->getType();
+
+        // Derive a stable subcircuit name from the device name, with a
+        // suffix to indicate that it is an AudioSmith fitted model.
+        const QString subcktName = makeSpiceSafeIdentifier(deviceName + QStringLiteral("_AS"));
+
+        // Helper lambdas for common JSON fields.
+        auto setCommonFields = [&](const char *formatTag,
+                                   const QStringList &pins,
+                                   const QString &body) {
+            spice["version"] = 1;
+            spice["format"] = QString::fromLatin1(formatTag);
+            spice["subcktName"] = subcktName;
+
+            QJsonArray pinsArray;
+            for (const QString &p : pins) {
+                pinsArray.append(p);
+            }
+            spice["pins"] = pinsArray;
+            spice["body"] = body;
+        };
+
+        // COHEN_HELIE_TRIODE → triode subcircuit using the Cohen–Helie law.
+        if (modelType == COHEN_HELIE_TRIODE && deviceType == TRIODE) {
+            const double mu   = model->getParameter(PAR_MU);
+            const double kg1  = model->getParameter(PAR_KG1);
+            const double x    = model->getParameter(PAR_X);
+            const double kp   = model->getParameter(PAR_KP);
+            const double kvb  = model->getParameter(PAR_KVB);
+            const double kvb1 = model->getParameter(PAR_KVB1);
+            const double vct  = model->getParameter(PAR_VCT);
+
+            // NOTE: This body is deliberately verbose and commented so that
+            // users can inspect and, if necessary, hand-edit the exported
+            // .inc/.lib file. The behaviour mirrors CohenHelieTriode::cohenHelieEpk
+            // and CohenHelieTriode::cohenHelieCurrent in C++.
+            QString body;
+            body += QStringLiteral("**** Cohen–Helie triode fitted in ValveWorkbench\n");
+            body += QStringLiteral("**** Subcircuit generated from fitted model parameters.\n");
+            body += QStringLiteral("**** Node order: P=plate, G=grid, K=cathode, H=heater (unused).\n\n");
+
+            body += QStringLiteral(".subckt %1 P G K H\n").arg(subcktName);
+            body += QStringLiteral("+ + MU=%1 KG1=%2 KP=%3 KVB=%4 KVB1=%5 VCT=%6 X=%7\n\n")
+                        .arg(mu, 0, 'g', 12)
+                        .arg(kg1, 0, 'g', 12)
+                        .arg(kp, 0, 'g', 12)
+                        .arg(kvb, 0, 'g', 12)
+                        .arg(kvb1, 0, 'g', 12)
+                        .arg(vct, 0, 'g', 12)
+                        .arg(x, 0, 'g', 12);
+
+            body += QStringLiteral("* Va = V(P,K), Vgk = V(G,K) (negative for normal bias)\n");
+            body += QStringLiteral("* Epk helper as in CohenHelieTriode::cohenHelieEpk\n");
+            body += QStringLiteral(".func CH_f(v)    { sqrt( max( 0, KVB + KVB1*v + v*v ) ) }\n");
+            body += QStringLiteral(".func CH_y(v,vg) { KP * ( 1/MU + (vg + VCT)/(CH_f(v) + 1e-9) ) }\n");
+            body += QStringLiteral(".func CH_ep(v,vg){ v/KP * ln( 1 + exp( limit(CH_y(v,vg), -50, 50) ) ) }\n");
+            body += QStringLiteral(".func CH_ia(v,vg){ ( max( CH_ep(v,vg), 0 )**X ) / max(KG1,1e-9) }\n\n");
+
+            body += QStringLiteral("* Behavioural anode current source from P to K.\n");
+            body += QStringLiteral("* The max() guard mirrors the C++ clamp that prevents negative Ia near Va≈0.\n");
+            body += QStringLiteral("Biak P K I = { max( CH_ia( V(P,K), V(G,K) ), 0 ) }\n\n");
+            body += QStringLiteral(".ends %1\n").arg(subcktName);
+
+            setCommonFields("cohenHelieTriode",
+                            QStringList() << QStringLiteral("P")
+                                          << QStringLiteral("G")
+                                          << QStringLiteral("K")
+                                          << QStringLiteral("H"),
+                            body);
+
+            return spice;
+        }
+
+        // GARDINER_PENTODE → pentode subcircuit using unified Gardiner law.
+        if (modelType == GARDINER_PENTODE && deviceType == PENTODE) {
+            const double mu    = model->getParameter(PAR_MU);
+            const double kg1   = model->getParameter(PAR_KG1);
+            const double x     = model->getParameter(PAR_X);
+            const double kp    = model->getParameter(PAR_KP);
+            const double kvb   = model->getParameter(PAR_KVB);
+            const double kvb1  = model->getParameter(PAR_KVB1);
+            const double vct   = model->getParameter(PAR_VCT);
+            const double kg2   = model->getParameter(PAR_KG2);
+            const double kg2a  = model->getParameter(PAR_KG2A);
+            const double a     = model->getParameter(PAR_A);
+            const double alpha = model->getParameter(PAR_ALPHA);
+            const double beta  = model->getParameter(PAR_BETA);
+            const double gamma = model->getParameter(PAR_GAMMA);
+            const double os    = model->getParameter(PAR_OS);
+            const double tau   = model->getParameter(PAR_TAU);
+            const double rho   = model->getParameter(PAR_RHO);
+            const double theta = model->getParameter(PAR_THETA);
+            const double psi   = model->getParameter(PAR_PSI);
+            const double omega = model->getParameter(PAR_OMEGA);
+            const double lambdaVal = model->getParameter(PAR_LAMBDA);
+            const double nu    = model->getParameter(PAR_NU);
+            const double s     = model->getParameter(PAR_S);
+            const double ap    = model->getParameter(PAR_AP);
+
+            QString body;
+            body += QStringLiteral("**** Gardiner pentode fitted in ValveWorkbench\n");
+            body += QStringLiteral("**** Subcircuit generated from fitted Gardiner parameters.\n");
+            body += QStringLiteral("**** Node order: P=plate, G2=screen, G1=control grid, K=cathode, H=heater (unused).\n\n");
+
+            body += QStringLiteral(".subckt %1 P G2 G1 K H\n").arg(subcktName);
+            body += QStringLiteral("+ + MU=%1 KG1=%2 KP=%3 KVB=%4 KVB1=%5 VCT=%6 X=%7\n")
+                        .arg(mu, 0, 'g', 12)
+                        .arg(kg1, 0, 'g', 12)
+                        .arg(kp, 0, 'g', 12)
+                        .arg(kvb, 0, 'g', 12)
+                        .arg(kvb1, 0, 'g', 12)
+                        .arg(vct, 0, 'g', 12)
+                        .arg(x, 0, 'g', 12);
+            body += QStringLiteral("+ + KG2=%1 KG2A=%2 A=%3 ALPHA=%4 BETA=%5 GAMMA=%6 OS=%7\n")
+                        .arg(kg2, 0, 'g', 12)
+                        .arg(kg2a, 0, 'g', 12)
+                        .arg(a, 0, 'g', 12)
+                        .arg(alpha, 0, 'g', 12)
+                        .arg(beta, 0, 'g', 12)
+                        .arg(gamma, 0, 'g', 12)
+                        .arg(os, 0, 'g', 12);
+            body += QStringLiteral("+ + TAU=%1 RHO=%2 THETA=%3 PSI=%4 OMEGA=%5 LAMBDA=%6 NU=%7 S=%8 AP=%9\n\n")
+                        .arg(tau, 0, 'g', 12)
+                        .arg(rho, 0, 'g', 12)
+                        .arg(theta, 0, 'g', 12)
+                        .arg(psi, 0, 'g', 12)
+                        .arg(omega, 0, 'g', 12)
+                        .arg(lambdaVal, 0, 'g', 12)
+                        .arg(nu, 0, 'g', 12)
+                        .arg(s, 0, 'g', 12)
+                        .arg(ap, 0, 'g', 12);
+
+            body += QStringLiteral("* Helper functions for Cohen–Helie Epk, reused by Gardiner.\n");
+            body += QStringLiteral(".func CH_f(v)    { sqrt( max( 0, KVB + KVB1*v + v*v ) ) }\n");
+            body += QStringLiteral(".func CH_y(v,vg) { KP * ( 1/MU + (vg + VCT)/(CH_f(v) + 1e-9) ) }\n");
+            body += QStringLiteral(".func CH_ep(v,vg){ v/KP * ln( 1 + exp( limit(CH_y(v,vg), -50, 50) ) ) }\n\n");
+
+            body += QStringLiteral("* For Gardiner, epk is driven by screen voltage (normalised) and grid1 bias.\n");
+            body += QStringLiteral(".func G_v2norm(v2){ if( abs(v2) < 5, v2*1000, v2 ) }\n");
+            body += QStringLiteral(".func G_epk(v2,vg1){ max( CH_ep( G_v2norm(v2), vg1 ), 1e-6 ) }\n\n");
+
+            body += QStringLiteral("* Derived helpers matching GardinerPentode::anodeCurrent/screenCurrent.\n");
+            body += QStringLiteral(".func G_k()           { 1/max(KG1,1e-9) - 1/max(KG2,1e-9) }\n");
+            body += QStringLiteral(".func G_scale(va,vg1) { 1 - exp( - (abs(BETA*(1-ALPHA*vg1)*va)+1e-12)**GAMMA ) }\n");
+            body += QStringLiteral(".func G_vco(v2,vg1)   { v2/LAMBDA - vg1*NU - OMEGA }\n");
+            body += QStringLiteral(".func G_psec(va,v2,vg1){ va*S * ( 1 + tanh( -AP*(va - G_vco(v2,vg1)) ) ) }\n");
+            body += QStringLiteral(".func G_termIa(va,vg1){ G_k()*G_scale(va,vg1) + A*va/max(KG2,1e-9) }\n");
+            body += QStringLiteral(".func G_sh2(vg1)      { RHO*(1-TAU*vg1) }\n");
+            body += QStringLiteral(".func G_h(va,vg1)     { exp( - (abs(G_sh2(vg1)*va)+1e-12)**(THETA*0.9) ) }\n");
+            body += QStringLiteral(".func G_termIg2(va,vg1){ (1 + PSI*G_h(va,vg1))/max(KG2A,1e-9) - A*va/max(KG2A,1e-9) }\n\n");
+
+            // Final Ia/Ig2 helpers as single-expression functions so they are
+            // valid in standard SPICE dialects (no local `let` statements).
+            body += QStringLiteral(".func G_ia(va,vg1,v2)  { G_epk(v2,vg1)*G_termIa(va,vg1) + OS*v2 }\n\n");
+            body += QStringLiteral(".func G_ig2(va,vg1,v2) { G_epk(v2,vg1)*G_termIg2(va,vg1) }\n\n");
+
+            body += QStringLiteral("* Behavioural current sources: anode (P→K) and screen (G2→K).\n");
+            body += QStringLiteral("Biak  P  K  I = { max( G_ia(  V(P,K), V(G1,K), V(G2,K) ), 0 ) }\n");
+            body += QStringLiteral("Big2  G2 K  I = { max( G_ig2( V(P,K), V(G1,K), V(G2,K) ), 0 ) }\n\n");
+            body += QStringLiteral(".ends %1\n").arg(subcktName);
+
+            setCommonFields("gardinerPentode",
+                            QStringList() << QStringLiteral("P")
+                                          << QStringLiteral("G2")
+                                          << QStringLiteral("G1")
+                                          << QStringLiteral("K")
+                                          << QStringLiteral("H"),
+                            body);
+
+            return spice;
+        }
+
+        // For all other model/device combinations we currently do not emit a
+        // SPICE block. Future work can extend this helper for Reefman-style
+        // pentodes or alternative triode models.
+        return spice;
+    }
+
+} // namespace (SPICE helpers)
+
+// Stub callback required by the ngspice shared library interface. We do not
+// currently embed ngspice; SPICE export is file-based only. This remains here
+// for completeness in case future work enables live SPICE integration.
 int ngspice_getchar(char* outputreturn, int ident, void* userdata) {
-    // Callback for ngSpice to send characters (e.g., print output)
-    // For now, just return 0
+    Q_UNUSED(outputreturn);
+    Q_UNUSED(ident);
+    Q_UNUSED(userdata);
+    // Callback for ngSpice to send characters (e.g., print output). For the
+    // current design we ignore ngspice entirely and rely on exported .cir/.inc
+    // files instead.
     return 0;
 }
 
@@ -856,6 +1126,129 @@ void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
             }
         }
     }
+}
+
+void ValveWorkbench::on_actionExport_to_Spice_triggered()
+{
+    // File → Export to Spice...
+    //
+    // This path exports a tube-only SPICE representation of the currently
+    // selected Designer Device. It uses the same SPICE helper that embeds a
+    // `spice` block into analyser-exported device JSON, so external SPICE
+    // simulators see exactly the same Ia(Va, Vg1, Vg2) law that the
+    // Modeller/Designer use internally.
+
+    // Require a current Designer device selection; the user picks this via
+    // the stdDeviceSelection combo and Designer circuits.
+    if (!currentDevice) {
+        QMessageBox::warning(this, tr("Export to Spice"),
+                             tr("No Designer device is currently selected. Please select a device in the Designer tab first."));
+        return;
+    }
+
+    // Require an attached fitted Model; legacy presets or analyser-only
+    // exports might not have a model block.
+    Model *deviceModel = currentDevice->getModel();
+    if (!deviceModel) {
+        QMessageBox::warning(this, tr("Export to Spice"),
+                             tr("The selected device has no fitted model to export as SPICE."));
+        return;
+    }
+
+    // Build a SPICE description directly from the Device's model and type.
+    const int devType = currentDevice->getDeviceType();
+    const QString devName = currentDevice->getName();
+    QJsonObject spiceObj = buildSpiceBlockForModel(deviceModel, devType, devName);
+
+    if (spiceObj.isEmpty() || !spiceObj.contains("body") || !spiceObj.value("body").isString()) {
+        QMessageBox::warning(this, tr("Export to Spice"),
+                             tr("The selected device's model type is not yet supported for SPICE export."));
+        return;
+    }
+
+    const QString subcktBody = spiceObj.value("body").toString();
+    const QString subcktName = spiceObj.value("subcktName").toString(devName);
+
+    // Suggest a filename based on the device name and SPICE format.
+    const QString formatTag = spiceObj.value("format").toString(QStringLiteral("tube"));
+
+    // Reuse the same models folder search used by loadDevices()/exportFittedModelToDevices
+    // as the root for SPICE exports, then place .inc files into a dedicated
+    // "spice" subdirectory so they do not clutter JSON preset files.
+    QString baseDir;
+    {
+        QStringList possiblePaths = {
+            QCoreApplication::applicationDirPath() + "/../../../../../models",
+            QCoreApplication::applicationDirPath() + "/../../../../models",
+            QCoreApplication::applicationDirPath() + "/../../../models",
+            QCoreApplication::applicationDirPath() + "/../models",
+            QCoreApplication::applicationDirPath() + "/models",
+            QDir::currentPath() + "/models",
+            QDir::currentPath() + "/../models",
+            QDir::currentPath() + "/../../models",
+            QDir::currentPath() + "/../../../models"
+        };
+
+        for (const QString &p : possiblePaths) {
+            QDir d(p);
+            if (d.exists()) {
+                baseDir = d.absolutePath();
+                break;
+            }
+        }
+
+        if (baseDir.isEmpty()) {
+            baseDir = QDir::cleanPath(QDir::currentPath() + "/models");
+            if (!QDir(baseDir).exists()) {
+                QDir().mkpath(baseDir);
+            }
+        }
+    }
+
+    // SPICE models live in a dedicated subdirectory beneath the models root.
+    QString spiceDir = QDir::cleanPath(baseDir + "/spice");
+    QDir spiceQDir(spiceDir);
+    if (!spiceQDir.exists()) {
+        QDir().mkpath(spiceDir);
+    }
+
+    QString safeName = devName;
+    if (safeName.isEmpty()) {
+        safeName = subcktName;
+    }
+    safeName.replace(QRegularExpression("[^A-Za-z0-9._ -]"), "_");
+    if (safeName.isEmpty()) {
+        safeName = QStringLiteral("FittedModel_AS");
+    }
+
+    const QString suggested = spiceQDir.filePath(safeName + "_" + formatTag + ".inc");
+
+    QString outPath = QFileDialog::getSaveFileName(this,
+                                                   tr("Export to Spice"),
+                                                   suggested,
+                                                   tr("SPICE Netlist (*.inc *.cir *.sp)"));
+    if (outPath.isEmpty()) {
+        return;
+    }
+
+    QFile outFile(outPath);
+    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Export to Spice"),
+                             tr("Could not write to %1").arg(outPath));
+        return;
+    }
+
+    QTextStream ts(&outFile);
+    ts << "; SPICE export from ValveWorkbench\n";
+    ts << "; Device: " << devName << "\n";
+    ts << "; Model format: " << formatTag << "\n";
+    ts << "; Subcircuit: " << subcktName << "\n";
+    ts << "\n";
+    ts << subcktBody;
+    outFile.close();
+
+    QMessageBox::information(this, tr("Export to Spice"),
+                             tr("Exported SPICE subcircuit to %1").arg(outPath));
 }
 
 void ValveWorkbench::startTriodeBFit()
@@ -4527,30 +4920,7 @@ void ValveWorkbench::on_actionClose_Project_triggered()
 
 void ValveWorkbench::on_actionExport_Model_triggered()
 {
-    if (currentModelItem != nullptr) {
-        Model *model = (Model *) currentModelItem->data(0, Qt::UserRole).value<void *>();
-
-        QString modelName = QFileDialog::getSaveFileName(this, "Save Project", "", "*.vwm");
-
-        if (modelName.isNull()) {
-            return;
-        }
-
-        QFile modelFile(modelName);
-
-        if (!modelFile.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text)) {
-            qWarning("Couldn't open model file for Save.");
-        } else {
-            QJsonObject modelDocument;
-
-            QJsonObject modelObject;
-            model->toJson(modelObject);
-
-            modelDocument["model"] = modelObject;
-
-            modelFile.write(QJsonDocument(modelDocument).toJson());
-        }
-    }
+    exportFittedModelToDevices();
 }
 
 void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
@@ -6555,14 +6925,64 @@ void ValveWorkbench::exportFittedModelToDevices()
         return;
     }
 
-    // Ask for device name to use in the preset file
-    const QString suggested = ui && ui->deviceName ? ui->deviceName->text() : toExport->getName();
-    bool ok = false;
-    QString deviceName = QInputDialog::getText(this, tr("Export to Devices"), tr("Device name:"), QLineEdit::Normal, suggested, &ok);
-    if (!ok || deviceName.trimmed().isEmpty()) {
+    // Resolve models directory to MATCH loadDevices() search, and use a
+    // Windows-style save dialog first so the chosen filename drives the
+    // Device name stored in JSON.
+    QString initialName = ui && ui->deviceName ? ui->deviceName->text() : toExport->getName();
+    if (initialName.trimmed().isEmpty()) {
+        initialName = QStringLiteral("FittedModel");
+    }
+
+    QStringList possiblePaths = {
+        QCoreApplication::applicationDirPath() + "/../../../../../models",
+        QCoreApplication::applicationDirPath() + "/../../../../models",
+        QCoreApplication::applicationDirPath() + "/../../../models",
+        QCoreApplication::applicationDirPath() + "/../models",
+        QCoreApplication::applicationDirPath() + "/models",
+        QDir::currentPath() + "/models",
+        QDir::currentPath() + "/../models",
+        QDir::currentPath() + "/../../models",
+        QDir::currentPath() + "/../../../models"
+    };
+
+    QString exportPath;
+    for (const QString &p : possiblePaths) {
+        QDir d(p);
+        if (d.exists()) { exportPath = d.absolutePath(); break; }
+    }
+    if (exportPath.isEmpty()) {
+        exportPath = QDir::cleanPath(QDir::currentPath() + "/models");
+        QDir().mkpath(exportPath);
+    }
+    QDir modelsDir(exportPath);
+    qInfo("Export to Devices: using models dir %s", modelsDir.absolutePath().toUtf8().constData());
+
+    // Use the UI/device name as a starting point for the suggested filename.
+    QString baseForFile = initialName;
+    baseForFile.replace(QRegularExpression("[^A-Za-z0-9._ -]"), "_");
+    if (baseForFile.isEmpty()) baseForFile = QStringLiteral("FittedModel");
+
+    const QString suggestedPath = modelsDir.filePath(baseForFile + ".json");
+
+    QString outPath = QFileDialog::getSaveFileName(this,
+                                                   tr("Export model to Device"),
+                                                   suggestedPath,
+                                                   tr("ValveWorkbench Device (*.json);;All Files (*.*)"));
+    if (outPath.isEmpty()) {
         return;
     }
-    deviceName = deviceName.trimmed();
+
+    // Derive Device name from the chosen filename so presets and filenames
+    // stay in sync, while still falling back to the UI/model name if the
+    // path does not contain a usable base name.
+    QFileInfo fi(outPath);
+    QString deviceName = fi.completeBaseName().trimmed();
+    if (deviceName.isEmpty()) {
+        deviceName = initialName.trimmed();
+        if (deviceName.isEmpty()) {
+            deviceName = QStringLiteral("FittedModel");
+        }
+    }
 
     // Build device preset JSON
     QJsonObject root;
@@ -6717,9 +7137,24 @@ void ValveWorkbench::exportFittedModelToDevices()
         }
     }
 
+    // Persist the fitted model parameters exactly as they are used by
+    // ValveWorkbench. This block is the primary source of truth for all
+    // internal plotting and Designer/Modeller behaviour.
     QJsonObject modelObj;
     toExport->toJson(modelObj);
     root["model"] = modelObj;
+
+    // In addition to the internal `model` block, embed an optional `spice`
+    // description that external SPICE tools can consume directly. This is
+    // derived from the concrete Model type (e.g. Cohen–Helie triode or
+    // Gardiner pentode) and encoded as a SPICE .subckt body with the same
+    // Ia(Va,Vg1,Vg2) law as used in the C++ code.
+    {
+        QJsonObject spiceObj = buildSpiceBlockForModel(toExport, deviceType, deviceName);
+        if (!spiceObj.isEmpty()) {
+            root["spice"] = spiceObj;
+        }
+    }
 
     // If a Cohen-Helie triode model exists in the project, embed its
     // parameters as a 'triodeModel' block so future pentode fits can reuse
@@ -6735,46 +7170,19 @@ void ValveWorkbench::exportFittedModelToDevices()
 
     // Attach full analyser measurement (if available) so offline tools and
     // Designer can reconstruct bias and perform data-driven recalculations.
-    // This effectively turns the preset into a tube-style package: model
-    // parameters plus the original sweeps.
+    // Together with the fitted `model` parameters and optional `spice`
+    // subcircuit, this turns the preset into a full tube-style package:
+    //   - analyserDefaults: measurement ranges / limits
+    //   - model:           fitted analytic parameters
+    //   - triodeModel:     optional triode seed for pentodes
+    //   - measurement:     original sweeps
+    //   - spice:           SPICE-ready .subckt for external simulators
     Measurement *measForExport = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
     if (measForExport) {
         QJsonObject measObj;
         measForExport->toJson(measObj);
         root["measurement"] = measObj;
     }
-
-    // Resolve models directory to MATCH loadDevices() search
-    QStringList possiblePaths = {
-        QCoreApplication::applicationDirPath() + "/../../../../../models",
-        QCoreApplication::applicationDirPath() + "/../../../../models",
-        QCoreApplication::applicationDirPath() + "/../../../models",
-        QCoreApplication::applicationDirPath() + "/../models",
-        QCoreApplication::applicationDirPath() + "/models",
-        QDir::currentPath() + "/models",
-        QDir::currentPath() + "/../models",
-        QDir::currentPath() + "/../../models",
-        QDir::currentPath() + "/../../../models"
-    };
-
-    QString exportPath;
-    for (const QString &p : possiblePaths) {
-        QDir d(p);
-        if (d.exists()) { exportPath = d.absolutePath(); break; }
-    }
-    if (exportPath.isEmpty()) {
-        exportPath = QDir::cleanPath(QDir::currentPath() + "/models");
-        QDir().mkpath(exportPath);
-    }
-    QDir modelsDir(exportPath);
-    qInfo("Export to Devices: using models dir %s", modelsDir.absolutePath().toUtf8().constData());
-
-    // Sanitize filename
-    QString base = deviceName;
-    base.replace(QRegularExpression("[^A-Za-z0-9._ -]"), "_");
-    if (base.isEmpty()) base = "FittedModel";
-    QString outPath = modelsDir.filePath(base + ".json");
-
     QFile outFile(outPath);
     if (!outFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
         QMessageBox::warning(this, tr("Export to Devices"), tr("Could not write to %1").arg(outPath));

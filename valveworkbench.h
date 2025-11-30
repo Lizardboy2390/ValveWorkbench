@@ -170,6 +170,12 @@ private slots:
 
     void exportFittedModelToDevices();
 
+    // File → Export to Spice: export the currently selected Designer device's
+    // tube model as a SPICE .subckt file using the same SPICE helper used by
+    // Export-to-Devices. This writes a tube-only netlist that external
+    // simulators (ngspice/LTspice/etc.) can include.
+    void on_actionExport_to_Spice_triggered();
+
     // Modeller small-signal source toggle: measured (unchecked) vs model (checked)
     void on_mes_mod_select_stateChanged(int state);
 

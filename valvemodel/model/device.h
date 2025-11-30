@@ -41,6 +41,11 @@ public:
 
     double getParameter(int index) const;
 
+    // Expose the underlying fitted Model for read-only operations such as
+    // generating SPICE subcircuit exports. Callers must not take ownership
+    // or delete the returned pointer.
+    Model *getModel() const { return model; }
+
     double anodeCurrent(double va, double vg1, double vg2 = 0);
     double anodeVoltage(double ia, double vg1, double vg2 = 0);
 

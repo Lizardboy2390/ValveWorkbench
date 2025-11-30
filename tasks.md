@@ -24,6 +24,10 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
     - Modeller triode μ/gm/ra now use a local least-squares estimator over measurement data at the ~0.5·Ia_max operating point, with the same OP used for model μ/gm/ra and clear mes/mod vs Designer override colour cues on the Modeller small-signal LCDs.
     - SE Designer harmonic panel (HD2/3/4/THD) now uses the same time-domain DFT helper as the Harmonics tab, and SE **input sensitivity (Vpp)** is computed from effective headroom and correctly scaled gm, with K-bypass selecting bypassed vs unbypassed gain rather than collapsing to zero.
 - [x] 2025-11-28: Documented task-tracking and commenting rules in `handoff.md` and `README.md`; clarified that `tasks.md` must be updated with each non-trivial change.
+- [x] 2025-11-30: File → Export to Spice now defaults to a dedicated `models/spice` directory while still using a native Explorer-style save dialog.
+- [x] 2025-11-30: File → Export Model (Export to Device) now defaults into the resolved models directory, uses `.json` by default, and offers a richer Explorer-style save filter (JSON/VWM/All).
+- [x] 2025-11-30: Modeller Export-to-Devices button now prompts with a QFileDialog save menu, defaulting to the models directory with a suggested JSON device name.
+ - [x] 2025-11-30: File menu export actions mapped so **Export to Device…** uses the same helper as the Modeller Export-to-Devices button, and **Export Model to Spice…** exports a tube-only SPICE subcircuit for the selected Designer device.
 
 ## Change log (highlights)
 - 2025-11-14: Further experimental Reefman/pentode plotting changes caused regressions; all such changes were reverted via VCS and baseline behaviour restored, with Gardiner as reference.

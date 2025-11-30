@@ -1372,11 +1372,11 @@ public:
         actionClose_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+W", nullptr));
 #endif // QT_CONFIG(shortcut)
         actionOptions->setText(QCoreApplication::translate("ValveWorkbench", "Edit Preferences...", nullptr));
-        actionExport_Model->setText(QCoreApplication::translate("ValveWorkbench", "Export Model...", nullptr));
+        actionExport_Model->setText(QCoreApplication::translate("ValveWorkbench", "Export to Device...", nullptr));
 #if QT_CONFIG(shortcut)
         actionExport_Model->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+E", nullptr));
 #endif // QT_CONFIG(shortcut)
-        actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export to Spice...", nullptr));
+        actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export Model to Spice...", nullptr));
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
         label_4->setText(QCoreApplication::translate("ValveWorkbench", "Device 1:", nullptr));
         label_5->setText(QCoreApplication::translate("ValveWorkbench", "Device 2:", nullptr));

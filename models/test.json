@@ -7608,10 +7608,10 @@
         "vct": 0.3477967233420014,
         "x": 1.532872069913737
     },
-    "name": "12AX7-cz",
+    "name": "test",
     "paMax": 1.25,
     "spice": {
-        "body": "**** Cohen–Helie triode fitted in ValveWorkbench\n**** Subcircuit generated from fitted model parameters.\n**** Node order: P=plate, G=grid, K=cathode, H=heater (unused).\n\n.subckt AS_12AX7_cz_AS P G K H\n+ + MU=108.55391266 KG1=0.505864107475 KP=400 KVB=150.412298084 KVB1=0 VCT=0.347796723342 X=1.53287206991\n\n* Va = V(P,K), Vgk = V(G,K) (negative for normal bias)\n* Epk helper as in CohenHelieTriode::cohenHelieEpk\n.func CH_f(v)    { sqrt( max( 0, KVB + KVB1*v + v*v ) ) }\n.func CH_y(v,vg) { KP * ( 1/MU + (vg + VCT)/(CH_f(v) + 1e-9) ) }\n.func CH_ep(v,vg){ v/KP * ln( 1 + exp( limit(CH_y(v,vg), -50, 50) ) ) }\n.func CH_ia(v,vg){ ( max( CH_ep(v,vg), 0 )**X ) / max(KG1,1e-9) }\n\n* Behavioural anode current source from P to K.\n* The max() guard mirrors the C++ clamp that prevents negative Ia near Va≈0.\nBiak P K I = { max( CH_ia( V(P,K), V(G,K) ), 0 ) }\n\n.ends AS_12AX7_cz_AS\n",
+        "body": "**** Cohen–Helie triode fitted in ValveWorkbench\n**** Subcircuit generated from fitted model parameters.\n**** Node order: P=plate, G=grid, K=cathode, H=heater (unused).\n\n.subckt test_AS P G K H\n+ + MU=108.55391266 KG1=0.505864107475 KP=400 KVB=150.412298084 KVB1=0 VCT=0.347796723342 X=1.53287206991\n\n* Va = V(P,K), Vgk = V(G,K) (negative for normal bias)\n* Epk helper as in CohenHelieTriode::cohenHelieEpk\n.func CH_f(v)    { sqrt( max( 0, KVB + KVB1*v + v*v ) ) }\n.func CH_y(v,vg) { KP * ( 1/MU + (vg + VCT)/(CH_f(v) + 1e-9) ) }\n.func CH_ep(v,vg){ v/KP * ln( 1 + exp( limit(CH_y(v,vg), -50, 50) ) ) }\n.func CH_ia(v,vg){ ( max( CH_ep(v,vg), 0 )**X ) / max(KG1,1e-9) }\n\n* Behavioural anode current source from P to K.\n* The max() guard mirrors the C++ clamp that prevents negative Ia near Va≈0.\nBiak P K I = { max( CH_ia( V(P,K), V(G,K) ), 0 ) }\n\n.ends test_AS\n",
         "format": "cohenHelieTriode",
         "pins": [
             "P",
@@ -7619,7 +7619,7 @@
             "K",
             "H"
         ],
-        "subcktName": "AS_12AX7_cz_AS",
+        "subcktName": "test_AS",
         "version": 1
     },
     "vaMax": 400,

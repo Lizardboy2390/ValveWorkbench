@@ -2223,7 +2223,7 @@
   </action>
   <action name="actionExport_Model">
    <property name="text">
-    <string>Export Model...</string>
+    <string>Export to Device...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+E</string>
@@ -2231,7 +2231,7 @@
   </action>
   <action name="actionExport_to_Spice">
    <property name="text">
-    <string>Export to Spice...</string>
+    <string>Export Model to Spice...</string>
    </property>
   </action>
  </widget>
