@@ -3393,6 +3393,17 @@ void ValveWorkbench::selectCircuit(int circuitType)
     // Show 'Show Screen Current' checkbox only for pentode circuits
     bool wantsPentodeScreen = (deviceType1 == PENTODE);
     if (ui->screenCheck) ui->screenCheck->setVisible(wantsPentodeScreen);
+
+    // Show the Designer "Inductive Load" toggle only for output-stage
+    // circuits where an inductive vs resistive load model makes sense.
+    bool wantsInductiveToggle =
+        (circuitType == SINGLE_ENDED_OUTPUT ||
+         circuitType == ULTRALINEAR_SINGLE_ENDED ||
+         circuitType == PUSH_PULL_OUTPUT ||
+         circuitType == ULTRALINEAR_PUSH_PULL);
+    if (ui->inductiveLoadCheck) {
+        ui->inductiveLoadCheck->setVisible(wantsInductiveToggle);
+    }
 }
 
 void ValveWorkbench::buildStdDeviceSelection(QComboBox *selection, int type)

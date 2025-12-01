@@ -87,7 +87,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 - [x] Verify valveworkbench.cpp file integrity after manual revert — 2025-11-30: Verified manually after revert; content matches expected baseline.
 - [x] Test compilation to ensure no remaining corruption — 2025-11-30: Full project rebuild in Qt Creator; no errors.
 - [ ] Complete time-domain harmonic heatmap using proper methodology
-- [ ] Document any changes properly in handoff.md
+- [x] Document any changes properly in handoff.md — 2025-11-30: Updated with Designer Autoscale Y semantics and output-stage axis behaviour.
 - [ ] Follow ALL Global Rules without exception
 
 ## Global Rules (Authoritative Summary)
@@ -508,6 +508,11 @@ With this fix, using the same triode-connected 6L6-GC data:
 - Gardiner/Reefman pentode fit runs through threaded solve stages without "parameter block not found" or QByteArray crashes.
 - Overlays (red) track measured sweeps closely; logging clearly shows solver START/AFTER sets.
 - Cohen-Helie logs remain suppressed during pentode plotting.
+- Designer output-stage axes (SE, SE-UL, PP, UL-PP) now mirror the Pentode Class A1 designer's autoscale semantics:
+  - X-axis: `axisVaMax` is chosen as `max(device.vaMax, 2×VB)` on device select and VB edits, and never shrinks below the current visible right edge.
+  - Y-axis with **Autoscale Y enabled** (Designer tab checkbox): for SE/SE-UL, `iaMax` is taken from the device's Ia_max; for PP/UL-PP, `iaMax` is the larger of Ia_max and the theoretical Class-B peak current `Ia_classB ≈ 4000·VB/RAA`. VB and RAA edits recompute this headroom on each change.
+  - Y-axis with **Autoscale Y disabled**: the current Y-top derived from the plot is treated as locked; subsequent device selects and VB/RAA edits preserve this fixed vertical range while still allowing X to auto-extend as VB increases.
+  - Device select in Designer always refreshes the axes using the current circuit parameters; toggling the **Autoscale Y** checkbox from off→on re-applies the current Designer device via `selectStdDevice` so the new autoscale rules take immediate effect.
 - “Show fitted model” toggles visibility, but replot path should be updated to use `Model::plotModel` (pending).
 
 ### Status Note

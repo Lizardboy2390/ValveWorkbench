@@ -69,6 +69,36 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
     - Push-Pull Output (pentode)
     - Push-Pull UL Output (pentode, UL tap)
 
+#### Designer Autoscale Y (output stages)
+
+- **Autoscale Y checkbox (Designer tab)**
+  - Located under the circuit/device selectors, this controls how the vertical axis is chosen for the four output-stage circuits:
+    - Single-Ended Output
+    - Single-Ended UL Output
+    - Push-Pull Output
+    - Push-Pull UL Output
+
+- **When Autoscale Y is checked (auto mode)**
+  - On **device select** and on relevant parameter edits (VB and RAA for push-pull stages), Designer recomputes the axes from the active device and circuit:
+    - **X-axis (Va):**
+      - Uses `axisVaMax = max(device.vaMax, 2×VB)` for all four output stages.
+      - Never shrinks below the current visible right edge; VB increases can extend X, but reducing VB will not pull X back.
+    - **Y-axis (Ia):**
+      - For **SE / SE-UL**, `iaMax` is taken from the device’s anode-current limit (`device.iaMax`).
+      - For **PP / UL-PP**, `iaMax` is the larger of the device limit and the theoretical Class-B peak current:
+        - `Ia_classB ≈ 4000·VB/RAA` (mA).
+      - Changing VB or RAA with Autoscale Y enabled will recompute this Y-headroom each time, so the full AC/Class-B and Pa_max overlays stay visible.
+
+- **When Autoscale Y is unchecked (fixed-Y mode)**
+  - The current Y-top derived from the plot is treated as **locked**:
+    - Device selects and VB/RAA edits keep using the same vertical range.
+    - X-axis can still auto-extend to at least `max(device.vaMax, 2×VB)`, but Y does not change until you re-enable Autoscale Y.
+  - This matches the original Pentode Class A1 web designer’s **autoscale vs fixed Y** toggle: autoscale picks a new best-fit Y from the model, while fixed-Y preserves a manual reference window for comparisons.
+
+- **Autoscale toggle behaviour**
+  - Toggling **Autoscale Y from off → on** immediately re-applies the current Designer device selection, causing `selectStdDevice` to recompute the axes according to the rules above.
+  - Toggling **on → off** simply freezes the current Y range; subsequent VB/RAA edits will not alter Y until you turn Autoscale Y back on.
+
 ### Small-signal & harmonic controls (Modeller / Designer)
 
 - **Modeller μ/gm/ra (mes/mod toggle)**

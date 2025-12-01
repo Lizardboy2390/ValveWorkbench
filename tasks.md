@@ -34,6 +34,8 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Fitted-model anode grids (red) for these circuits are plotted from `-vg1Max` up to `0 V` at ~2 V steps for pentodes, extend to the visible X-axis edge, and carry Modeller-style Vg labels placed ~70% along the visible line with a small gap cut out under each label.
   - Push-Pull Output plots include an orange max-power marker at the AC load line / `Vg1=0` intersection and an axes-aware Pa_max hyperbola that remains visible under extended Designer axes.
 
+- [x] 2025-11-30: Designer Autoscale Y checkbox implemented for output-stage circuits (SE, SE-UL, PP, UL-PP). With Autoscale Y **enabled**, device select and VB/RAA edits recompute axes from the active device and circuit: X uses `max(currentXStop, max(device.vaMax, 2×VB))`, Y uses `device.iaMax` for SE/SE-UL and `max(device.iaMax, 4000·VB/RAA)` for PP/UL-PP. With Autoscale Y **disabled**, the current Y range is treated as locked while X can still auto-extend to at least `2×VB`.
+
 ## Change log (highlights)
 - 2025-11-14: Further experimental Reefman/pentode plotting changes caused regressions; all such changes were reverted via VCS and baseline behaviour restored, with Gardiner as reference.
 - 2025-11-13: Gardiner/Reefman pentode solver bounds/logging fix; curves now align with measurement families; docs scheduled for refresh.
@@ -70,8 +72,8 @@ Reference: `refrence code/pentodeClassA1Designer-main`.
   - Plot screen-current families with plate curves for pentode analysis.
 
 - **Axis scaling controls**
-  - Autoscale/fixed Y toggle.
-  - Smarter automatic X-max tied to supply voltage. **Status:** Output-stage circuits (SE, SE-UL, PP, UL-PP) now auto-extend X to `max(device.vaMax, 2×VB)` and, for PP/UL-PP, Y to at least the Class-B current (`4000·VB/RAA`), while never shrinking when VB is reduced.
+  - Autoscale/fixed Y toggle. **Status:** Implemented as a Designer “Autoscale Y” checkbox. When checked, SE, SE-UL, PP, and UL-PP recompute their Y-axis from the active device and circuit on device select and VB/RAA edits (SE/SE-UL: `device.iaMax`; PP/UL-PP: `max(device.iaMax, 4000·VB/RAA)`). When unchecked, the current Y range is preserved while X can still auto-extend.
+  - Smarter automatic X-max tied to supply voltage. **Status:** Output-stage circuits (SE, SE-UL, PP, UL-PP) now auto-extend X to `max(device.vaMax, 2×VB)` on device select and VB changes, without shrinking when VB is reduced.
 
 - **Interactive swing/power measurement**
   - Click–drag on the plot to measure `ΔV`, `ΔI`, and approximate Class A power over that swing.

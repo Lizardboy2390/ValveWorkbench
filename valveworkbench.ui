@@ -162,6 +162,16 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="inductiveLoadCheck">
+           <property name="text">
+            <string>Inductive Load</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <item>
             <widget class="QLabel" name="cir1Label">
@@ -2077,26 +2087,6 @@
           <widget class="QCheckBox" name="screenCheck">
            <property name="text">
             <string>Show Screen Current</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="autoscaleYCheck">
-           <property name="text">
-            <string>Autoscale Y</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="inductiveLoadCheck">
-           <property name="text">
-            <string>Inductive Load</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
            </property>
           </widget>
          </item>
