@@ -71,7 +71,9 @@ Device::Device(QJsonDocument modelDocument)
                 qInfo("Model type: %s", modelTypeStr.toStdString().c_str());
             }
 
-            // Choose model class: prefer explicit type, otherwise infer from keys
+            // Choose model class: prefer explicit type, otherwise infer from keys.
+            // This now includes explicit support for ExtractModel pentode exports
+            // which use type "extractDerkE" in their JSON.
             if (modelTypeStr == "simple") {
                 model = new SimpleTriode();
             } else if (modelTypeStr == "koren") {
@@ -82,6 +84,8 @@ Device::Device(QJsonDocument modelDocument)
                 model = new ReefmanPentode();
             } else if (modelTypeStr == "gardiner") {
                 model = new GardinerPentode();
+            } else if (modelTypeStr == "extractDerkE") {
+                model = new ExtractModelPentode();
             } else {
                 // Infer triode model from present keys
                 if (modelObject.contains("kvb1")) {
@@ -349,12 +353,13 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
     modelPen.setColor(QColor::fromRgb(255, 0, 0));
 
     // Choose grid voltage step for model sweeps. For pentodes with typical
-    // power-tube ranges (e.g. 0 .. -40 V), use a finer fixed step so the
+    // power-tube ranges (e.g. 0 .. -60 V), use a finer fixed step so the
     // number of red model curves is closer to the number of analyser
-    // measurement sweeps. For other cases, fall back to the generic interval
+    // measurement sweeps and grid families line up with the projected
+    // Class B line. For other cases, fall back to the generic interval
     // heuristic.
     double vgInterval = 0.0;
-    if (deviceType == PENTODE && vg1Max > 0.0 && vg1Max <= 50.0) {
+    if (deviceType == PENTODE && vg1Max > 0.0 && vg1Max <= 80.0) {
         vgInterval = 2.0;
     } else {
         vgInterval = interval(vg1Max);
@@ -428,36 +433,158 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
             double ia = 0.0;
             ia = model->anodeCurrent(va, vg1, vg2Max);
 
+            // For pentode model families, sample up to the full visible X
+            // range so lines can extend to the right edge of the current
+            // Plot axes (e.g., Designer's 2*VB range), rather than stopping
+            // at the device's vaMax. Also use this same range for label
+            // visibility scanning.
+            double curveVaMax = vaMax;
+            const double xScaleGlobal = plot->getXScale();
+            if (xScaleGlobal > 0.0) {
+                const double xStartGlobal = plot->getXStart();
+                const double xStopGlobal  = xStartGlobal + static_cast<double>(PLOT_WIDTH) / xScaleGlobal;
+                curveVaMax = std::max(vaMax, xStopGlobal);
+            }
+
+            // Collect this family's segments locally so we can trim out the
+            // portion covered by the label rectangle, mirroring the triode
+            // branch behaviour.
+            QList<QGraphicsItem*> pentodeSegments;
             for (int j = 1; j < 61; j++) {
-                double vaNext = (vaMax * j) / 60.0;
+                double vaNext = (curveVaMax * j) / 60.0;
                 double iaNext = model->anodeCurrent(vaNext, vg1, vg2Max);
 
                 QGraphicsLineItem *seg = plot->createSegment(va, ia, vaNext, iaNext, modelPen);
                 if (seg) {
-                    items.append(seg);
+                    pentodeSegments.append(seg);
                 }
 
                 va = vaNext;
                 ia = iaNext;
             }
 
-            const double epsX = std::max(0.5, vaMax * 0.01);
-            const double epsY = std::max(0.05, iaMax * 0.01);
+            // Place one label per pentode Vg1 family roughly 70% along the
+            // visible Va axis, clamped into the current Plot axes so labels
+            // follow the curve in both Modeller and Designer (even when the
+            // Y-axis has been extended above the device's iaMax).
+            const double xScale = plot->getXScale();
+            const double yScale = plot->getYScale();
 
-            const double vaLabel = std::max(0.0, vaMax * 0.7);
-            double x = std::min(vaMax - epsX, std::max(0.0, vaLabel));
-            double yAtLine = model->anodeCurrent(x, vg1, vg2Max);
-            double y = iaMax - epsY;
-            if (std::isfinite(yAtLine)) {
-                y = std::min(iaMax - epsY, std::max(0.0, yAtLine));
+            double x = 0.0;
+            double y = 0.0;
+            bool hasVisibleSegment = false;
+
+            if (xScale != 0.0 && yScale != 0.0) {
+                const double xStart = plot->getXStart();
+                const double yStart = plot->getYStart();
+                const double xStop  = xStart + static_cast<double>(PLOT_WIDTH)  / xScale;
+                const double yStop  = yStart + static_cast<double>(PLOT_HEIGHT) / yScale;
+
+                // Scan along the model curve to find the portion that is
+                // actually visible inside the current axes box. Use 70% of
+                // that visible segment so labels sit inside the drawn line,
+                // not in a region that has been clipped by X or Y limits.
+                const int steps = 60;
+                int firstVis = -1;
+                int lastVis  = -1;
+                for (int j = 0; j <= steps; ++j) {
+                    const double vaProbe = curveVaMax * static_cast<double>(j) / static_cast<double>(steps);
+                    double iaProbe = model->anodeCurrent(vaProbe, vg1, vg2Max);
+                    if (!std::isfinite(iaProbe)) {
+                        continue;
+                    }
+                    if (vaProbe < xStart || vaProbe > xStop) {
+                        continue;
+                    }
+                    if (iaProbe < yStart || iaProbe > yStop) {
+                        continue;
+                    }
+                    if (firstVis < 0) {
+                        firstVis = j;
+                    }
+                    lastVis = j;
+                }
+
+                if (firstVis >= 0 && lastVis >= firstVis) {
+                    hasVisibleSegment = true;
+
+                    const double epsX = std::max(0.5,  std::abs(xStop - xStart) * 0.01);
+                    const double epsY = std::max(0.05, std::abs(yStop - yStart) * 0.01);
+
+                    const double vaStart = curveVaMax * static_cast<double>(firstVis) / static_cast<double>(steps);
+                    const double vaEnd   = curveVaMax * static_cast<double>(lastVis)  / static_cast<double>(steps);
+
+                    double vaLabel = vaStart;
+                    if (lastVis > firstVis) {
+                        vaLabel = vaStart + 0.7 * (vaEnd - vaStart);
+                    }
+                    vaLabel = std::min(xStop - epsX, std::max(xStart, vaLabel));
+                    x = vaLabel;
+
+                    double yAtLine = model->anodeCurrent(x, vg1, vg2Max);
+                    // Fallback: mid-height of the visible axis if the model
+                    // returns a non-finite value.
+                    y = yStart + 0.5 * (yStop - yStart);
+                    if (std::isfinite(yAtLine)) {
+                        y = std::min(yStop - epsY, std::max(yStart, yAtLine));
+                    }
+                }
+            } else {
+                // Fallback to device vaMax/iaMax if plot scales are invalid.
+                const double epsX = std::max(0.5, vaMax * 0.01);
+                const double epsY = std::max(0.05, iaMax * 0.01);
+                const double vaLabel = std::max(0.0, vaMax * 0.7);
+                x = std::min(vaMax - epsX, std::max(0.0, vaLabel));
+                double yAtLine = model->anodeCurrent(x, vg1, vg2Max);
+                y = iaMax - epsY;
+                if (std::isfinite(yAtLine)) {
+                    y = std::min(iaMax - epsY, std::max(0.0, yAtLine));
+                }
             }
-            QGraphicsTextItem *label = plot->createLabel(x, y, vgLabel, QColor::fromRgb(255, 0, 0));
-            if (label) {
-                label->setPlainText(QString("%1V").arg(vgLabel, 0, 'f', 1));
-                QFont f = label->font();
-                f.setPointSizeF(std::max(7.0, f.pointSizeF()));
-                label->setFont(f);
-                items.append(label);
+
+            if (hasVisibleSegment || xScale == 0.0 || yScale == 0.0) {
+                QGraphicsTextItem *label = plot->createLabel(x, y, vgLabel, QColor::fromRgb(255, 0, 0));
+                if (label) {
+                    label->setPlainText(QString("%1V").arg(vgLabel, 0, 'f', 1));
+                    QFont f = label->font();
+                    f.setPointSizeF(std::max(7.0, f.pointSizeF()));
+                    label->setFont(f);
+
+                    // Reposition so that the centre of the label rectangle
+                    // sits on the chosen (x,y) point on the curve, mirroring
+                    // the triode labelling behaviour.
+                    QRectF r = label->boundingRect();
+                    QPointF p = label->pos();
+                    const double halfW = r.width() * 0.5;
+                    const double halfH = r.height() * 0.5;
+                    label->setPos(p.x() - 5.0 - halfW,
+                                  p.y() + 10.0 - halfH);
+
+                    // Remove any segment whose midpoint lies inside the
+                    // label rectangle so the line segment touching the
+                    // label is not drawn.
+                    QRectF labelSceneRect = label->sceneBoundingRect();
+                    for (QGraphicsItem *seg : pentodeSegments) {
+                        QRectF segRect = seg->sceneBoundingRect();
+                        QPointF mid = segRect.center();
+                        if (labelSceneRect.contains(mid)) {
+                            plot->remove(seg);
+                            delete seg;
+                            continue;
+                        }
+                        items.append(seg);
+                    }
+
+                    items.append(label);
+                } else {
+                    for (QGraphicsItem *seg : pentodeSegments) {
+                        items.append(seg);
+                    }
+                }
+            } else {
+                for (QGraphicsItem *seg : pentodeSegments) {
+                    items.append(seg);
+                }
             }
         }
 

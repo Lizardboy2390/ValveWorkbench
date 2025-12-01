@@ -176,6 +176,8 @@ private slots:
     // simulators (ngspice/LTspice/etc.) can include.
     void on_actionExport_to_Spice_triggered();
 
+    void on_actionExport_SE_Output_to_Spice_triggered();
+
     // Modeller small-signal source toggle: measured (unchecked) vs model (checked)
     void on_mes_mod_select_stateChanged(int state);
 

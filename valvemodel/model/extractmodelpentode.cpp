@@ -466,6 +466,29 @@ void ExtractModelPentode::fromJson(QJsonObject source)
     if (source.contains("beta") && source["beta"].isDouble()) {
         parameter[PAR_BETA]->setValue(source["beta"].toDouble());
     }
+
+    // Optional secondary-emission and geometry parameters. Older exports
+    // may not carry these keys; in that case we simply retain the in-memory
+    // defaults set by the constructor / setOptions().
+    if (source.contains("omega") && source["omega"].isDouble()) {
+        parameter[PAR_OMEGA]->setValue(source["omega"].toDouble());
+    }
+
+    if (source.contains("lambda") && source["lambda"].isDouble()) {
+        parameter[PAR_LAMBDA]->setValue(source["lambda"].toDouble());
+    }
+
+    if (source.contains("nu") && source["nu"].isDouble()) {
+        parameter[PAR_NU]->setValue(source["nu"].toDouble());
+    }
+
+    if (source.contains("s") && source["s"].isDouble()) {
+        parameter[PAR_S]->setValue(source["s"].toDouble());
+    }
+
+    if (source.contains("ap") && source["ap"].isDouble()) {
+        parameter[PAR_AP]->setValue(source["ap"].toDouble());
+    }
 }
 
 void ExtractModelPentode::toJson(QJsonObject &destination)
@@ -476,6 +499,14 @@ void ExtractModelPentode::toJson(QJsonObject &destination)
     destination["a"] = parameter[PAR_A]->getValue();
     destination["alpha"] = parameter[PAR_ALPHA]->getValue();
     destination["beta"] = parameter[PAR_BETA]->getValue();
+
+    // Persist secondary-emission / geometry parameters so that fitted
+    // ExtractModel pentodes behave identically when reloaded as Devices.
+    destination["omega"]  = parameter[PAR_OMEGA]->getValue();
+    destination["lambda"] = parameter[PAR_LAMBDA]->getValue();
+    destination["nu"]     = parameter[PAR_NU]->getValue();
+    destination["s"]      = parameter[PAR_S]->getValue();
+    destination["ap"]     = parameter[PAR_AP]->getValue();
 
     destination["device"] = "pentode";
     destination["type"] = "extractDerkE";

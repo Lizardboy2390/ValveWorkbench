@@ -49,6 +49,7 @@ public:
     QAction *actionOptions;
     QAction *actionExport_Model;
     QAction *actionExport_to_Spice;
+    QAction *actionExport_SE_Output_to_Spice;
     QWidget *centralwidget;
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
@@ -254,6 +255,8 @@ public:
         actionExport_Model->setObjectName("actionExport_Model");
         actionExport_to_Spice = new QAction(ValveWorkbench);
         actionExport_to_Spice->setObjectName("actionExport_to_Spice");
+        actionExport_SE_Output_to_Spice = new QAction(ValveWorkbench);
+        actionExport_SE_Output_to_Spice->setObjectName("actionExport_SE_Output_to_Spice");
         centralwidget = new QWidget(ValveWorkbench);
         centralwidget->setObjectName("centralwidget");
         horizontalLayoutWidget = new QWidget(centralwidget);
@@ -1333,6 +1336,7 @@ public:
         menuFile->addSeparator();
         menuFile->addAction(actionOptions);
         menuFile->addAction(actionExport_Model);
+        menuFile->addAction(actionExport_SE_Output_to_Spice);
         menuFile->addAction(actionExport_to_Spice);
 
         retranslateUi(ValveWorkbench);
@@ -1377,6 +1381,7 @@ public:
         actionExport_Model->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+E", nullptr));
 #endif // QT_CONFIG(shortcut)
         actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export Model to Spice...", nullptr));
+        actionExport_SE_Output_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export SE Output to SPICE...", nullptr));
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
         label_4->setText(QCoreApplication::translate("ValveWorkbench", "Device 1:", nullptr));
         label_5->setText(QCoreApplication::translate("ValveWorkbench", "Device 2:", nullptr));

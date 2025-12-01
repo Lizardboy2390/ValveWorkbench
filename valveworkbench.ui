@@ -2152,6 +2152,7 @@
     <addaction name="separator"/>
     <addaction name="actionOptions"/>
     <addaction name="actionExport_Model"/>
+    <addaction name="actionExport_SE_Output_to_Spice"/>
     <addaction name="actionExport_to_Spice"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -2232,6 +2233,11 @@
   <action name="actionExport_to_Spice">
    <property name="text">
     <string>Export Model to Spice...</string>
+   </property>
+  </action>
+  <action name="actionExport_SE_Output_to_Spice">
+   <property name="text">
+    <string>Export SE Output to SPICE...</string>
    </property>
   </action>
  </widget>

@@ -1403,23 +1403,33 @@ void SingleEndedOutput::plot(Plot *plot)
         opMarker = nullptr;
     }
 
-    const double vaMax = device1->getVaMax();
-    const double iaMax = device1->getIaMax();
-    const double xMajor = std::max(5.0, vaMax / 10.0);
-    const double yMajor = std::max(0.5, iaMax / 10.0);
-
-    // Only set axes when the scene is empty so that re-plotting (for example
-    // when toggling Max Sym Swing) does not clear existing model or
-    // measurement overlays that the Designer shares with Modeller/Analyser.
-    if (plot->getScene()->items().isEmpty()) {
-        plot->setAxes(0.0, vaMax, xMajor, 0.0, iaMax, yMajor);
-    }
+    const double deviceVaMax = device1->getVaMax();
+    const double iaMax       = device1->getIaMax();
 
     const double vb  = parameter[SE_VB]->getValue();
     const double vs  = parameter[SE_VS]->getValue();
     const double ia       = parameter[SE_IA]->getValue();
     const double raa      = parameter[SE_RA]->getValue();
     const double headroom = parameter[SE_HEADROOM]->getValue();
+
+    // X-axis headroom: for SE Output, allow approximately 2× supply swing
+    // when first plotting, while never shrinking below the device's own
+    // vaMax. This keeps the AC/DC load lines and Pa_max hyperbola visible
+    // over the full expected swing range.
+    double axisVaMax = deviceVaMax;
+    if (vb > 0.0 && deviceVaMax > 0.0) {
+        axisVaMax = std::max(deviceVaMax, 2.0 * vb);
+    }
+
+    const double xMajor = std::max(5.0, axisVaMax / 10.0);
+    const double yMajor = std::max(0.5, iaMax / 10.0);
+
+    // Only set axes when the scene is empty so that re-plotting (for example
+    // when toggling Max Sym Swing) does not clear existing model or
+    // measurement overlays that the Designer shares with Modeller/Analyser.
+    if (plot->getScene()->items().isEmpty()) {
+        plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
+    }
 
     if (vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
         return;
@@ -1428,7 +1438,7 @@ void SingleEndedOutput::plot(Plot *plot)
     // Recreate AC load line for plotting (through the chosen operating point)
     const double gradient = -1000.0 / raa;            // mA/V
     const double iaMaxA   = ia - gradient * vb;       // Ia at Va = 0
-    const double vaMaxA   = -iaMaxA / gradient;       // Va intercept
+    const double vaMaxA   = -iaMaxA / gradient;       // Va intercept (may exceed axisVaMax)
 
     QVector<QPointF> acLine;
     acLine.reserve(101);
@@ -1448,7 +1458,7 @@ void SingleEndedOutput::plot(Plot *plot)
         const double ia_dc_0 = (vb / raa) * 1000.0; // mA at Va=0
         const double x1 = 0.0;
         const double y1 = std::clamp(ia_dc_0, 0.0, iaMax);
-        const double x2 = std::min(vb, vaMax);
+        const double x2 = std::min(vb, axisVaMax);
         const double y2 = 0.0;
 
         if (auto *seg = plot->createSegment(x1, y1, x2, y2, dcPen)) {
@@ -1485,7 +1495,7 @@ void SingleEndedOutput::plot(Plot *plot)
             paPen.setStyle(Qt::DashLine);
             paPen.setWidth(2);
 
-            const double xStop = vaMax;
+            const double xStop = axisVaMax;
             const double yStop = iaMax;
             const double xEnter = std::max(1e-6, std::min(xStop, (yStop > 0.0 ? (1000.0 * paMaxW / yStop) : xStop)));
 
@@ -1537,7 +1547,7 @@ void SingleEndedOutput::plot(Plot *plot)
 
         // Clamp to the plotted Va range
         vaMin  = std::max(0.0, vaMin);
-        vaMax2 = std::min(vaMax, vaMax2);
+        vaMax2 = std::min(axisVaMax, vaMax2);
 
         if (vaMax2 > vaMin) {
             const double dia = headroom * 1000.0 / raa; // mA deviation along load line
@@ -1556,7 +1566,7 @@ void SingleEndedOutput::plot(Plot *plot)
             }
 
             // Filled polygon in scene coordinates under the headroom line
-            const double xScale = PLOT_WIDTH  / (vaMax - 0.0);
+            const double xScale = PLOT_WIDTH  / (axisVaMax - 0.0);
             const double yScale = PLOT_HEIGHT / (iaMax - 0.0);
 
             const double sx1 = (vaMin  - 0.0) * xScale;
@@ -1610,7 +1620,7 @@ void SingleEndedOutput::plot(Plot *plot)
             };
 
             const int samples = 400;
-            double lastVa = std::clamp(va0, 0.0, vaMax);
+            double lastVa = std::clamp(va0, 0.0, axisVaMax);
             double lastF  = f(lastVa);
             for (int i = 1; i <= samples; ++i) {
                 double va = va0 * (1.0 - static_cast<double>(i) / samples);
@@ -1633,9 +1643,9 @@ void SingleEndedOutput::plot(Plot *plot)
         if (vaLeft >= 0.0) {
             // Ia = 0 crossing
             double vaZero = va0 - ia0 / slope;
-            vaZero = std::clamp(vaZero, 0.0, vaMax);
+            vaZero = std::clamp(vaZero, 0.0, axisVaMax);
 
-            double vaPa = vaMax + 1.0;
+            double vaPa = axisVaMax + 1.0;
             const double paMaxW = device1 ? device1->getPaMax() : 0.0;
             if (device1 && paMaxW > 0.0) {
                 auto g_pa = [&](double va) {
@@ -1648,7 +1658,7 @@ void SingleEndedOutput::plot(Plot *plot)
                 double lastVa = std::max(va0, 1e-3);
                 double lastF  = g_pa(lastVa);
                 for (int i = 1; i <= samples; ++i) {
-                    double va = va0 + (vaMax - va0) * (static_cast<double>(i) / samples);
+                    double va = va0 + (axisVaMax - va0) * (static_cast<double>(i) / samples);
                     double curF = g_pa(va);
                     if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
                         double denom = (curF - lastF);
@@ -1663,7 +1673,7 @@ void SingleEndedOutput::plot(Plot *plot)
             }
 
             vaRight = std::min(vaZero, vaPa);
-            vaRight = std::clamp(vaRight, 0.0, vaMax);
+            vaRight = std::clamp(vaRight, 0.0, axisVaMax);
         }
 
         if (vaLeft >= 0.0 && vaRight > va0 && vaLeft < va0) {

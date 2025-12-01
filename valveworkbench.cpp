@@ -701,6 +701,52 @@ void ValveWorkbench::on_pushButton_3_clicked()
             }
         }
 
+        // Determine which test type this template wants to restore; default to
+        // the current analyser testType if no explicit value was saved.
+        int savedTestType = testType;
+        if (defs.contains("testType")) {
+            savedTestType = defs.value("testType").toInt(testType);
+        }
+
+        // If per-test snapshots are present, prefer the one whose testType
+        // matches savedTestType and use its ranges/limits to override the
+        // generic anode/grid/screen/limits above.
+        const QJsonObject testsObj = defs.value("tests").toObject();
+        if (!testsObj.isEmpty()) {
+            QJsonObject snapshot;
+            for (auto it = testsObj.begin(); it != testsObj.end(); ++it) {
+                if (!it.value().isObject()) {
+                    continue;
+                }
+                const QJsonObject tObj = it.value().toObject();
+                const int tType = tObj.value("testType").toInt(-1);
+                if (tType == savedTestType) {
+                    snapshot = tObj;
+                    break;
+                }
+            }
+
+            if (!snapshot.isEmpty()) {
+                auto setRangeFrom = [&](const char *key, double &start, double &stop, double &step) {
+                    const QJsonObject r = snapshot.value(QLatin1String(key)).toObject();
+                    if (!r.isEmpty()) {
+                        start = r.value("start").toDouble(start);
+                        stop  = r.value("stop").toDouble(stop);
+                        step  = r.value("step").toDouble(step);
+                    }
+                };
+                setRangeFrom("anode", anodeStart, anodeStop, anodeStep);
+                setRangeFrom("grid",  gridStart, gridStop, gridStep);
+                setRangeFrom("screen", screenStart, screenStop, screenStep);
+
+                const QJsonObject lim2 = snapshot.value("limits").toObject();
+                if (!lim2.isEmpty()) {
+                    iaMax = lim2.value("iaMax").toDouble(iaMax);
+                    pMax  = lim2.value("pMax").toDouble(pMax);
+                }
+            }
+        }
+
         // Apply double-triode flag for triode devices (overrides TRI vs DOUBLE_TRIODE selection)
         if (deviceType == TRIODE && defs.contains("doubleTriode")) {
             const bool dbl = defs.value("doubleTriode").toBool(false);
@@ -711,10 +757,8 @@ void ValveWorkbench::on_pushButton_3_clicked()
             }
         }
 
-        // Apply saved test type if present
-        if (defs.contains("testType") && ui && ui->testType) {
-            const int savedTestType = defs.value("testType").toInt(testType);
-            // Find the combo index whose itemData matches savedTestType
+        // Apply saved test type (or current testType if none was saved) to the UI.
+        if (ui && ui->testType) {
             int matchIndex = -1;
             for (int i = 0; i < ui->testType->count(); ++i) {
                 if (ui->testType->itemData(i).toInt() == savedTestType) { matchIndex = i; break; }
@@ -776,6 +820,33 @@ void ValveWorkbench::on_pushButton_4_clicked()
     defs.insert("testType", testType);
     defs.insert("doubleTriode", isDoubleTriode);
     QJsonObject lim; lim.insert("iaMax", iaMax); lim.insert("pMax", pMax); defs.insert("limits", lim);
+
+    // Per-test snapshot for the currently selected test type so templates can
+    // remember distinct analyser settings for anode/transfer/screen tests.
+    {
+        QJsonObject testsObj;
+        QJsonObject snapshot;
+        snapshot.insert("testType", testType);
+        snapshot.insert("anode",  makeRange(anodeStart, anodeStop, anodeStep));
+        snapshot.insert("grid",   makeRange(gridStart, gridStop, gridStep));
+        snapshot.insert("screen", makeRange(screenStart, screenStop, screenStep));
+        QJsonObject testLim;
+        testLim.insert("iaMax", iaMax);
+        testLim.insert("pMax",  pMax);
+        snapshot.insert("limits", testLim);
+
+        QString key;
+        switch (testType) {
+        case ANODE_CHARACTERISTICS:    key = QStringLiteral("anode");    break;
+        case TRANSFER_CHARACTERISTICS: key = QStringLiteral("transfer"); break;
+        case SCREEN_CHARACTERISTICS:   key = QStringLiteral("screen");   break;
+        default:                       key = QString::number(testType);   break;
+        }
+
+        testsObj.insert(key, snapshot);
+        defs.insert("tests", testsObj);
+    }
+
     obj.insert("analyserDefaults", defs);
 
     QJsonDocument out(obj);
@@ -1249,6 +1320,164 @@ void ValveWorkbench::on_actionExport_to_Spice_triggered()
 
     QMessageBox::information(this, tr("Export to Spice"),
                              tr("Exported SPICE subcircuit to %1").arg(outPath));
+}
+
+void ValveWorkbench::on_actionExport_SE_Output_to_Spice_triggered()
+{
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) {
+        QMessageBox::warning(this, tr("Export SE Output to SPICE"),
+                             tr("No valid Designer circuit selected. Please select 'Single Ended Output' in the Designer tab."));
+        return;
+    }
+
+    Circuit *c = circuits.at(currentCircuitType);
+    auto *se = dynamic_cast<SingleEndedOutput *>(c);
+    if (!se) {
+        QMessageBox::warning(this, tr("Export SE Output to SPICE"),
+                             tr("SE Output SPICE export is only available when the 'Single Ended Output' circuit is active."));
+        return;
+    }
+
+    if (!currentDevice) {
+        QMessageBox::warning(this, tr("Export SE Output to SPICE"),
+                             tr("No Designer device is currently selected. Please select a device in the Designer tab first."));
+        return;
+    }
+
+    Model *deviceModel = currentDevice->getModel();
+    if (!deviceModel) {
+        QMessageBox::warning(this, tr("Export SE Output to SPICE"),
+                             tr("The selected device has no fitted model to export as SPICE."));
+        return;
+    }
+
+    const int devType = currentDevice->getDeviceType();
+    const QString devName = currentDevice->getName();
+    QJsonObject spiceObj = buildSpiceBlockForModel(deviceModel, devType, devName);
+    if (spiceObj.isEmpty() || !spiceObj.contains("body") || !spiceObj.value("body").isString()) {
+        QMessageBox::warning(this, tr("Export SE Output to SPICE"),
+                             tr("The selected device's model type is not yet supported for SPICE export."));
+        return;
+    }
+
+    const QString subcktBody = spiceObj.value("body").toString();
+    const QString subcktName = spiceObj.value("subcktName").toString(devName);
+    const QString formatTag  = spiceObj.value("format").toString(QStringLiteral("tube"));
+
+    const double vb  = se->getParameter(SE_VB);
+    const double vs  = se->getParameter(SE_VS);
+    const double ra  = se->getParameter(SE_RA);
+    const double rk  = se->getParameter(SE_RK);
+
+    if (!(vb > 0.0) || !(ra > 0.0)) {
+        QMessageBox::warning(this, tr("Export SE Output to SPICE"),
+                             tr("SE Output requires positive supply voltage and load resistance (VB, RA)."));
+        return;
+    }
+
+    QString header;
+    header += QStringLiteral("; SE Output SPICE export from ValveWorkbench\n");
+    header += QStringLiteral("; Device: %1\n").arg(devName);
+    header += QStringLiteral("; Model format: %1\n").arg(formatTag);
+    header += QStringLiteral("; Subcircuit: %1\n").arg(subcktName);
+    header += QStringLiteral("; VB=%.3f V, VS=%.3f V, RA=%.1f ohm, RK=%.1f ohm\n\n")
+                  .arg(vb, 0, 'f', 3)
+                  .arg(vs, 0, 'f', 3)
+                  .arg(ra, 0, 'f', 1)
+                  .arg(rk, 0, 'f', 1);
+
+    QString netlist;
+    netlist += header;
+    netlist += subcktBody;
+    if (!netlist.endsWith('\n')) {
+        netlist += '\n';
+    }
+    netlist += QStringLiteral("\n* Single-Ended Output stage (resistive load approximation)\n");
+    netlist += QStringLiteral("Vb  B+ 0 %.3f\n").arg(vb, 0, 'f', 3);
+    if (vs > 0.0) {
+        netlist += QStringLiteral("Vg2 VS 0 %.3f\n").arg(vs, 0, 'f', 3);
+    } else {
+        netlist += QStringLiteral("*Vg2 VS 0 0 ; screen supply disabled (VS<=0)\n");
+    }
+    netlist += QStringLiteral("Ra  B+ P %.1f\n").arg(ra, 0, 'f', 1);
+    if (rk > 0.0) {
+        netlist += QStringLiteral("Rk  K  0 %.1f\n").arg(rk, 0, 'f', 1);
+    } else {
+        netlist += QStringLiteral("*Rk K 0 0 ; cathode resistor not set in Designer (RK<=0)\n");
+    }
+    netlist += QStringLiteral("Rg  G1 0 1Meg\n");
+    netlist += QStringLiteral("XU1 P VS G1 K 0 %1\n\n").arg(subcktName);
+    netlist += QStringLiteral(".op\n.end\n");
+
+    QString baseDir;
+    {
+        QStringList possiblePaths = {
+            QCoreApplication::applicationDirPath() + "/../../../../../models",
+            QCoreApplication::applicationDirPath() + "/../../../../models",
+            QCoreApplication::applicationDirPath() + "/../../../models",
+            QCoreApplication::applicationDirPath() + "/../models",
+            QCoreApplication::applicationDirPath() + "/models",
+            QDir::currentPath() + "/models",
+            QDir::currentPath() + "/../models",
+            QDir::currentPath() + "/../../models",
+            QDir::currentPath() + "/../../../models"
+        };
+
+        for (const QString &p : possiblePaths) {
+            QDir d(p);
+            if (d.exists()) {
+                baseDir = d.absolutePath();
+                break;
+            }
+        }
+
+        if (baseDir.isEmpty()) {
+            baseDir = QDir::cleanPath(QDir::currentPath() + "/models");
+            if (!QDir(baseDir).exists()) {
+                QDir().mkpath(baseDir);
+            }
+        }
+    }
+
+    QString spiceDir = QDir::cleanPath(baseDir + "/spice");
+    QDir spiceQDir(spiceDir);
+    if (!spiceQDir.exists()) {
+        QDir().mkpath(spiceDir);
+    }
+
+    QString safeName = devName;
+    if (safeName.isEmpty()) {
+        safeName = subcktName;
+    }
+    safeName.replace(QRegularExpression("[^A-Za-z0-9._ -]"), "_");
+    if (safeName.isEmpty()) {
+        safeName = QStringLiteral("SE_Output");
+    }
+
+    const QString suggested = spiceQDir.filePath(safeName + "_SEOutput.cir");
+
+    QString outPath = QFileDialog::getSaveFileName(this,
+                                                   tr("Export SE Output to SPICE"),
+                                                   suggested,
+                                                   tr("SPICE Netlist (*.cir *.inc *.sp)"));
+    if (outPath.isEmpty()) {
+        return;
+    }
+
+    QFile outFile(outPath);
+    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Export SE Output to SPICE"),
+                             tr("Could not write to %1").arg(outPath));
+        return;
+    }
+
+    QTextStream ts(&outFile);
+    ts << netlist;
+    outFile.close();
+
+    QMessageBox::information(this, tr("Export SE Output to SPICE"),
+                             tr("Exported SE Output SPICE netlist to %1").arg(outPath));
 }
 
 void ValveWorkbench::startTriodeBFit()
@@ -2851,9 +3080,52 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         }
     }
 
-    // Update plot axes to match the new device's vaMax/iaMax
+    // Update plot axes to match the new device's vaMax/iaMax. For the
+    // Single-Ended Output Designer circuit, give the X-axis enough headroom
+    // for approximately 2× supply swing while never shrinking below the
+    // device's own vaMax.
     double vaMax = device->getVaMax();
     double iaMax = device->getIaMax();
+
+    if (circuitType == SINGLE_ENDED_OUTPUT) {
+        Circuit *seCircuit = circuits.at(circuitType);
+        if (seCircuit) {
+            const double vb = seCircuit->getParameter(SE_VB);
+            if (vb > 0.0 && vaMax > 0.0) {
+                vaMax = std::max(vaMax, 2.0 * vb);
+            }
+        }
+    }
+
+    // For push-pull Designer circuits, apply the same 2×VB headroom rule so
+    // that the combined AC load line and swing helpers have sufficient
+    // horizontal space on first plot, and extend the Y-axis to cover the
+    // theoretical Class B peak current (4000*VB/RAA) rather than stopping at
+    // the measurement/model Ia_max.
+    if (circuitType == PUSH_PULL_OUTPUT || circuitType == ULTRALINEAR_PUSH_PULL) {
+        Circuit *ppCircuit = circuits.at(circuitType);
+        if (ppCircuit && vaMax > 0.0) {
+            double vb  = 0.0;
+            double raa = 0.0;
+            if (circuitType == PUSH_PULL_OUTPUT) {
+                vb  = ppCircuit->getParameter(PP_VB);
+                raa = ppCircuit->getParameter(PP_RAA);
+            } else {
+                vb  = ppCircuit->getParameter(PPUL_VB);
+                raa = ppCircuit->getParameter(PPUL_RAA);
+            }
+            if (vb > 0.0) {
+                vaMax = std::max(vaMax, 2.0 * vb);
+            }
+            if (vb > 0.0 && raa > 0.0) {
+                const double iaClassB_mA = 4000.0 * vb / raa;
+                if (iaClassB_mA > 0.0) {
+                    iaMax = std::max(iaMax, iaClassB_mA);
+                }
+            }
+        }
+    }
+
     double vaInterval = device->interval(vaMax);
     double iaInterval = device->interval(iaMax);
     plot.setAxes(0.0, vaMax, vaInterval, 0.0, iaMax, iaInterval, 0, 0);
@@ -2878,11 +3150,14 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     }
     circuit->updateUI(circuitLabels, circuitValues);
 
-    // Auto-plot device model curves in Designer (no measurements required).
-    // To avoid subtle crashes when switching triode devices in TriodeCC, we
-    // currently restrict this auto-plot path to **pentode** devices only.
-    // Triode model overlays are still available via the Modeller plotting
-    // path and do not need automatic Designer plotting.
+    // Auto-plot device model curves in Designer. When an embedded analyser
+    // Measurement is present (from a tube-style preset JSON), prefer the
+    // measurement-driven Model::plotModel helper so that the fitted model
+    // uses the same grid/screen families as the measurement sweeps. This
+    // keeps the red model curves consistent with the black measurement
+    // curves on the shared Designer axes. When no embedded Measurement is
+    // available, fall back to Device::anodePlot, which plots against the
+    // device's vg1Max/vg2Max ranges.
     if (modelledCurves) {
         if (modelledCurves->scene() == plot.getScene()) {
             plot.remove(modelledCurves);
@@ -2890,12 +3165,39 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         modelledCurves = nullptr;
     }
     if (ui->modelCheck->isChecked() && device) {
-        // Draw the model family (red) using the device's pentode model.
-        // anodePlot() already creates the QGraphicsItemGroup in the scene via
-        // QGraphicsScene::createItemGroup, so we must NOT add it again.
-        modelledCurves = device->anodePlot(&plot);
-        if (modelledCurves) {
-            modelledCurves->setVisible(ui->modelCheck->isChecked());
+        Measurement *embedded = device->getMeasurement();
+        Model *deviceModel = device->getModel();
+
+        // For Designer push-pull circuits, always use the fitted-model
+        // anodePlot so that Vg1 sweeps run from -vg1Max up to 0 V at
+        // consistent steps, even when the embedded measurement only covers
+        // part of that range (e.g. -60 .. -20 V).
+        if (circuitType == PUSH_PULL_OUTPUT || circuitType == ULTRALINEAR_PUSH_PULL) {
+            modelledCurves = device->anodePlot(&plot);
+            if (modelledCurves) {
+                modelledCurves->setVisible(ui->modelCheck->isChecked());
+            }
+        } else {
+            // Existing behaviour for all other circuits: prefer the
+            // measurement-driven Model::plotModel helper when an embedded
+            // pentode Measurement is available so that grid/screen families
+            // exactly match the analyser sweeps.
+            if (embedded && deviceModel && embedded->getDeviceType() == PENTODE &&
+                embedded->getTestType() == ANODE_CHARACTERISTICS) {
+                QGraphicsItemGroup *plotted = deviceModel->plotModel(&plot, embedded, nullptr);
+                if (plotted) {
+                    modelledCurves = plotted;
+                    plot.add(modelledCurves);
+                    modelledCurves->setVisible(ui->modelCheck->isChecked());
+                }
+            } else {
+                // Fallback: draw using the device's internal anodePlot, which
+                // uses vg1Max/vg2Max from the preset JSON.
+                modelledCurves = device->anodePlot(&plot);
+                if (modelledCurves) {
+                    modelledCurves->setVisible(ui->modelCheck->isChecked());
+                }
+            }
         }
     }
 
@@ -3196,11 +3498,140 @@ void ValveWorkbench::updateCircuitParameter(int index)
     // calls the protected virtual update(index), so all derived metrics
     // (including effective headroom and THD in SingleEndedOutput) are
     // recomputed automatically here.
+
+    // For Designer output stages, allow VB changes to expand the X-axis
+    // headroom up to at least 2VB without ever shrinking the existing
+    // range. This keeps the operating point and swing helpers away from
+    // the right-hand edge when the user raises VB.
+    {
+        auto se   = dynamic_cast<SingleEndedOutput*>(circuit);
+        auto seul = dynamic_cast<SingleEndedUlOutput*>(circuit);
+        auto pp   = dynamic_cast<PushPullOutput*>(circuit);
+        auto ppul = dynamic_cast<PushPullUlOutput*>(circuit);
+
+        const bool isSeVB   = (se   && index == SE_VB);
+        const bool isSeUlVB = (seul && index == SEUL_VB);
+        const bool isPpVB   = (pp   && index == PP_VB);
+        const bool isPpUlVB = (ppul && index == PPUL_VB);
+
+        if ((isSeVB || isSeUlVB || isPpVB || isPpUlVB) && currentDevice) {
+            const double vbParam = value;
+            if (vbParam > 0.0) {
+                const double xScale = plot.getXScale();
+                const double yScale = plot.getYScale();
+                const double xStart = plot.getXStart();
+                const double yStart = plot.getYStart();
+                if (xScale > 0.0 && yScale > 0.0) {
+                    const double currentXStop = xStart + static_cast<double>(PLOT_WIDTH) / xScale;
+                    const double currentYStop = yStart + static_cast<double>(PLOT_HEIGHT) / yScale;
+                    const double desiredXStop = 2.0 * vbParam;
+                    if (desiredXStop > currentXStop) {
+                        double vaMaxNew = desiredXStop;
+                        const double deviceVaMax = currentDevice->getVaMax();
+                        if (deviceVaMax > 0.0) {
+                            vaMaxNew = std::max(vaMaxNew, deviceVaMax);
+                        }
+
+                        // Start from the device's own Ia limit, but never
+                        // shrink below the current Y range so VB tweaks
+                        // only ever expand the visible envelope.
+                        double iaMaxNew = currentDevice->getIaMax();
+
+                        // For push-pull circuits, also ensure the Y-axis
+                        // covers the theoretical Class B peak current
+                        // (4000*VB/RAA), mirroring the initial
+                        // selectStdDevice() behaviour.
+                        if (isPpVB || isPpUlVB) {
+                            double raa = 0.0;
+                            if (isPpVB) {
+                                if (auto *pp = dynamic_cast<PushPullOutput*>(circuit)) {
+                                    raa = pp->getParameter(PP_RAA);
+                                }
+                            } else if (isPpUlVB) {
+                                if (auto *ppul = dynamic_cast<PushPullUlOutput*>(circuit)) {
+                                    raa = ppul->getParameter(PPUL_RAA);
+                                }
+                            }
+                            if (raa > 0.0) {
+                                const double iaClassB_mA = 4000.0 * vbParam / raa;
+                                if (iaClassB_mA > 0.0) {
+                                    iaMaxNew = std::max(iaMaxNew, iaClassB_mA);
+                                }
+                            }
+                        }
+
+                        if (currentYStop > 0.0) {
+                            iaMaxNew = std::max(iaMaxNew, currentYStop);
+                        }
+
+                        const double vaInterval = currentDevice->interval(vaMaxNew);
+                        const double iaInterval = currentDevice->interval(iaMaxNew);
+
+                        if (measuredCurves)          measuredCurves = nullptr;
+                        if (measuredCurvesSecondary) measuredCurvesSecondary = nullptr;
+                        if (estimatedCurves)         estimatedCurves = nullptr;
+                        if (modelledCurves)          modelledCurves = nullptr;
+                        if (modelledCurvesSecondary) modelledCurvesSecondary = nullptr;
+
+                        circuit->resetOverlays();
+                        plot.setAxes(0.0, vaMaxNew, vaInterval, 0.0, iaMaxNew, iaInterval, 0, 0);
+                    }
+                }
+            }
+        }
+    }
+
     circuit->setParameter(index, value);
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
-    
+
+    Device *device = currentDevice;
+    if (device) {
+        if (modelledCurves) {
+            if (modelledCurves->scene() == plot.getScene()) {
+                plot.remove(modelledCurves);
+            }
+            modelledCurves = nullptr;
+        }
+        if (ui->modelCheck->isChecked()) {
+            Measurement *embedded = device->getMeasurement();
+            Model *deviceModel = device->getModel();
+            if (embedded && deviceModel && embedded->getDeviceType() == PENTODE &&
+                embedded->getTestType() == ANODE_CHARACTERISTICS) {
+                QGraphicsItemGroup *plotted = deviceModel->plotModel(&plot, embedded, nullptr);
+                if (plotted) {
+                    modelledCurves = plotted;
+                    plot.add(modelledCurves);
+                    modelledCurves->setVisible(ui->modelCheck->isChecked());
+                }
+            } else {
+                modelledCurves = device->anodePlot(&plot);
+                if (modelledCurves) {
+                    modelledCurves->setVisible(ui->modelCheck->isChecked());
+                }
+            }
+        }
+
+        if (measuredCurves) {
+            plot.remove(measuredCurves);
+            measuredCurves = nullptr;
+        }
+        if (measuredCurvesSecondary) {
+            plot.remove(measuredCurvesSecondary);
+            measuredCurvesSecondary = nullptr;
+        }
+        if (ui->measureCheck->isChecked() && device->getMeasurement()) {
+            Measurement *embedded = device->getMeasurement();
+            embedded->setShowScreen(ui->screenCheck->isChecked());
+            measuredCurves = embedded->updatePlotWithoutAxes(&plot);
+            if (measuredCurves) {
+                plot.add(measuredCurves);
+                measuredCurves->setVisible(ui->measureCheck->isChecked());
+            }
+        }
+    }
+
     // Refresh harmonic plots if they're currently displayed
     refreshHarmonicsPlots();
 }
@@ -4314,6 +4745,15 @@ void ValveWorkbench::loadDevices()
                 QFileInfo fi(modelFileName);
                 model->setName(fi.baseName());
             }
+
+            // Wire application preferences into the Device's underlying Model
+            // so that settings like useSecondaryEmission are honoured when
+            // plotting in Designer and when exporting SPICE.
+            if (Model *m = model->getModel()) {
+                m->setPreferences(&preferencesDialog);
+                m->setSecondaryEmission(preferencesDialog.useSecondaryEmission());
+            }
+
             qInfo("Loaded device: %s, type: %d", model->getName().toStdString().c_str(), model->getDeviceType());
             this->devices.append(model);
         }
@@ -6673,6 +7113,10 @@ void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
         se->setSymSwingEnabled(enabled);
         se->plot(&plot);
         se->updateUI(circuitLabels, circuitValues);
+    } else if (auto *pp = dynamic_cast<PushPullOutput*>(c)) {
+        pp->setSymSwingEnabled(enabled);
+        pp->plot(&plot);
+        pp->updateUI(circuitLabels, circuitValues);
     }
 }
 
@@ -6925,6 +7369,12 @@ void ValveWorkbench::exportFittedModelToDevices()
         return;
     }
 
+    // If an analyser measurement is available, we prefer its recorded limits
+    // (iaMax/paMax, sweep ranges) when building the exported device preset so
+    // Designer and Modeller graph limits track the actual measurement rather
+    // than any stale analyser UI values.
+    Measurement *measForExport = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
+
     // Resolve models directory to MATCH loadDevices() search, and use a
     // Windows-style save dialog first so the chosen filename drives the
     // Device name stored in JSON.
@@ -6988,15 +7438,36 @@ void ValveWorkbench::exportFittedModelToDevices()
     QJsonObject root;
     root["name"] = deviceName;
 
-    // Use current analyser limits if available; otherwise sensible defaults.
-    // For pentodes, ensure Designer has enough headroom for SE/PP output
-    // stages by enforcing a minimum Va range.
+    // Start from current analyser UI limits if available; otherwise sensible
+    // defaults, then override Ia/P limits from the recorded measurement (if
+    // present) so exported presets always reflect the actual test envelope.
+    // For pentodes, we still clamp Ia to the hardware 50 mA capability.
     double vaMaxOut = 300.0;
     double iaMaxOut = 5.0;
     double paMaxOut = 1.125;
-    if (std::isfinite(anodeStop) && anodeStop > 0.0) vaMaxOut = anodeStop;
-    if (std::isfinite(iaMax) && iaMax > 0.0) iaMaxOut = iaMax;
-    if (std::isfinite(pMax) && pMax > 0.0) paMaxOut = pMax;
+
+    if (std::isfinite(anodeStop) && anodeStop > 0.0) {
+        vaMaxOut = anodeStop;
+    }
+    if (std::isfinite(iaMax) && iaMax > 0.0) {
+        iaMaxOut = iaMax;
+    }
+    if (std::isfinite(pMax) && pMax > 0.0) {
+        paMaxOut = pMax;
+    }
+
+    // Prefer the measurement's own Ia/P limits when available; these remain
+    // stable even if the analyser UI template is later changed.
+    if (measForExport) {
+        const double measIaMax = measForExport->getIaMax();
+        const double measPMax  = measForExport->getPMax();
+        if (std::isfinite(measIaMax) && measIaMax > 0.0) {
+            iaMaxOut = measIaMax;
+        }
+        if (std::isfinite(measPMax) && measPMax > 0.0) {
+            paMaxOut = measPMax;
+        }
+    }
 
     if (deviceType == PENTODE) {
         // Give pentode Designer circuits enough voltage headroom.
@@ -7097,7 +7568,55 @@ void ValveWorkbench::exportFittedModelToDevices()
         analyserDefaults["limits"] = limitsObj;
     }
 
-    analyserDefaults["testType"]    = testType;
+    // Per-test snapshot for the exported measurement so the analyser tab
+    // can restore the exact sweep ranges and limits used when this data was
+    // captured.
+    if (measForExport) {
+        QJsonObject testsObj;
+        QJsonObject snapshot;
+        const int measType = measForExport->getTestType();
+        snapshot.insert("testType", measType);
+
+        auto makeRangeFromMeas = [&](double (Measurement::*getStart)() const,
+                                     double (Measurement::*getStop)() const,
+                                     double (Measurement::*getStep)() const) {
+            QJsonObject r;
+            r.insert("start", (measForExport->*getStart)());
+            r.insert("step",  (measForExport->*getStep)());
+            r.insert("stop",  (measForExport->*getStop)());
+            return r;
+        };
+
+        snapshot.insert("anode",  makeRangeFromMeas(&Measurement::getAnodeStart,
+                                                     &Measurement::getAnodeStop,
+                                                     &Measurement::getAnodeStep));
+        snapshot.insert("grid",   makeRangeFromMeas(&Measurement::getGridStart,
+                                                     &Measurement::getGridStop,
+                                                     &Measurement::getGridStep));
+        snapshot.insert("screen", makeRangeFromMeas(&Measurement::getScreenStart,
+                                                     &Measurement::getScreenStop,
+                                                     &Measurement::getScreenStep));
+
+        QJsonObject testLimits;
+        testLimits.insert("iaMax", measForExport->getIaMax());
+        testLimits.insert("pMax",  measForExport->getPMax());
+        snapshot.insert("limits", testLimits);
+
+        QString key;
+        switch (measType) {
+        case ANODE_CHARACTERISTICS:    key = QStringLiteral("anode");    break;
+        case TRANSFER_CHARACTERISTICS: key = QStringLiteral("transfer"); break;
+        case SCREEN_CHARACTERISTICS:   key = QStringLiteral("screen");   break;
+        default:                       key = QString::number(measType);   break;
+        }
+
+        testsObj.insert(key, snapshot);
+        analyserDefaults["tests"] = testsObj;
+
+        // Ensure the default testType matches the measurement we attached.
+        analyserDefaults["testType"] = measType;
+    }
+
     analyserDefaults["doubleTriode"] = isDoubleTriode;
 
     root["analyserDefaults"] = analyserDefaults;
@@ -7177,7 +7696,6 @@ void ValveWorkbench::exportFittedModelToDevices()
     //   - triodeModel:     optional triode seed for pentodes
     //   - measurement:     original sweeps
     //   - spice:           SPICE-ready .subckt for external simulators
-    Measurement *measForExport = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
     if (measForExport) {
         QJsonObject measObj;
         measForExport->toJson(measObj);

@@ -112,6 +112,7 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         "on_actionExport_Model_triggered",
         "exportFittedModelToDevices",
         "on_actionExport_to_Spice_triggered",
+        "on_actionExport_SE_Output_to_Spice_triggered",
         "on_mes_mod_select_stateChanged",
         "state",
         "on_pushButton_3_clicked",
@@ -273,14 +274,16 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         QtMocHelpers::SlotData<void()>(71, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_actionExport_to_Spice_triggered'
         QtMocHelpers::SlotData<void()>(72, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_actionExport_SE_Output_to_Spice_triggered'
+        QtMocHelpers::SlotData<void()>(73, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_mes_mod_select_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(73, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 74 },
+        QtMocHelpers::SlotData<void(int)>(74, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 75 },
         }}),
         // Slot 'on_pushButton_3_clicked'
-        QtMocHelpers::SlotData<void()>(75, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_pushButton_4_clicked'
         QtMocHelpers::SlotData<void()>(76, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButton_4_clicked'
+        QtMocHelpers::SlotData<void()>(77, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -366,9 +369,10 @@ void ValveWorkbench::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 59: _t->on_actionExport_Model_triggered(); break;
         case 60: _t->exportFittedModelToDevices(); break;
         case 61: _t->on_actionExport_to_Spice_triggered(); break;
-        case 62: _t->on_mes_mod_select_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 63: _t->on_pushButton_3_clicked(); break;
-        case 64: _t->on_pushButton_4_clicked(); break;
+        case 62: _t->on_actionExport_SE_Output_to_Spice_triggered(); break;
+        case 63: _t->on_mes_mod_select_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 64: _t->on_pushButton_3_clicked(); break;
+        case 65: _t->on_pushButton_4_clicked(); break;
         default: ;
         }
     }
@@ -395,14 +399,14 @@ int ValveWorkbench::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 65)
+        if (_id < 66)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 65;
+        _id -= 66;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 65)
+        if (_id < 66)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 65;
+        _id -= 66;
     }
     return _id;
 }

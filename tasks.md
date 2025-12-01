@@ -3,12 +3,8 @@
 Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Active tasks (end-user focused)
-- [ ] Validate measurement → save → pentode fit → overlay workflow using the restored baseline (no experimental Reefman/bounds changes); use Gardiner as the visual reference for pentode auto-fit.
-- [ ] Calibrate **Simple Manual Pentode** current scaling so that `anodeCurrent` returns mA in the same numeric range as measurement and Gardiner/Reefman for representative tubes (e.g. 6L6). Remove ad-hoc empirical scale factors once a stable mapping is found.
-- [ ] Optional: once Simple Manual Pentode matches the web tool and Gardiner visually for key tubes (e.g. 6L6, EL34), add a small auto-fit layer on top that adjusts only a subset of parameters while keeping the manual feel.
 - [ ] Designer: ensure device selection auto-replots and axes clamp to device limits.
 - [ ] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
-- [ ] Experimental branch: on a separate branch (e.g. `feature/reefman-extractmodel`), work toward aligning `ReefmanPentode` behaviour with ExtractModel_3p0 located at `C:\Users\lizar\Documents\ExtractModel_3p0`, using common parameter sets and sample Ia/Ig2 points as reference.
  - [ ] Integrated SPICE export via Devices:
    - Extend **Export model to Device** so each device JSON optionally includes a SPICE representation of the fitted tube model (triode and pentode) suitable for `.inc`/`.subckt` use.
    - Implement **File → Export to Spice...** so it uses the active Device's SPICE block to export (a) tube model only (`.inc`/`.lib`), and (b) optional Designer circuit wrappers (Triode CC, SE Output, PP, etc.) that reference that model.
@@ -27,7 +23,11 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - [x] 2025-11-30: File → Export to Spice now defaults to a dedicated `models/spice` directory while still using a native Explorer-style save dialog.
 - [x] 2025-11-30: File → Export Model (Export to Device) now defaults into the resolved models directory, uses `.json` by default, and offers a richer Explorer-style save filter (JSON/VWM/All).
 - [x] 2025-11-30: Modeller Export-to-Devices button now prompts with a QFileDialog save menu, defaulting to the models directory with a suggested JSON device name.
- - [x] 2025-11-30: File menu export actions mapped so **Export to Device…** uses the same helper as the Modeller Export-to-Devices button, and **Export Model to Spice…** exports a tube-only SPICE subcircuit for the selected Designer device.
+- [x] 2025-11-30: File menu export actions mapped so **Export to Device…** uses the same helper as the Modeller Export-to-Devices button, and **Export Model to Spice…** exports a tube-only SPICE subcircuit for the selected Designer device.
+- [x] 2025-11-30: Added SE Output Designer circuit SPICE export (File → Export SE Output to SPICE…), writing a self-contained netlist with the fitted tube subcircuit and a resistive-load SE stage schematic.
+- [x] 2025-11-30: Designer pentode model overlays now use the embedded Measurement’s grid/screen families (via `Model::plotModel`) when available, so the red fitted curves align with the black measurement sweeps on SE Output and other Designer plots; fall back to `Device::anodePlot` when no measurement is present.
+- [x] 2025-11-30: SE Output Designer X-axis now uses `max(device.vaMax, 2×VB)` on first plot, so the AC/DC load lines and Pa_max hyperbola have enough horizontal headroom for ~2× supply swing.
+- [x] 2025-11-30: Extended Pa_max (plate-dissipation) hyperbola overlays to additional Designer circuits (Pentode Common Cathode, Single-Ended UL Output, Push-Pull Output, Push-Pull UL Output) and aligned output-stage X-axis behaviour with the SE Output reference (`axisVaMax = max(device.vaMax, 2×VB)` on first plot).
 
 ## Change log (highlights)
 - 2025-11-14: Further experimental Reefman/pentode plotting changes caused regressions; all such changes were reverted via VCS and baseline behaviour restored, with Gardiner as reference.
@@ -48,8 +48,8 @@ AudioSmith — Darrin Smith, Nelson BC, Canada
 
 Reference: `refrence code/pentodeClassA1Designer-main`.
 
-- **Pd limit curve overlay**
-  - Add `Ia_max(Va) = Pmax / Va` plate-dissipation limit line to Designer plots.
+- **Pd limit curve overlay (status)**
+  - 2025-11-30: SE Output, Pentode Common Cathode, Single-Ended UL Output, Push-Pull Output, and Push-Pull UL Output now draw a Pa_max hyperbola (`Ia = Pa_max * 1000 / Va`) over the Designer plots. Any new Designer circuits should follow the same pattern.
 
 - **Main and alternate load lines**
   - Draw the main AC load line for the current tube, supply, bias, and load.

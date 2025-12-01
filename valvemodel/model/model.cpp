@@ -936,10 +936,33 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     qInfo("PENTODE DIAG: vg1=%.3f, vg2=%.3f, Va[first/mid/last]=[%.3f, %.3f, %.3f], Ia[first/mid/last]=[%.3f, %.3f, %.3f], Ia[min/max]=[%.3f, %.3f]",
                           vg1, vg2, vaFirst, vaMid, vaLast, iaFirst, iaMid, iaLast, iaMin, iaMax);
 
-                    // Add a label inside the curve (similar to triode plotting): place it around
-                    // mid/an upper portion of the Va range, clamp into the visible Ia axis, then
-                    // remove anode segments directly under the label so the text sits "inside" the
-                    // red family without being obscured.
+                    double axisVaMax = plot->sceneToData(QPointF(PLOT_WIDTH, 0.0)).x();
+                    if (std::isfinite(axisVaMax) && axisVaMax > endVa + 1e-6) {
+                        const int extraSegs = 40;
+                        double vaPrevExt = endVa;
+                        double iaPrevExt = endIa;
+                        double dv = (axisVaMax - endVa) / extraSegs;
+                        double vg2Ext = sampleVg2(sl);
+                        for (int e = 0; e < extraSegs; ++e) {
+                            double vaExt = vaPrevExt + dv;
+                            double iaExt = anodeCurrent(vaExt, vg1, vg2Ext) * iaScale;
+                            if (!std::isfinite(iaPrevExt) || !std::isfinite(iaExt)) {
+                                vaPrevExt = vaExt;
+                                iaPrevExt = iaExt;
+                                continue;
+                            }
+                            double y1 = std::min(yMaxAxis, std::max(0.0, iaPrevExt));
+                            double y2 = std::min(yMaxAxis, std::max(0.0, iaExt));
+                            QGraphicsItem *seg = plot->createSegment(vaPrevExt, y1, vaExt, y2, anodePen);
+                            if (seg != nullptr) {
+                                anodeSegments.append(seg);
+                                segmentCount++;
+                            }
+                            vaPrevExt = vaExt;
+                            iaPrevExt = iaExt;
+                        }
+                    }
+
                     if (!anodeSegments.isEmpty()) {
                         const double vaLabel = vaFirst + 0.7 * (vaLast - vaFirst);
                         double vg2Op = sampleVg2(sm);
@@ -948,7 +971,6 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                             double iaClamped = std::min(yMaxAxis, std::max(0.0, iaLabel));
                             QGraphicsItem *label = plot->createLabel(vaLabel, iaClamped, vg1, anodePen.color());
                             if (label) {
-                                // Reposition label so its center lies on the curve point.
                                 QRectF r = label->boundingRect();
                                 QPointF p = label->pos();
                                 const double halfW = r.width() * 0.5;
@@ -956,9 +978,6 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                                 label->setPos(p.x() - 5.0 - halfW,
                                               p.y() + 10.0 - halfH);
 
-                                // Use the label's scene rect to decide which segments to add.
-                                // Skip/add segments based on whether their midpoint lies inside
-                                // the label rectangle, mirroring the triode plotting behaviour.
                                 QRectF labelSceneRect = label->sceneBoundingRect();
                                 for (QGraphicsItem *seg : anodeSegments) {
                                     QRectF segRect = seg->sceneBoundingRect();
@@ -973,19 +992,16 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
                                 group->addToGroup(label);
                             } else {
-                                // If label creation failed, fall back to adding all segments.
                                 for (QGraphicsItem *seg : anodeSegments) {
                                     group->addToGroup(seg);
                                 }
                             }
                         } else {
-                            // Invalid label point; just add all segments.
                             for (QGraphicsItem *seg : anodeSegments) {
                                 group->addToGroup(seg);
                             }
                         }
                     } else {
-                        // No label; just add all segments.
                         for (QGraphicsItem *seg : anodeSegments) {
                             group->addToGroup(seg);
                         }

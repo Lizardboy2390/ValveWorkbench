@@ -684,12 +684,6 @@ void SingleEndedUlOutput::plot(Plot *plot)
 
     const double vaMax = device1->getVaMax();
     const double iaMax = device1->getIaMax();
-    const double xMajor = std::max(5.0, vaMax / 10.0);
-    const double yMajor = std::max(0.5, iaMax / 10.0);
-
-    if (plot->getScene()->items().isEmpty()) {
-        plot->setAxes(0.0, vaMax, xMajor, 0.0, iaMax, yMajor);
-    }
 
     const double vb  = parameter[SEUL_VB]->getValue();
     const double ia  = parameter[SEUL_IA]->getValue();
@@ -697,6 +691,18 @@ void SingleEndedUlOutput::plot(Plot *plot)
 
     if (vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
         return;
+    }
+
+    double axisVaMax = vaMax;
+    if (vb > 0.0 && vaMax > 0.0) {
+        axisVaMax = std::max(vaMax, 2.0 * vb);
+    }
+
+    const double xMajor = std::max(5.0, axisVaMax / 10.0);
+    const double yMajor = std::max(0.5, iaMax / 10.0);
+
+    if (plot->getScene()->items().isEmpty()) {
+        plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
     }
 
     // Recreate AC load line for plotting
@@ -724,6 +730,33 @@ void SingleEndedUlOutput::plot(Plot *plot)
                 acSignalLine->addToGroup(seg);
             }
         }
+
+        const double paMaxW = device1->getPaMax();
+        if (paMaxW > 0.0) {
+            QPen paPen(QColor::fromRgb(255, 105, 180));
+            paPen.setStyle(Qt::DashLine);
+            paPen.setWidth(2);
+
+            const double xStop = vaMax;
+            const double yStop = iaMax;
+            const double xEnter = std::max(1e-6, std::min(xStop,
+                                      (yStop > 0.0 ? (1000.0 * paMaxW / yStop) : xStop)));
+
+            const int segs = 60;
+            double prevX = xEnter;
+            double prevY = std::min(yStop, 1000.0 * paMaxW / prevX);
+            for (int i = 1; i <= segs; ++i) {
+                double t = static_cast<double>(i) / segs;
+                double x = xEnter + (xStop - xEnter) * t;
+                double y = (x > 0.0) ? std::min(yStop, 1000.0 * paMaxW / x) : yStop;
+                if (auto *seg = plot->createSegment(prevX, prevY, x, y, paPen)) {
+                    acSignalLine->addToGroup(seg);
+                }
+                prevX = x;
+                prevY = y;
+            }
+        }
+
         if (!acSignalLine->childItems().isEmpty()) {
             plot->getScene()->addItem(acSignalLine);
         } else {

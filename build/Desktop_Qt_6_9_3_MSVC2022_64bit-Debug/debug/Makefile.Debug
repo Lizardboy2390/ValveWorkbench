@@ -2364,9 +2364,9 @@ debug\moc_valveworkbench.cpp: ..\..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\model\modelfactory.h \
 		..\..\..\valvemodel\model\simplemanualpentode.h \
-		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\circuit.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		..\..\..\valvemodel\model\template.h \
@@ -3000,6 +3000,7 @@ debug\moc_circuit.cpp: ..\..\..\valvemodel\circuit\circuit.h \
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		debug\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
@@ -3621,6 +3622,7 @@ debug\moc_triodeaccathodefollower.cpp: ..\..\..\valvemodel\circuit\triodeaccatho
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
@@ -4244,6 +4246,7 @@ debug\moc_triodecommoncathode.cpp: ..\..\..\valvemodel\circuit\triodecommoncatho
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
@@ -4867,6 +4870,7 @@ debug\moc_pentodecommoncathode.cpp: ..\..\..\valvemodel\circuit\pentodecommoncat
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
@@ -5490,6 +5494,7 @@ debug\moc_singleendedoutput.cpp: ..\..\..\valvemodel\circuit\singleendedoutput.h
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		debug\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
@@ -6111,6 +6116,7 @@ debug\moc_singleendeduloutput.cpp: ..\..\..\valvemodel\circuit\singleendeduloutp
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		debug\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
@@ -6732,6 +6738,7 @@ debug\moc_pushpulloutput.cpp: ..\..\..\valvemodel\circuit\pushpulloutput.h \
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		debug\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
@@ -7353,6 +7360,7 @@ debug\moc_pushpulluloutput.cpp: ..\..\..\valvemodel\circuit\pushpulluloutput.h \
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		debug\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
@@ -7974,6 +7982,7 @@ debug\moc_triodedccathodefollower.cpp: ..\..\..\valvemodel\circuit\triodedccatho
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
@@ -9336,9 +9345,9 @@ debug\main.obj: ..\..\..\main.cpp ..\..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\model\modelfactory.h \
 		..\..\..\valvemodel\model\simplemanualpentode.h \
-		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\circuit.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		..\..\..\valvemodel\model\template.h \
@@ -12080,9 +12089,9 @@ debug\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.h 
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\model\modelfactory.h \
 		..\..\..\valvemodel\model\simplemanualpentode.h \
-		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\circuit.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		..\..\..\valvemodel\model\template.h \
@@ -12767,6 +12776,7 @@ debug\circuit.obj: ..\..\..\valvemodel\circuit\circuit.cpp ..\..\..\valvemodel\c
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QApplication \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qapplication.h
@@ -13387,6 +13397,7 @@ debug\triodeaccathodefollower.obj: ..\..\..\valvemodel\circuit\triodeaccathodefo
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
@@ -14007,6 +14018,7 @@ debug\triodecommoncathode.obj: ..\..\..\valvemodel\circuit\triodecommoncathode.c
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
@@ -14627,6 +14639,7 @@ debug\pentodecommoncathode.obj: ..\..\..\valvemodel\circuit\pentodecommoncathode
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
@@ -15247,6 +15260,7 @@ debug\singleendedoutput.obj: ..\..\..\valvemodel\circuit\singleendedoutput.cpp .
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
@@ -15868,6 +15882,7 @@ debug\singleendeduloutput.obj: ..\..\..\valvemodel\circuit\singleendeduloutput.c
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
@@ -16488,6 +16503,7 @@ debug\pushpulloutput.obj: ..\..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\.
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
@@ -17108,6 +17124,7 @@ debug\pushpulluloutput.obj: ..\..\..\valvemodel\circuit\pushpulluloutput.cpp ..\
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
@@ -17728,6 +17745,7 @@ debug\triodedccathodefollower.obj: ..\..\..\valvemodel\circuit\triodedccathodefo
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
@@ -20542,6 +20560,7 @@ debug\device.obj: ..\..\..\valvemodel\model\device.cpp ..\..\..\valvemodel\model
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\data\sweep.h \
 		..\..\..\valvemodel\data\sample.h
 
@@ -27703,6 +27722,7 @@ debug\moc_device.obj: ..\..\..\valvemodel\model\moc_device.cpp ..\..\..\valvemod
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
+		..\..\..\valvemodel\model\extractmodelpentode.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmochelpers.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtmocconstants.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\q20algorithm.h \

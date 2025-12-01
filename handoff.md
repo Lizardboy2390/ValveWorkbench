@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-11-28 (analyser S/M protocol, transfer and anode verification behaviour, documentation/tasks rules)
+Last updated: 2025-11-30 (Open Items maintenance; marked verification tasks complete)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -84,8 +84,8 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 `Analyser::nextSample()`, and `Analyser::checkResponse()`.
 
 ## Open Items (For Successor)
-- [ ] Verify valveworkbench.cpp file integrity after manual revert
-- [ ] Test compilation to ensure no remaining corruption
+- [x] Verify valveworkbench.cpp file integrity after manual revert — 2025-11-30: Verified manually after revert; content matches expected baseline.
+- [x] Test compilation to ensure no remaining corruption — 2025-11-30: Full project rebuild in Qt Creator; no errors.
 - [ ] Complete time-domain harmonic heatmap using proper methodology
 - [ ] Document any changes properly in handoff.md
 - [ ] Follow ALL Global Rules without exception

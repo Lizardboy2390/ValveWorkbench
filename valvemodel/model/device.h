@@ -22,6 +22,7 @@
 #include "cohenhelietriode.h"
 #include "reefmanpentode.h"
 #include "gardinerpentode.h"
+#include "extractmodelpentode.h"
 #include "../data/measurement.h"
 
 enum ePlotType {

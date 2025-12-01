@@ -35,6 +35,7 @@ public:
     // Gain mode for AC calculations: 1 = cathode bypassed (default, higher gain),
     // 0 = unbypassed (lower gain due to local feedback).
     void setGainMode(int mode);
+    void setSymSwingEnabled(bool enabled);
 
 protected:
     void update(int index) override;
@@ -73,4 +74,5 @@ private:
     double effectiveHeadroomVpk = 0.0;
     double inputSensitivityVpp = 0.0;
     int gainMode = 1;
+    bool showSymSwing = true;
 };

@@ -504,6 +504,40 @@ void PentodeCommonCathode::plot(Plot *plot)
         }
     }
 
+    const double paMaxW = device1->getPaMax();
+    if (paMaxW > 0.0) {
+        acSignalLine = new QGraphicsItemGroup();
+        QPen paPen(QColor::fromRgb(255, 105, 180));
+        paPen.setStyle(Qt::DashLine);
+        paPen.setWidth(2);
+
+        const double xStop = vaMax;
+        const double yStop = iaMax;
+        const double xEnter = std::max(1e-6, std::min(xStop,
+                                  (yStop > 0.0 ? (1000.0 * paMaxW / yStop) : xStop)));
+
+        const int segs = 60;
+        double prevX = xEnter;
+        double prevY = std::min(yStop, 1000.0 * paMaxW / prevX);
+        for (int i = 1; i <= segs; ++i) {
+            double t = static_cast<double>(i) / segs;
+            double x = xEnter + (xStop - xEnter) * t;
+            double y = (x > 0.0) ? std::min(yStop, 1000.0 * paMaxW / x) : yStop;
+            if (auto *seg = plot->createSegment(prevX, prevY, x, y, paPen)) {
+                acSignalLine->addToGroup(seg);
+            }
+            prevX = x;
+            prevY = y;
+        }
+
+        if (!acSignalLine->childItems().isEmpty()) {
+            plot->getScene()->addItem(acSignalLine);
+        } else {
+            delete acSignalLine;
+            acSignalLine = nullptr;
+        }
+    }
+
     // Operating point marker (red cross)
     opMarker = new QGraphicsItemGroup();
     {

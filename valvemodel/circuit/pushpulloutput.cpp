@@ -34,6 +34,15 @@ void PushPullOutput::setGainMode(int mode)
     update(PP_HEADROOM);
 }
 
+void PushPullOutput::setSymSwingEnabled(bool enabled)
+{
+    showSymSwing = enabled;
+    // Changing which swing helper we treat as the default when Headroom==0
+    // affects the effectiveHeadroomVpk used for PHEAD/THD/sensitivity, so
+    // recompute using PP_HEADROOM as the driver.
+    update(PP_HEADROOM);
+}
+
 int PushPullOutput::getDeviceType(int index)
 {
     Q_UNUSED(index);
@@ -65,6 +74,14 @@ void PushPullOutput::updateUI(QLabel *labels[], QLineEdit *values[])
                 if (overrideActive) {
                     // Manual override of helper swings: bright blue.
                     style = "color: rgb(0,0,255);";
+                } else if (effectiveHeadroomVpk > 0.0) {
+                    // Headroom derived from helpers: lighter blue for symmetric
+                    // mode, brown for max-swing mode.
+                    if (showSymSwing) {
+                        style = "color: rgb(100,149,237);";
+                    } else {
+                        style = "color: rgb(165,42,42);";
+                    }
                 }
                 labels[i]->setStyleSheet(style);
                 values[i]->setStyleSheet(style);
@@ -113,11 +130,19 @@ void PushPullOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         values[i]->setVisible(true);
         values[i]->setReadOnly(true);
 
-        // Colour distortion-related outputs when a manual headroom override is
-        // active, mirroring the SE behaviour for the manual case.
+        // Colour distortion-related outputs based on the active headroom source.
         if (i == PP_PHEAD || i == PP_HD2 || i == PP_HD3 || i == PP_HD4 || i == PP_THD) {
-            if (overrideActive) {
-                values[i]->setStyleSheet("color: rgb(0,0,255);");
+            if (effectiveHeadroomVpk > 0.0) {
+                if (overrideActive) {
+                    // Manual override: bright blue.
+                    values[i]->setStyleSheet("color: rgb(0,0,255);");
+                } else if (showSymSwing) {
+                    // Symmetric-mode metrics: lighter blue.
+                    values[i]->setStyleSheet("color: rgb(100,149,237);");
+                } else {
+                    // Max-swing metrics: brown.
+                    values[i]->setStyleSheet("color: rgb(165,42,42);");
+                }
             } else {
                 values[i]->setStyleSheet("");
             }
@@ -138,9 +163,15 @@ void PushPullOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         values[sensIndex]->setVisible(true);
         values[sensIndex]->setReadOnly(true);
 
-        // Match sensitivity colour to manual headroom override when active.
-        if (overrideActive && inputSensitivityVpp > 0.0) {
-            values[sensIndex]->setStyleSheet("color: rgb(0,0,255);");
+        // Match sensitivity colour to the headroom source, mirroring SE Output.
+        if (inputSensitivityVpp > 0.0 && effectiveHeadroomVpk > 0.0) {
+            if (overrideActive) {
+                values[sensIndex]->setStyleSheet("color: rgb(0,0,255);");
+            } else if (showSymSwing) {
+                values[sensIndex]->setStyleSheet("color: rgb(100,149,237);");
+            } else {
+                values[sensIndex]->setStyleSheet("color: rgb(165,42,42);");
+            }
         } else {
             values[sensIndex]->setStyleSheet("");
         }
@@ -307,8 +338,111 @@ void PushPullOutput::update(int index)
     double hd4 = 0.0;
     double thd = 0.0;
 
-    if (headroom > 0.0 && raa > 0.0) {
-        effectiveHeadroomVpk = headroom;
+    // Determine effective headroom (Vpk at anode) driving PHEAD/THD/sensitivity.
+    // - If manual Headroom>0, use that directly.
+    // - If Headroom==0 and swing helpers are available, use Vpp_sym/2 when
+    //   showSymSwing is true, otherwise use Vpp_max/2.
+    double symVpp = 0.0;
+    double maxVpp = 0.0;
+
+    if (raa > 0.0 && device1) {
+        const double slope = -2000.0 / raa; // mA/V, same as AC load line
+        const double ia0   = ia;
+        const double va0   = vb;
+
+        auto ia_line_mA = [&](double va_val) {
+            return ia0 + slope * (va_val - va0);
+        };
+
+        // Left limit: intersection of AC load line with Vg1 = 0 curve.
+        double vaLeft = -1.0;
+        {
+            auto f_left = [&](double va_val) {
+                double ia_curve_mA = device1->anodeCurrent(va_val, 0.0, vs) * 1000.0;
+                double ia_line = ia_line_mA(va_val);
+                return ia_curve_mA - ia_line;
+            };
+
+            const int samples = 400;
+            double lastVa = std::clamp(va0, 0.0, vaMax);
+            double lastF  = f_left(lastVa);
+            for (int i = 1; i <= samples; ++i) {
+                double va_val = va0 * (1.0 - static_cast<double>(i) / samples);
+                va_val = std::max(va_val, 0.0);
+                double curF = f_left(va_val);
+                if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                    double denom = (curF - lastF);
+                    double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                    t = std::clamp(t, 0.0, 1.0);
+                    vaLeft = lastVa + t * (va_val - lastVa);
+                    break;
+                }
+                lastVa = va_val;
+                lastF  = curF;
+            }
+        }
+
+        // Right limits along the AC load line: Ia = 0 crossing and optional Pa_max.
+        double vaRight = -1.0;
+        if (vaLeft >= 0.0) {
+            // Ia = 0 crossing of the AC line.
+            double vaZero = va0 - ia0 / slope;
+            vaZero = std::clamp(vaZero, 0.0, vaMax);
+
+            double vaPa = vaMax + 1.0;
+            const double paMaxW = device1->getPaMax();
+            if (paMaxW > 0.0) {
+                auto g_pa = [&](double va_val) {
+                    if (va_val <= 0.0) return 1e9;
+                    double ia_line = ia_line_mA(va_val);
+                    double ia_pa_mA = 1000.0 * paMaxW / va_val;
+                    return ia_line - ia_pa_mA;
+                };
+                const int samples = 400;
+                double lastVa = std::max(va0, 1e-3);
+                double lastF  = g_pa(lastVa);
+                for (int i = 1; i <= samples; ++i) {
+                    double va_val = va0 + (vaMax - va0) * (static_cast<double>(i) / samples);
+                    double curF = g_pa(va_val);
+                    if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                        double denom = (curF - lastF);
+                        double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                        t = std::clamp(t, 0.0, 1.0);
+                        vaPa = lastVa + t * (va_val - lastVa);
+                        break;
+                    }
+                    lastVa = va_val;
+                    lastF  = curF;
+                }
+            }
+
+            vaRight = std::min(vaZero, vaPa);
+            vaRight = std::clamp(vaRight, 0.0, vaMax);
+        }
+
+        if (vaLeft >= 0.0 && vaRight > va0 && vaLeft < va0) {
+            maxVpp = vaRight - vaLeft;
+
+            const double vpk_sym = std::min(va0 - vaLeft, vaRight - va0);
+            if (vpk_sym > 0.0) {
+                symVpp = 2.0 * vpk_sym;
+            }
+        }
+    }
+
+    double effective = 0.0;
+    if (headroom > 0.0) {
+        effective = headroom;
+    } else {
+        if (showSymSwing && symVpp > 0.0) {
+            effective = symVpp / 2.0;
+        } else if (maxVpp > 0.0) {
+            effective = maxVpp / 2.0;
+        }
+    }
+    effectiveHeadroomVpk = effective;
+
+    if (effectiveHeadroomVpk > 0.0 && raa > 0.0) {
         // For push-pull, each valve effectively sees a fraction of RAA, so
         // scale headroom power by ~2× compared to a simple SE helper.
         phead_W = 2.0 * (effectiveHeadroomVpk * effectiveHeadroomVpk) / raa;
@@ -732,8 +866,6 @@ void PushPullOutput::plot(Plot *plot)
 
     const double vaMax = device1->getVaMax();
     double iaMax = device1->getIaMax();
-    const double xMajor = std::max(5.0, vaMax / 10.0);
-    double yMajor = std::max(0.5, iaMax / 10.0);
 
     const double vb  = parameter[PP_VB]->getValue();
     const double vs  = parameter[PP_VS]->getValue();
@@ -742,6 +874,18 @@ void PushPullOutput::plot(Plot *plot)
 
     if (vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
         return;
+    }
+
+    double axisVaMax = vaMax;
+    if (vb > 0.0 && vaMax > 0.0) {
+        axisVaMax = std::max(vaMax, 2.0 * vb);
+    }
+
+    const double xMajor = std::max(5.0, axisVaMax / 10.0);
+    const double yMajor = std::max(0.5, iaMax / 10.0);
+
+    if (plot->getScene()->items().isEmpty()) {
+        plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
     }
 
     // Recreate AC load line and its class A / class B components for plotting
@@ -828,6 +972,61 @@ void PushPullOutput::plot(Plot *plot)
                 acSignalLine->addToGroup(seg);
             }
         }
+
+        const double paMaxW = device1->getPaMax();
+        if (paMaxW > 0.0) {
+            QPen paPen(QColor::fromRgb(255, 105, 180));
+            paPen.setStyle(Qt::DashLine);
+            paPen.setWidth(2);
+
+            // Use the current Plot axes so the Pa_max curve remains visible
+            // even when Designer extends the Y-range beyond the device's
+            // iaMax for Class-B viewing.
+            const double xScale = plot->getXScale();
+            const double yScale = plot->getYScale();
+            if (xScale > 0.0 && yScale > 0.0) {
+                const double xStart = plot->getXStart();
+                const double yStart = plot->getYStart();
+                const double xStop  = xStart + static_cast<double>(PLOT_WIDTH)  / xScale;
+                const double yStop  = yStart + static_cast<double>(PLOT_HEIGHT) / yScale;
+
+                // Pa_max hyperbola: Ia = 1000 * Pa_max / Va (mA). Enter the
+                // visible box where the curve first drops below the top Y
+                // limit.
+                const double xMaxCurve = std::max(1e-6, xStop);
+                const double yTop      = yStop;
+                const double xEnter    = std::max(1e-6,
+                                                  std::min(xMaxCurve,
+                                                           (yTop > 0.0
+                                                            ? (1000.0 * paMaxW / yTop)
+                                                            : xMaxCurve)));
+
+                const int segs = 60;
+                double prevX = xEnter;
+                double prevY = (prevX > xStart)
+                               ? std::min(yTop, 1000.0 * paMaxW / prevX)
+                               : yTop;
+                for (int i = 1; i <= segs; ++i) {
+                    double t = static_cast<double>(i) / segs;
+                    double x = xEnter + (xMaxCurve - xEnter) * t;
+                    if (x < xStart) {
+                        continue;
+                    }
+                    double y = (x > 0.0) ? std::min(yTop, 1000.0 * paMaxW / x) : yTop;
+                    if (y < yStart) {
+                        // Once we leave the visible box at the bottom, stop
+                        // drawing further segments.
+                        break;
+                    }
+                    if (auto *seg = plot->createSegment(prevX, prevY, x, y, paPen)) {
+                        acSignalLine->addToGroup(seg);
+                    }
+                    prevX = x;
+                    prevY = y;
+                }
+            }
+        }
+
         if (!acSignalLine->childItems().isEmpty()) {
             plot->getScene()->addItem(acSignalLine);
         } else {
@@ -939,54 +1138,83 @@ void PushPullOutput::plot(Plot *plot)
             const double Vpp_max = vaRight - vaLeft;
             const double midMax  = 0.5 * (vaLeft + vaRight);
 
-            QGraphicsItemGroup *maxSwingGroup = new QGraphicsItemGroup();
-            QPen maxPen(QColor::fromRgb(165, 42, 42)); // brown
-            maxPen.setWidth(2);
+            if (!showSymSwing) {
+                QGraphicsItemGroup *maxSwingGroup = new QGraphicsItemGroup();
+                QPen maxPen(QColor::fromRgb(165, 42, 42)); // brown
+                maxPen.setWidth(2);
 
-            // Vertical ticks up to the AC line.
-            const double iaLeft  = ia_line_mA(vaLeft);
-            const double iaRight = ia_line_mA(vaRight);
-            if (auto *lt = plot->createSegment(vaLeft, 0.0, vaLeft, iaLeft, maxPen)) {
-                maxSwingGroup->addToGroup(lt);
-            }
-            if (auto *rt = plot->createSegment(vaRight, 0.0, vaRight, iaRight, maxPen)) {
-                maxSwingGroup->addToGroup(rt);
+                const double labelRow = -yMajor * 2.0;
+
+                // Vertical ticks at the swing limits down to Ia = 0.
+                const double iaLeft  = ia_line_mA(vaLeft);
+                const double iaRight = ia_line_mA(vaRight);
+                if (auto *lt = plot->createSegment(vaLeft, 0.0, vaLeft, iaLeft, maxPen)) {
+                    maxSwingGroup->addToGroup(lt);
+                }
+                if (auto *rt = plot->createSegment(vaRight, 0.0, vaRight, iaRight, maxPen)) {
+                    maxSwingGroup->addToGroup(rt);
+                }
+
+                // Labels at tick positions, placed on a negative Ia row so they
+                // appear below the graph.
+                if (auto *lLbl = plot->createLabel(vaLeft, labelRow, vaLeft, maxPen.color())) {
+                    QPointF p = lLbl->pos();
+                    double w = lLbl->boundingRect().width();
+                    lLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(lLbl);
+                }
+                if (auto *rLbl = plot->createLabel(vaRight, labelRow, vaRight, maxPen.color())) {
+                    QPointF p = rLbl->pos();
+                    double w = rLbl->boundingRect().width();
+                    rLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(rLbl);
+                }
+
+                // Centered Vpp_max label.
+                if (auto *lbl = plot->createLabel(midMax, labelRow, Vpp_max, maxPen.color())) {
+                    QPointF p = lbl->pos();
+                    double w = lbl->boundingRect().width();
+                    lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(lbl);
+                }
+
+                // Attach helpers to the AC load line group so they move with it.
+                if (!acSignalLine) {
+                    acSignalLine = new QGraphicsItemGroup();
+                    plot->getScene()->addItem(acSignalLine);
+                }
+                acSignalLine->addToGroup(maxSwingGroup);
             }
 
-            // Labels at tick positions, placed on a negative Ia row so they
-            // appear visually below the graph.
-            const double labelRow = -yMajor * 1.8;
-            if (auto *lLbl = plot->createLabel(vaLeft, labelRow, vaLeft, maxPen.color())) {
-                QPointF p = lLbl->pos();
-                double w = lLbl->boundingRect().width();
-                lLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
-                maxSwingGroup->addToGroup(lLbl);
-            }
-            if (auto *rLbl = plot->createLabel(vaRight, labelRow, vaRight, maxPen.color())) {
-                QPointF p = rLbl->pos();
-                double w = rLbl->boundingRect().width();
-                rLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
-                maxSwingGroup->addToGroup(rLbl);
-            }
+            // Mark the maximum-output-power point used for PP_POUT. This is the
+            // intersection of the AC load line with the Vg1=0 curve, which is
+            // represented here by vaLeft and the corresponding Ia on the line.
+            {
+                const double iaPmax = ia_line_mA(vaLeft);
+                if (std::isfinite(iaPmax) && iaPmax > 0.0) {
+                    QGraphicsItemGroup *pmaxGroup = new QGraphicsItemGroup();
+                    QPen pPen(QColor::fromRgb(255, 140, 0)); // orange
+                    pPen.setWidth(2);
 
-            // Centered Vpp_max label.
-            if (auto *lbl = plot->createLabel(midMax, labelRow, Vpp_max, maxPen.color())) {
-                QPointF p = lbl->pos();
-                double w = lbl->boundingRect().width();
-                lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
-                maxSwingGroup->addToGroup(lbl);
-            }
+                    const double d = 5.0;
+                    if (auto *h = plot->createSegment(vaLeft - d, iaPmax, vaLeft + d, iaPmax, pPen)) {
+                        pmaxGroup->addToGroup(h);
+                    }
+                    if (auto *v = plot->createSegment(vaLeft, iaPmax - d, vaLeft, iaPmax + d, pPen)) {
+                        pmaxGroup->addToGroup(v);
+                    }
 
-            // Attach helpers to the AC load line group so they move with it.
-            if (!acSignalLine) {
-                acSignalLine = new QGraphicsItemGroup();
-                plot->getScene()->addItem(acSignalLine);
+                    if (!acSignalLine) {
+                        acSignalLine = new QGraphicsItemGroup();
+                        plot->getScene()->addItem(acSignalLine);
+                    }
+                    acSignalLine->addToGroup(pmaxGroup);
+                }
             }
-            acSignalLine->addToGroup(maxSwingGroup);
 
             // Symmetric swing (blue): around the operating point.
             const double vpk_sym = std::min(va0 - vaLeft, vaRight - va0);
-            if (vpk_sym > 0.0) {
+            if (showSymSwing && vpk_sym > 0.0) {
                 const double leftX  = va0 - vpk_sym;
                 const double rightX = va0 + vpk_sym;
 
@@ -1026,6 +1254,10 @@ void PushPullOutput::plot(Plot *plot)
                     symSwingGroup->addToGroup(lbl);
                 }
 
+                if (!acSignalLine) {
+                    acSignalLine = new QGraphicsItemGroup();
+                    plot->getScene()->addItem(acSignalLine);
+                }
                 acSignalLine->addToGroup(symSwingGroup);
             }
         }
