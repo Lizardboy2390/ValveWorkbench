@@ -513,6 +513,12 @@ With this fix, using the same triode-connected 6L6-GC data:
   - Y-axis with **Autoscale Y enabled** (Designer tab checkbox): for SE/SE-UL, `iaMax` is taken from the device's Ia_max; for PP/UL-PP, `iaMax` is the larger of Ia_max and the theoretical Class-B peak current `Ia_classB ≈ 4000·VB/RAA`. VB and RAA edits recompute this headroom on each change.
   - Y-axis with **Autoscale Y disabled**: the current Y-top derived from the plot is treated as locked; subsequent device selects and VB/RAA edits preserve this fixed vertical range while still allowing X to auto-extend as VB increases.
   - Device select in Designer always refreshes the axes using the current circuit parameters; toggling the **Autoscale Y** checkbox from off→on re-applies the current Designer device via `selectStdDevice` so the new autoscale rules take immediate effect.
+- Designer **Inductive Load** toggle (SE, SE-UL, PP, UL-PP) now closely follows the Pentode Class A1 semantics for transformer vs resistive loads:
+  - With **Inductive Load checked**, the primary is treated as having negligible DC drop. The AC load line pivots around a bias point at approximately `(Va ≈ VB, Ia = bias)` and the numeric helpers (Pout, PHEAD, HD2/3/4, THD, and input sensitivity) are computed from this transformer-style load.
+  - With **Inductive Load unchecked**, the load is interpreted as purely resistive:
+    - For SE/SE-UL, the DC bias point is taken as `Va_bias = VB − IA·RA` and the AC line uses the classic resistive line from `(0, VB/RA)` to `(VB, 0)`.
+    - For PP/UL-PP, each valve is treated as seeing `RAA/2` at DC, so `Va_bias ≈ VB − IA·(RAA/2)` per valve and the AC line follows the corresponding `RAA/2` resistive load.
+  - In all four output-stage plots, the AC load line, red DC bias marker, and swing/headroom helpers update immediately when the checkbox is toggled so that the geometry and numeric panel move together.
 - “Show fitted model” toggles visibility, but replot path should be updated to use `Model::plotModel` (pending).
 
 ### Status Note

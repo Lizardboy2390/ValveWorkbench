@@ -99,6 +99,35 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Toggling **Autoscale Y from off → on** immediately re-applies the current Designer device selection, causing `selectStdDevice` to recompute the axes according to the rules above.
   - Toggling **on → off** simply freezes the current Y range; subsequent VB/RAA edits will not alter Y until you turn Autoscale Y back on.
 
+#### Inductive vs resistive load (output stages)
+
+- **Inductive Load checkbox (Designer tab)**
+  - Located directly under **Autoscale Y** in the Designer control column.
+  - Only shown for the four output-stage circuits:
+    - Single-Ended Output
+    - Single-Ended UL Output
+    - Push-Pull Output
+    - Push-Pull UL Output
+
+- **When Inductive Load is checked (transformer / inductive mode)**
+  - The output transformer primary is treated as having negligible DC drop:
+    - The DC anode bias sits at approximately `Va ≈ VB`.
+    - The AC load line pivots around `(Va = VB, Ia = bias)` with slope `−1/RA` (for SE/SE-UL) or the corresponding combined class-A/B slope for push-pull stages.
+  - Numeric helpers (Pout, **Power at headroom**, HD2/3/4, THD, and input sensitivity) are computed from this inductive load geometry, matching the Pentode Class A1 designer’s “inductive” interpretation.
+
+- **When Inductive Load is unchecked (purely resistive mode)**
+  - The load is interpreted as a simple resistor at DC and AC:
+    - For **SE / SE-UL**, the DC bias point is taken as `Va_bias = VB − IA·RA`, and the AC load line is the classic resistive line from `(0, VB/RA)` to `(VB, 0)`.
+    - For **PP / UL-PP**, each valve is treated as seeing `RAA/2` at DC, so `Va_bias ≈ VB − IA·(RAA/2)` per valve and the AC line follows the corresponding `RAA/2` resistive load.
+  - The Designer numeric panel (Pout, PHEAD, HD2/3/4, THD, and input sensitivity) is recomputed using this resistive geometry, so values will shift when you flip the checkbox.
+
+- **Visual feedback**
+  - In all four output stages, toggling **Inductive Load** immediately updates:
+    - The AC load line (yellow for SE, green for UL/PP stages).
+    - The red DC operating-point marker (moves between `Va ≈ VB` and the resistive `Va_bias`).
+    - Max-swing and symmetric-swing helpers where present.
+  - This keeps the plotted geometry and numeric readouts in sync with the selected load interpretation.
+
 ### Small-signal & harmonic controls (Modeller / Designer)
 
 - **Modeller μ/gm/ra (mes/mod toggle)**
