@@ -92,8 +92,8 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 
 ## Global Rules (Authoritative Summary)
 - **Code Quality**
-  - Code should be exhaustively and accurately commented. When you touch a file, review existing comments, remove outdated or misleading ones, and add new comments so intent, assumptions, and edge cases are clear.
-  - Comment public methods, complex algorithms, and non-obvious logic.
+  - Code comments must be extensive, accurate, and kept strictly up to date. When you touch a file, you must review existing comments, remove or fix anything stale or misleading, and add new comments so that intent, assumptions, units, ranges, and edge cases are clear.
+  - Comment all public methods, complex algorithms, hardware interactions, and any non-obvious logic; whenever behaviour changes, update the relevant comments in the same change.
   - Functions ≤ 50 lines where practical.
   - Descriptive names (e.g., `anodeCurrent`, `gridVoltage`).
   - Replace magic numbers with named constants; validate parameters; log errors.

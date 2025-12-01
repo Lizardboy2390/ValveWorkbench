@@ -437,20 +437,23 @@ void Analyser::startTest()
             sendCommand("M1");
             sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
             sendCommand("M2");
-        } else if (isDoubleTriode) { // First and second anode swept with same values, Second grid stepped, Main grid 0
+        } else if (isDoubleTriode) { 
             result->setAnodeStart(anodeStart);
-
-            sendCommand(buildSetCommand("S2 ", 0)); // Set main grid to 0V
-            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
 
             int initialSecondaryGrid = convertTargetVoltage(GRID, secondGridStart);
             qInfo("Command: S6 %d (initial secondary grid)", initialSecondaryGrid);
+
+            // Set BOTH grids to the same initial code, then bias both anodes
+            sendCommand(buildSetCommand("S2 ", initialSecondaryGrid));
+            sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, anodeStart)));
             sendCommand(buildSetCommand("S6 ", initialSecondaryGrid));
             sendCommand(buildSetCommand("S7 ", convertTargetVoltage(ANODE, secondAnodeStart)));
         }
         if (isDoubleTriode && stepCommandPrefix == "S6 ") {
-            sendCommand("S2 0");
-            sendCommand(buildSetCommand("S6 ", stepParameter.at(0)));
+            int initialGridCode = stepParameter.at(0);
+            // First grid family: drive S2 and S6 with the same step code
+            sendCommand(buildSetCommand("S2 ", initialGridCode));
+            sendCommand(buildSetCommand("S6 ", initialGridCode));
         } else {
             // Log initial S2 setting at start of first sweep (Anode Characteristics)
             if (stepCommandPrefix == "S2 ") {
@@ -747,12 +750,20 @@ void Analyser::nextSample() {
                 isVerifyingHardware = true;
                 verificationAttempts = 0;
 
-                // Ensure anode and (where applicable) screen are at their start voltages
-                if (hasVaTarget) {
-                    sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, vaTarget)));
-                }
-                if (hasVg2Target) {
-                    sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, vg2Target)));
+                if (testType == ANODE_CHARACTERISTICS && isDoubleTriode) {
+                    if (hasVaTarget) {
+                        int vaCode = convertTargetVoltage(ANODE, vaTarget);
+                        sendCommand("M1");
+                        sendCommand(buildSetCommand("S3 ", vaCode));
+                        sendCommand(buildSetCommand("S7 ", vaCode));
+                    }
+                } else {
+                    if (hasVaTarget) {
+                        sendCommand(buildSetCommand("S3 ", convertTargetVoltage(ANODE, vaTarget)));
+                    }
+                    if (hasVg2Target) {
+                        sendCommand(buildSetCommand("S7 ", convertTargetVoltage(SCREEN, vg2Target)));
+                    }
                 }
 
                 // Take a verification measurement at the configured start bias for
