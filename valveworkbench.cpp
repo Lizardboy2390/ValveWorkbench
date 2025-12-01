@@ -3168,11 +3168,14 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         Measurement *embedded = device->getMeasurement();
         Model *deviceModel = device->getModel();
 
-        // For Designer push-pull circuits, always use the fitted-model
-        // anodePlot so that Vg1 sweeps run from -vg1Max up to 0 V at
-        // consistent steps, even when the embedded measurement only covers
-        // part of that range (e.g. -60 .. -20 V).
-        if (circuitType == PUSH_PULL_OUTPUT || circuitType == ULTRALINEAR_PUSH_PULL) {
+        // For Designer power-output circuits (SE, SE-UL, PP, UL-PP), always
+        // use the fitted-model anodePlot so grid families and labels behave
+        // consistently across all of them, independent of the embedded
+        // measurement's grid coverage.
+        if (circuitType == SINGLE_ENDED_OUTPUT ||
+            circuitType == ULTRALINEAR_SINGLE_ENDED ||
+            circuitType == PUSH_PULL_OUTPUT ||
+            circuitType == ULTRALINEAR_PUSH_PULL) {
             modelledCurves = device->anodePlot(&plot);
             if (modelledCurves) {
                 modelledCurves->setVisible(ui->modelCheck->isChecked());

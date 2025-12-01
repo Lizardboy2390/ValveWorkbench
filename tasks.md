@@ -27,7 +27,12 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - [x] 2025-11-30: Added SE Output Designer circuit SPICE export (File → Export SE Output to SPICE…), writing a self-contained netlist with the fitted tube subcircuit and a resistive-load SE stage schematic.
 - [x] 2025-11-30: Designer pentode model overlays now use the embedded Measurement’s grid/screen families (via `Model::plotModel`) when available, so the red fitted curves align with the black measurement sweeps on SE Output and other Designer plots; fall back to `Device::anodePlot` when no measurement is present.
 - [x] 2025-11-30: SE Output Designer X-axis now uses `max(device.vaMax, 2×VB)` on first plot, so the AC/DC load lines and Pa_max hyperbola have enough horizontal headroom for ~2× supply swing.
-- [x] 2025-11-30: Extended Pa_max (plate-dissipation) hyperbola overlays to additional Designer circuits (Pentode Common Cathode, Single-Ended UL Output, Push-Pull Output, Push-Pull UL Output) and aligned output-stage X-axis behaviour with the SE Output reference (`axisVaMax = max(device.vaMax, 2×VB)` on first plot).
+- [x] 2025-11-30: Extended Pa_max (plate-dissipation) hyperbola overlays to additional Designer circuits (Pentode Common Cathode, Single-Ended UL Output, Push-Pull Output, and Push-Pull UL Output) and aligned output-stage X-axis behaviour with the SE Output reference (`axisVaMax = max(device.vaMax, 2×VB)` on first plot).
+- [x] 2025-11-30: Designer output-stage axes and model overlays updated for SE, SE-UL, PP, and UL-PP:
+  - X-axis for all four circuits now auto-expands to at least `2×VB` on device select and VB edits, without shrinking on lower VB.
+  - Y-axis for PP and UL-PP now auto-expands to cover the theoretical Class-B peak current (`Ia_classB ≈ 4000·VB/RAA`) while never shrinking below the device/plot range.
+  - Fitted-model anode grids (red) for these circuits are plotted from `-vg1Max` up to `0 V` at ~2 V steps for pentodes, extend to the visible X-axis edge, and carry Modeller-style Vg labels placed ~70% along the visible line with a small gap cut out under each label.
+  - Push-Pull Output plots include an orange max-power marker at the AC load line / `Vg1=0` intersection and an axes-aware Pa_max hyperbola that remains visible under extended Designer axes.
 
 ## Change log (highlights)
 - 2025-11-14: Further experimental Reefman/pentode plotting changes caused regressions; all such changes were reverted via VCS and baseline behaviour restored, with Gardiner as reference.
@@ -66,7 +71,7 @@ Reference: `refrence code/pentodeClassA1Designer-main`.
 
 - **Axis scaling controls**
   - Autoscale/fixed Y toggle.
-  - Smarter automatic X-max tied to supply voltage.
+  - Smarter automatic X-max tied to supply voltage. **Status:** Output-stage circuits (SE, SE-UL, PP, UL-PP) now auto-extend X to `max(device.vaMax, 2×VB)` and, for PP/UL-PP, Y to at least the Class-B current (`4000·VB/RAA`), while never shrinking when VB is reduced.
 
 - **Interactive swing/power measurement**
   - Click–drag on the plot to measure `ΔV`, `ΔI`, and approximate Class A power over that swing.
