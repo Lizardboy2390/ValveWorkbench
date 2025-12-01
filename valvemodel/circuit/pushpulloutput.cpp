@@ -43,6 +43,16 @@ void PushPullOutput::setSymSwingEnabled(bool enabled)
     update(PP_HEADROOM);
 }
 
+void PushPullOutput::setInductiveLoad(bool enabled)
+{
+    inductiveLoad = enabled;
+    // Changing the load interpretation (inductive vs resistive) affects the
+    // effective load-line geometry used for headroom, power, and THD
+    // calculations. Recompute using PP_HEADROOM as the driver so all derived
+    // outputs refresh consistently.
+    update(PP_HEADROOM);
+}
+
 int PushPullOutput::getDeviceType(int index)
 {
     Q_UNUSED(index);
@@ -262,11 +272,26 @@ void PushPullOutput::update(int index)
 
     double pout_W = 0.0;
     if (anodeCurve0.size() >= 2) {
-        // Use an analytic AC load line passing through the bias point (vb, ia)
-        // with the same gradient used in plot(): m = -2000 / RAA.
+        // Use an analytic AC load line to estimate maximum output power.
+        // In inductive mode, keep the existing VTADIY-style line pivoting
+        // around (Vb, Ia). In resistive mode, use the classic DC load line
+        // for a single valve seeing RAA/2, i.e. from (0, Vb/(RAA/2)) to (Vb, 0).
         const double gradient = -2000.0 / raa; // mA/V
-        const QPointF aStart(0.0, ia - gradient * vb);
-        const QPointF aEnd(vaMax, ia + gradient * (vaMax - vb));
+
+        QPointF aStart(0.0, 0.0);
+        QPointF aEnd(vaMax, 0.0);
+        if (inductiveLoad) {
+            aStart = QPointF(0.0, ia - gradient * vb);
+            aEnd   = QPointF(vaMax, ia + gradient * (vaMax - vb));
+        } else {
+            const double rPerValve = raa / 2.0;
+            double ia0_mA = 0.0;
+            if (rPerValve > 0.0) {
+                ia0_mA = (vb * 1000.0) / rPerValve; // 2*Vb/RAA in mA
+            }
+            aStart = QPointF(0.0, ia0_mA);
+            aEnd   = QPointF(vb, 0.0);
+        }
 
         QPointF best(-1.0, -1.0);
         for (int i = 0; i < anodeCurve0.size() - 1; ++i) {
@@ -348,7 +373,22 @@ void PushPullOutput::update(int index)
     if (raa > 0.0 && device1) {
         const double slope = -2000.0 / raa; // mA/V, same as AC load line
         const double ia0   = ia;
-        const double va0   = vb;
+        double va0   = vb;
+
+        if (!inductiveLoad) {
+            // For a resistive load, each valve effectively sees RAA/2 at DC,
+            // so bias lies at approximately Va_bias = Vb - Ia * (RAA/2).
+            const double ia_A     = ia / 1000.0;
+            const double rPerValve = raa / 2.0;
+            double vaBias = vb;
+            if (rPerValve > 0.0 && ia_A > 0.0) {
+                vaBias = vb - ia_A * rPerValve;
+                if (!std::isfinite(vaBias)) {
+                    vaBias = vb;
+                }
+            }
+            va0 = std::clamp(vaBias, 0.0, vaMax);
+        }
 
         auto ia_line_mA = [&](double va_val) {
             return ia0 + slope * (va_val - va0);
@@ -888,9 +928,31 @@ void PushPullOutput::plot(Plot *plot)
         plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
     }
 
-    // Recreate AC load line and its class A / class B components for plotting
+    // Determine an effective DC anode voltage per valve when treating the
+    // load as resistive. In inductive mode we keep the original assumption
+    // that the primary has negligible DC drop, so the operating point sits
+    // at Va vb.
+    const double ia_A = ia / 1000.0;
+    double vaBias = vb;
+    if (!inductiveLoad) {
+        const double rPerValve = raa / 2.0;
+        if (rPerValve > 0.0 && ia_A > 0.0) {
+            vaBias = vb - ia_A * rPerValve;
+            if (!std::isfinite(vaBias)) {
+                vaBias = vb;
+            }
+        }
+        vaBias = std::clamp(vaBias, 0.0, axisVaMax);
+    }
+
+    // Recreate AC load line and its class A / class B components for plotting.
+    // In inductive mode, use the original VTADIY-style geometry pivoting
+    // around Va=Vb. In resistive mode, pivot the class-A component around the
+    // DC bias VaVb - Ia*(RAA/2) so the helpers and operating point follow
+    // the chosen load interpretation.
     const double gradient = -2000.0 / raa;
-    const double iaMaxA   = ia - gradient * vb;
+    const double vaCentre = inductiveLoad ? vb : vaBias;
+    const double iaMaxA   = ia - gradient * vaCentre;
     const double vaMaxA   = -iaMaxA / gradient;
 
     QVector<QPointF> acLine;
@@ -1035,15 +1097,16 @@ void PushPullOutput::plot(Plot *plot)
         }
     }
 
-    // Mark the DC operating point at (Vb, Ia)
+    // Mark the DC operating point on the load line
     opMarker = new QGraphicsItemGroup();
     {
         QPen pen;
         pen.setColor(QColor::fromRgb(255, 0, 0));
         pen.setWidth(2);
         const double d = 5.0;
-        if (auto *h = plot->createSegment(vb - d, ia, vb + d, ia, pen)) opMarker->addToGroup(h);
-        if (auto *v = plot->createSegment(vb, ia - d, vb, ia + d, pen)) opMarker->addToGroup(v);
+        const double vaOp = inductiveLoad ? vb : vaBias;
+        if (auto *h = plot->createSegment(vaOp - d, ia, vaOp + d, ia, pen)) opMarker->addToGroup(h);
+        if (auto *v = plot->createSegment(vaOp, ia - d, vaOp, ia + d, pen)) opMarker->addToGroup(v);
 
         if (!opMarker->childItems().isEmpty()) {
             plot->getScene()->addItem(opMarker);
@@ -1059,7 +1122,7 @@ void PushPullOutput::plot(Plot *plot)
     {
         const double slope = gradient; // mA/V, same as AC load line
         const double ia0   = ia;
-        const double va0   = vb;
+        const double va0   = inductiveLoad ? vb : vaBias;
 
         auto ia_line_mA = [&](double va) {
             return ia0 + slope * (va - va0);

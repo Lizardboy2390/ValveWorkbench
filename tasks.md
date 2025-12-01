@@ -3,13 +3,13 @@
 Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Active tasks (end-user focused)
-- [ ] Designer: ensure device selection auto-replots and axes clamp to device limits.
 - [ ] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
  - [ ] Integrated SPICE export via Devices:
    - Extend **Export model to Device** so each device JSON optionally includes a SPICE representation of the fitted tube model (triode and pentode) suitable for `.inc`/`.subckt` use.
    - Implement **File → Export to Spice...** so it uses the active Device's SPICE block to export (a) tube model only (`.inc`/`.lib`), and (b) optional Designer circuit wrappers (Triode CC, SE Output, PP, etc.) that reference that model.
 
 ## Recently completed
+- [x] 2025-11-30: Designer device selection now auto-replots using `selectStdDevice` and `updateCircuitParameter` so that output-stage axes clamp to device limits and supply/load headroom: X uses `max(currentXStop, max(device.vaMax, 2×VB))` for SE/SE-UL/PP/UL-PP, Y uses `device.iaMax` or `max(device.iaMax, 4000·VB/RAA)` depending on circuit and Autoscale Y mode.
 - [x] Restored analyser and pentode modeller to baseline behaviour after experimental kg1/curvature changes.
 - [x] Added backend **SimpleManualPentode** model type, wired it into ModelFactory / Options, and updated it to use a web-style `epk` anode-current formula.
 - [x] Implemented **Simple Manual Pentode** Modeller popup UI (sliders for `mu, kp, kg1, kg2, alpha, beta, gamma, a`), seeded from `Estimate::estimatePentode`, and wired plotting so that the saved instance is used when reselecting the model in the project tree.

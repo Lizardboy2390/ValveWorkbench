@@ -146,6 +146,7 @@ private slots:
     void on_symSwingCheck_stateChanged(int arg1);
     void on_inputSensitivityCheck_stateChanged(int arg1);
     void on_useBypassedGainCheck_stateChanged(int arg1);
+    void on_inductiveLoadCheck_stateChanged(int arg1);
 
     void on_properties_itemChanged(QTableWidgetItem *item);
 

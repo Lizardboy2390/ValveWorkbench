@@ -1139,6 +1139,43 @@ void ValveWorkbench::cleanupTriodeBResources()
     }
 }
 
+void ValveWorkbench::on_inductiveLoadCheck_stateChanged(int arg1)
+{
+    const bool inductive = (arg1 != 0);
+
+    if (!ui || !ui->circuitSelection) {
+        return;
+    }
+
+    int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size()) {
+        return;
+    }
+
+    Circuit *c = circuits.at(currentCircuitType);
+    if (!c) {
+        return;
+    }
+
+    if (auto *se = dynamic_cast<SingleEndedOutput*>(c)) {
+        se->setInductiveLoad(inductive);
+        se->plot(&plot);
+        se->updateUI(circuitLabels, circuitValues);
+    } else if (auto *seul = dynamic_cast<SingleEndedUlOutput*>(c)) {
+        seul->setInductiveLoad(inductive);
+        seul->plot(&plot);
+        seul->updateUI(circuitLabels, circuitValues);
+    } else if (auto *pp = dynamic_cast<PushPullOutput*>(c)) {
+        pp->setInductiveLoad(inductive);
+        pp->plot(&plot);
+        pp->updateUI(circuitLabels, circuitValues);
+    } else if (auto *ppul = dynamic_cast<PushPullUlOutput*>(c)) {
+        ppul->setInductiveLoad(inductive);
+        ppul->plot(&plot);
+        ppul->updateUI(circuitLabels, circuitValues);
+    }
+}
+
 void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
 {
     const bool show = (arg1 != 0);
@@ -3395,7 +3432,9 @@ void ValveWorkbench::selectCircuit(int circuitType)
     if (ui->screenCheck) ui->screenCheck->setVisible(wantsPentodeScreen);
 
     // Show the Designer "Inductive Load" toggle only for output-stage
-    // circuits where an inductive vs resistive load model makes sense.
+    // circuits where an inductive vs resistive load model makes sense, and
+    // propagate its current state into SE/PP circuits so that switching
+    // circuits keeps the load interpretation in sync with the UI.
     bool wantsInductiveToggle =
         (circuitType == SINGLE_ENDED_OUTPUT ||
          circuitType == ULTRALINEAR_SINGLE_ENDED ||
@@ -3403,6 +3442,18 @@ void ValveWorkbench::selectCircuit(int circuitType)
          circuitType == ULTRALINEAR_PUSH_PULL);
     if (ui->inductiveLoadCheck) {
         ui->inductiveLoadCheck->setVisible(wantsInductiveToggle);
+        if (wantsInductiveToggle) {
+            const bool inductive = ui->inductiveLoadCheck->isChecked();
+            if (auto *se = dynamic_cast<SingleEndedOutput*>(circuit)) {
+                se->setInductiveLoad(inductive);
+            } else if (auto *seul = dynamic_cast<SingleEndedUlOutput*>(circuit)) {
+                seul->setInductiveLoad(inductive);
+            } else if (auto *pp = dynamic_cast<PushPullOutput*>(circuit)) {
+                pp->setInductiveLoad(inductive);
+            } else if (auto *ppul = dynamic_cast<PushPullUlOutput*>(circuit)) {
+                ppul->setInductiveLoad(inductive);
+            }
+        }
     }
 }
 

@@ -36,6 +36,7 @@ public:
     // 0 = unbypassed (lower gain due to local feedback).
     void setGainMode(int mode);
     void setSymSwingEnabled(bool enabled);
+    void setInductiveLoad(bool enabled);
 
     // Debug helper: scan time-domain THD vs headroom into clipping and log
     // results to the application output. Intended for manual use only.
@@ -122,4 +123,5 @@ private:
     bool showSymSwing = true;
     double effectiveHeadroomVpk = 0.0;
     int gainMode = 1;
+    bool inductiveLoad = true;
 };

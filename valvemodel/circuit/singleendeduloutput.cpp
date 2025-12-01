@@ -48,6 +48,16 @@ void SingleEndedUlOutput::setGainMode(int mode)
     update(SEUL_HEADROOM);
 }
 
+void SingleEndedUlOutput::setInductiveLoad(bool enabled)
+{
+    inductiveLoad = enabled;
+    // Changing the load interpretation (inductive vs resistive) affects the
+    // effective load-line geometry used for headroom, power, and THD
+    // calculations. Recompute using SEUL_HEADROOM as the driver so all
+    // derived outputs refresh consistently.
+    update(SEUL_HEADROOM);
+}
+
 void SingleEndedUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
 {
     // Inputs: first 5 fields (including manual Headroom)
@@ -471,16 +481,30 @@ void SingleEndedUlOutput::update(int index)
     classBLine.push_back(QPointF(0.0, iaMaxB));
     classBLine.push_back(QPointF(vb, 0.0));
 
-    // AC load line around the chosen bias current ia
+    // AC load line used for power estimation. In inductive mode, treat the
+    // primary as having negligible DC drop so the AC line pivots around the
+    // supply/bias point (Vb, Ia). In resistive mode, use the classic DC
+    // load line from (0, Vb/Ra) to (Vb, 0).
     const double gradient = -1000.0 / raa;          // mA/V
-    const double iaMaxA   = ia - gradient * vb;     // Ia at Va = 0
-    const double vaMaxA   = -iaMaxA / gradient;     // Va intercept
-
     QVector<QPointF> acLine;
-    for (int i = 0; i < 101; ++i) {
-        const double va = static_cast<double>(i) * vaMaxA / 100.0;
-        const double ia2 = iaMaxA - va * 1000.0 / raa;
-        acLine.push_back(QPointF(va, ia2));
+    if (inductiveLoad) {
+        const double iaMaxA = ia - gradient * vb;     // Ia at Va = 0
+        const double vaMaxA = -iaMaxA / gradient;     // Va intercept
+
+        for (int i = 0; i < 101; ++i) {
+            const double va  = static_cast<double>(i) * vaMaxA / 100.0;
+            const double ia2 = iaMaxA - va * 1000.0 / raa;
+            acLine.push_back(QPointF(va, ia2));
+        }
+    } else {
+        const double vaStop = vb;                     // DC line crosses Ia=0 at Va = Vb
+        const double ia0_mA = (vb * 1000.0) / raa;    // Ia at Va=0 on DC line
+
+        for (int i = 0; i < 101; ++i) {
+            const double va  = static_cast<double>(i) * vaStop / 100.0;
+            const double ia2 = ia0_mA + gradient * va;  // gradient is negative
+            acLine.push_back(QPointF(va, ia2));
+        }
     }
 
     // Anode characteristics at Vg1=0, Vg2 from UL tap
@@ -705,16 +729,42 @@ void SingleEndedUlOutput::plot(Plot *plot)
         plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
     }
 
-    // Recreate AC load line for plotting
-    const double gradient = -1000.0 / raa;
-    const double iaMaxA   = ia - gradient * vb;
-    const double vaMaxA   = -iaMaxA / gradient;
+    // Determine an effective DC anode voltage when treating the load as
+    // resistive. In inductive mode we keep the assumption that the primary
+    // has negligible DC drop so the operating point sits at Va≈Vb.
+    const double ia_A = ia / 1000.0;
+    double vaBias = vb;
+    if (!inductiveLoad && raa > 0.0 && ia_A > 0.0) {
+        vaBias = vb - ia_A * raa;
+        if (!std::isfinite(vaBias)) {
+            vaBias = vb;
+        }
+        vaBias = std::clamp(vaBias, 0.0, axisVaMax);
+    }
 
+    // Recreate AC load line for plotting. In inductive mode, pivot around Va=Vb
+    // with slope -1/Ra. In resistive mode, draw the classical DC load line
+    // from (0, Vb/Ra) to (Vb, 0).
+    const double gradient = -1000.0 / raa;
     QVector<QPointF> acLine;
-    for (int i = 0; i < 101; ++i) {
-        const double va = static_cast<double>(i) * vaMaxA / 100.0;
-        const double ia2 = iaMaxA - va * 1000.0 / raa;
-        acLine.push_back(QPointF(va, ia2));
+    if (inductiveLoad) {
+        const double iaMaxA = ia - gradient * vb;
+        const double vaMaxA = -iaMaxA / gradient;
+
+        for (int i = 0; i < 101; ++i) {
+            const double va = static_cast<double>(i) * vaMaxA / 100.0;
+            const double ia2 = iaMaxA - va * 1000.0 / raa;
+            acLine.push_back(QPointF(va, ia2));
+        }
+    } else {
+        const double ia0_mA = (vb * 1000.0) / raa;
+        const double vaStop = std::min(vb, axisVaMax);
+
+        for (int i = 0; i < 101; ++i) {
+            const double va = static_cast<double>(i) * vaStop / 100.0;
+            const double ia2 = ia0_mA + gradient * va;
+            acLine.push_back(QPointF(va, ia2));
+        }
     }
 
     // Draw AC load line (green)
@@ -765,15 +815,16 @@ void SingleEndedUlOutput::plot(Plot *plot)
         }
     }
 
-    // Mark the DC operating point at (Vb, Ia)
+    // Mark the DC operating point on the load line
     opMarker = new QGraphicsItemGroup();
     {
         QPen pen;
         pen.setColor(QColor::fromRgb(255, 0, 0));
         pen.setWidth(2);
         const double d = 5.0;
-        if (auto *h = plot->createSegment(vb - d, ia, vb + d, ia, pen)) opMarker->addToGroup(h);
-        if (auto *v = plot->createSegment(vb, ia - d, vb, ia + d, pen)) opMarker->addToGroup(v);
+        const double vaOp = inductiveLoad ? vb : vaBias;
+        if (auto *h = plot->createSegment(vaOp - d, ia, vaOp + d, ia, pen)) opMarker->addToGroup(h);
+        if (auto *v = plot->createSegment(vaOp, ia - d, vaOp, ia + d, pen)) opMarker->addToGroup(v);
 
         if (!opMarker->childItems().isEmpty()) {
             plot->getScene()->addItem(opMarker);

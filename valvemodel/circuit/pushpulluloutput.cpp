@@ -47,6 +47,16 @@ void PushPullUlOutput::setGainMode(int mode)
     update(PPUL_HEADROOM);
 }
 
+void PushPullUlOutput::setInductiveLoad(bool enabled)
+{
+    inductiveLoad = enabled;
+    // Changing the load interpretation (inductive vs resistive) affects the
+    // effective load-line geometry used for power/headroom calculations.
+    // Recompute using PPUL_HEADROOM as the driver so all derived outputs
+    // refresh consistently.
+    update(PPUL_HEADROOM);
+}
+
 void PushPullUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
 {
     // Inputs: first 5 fields (including manual Headroom)
@@ -210,20 +220,39 @@ void PushPullUlOutput::update(int index)
     classBLine.push_back(QPointF(0.0, iaMaxB));
     classBLine.push_back(QPointF(vb, 0.0));
 
-    // AC load line combining class B and A regions
+    // AC load line combining class B and A regions. In inductive mode, keep
+    // the original VTADIY-style smoothed combination pivoting around Va=Vb.
+    // In resistive mode, approximate a classic per-valve resistive load line
+    // for RAA/2, from (0, 2*Vb/RAA) to (Vb, 0).
     const double gradient = -2000.0 / raa;          // mA/V
-    const double iaMaxA   = ia - gradient * vb;     // Ia at Va = 0 for class A segment
-    const double vaMaxA   = -iaMaxA / gradient;     // Va intercept
-
     QVector<QPointF> acLine;
-    for (int i = 0; i < 101; ++i) {
-        const double va = static_cast<double>(i) * vaMaxA / 100.0;
-        const double ia1 = iaMaxB - va * 4000.0 / raa;
-        const double ia2 = iaMaxA - va * 2000.0 / raa;
-        const double k = 5.0;
-        const double r = std::exp(-ia1 / k) + std::exp(-ia2 / k);
-        const double ia_max = -k * std::log(r);
-        acLine.push_back(QPointF(va, ia_max));
+    if (inductiveLoad) {
+        const double iaMaxA   = ia - gradient * vb;     // Ia at Va = 0 for class A segment
+        const double vaMaxA   = -iaMaxA / gradient;     // Va intercept
+
+        for (int i = 0; i < 101; ++i) {
+            const double va = static_cast<double>(i) * vaMaxA / 100.0;
+            const double ia1 = iaMaxB - va * 4000.0 / raa;
+            const double ia2 = iaMaxA - va * 2000.0 / raa;
+            const double k = 5.0;
+            const double r = std::exp(-ia1 / k) + std::exp(-ia2 / k);
+            const double ia_max = -k * std::log(r);
+            acLine.push_back(QPointF(va, ia_max));
+        }
+    } else {
+        // Resistive per-valve load line: R = RAA/2, so Ia(0) = 2*Vb/RAA.
+        const double rPerValve = raa / 2.0;
+        double ia0_mA = 0.0;
+        if (rPerValve > 0.0) {
+            ia0_mA = (vb * 1000.0) / rPerValve; // 2*Vb/RAA in mA
+        }
+        const double vaStop = vb;
+
+        for (int i = 0; i < 101; ++i) {
+            const double va = static_cast<double>(i) * vaStop / 100.0;
+            const double ia2 = ia0_mA + gradient * va;
+            acLine.push_back(QPointF(va, ia2));
+        }
     }
 
     // Anode characteristics at Vg1=0, Vg2 from UL tap
@@ -342,21 +371,54 @@ void PushPullUlOutput::plot(Plot *plot)
         plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
     }
 
-    // Recreate AC load line for plotting
-    const double gradient = -2000.0 / raa;
-    const double iaMaxA   = ia - gradient * vb;
-    const double vaMaxA   = -iaMaxA / gradient;
+    // Determine an effective DC anode voltage per valve when treating the
+    // load as resistive. In inductive mode we keep the assumption that the
+    // primary has negligible DC drop so the operating point sits at Va≈Vb.
+    const double ia_A = ia / 1000.0;
+    double vaBias = vb;
+    if (!inductiveLoad) {
+        const double rPerValve = raa / 2.0;
+        if (rPerValve > 0.0 && ia_A > 0.0) {
+            vaBias = vb - ia_A * rPerValve;
+            if (!std::isfinite(vaBias)) {
+                vaBias = vb;
+            }
+        }
+        vaBias = std::clamp(vaBias, 0.0, axisVaMax);
+    }
 
+    // Recreate AC load line for plotting. In inductive mode, reuse the
+    // smoothed class A/B combination. In resistive mode, approximate a
+    // per-valve resistive line RAA/2.
+    const double gradient = -2000.0 / raa;
     QVector<QPointF> acLine;
     const double iaMaxB = 4000.0 * vb / raa;
-    for (int i = 0; i < 101; ++i) {
-        const double va = static_cast<double>(i) * vaMaxA / 100.0;
-        const double ia1 = iaMaxB - va * 4000.0 / raa;
-        const double ia2 = iaMaxA - va * 2000.0 / raa;
-        const double k = 5.0;
-        const double r = std::exp(-ia1 / k) + std::exp(-ia2 / k);
-        const double ia_max = -k * std::log(r);
-        acLine.push_back(QPointF(va, ia_max));
+    if (inductiveLoad) {
+        const double iaMaxA   = ia - gradient * vb;
+        const double vaMaxA   = -iaMaxA / gradient;
+
+        for (int i = 0; i < 101; ++i) {
+            const double va = static_cast<double>(i) * vaMaxA / 100.0;
+            const double ia1 = iaMaxB - va * 4000.0 / raa;
+            const double ia2 = iaMaxA - va * 2000.0 / raa;
+            const double k = 5.0;
+            const double r = std::exp(-ia1 / k) + std::exp(-ia2 / k);
+            const double ia_max = -k * std::log(r);
+            acLine.push_back(QPointF(va, ia_max));
+        }
+    } else {
+        const double rPerValve = raa / 2.0;
+        double ia0_mA = 0.0;
+        if (rPerValve > 0.0) {
+            ia0_mA = (vb * 1000.0) / rPerValve; // 2*Vb/RAA in mA
+        }
+        const double vaStop = vb;
+
+        for (int i = 0; i < 101; ++i) {
+            const double va = static_cast<double>(i) * vaStop / 100.0;
+            const double ia2 = ia0_mA + gradient * va;
+            acLine.push_back(QPointF(va, ia2));
+        }
     }
 
     // Draw AC load line (green)
@@ -407,15 +469,16 @@ void PushPullUlOutput::plot(Plot *plot)
         }
     }
 
-    // Mark the DC operating point at (Vb, Ia)
+    // Mark the DC operating point on the load line
     opMarker = new QGraphicsItemGroup();
     {
         QPen pen;
         pen.setColor(QColor::fromRgb(255, 0, 0));
         pen.setWidth(2);
         const double d = 5.0;
-        if (auto *h = plot->createSegment(vb - d, ia, vb + d, ia, pen)) opMarker->addToGroup(h);
-        if (auto *v = plot->createSegment(vb, ia - d, vb, ia + d, pen)) opMarker->addToGroup(v);
+        const double vaOp = inductiveLoad ? vb : vaBias;
+        if (auto *h = plot->createSegment(vaOp - d, ia, vaOp + d, ia, pen)) opMarker->addToGroup(h);
+        if (auto *v = plot->createSegment(vaOp, ia - d, vaOp, ia + d, pen)) opMarker->addToGroup(v);
 
         if (!opMarker->childItems().isEmpty()) {
             plot->getScene()->addItem(opMarker);

@@ -36,6 +36,7 @@ public:
     // 0 = unbypassed (lower gain due to local feedback).
     void setGainMode(int mode);
     void setSymSwingEnabled(bool enabled);
+    void setInductiveLoad(bool enabled);
 
 protected:
     void update(int index) override;
@@ -75,4 +76,5 @@ private:
     double inputSensitivityVpp = 0.0;
     int gainMode = 1;
     bool showSymSwing = true;
+    bool inductiveLoad = true;
 };
