@@ -142,6 +142,7 @@ private slots:
     void on_modelCheck_stateChanged(int arg1);
     void on_screenCheck_stateChanged(int arg1);
     void on_designerCheck_stateChanged(int arg1);
+    void on_autoscaleYCheck_stateChanged(int arg1);
     void on_symSwingCheck_stateChanged(int arg1);
     void on_inputSensitivityCheck_stateChanged(int arg1);
     void on_useBypassedGainCheck_stateChanged(int arg1);

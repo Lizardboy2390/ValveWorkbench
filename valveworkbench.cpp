@@ -1199,6 +1199,38 @@ void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
     }
 }
 
+void ValveWorkbench::on_autoscaleYCheck_stateChanged(int arg1)
+{
+    Q_UNUSED(arg1);
+
+    // Only take action when Autoscale Y is being enabled. Turning it on
+    // should recompute the Designer axes from the current device and
+    // circuit parameters, mirroring the Pentode Class A1 designer's
+    // behaviour where toggling autoscale triggers a fresh axis fit.
+    if (!ui || !ui->autoscaleYCheck || !ui->autoscaleYCheck->isChecked()) {
+        return;
+    }
+
+    if (!ui->stdDeviceSelection) {
+        return;
+    }
+
+    const int comboIndex = ui->stdDeviceSelection->currentIndex();
+    if (comboIndex < 0) {
+        return;
+    }
+
+    const int deviceNumber = ui->stdDeviceSelection->itemData(comboIndex).toInt();
+    if (deviceNumber < 0) {
+        return;
+    }
+
+    // Reapply the current Designer device so that selectStdDevice() can
+    // recalculate vaMax/iaMax (including 2*VB and Class-B extensions) on
+    // top of the existing circuit parameters.
+    selectStdDevice(1, deviceNumber);
+}
+
 void ValveWorkbench::on_actionExport_to_Spice_triggered()
 {
     // File → Export to Spice...
@@ -3126,6 +3158,23 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         }
     }
 
+    // If Autoscale Y is disabled and we already have a valid Y-axis,
+    // preserve the existing Y range instead of recomputing iaMax from the
+    // device. This lets the user lock Y while exploring devices or VB
+    // changes in Designer.
+    {
+        const double xScale = plot.getXScale();
+        const double yScale = plot.getYScale();
+        if (ui->autoscaleYCheck && !ui->autoscaleYCheck->isChecked() &&
+            xScale > 0.0 && yScale > 0.0) {
+            const double yStart = plot.getYStart();
+            const double currentYStop = yStart + static_cast<double>(PLOT_HEIGHT) / yScale;
+            if (currentYStop > 0.0) {
+                iaMax = currentYStop;
+            }
+        }
+    }
+
     double vaInterval = device->interval(vaMax);
     double iaInterval = device->interval(iaMax);
     plot.setAxes(0.0, vaMax, vaInterval, 0.0, iaMax, iaInterval, 0, 0);
@@ -3502,10 +3551,19 @@ void ValveWorkbench::updateCircuitParameter(int index)
     // (including effective headroom and THD in SingleEndedOutput) are
     // recomputed automatically here.
 
-    // For Designer output stages, allow VB changes to expand the X-axis
-    // headroom up to at least 2VB without ever shrinking the existing
-    // range. This keeps the operating point and swing helpers away from
-    // the right-hand edge when the user raises VB.
+    // For Designer output stages, handle supply and load changes in a way
+    // that mirrors the Pentode Class A1 designer's Autoscale Y behaviour:
+    //
+    // - When Autoscale Y is enabled, recompute the Y-axis from the
+    //   device/model limits on each relevant parameter change. For SE/SE-UL
+    //   this is the device's Ia_max; for PP/UL-PP it is the larger of
+    //   Ia_max and the theoretical Class B peak current (4000*VB/RAA).
+    // - When Autoscale Y is disabled, treat the current Y range as locked
+    //   and reuse it even if VB/RAA would normally suggest a different
+    //   headroom.
+    // - For all output stages, keep the X-axis from shrinking by pinning
+    //   the new max to at least the current visible right edge and
+    //   max(device.vaMax, 2*VB) where applicable.
     {
         auto se   = dynamic_cast<SingleEndedOutput*>(circuit);
         auto seul = dynamic_cast<SingleEndedUlOutput*>(circuit);
@@ -3516,70 +3574,113 @@ void ValveWorkbench::updateCircuitParameter(int index)
         const bool isSeUlVB = (seul && index == SEUL_VB);
         const bool isPpVB   = (pp   && index == PP_VB);
         const bool isPpUlVB = (ppul && index == PPUL_VB);
+        const bool isPpRaa   = (pp   && index == PP_RAA);
+        const bool isPpUlRaa = (ppul && index == PPUL_RAA);
 
-        if ((isSeVB || isSeUlVB || isPpVB || isPpUlVB) && currentDevice) {
-            const double vbParam = value;
-            if (vbParam > 0.0) {
-                const double xScale = plot.getXScale();
-                const double yScale = plot.getYScale();
+        const bool affectsOutputStage =
+            (isSeVB || isSeUlVB || isPpVB || isPpUlVB || isPpRaa || isPpUlRaa);
+
+        if (currentDevice && affectsOutputStage) {
+            const double xScale = plot.getXScale();
+            const double yScale = plot.getYScale();
+            if (xScale > 0.0 && yScale > 0.0) {
                 const double xStart = plot.getXStart();
                 const double yStart = plot.getYStart();
-                if (xScale > 0.0 && yScale > 0.0) {
-                    const double currentXStop = xStart + static_cast<double>(PLOT_WIDTH) / xScale;
-                    const double currentYStop = yStart + static_cast<double>(PLOT_HEIGHT) / yScale;
-                    const double desiredXStop = 2.0 * vbParam;
-                    if (desiredXStop > currentXStop) {
-                        double vaMaxNew = desiredXStop;
-                        const double deviceVaMax = currentDevice->getVaMax();
-                        if (deviceVaMax > 0.0) {
-                            vaMaxNew = std::max(vaMaxNew, deviceVaMax);
-                        }
+                const double currentXStop = xStart + static_cast<double>(PLOT_WIDTH) / xScale;
+                const double currentYStop = yStart + static_cast<double>(PLOT_HEIGHT) / yScale;
 
-                        // Start from the device's own Ia limit, but never
-                        // shrink below the current Y range so VB tweaks
-                        // only ever expand the visible envelope.
-                        double iaMaxNew = currentDevice->getIaMax();
+                const double deviceVaMax = currentDevice->getVaMax();
+                const double deviceIaMax = currentDevice->getIaMax();
 
-                        // For push-pull circuits, also ensure the Y-axis
-                        // covers the theoretical Class B peak current
-                        // (4000*VB/RAA), mirroring the initial
-                        // selectStdDevice() behaviour.
-                        if (isPpVB || isPpUlVB) {
-                            double raa = 0.0;
-                            if (isPpVB) {
-                                if (auto *pp = dynamic_cast<PushPullOutput*>(circuit)) {
-                                    raa = pp->getParameter(PP_RAA);
-                                }
-                            } else if (isPpUlVB) {
-                                if (auto *ppul = dynamic_cast<PushPullUlOutput*>(circuit)) {
-                                    raa = ppul->getParameter(PPUL_RAA);
-                                }
-                            }
-                            if (raa > 0.0) {
-                                const double iaClassB_mA = 4000.0 * vbParam / raa;
-                                if (iaClassB_mA > 0.0) {
-                                    iaMaxNew = std::max(iaMaxNew, iaClassB_mA);
-                                }
-                            }
-                        }
+                // Resolve the effective VB/RAA values after this edit. For
+                // SE/SE-UL we only care about VB; for PP/UL-PP we also need
+                // RAA so that the Class B peak current (4000*VB/RAA) can be
+                // reflected in the Y-axis when Autoscale Y is enabled.
+                double vbSe = 0.0;
+                if (se && isSeVB) {
+                    vbSe = value;
+                } else if (se) {
+                    vbSe = se->getParameter(SE_VB);
+                }
+                if (seul && isSeUlVB) {
+                    vbSe = value;
+                } else if (seul) {
+                    vbSe = seul->getParameter(SEUL_VB);
+                }
 
-                        if (currentYStop > 0.0) {
-                            iaMaxNew = std::max(iaMaxNew, currentYStop);
-                        }
+                double vbPp   = 0.0;
+                double raaPp  = 0.0;
+                if (pp) {
+                    vbPp  = pp->getParameter(PP_VB);
+                    raaPp = pp->getParameter(PP_RAA);
+                    if (isPpVB)   vbPp  = value;
+                    if (isPpRaa)  raaPp = value;
+                }
 
-                        const double vaInterval = currentDevice->interval(vaMaxNew);
-                        const double iaInterval = currentDevice->interval(iaMaxNew);
+                double vbPpUl   = 0.0;
+                double raaPpUl  = 0.0;
+                if (ppul) {
+                    vbPpUl  = ppul->getParameter(PPUL_VB);
+                    raaPpUl = ppul->getParameter(PPUL_RAA);
+                    if (isPpUlVB)   vbPpUl  = value;
+                    if (isPpUlRaa)  raaPpUl = value;
+                }
 
-                        if (measuredCurves)          measuredCurves = nullptr;
-                        if (measuredCurvesSecondary) measuredCurvesSecondary = nullptr;
-                        if (estimatedCurves)         estimatedCurves = nullptr;
-                        if (modelledCurves)          modelledCurves = nullptr;
-                        if (modelledCurvesSecondary) modelledCurvesSecondary = nullptr;
-
-                        circuit->resetOverlays();
-                        plot.setAxes(0.0, vaMaxNew, vaInterval, 0.0, iaMaxNew, iaInterval, 0, 0);
+                // X-axis: never shrink; for output stages keep at least
+                // max(device.vaMax, 2*VB) where applicable, but do not roll
+                // back below the current visible right edge.
+                double vaMaxNew = currentXStop;
+                if ((se || seul) && (isSeVB || isSeUlVB) && vbSe > 0.0) {
+                    const double desiredXStop = 2.0 * vbSe;
+                    const double baseX       = std::max(deviceVaMax, desiredXStop);
+                    vaMaxNew = std::max(currentXStop, baseX);
+                } else if (pp || ppul) {
+                    double vbForX = (pp ? vbPp : vbPpUl);
+                    if (vbForX > 0.0) {
+                        const double desiredXStop = 2.0 * vbForX;
+                        const double baseX       = std::max(deviceVaMax, desiredXStop);
+                        vaMaxNew = std::max(currentXStop, baseX);
+                    } else {
+                        vaMaxNew = std::max(currentXStop, deviceVaMax);
                     }
                 }
+
+                // Y-axis base: device Ia_max, optionally extended to cover
+                // theoretical Class B current for push-pull stages.
+                double iaBase = deviceIaMax;
+                if (pp || ppul) {
+                    double vbForY  = (pp ? vbPp : vbPpUl);
+                    double raaForY = (pp ? raaPp : raaPpUl);
+                    if (vbForY > 0.0 && raaForY > 0.0) {
+                        const double iaClassB_mA = 4000.0 * vbForY / raaForY;
+                        if (iaClassB_mA > 0.0) {
+                            iaBase = std::max(iaBase, iaClassB_mA);
+                        }
+                    }
+                }
+
+                double iaMaxNew = iaBase;
+
+                // When Autoscale Y is disabled, lock the Y range to the
+                // current axis limits so Designer tweaks preserve a fixed
+                // vertical reference, mirroring the A1 tool's manual mode.
+                if (ui->autoscaleYCheck && !ui->autoscaleYCheck->isChecked()) {
+                    if (currentYStop > 0.0) {
+                        iaMaxNew = currentYStop;
+                    }
+                }
+
+                const double vaInterval = currentDevice->interval(vaMaxNew);
+                const double iaInterval = currentDevice->interval(iaMaxNew);
+
+                if (measuredCurves)          measuredCurves = nullptr;
+                if (measuredCurvesSecondary) measuredCurvesSecondary = nullptr;
+                if (estimatedCurves)         estimatedCurves = nullptr;
+                if (modelledCurves)          modelledCurves = nullptr;
+                if (modelledCurvesSecondary) modelledCurvesSecondary = nullptr;
+
+                circuit->resetOverlays();
+                plot.setAxes(0.0, vaMaxNew, vaInterval, 0.0, iaMaxNew, iaInterval, 0, 0);
             }
         }
     }

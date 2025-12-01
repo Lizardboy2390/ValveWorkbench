@@ -65,6 +65,7 @@ public:
     QHBoxLayout *horizontalLayout_17;
     QLabel *label_5;
     QComboBox *stdDeviceSelection2;
+    QCheckBox *autoscaleYCheck;
     QHBoxLayout *horizontalLayout_5;
     QLabel *cir1Label;
     QLineEdit *cir1Value;
@@ -221,6 +222,8 @@ public:
     QSpacerItem *horizontalSpacer_171;
     QCheckBox *designerCheck;
     QCheckBox *screenCheck;
+    QCheckBox *autoscaleYCheck1;
+    QCheckBox *inductiveLoadCheck;
     QSpacerItem *horizontalSpacer_15;
     QSpacerItem *horizontalSpacer_6;
     QSpacerItem *verticalSpacer_5;
@@ -340,6 +343,12 @@ public:
 
 
         verticalLayout->addLayout(horizontalLayout_17);
+
+        autoscaleYCheck = new QCheckBox(tab);
+        autoscaleYCheck->setObjectName("autoscaleYCheck");
+        autoscaleYCheck->setChecked(true);
+
+        verticalLayout->addWidget(autoscaleYCheck);
 
         horizontalLayout_5 = new QHBoxLayout();
         horizontalLayout_5->setObjectName("horizontalLayout_5");
@@ -1289,6 +1298,18 @@ public:
 
         horizontalLayout_9->addWidget(screenCheck);
 
+        autoscaleYCheck1 = new QCheckBox(horizontalLayoutWidget);
+        autoscaleYCheck1->setObjectName("autoscaleYCheck1");
+        autoscaleYCheck1->setChecked(true);
+
+        horizontalLayout_9->addWidget(autoscaleYCheck1);
+
+        inductiveLoadCheck = new QCheckBox(horizontalLayoutWidget);
+        inductiveLoadCheck->setObjectName("inductiveLoadCheck");
+        inductiveLoadCheck->setChecked(true);
+
+        horizontalLayout_9->addWidget(inductiveLoadCheck);
+
         horizontalSpacer_15 = new QSpacerItem(20, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
         horizontalLayout_9->addItem(horizontalSpacer_15);
@@ -1385,6 +1406,7 @@ public:
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
         label_4->setText(QCoreApplication::translate("ValveWorkbench", "Device 1:", nullptr));
         label_5->setText(QCoreApplication::translate("ValveWorkbench", "Device 2:", nullptr));
+        autoscaleYCheck->setText(QCoreApplication::translate("ValveWorkbench", "Autoscale Y", nullptr));
         cir1Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel1", nullptr));
         cir2Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel2", nullptr));
         cir3Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel3", nullptr));
@@ -1439,6 +1461,8 @@ public:
         modelCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Fitted Model", nullptr));
         designerCheck->setText(QCoreApplication::translate("ValveWorkbench", "Designer Overlays", nullptr));
         screenCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Screen Current", nullptr));
+        autoscaleYCheck1->setText(QCoreApplication::translate("ValveWorkbench", "Autoscale Y", nullptr));
+        inductiveLoadCheck->setText(QCoreApplication::translate("ValveWorkbench", "Inductive Load", nullptr));
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));
     } // retranslateUi

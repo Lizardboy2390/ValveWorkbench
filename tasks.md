@@ -83,9 +83,6 @@ Reference: `refrence code/pentodeClassA1Designer-main`.
 - **SPICE export-only workflow**
   - Generate SPICE netlists for Designer circuits (SE output, PP, Triode CC, etc.) without running ngspice internally, suitable for opening directly in LTspice/ngspice or other simulators.
 
-- **Optional SPICE-backed curve mode**
-  - Add an option to generate curves via ngspice from a netlist and `.inc` models, for comparison with internal models.
-
 - **UI/UX polish inspired by reference**
   - Explore a compact “Pentode Class A1” view (toolbar+plot).
   - Dual numeric+slider controls for main parameters.
