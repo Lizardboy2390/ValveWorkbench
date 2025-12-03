@@ -15,6 +15,7 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGraphicsView>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
@@ -202,19 +203,40 @@ public:
     QSpacerItem *verticalSpacer_10;
     QHBoxLayout *horizontalLayout_35;
     QPushButton *runButton;
+    QPushButton *quickHealthButton;
+    QPushButton *fullHealthButton;
     QSpacerItem *horizontalSpacer_18;
     QProgressBar *progressBar;
+    QGroupBox *datasheetGroupBox;
+    QGridLayout *gridLayout_datasheet;
+    QLabel *datasheetNameLabel;
+    QLineEdit *datasheetRefName;
+    QLabel *datasheetSectionLabel;
+    QLineEdit *datasheetSection;
+    QLabel *datasheetVaLabel;
+    QLineEdit *datasheetVa;
+    QLabel *datasheetVgLabel;
+    QLineEdit *datasheetVg;
+    QLabel *datasheetIaLabel;
+    QLineEdit *datasheetIa;
+    QLabel *datasheetGmLabel;
+    QLineEdit *datasheetGm;
+    QLabel *datasheetMuLabel;
+    QLineEdit *datasheetMu;
+    QLabel *datasheetRpLabel;
+    QLineEdit *datasheetRp;
     QSpacerItem *verticalSpacer_11;
     QSpacerItem *horizontalSpacer_8;
     QPushButton *btnAddToProject;
     QPushButton *btnImportFromDevice;
-    QSpacerItem *horizontalSpacer_9;
+    QSpacerItem *verticalSpacer_3;
+    QSpacerItem *verticalSpacer_5;
     QSpacerItem *horizontalSpacer;
     QVBoxLayout *verticalLayout_2;
     QSpacerItem *verticalSpacer_4;
     QLabel *plotTitle;
     QGraphicsView *graphicsView;
-    QSpacerItem *verticalSpacer_3;
+    QSpacerItem *verticalSpacer_31;
     QHBoxLayout *horizontalLayout_9;
     QSpacerItem *horizontalSpacer_3;
     QCheckBox *measureCheck;
@@ -225,7 +247,7 @@ public:
     QCheckBox *screenCheck;
     QSpacerItem *horizontalSpacer_15;
     QSpacerItem *horizontalSpacer_6;
-    QSpacerItem *verticalSpacer_5;
+    QSpacerItem *verticalSpacer_51;
     QSpacerItem *horizontalSpacer_2;
     QMenuBar *menubar;
     QMenu *menuFile;
@@ -1198,6 +1220,16 @@ public:
 
         horizontalLayout_35->addWidget(runButton);
 
+        quickHealthButton = new QPushButton(layoutWidget_2);
+        quickHealthButton->setObjectName("quickHealthButton");
+
+        horizontalLayout_35->addWidget(quickHealthButton);
+
+        fullHealthButton = new QPushButton(layoutWidget_2);
+        fullHealthButton->setObjectName("fullHealthButton");
+
+        horizontalLayout_35->addWidget(fullHealthButton);
+
         horizontalSpacer_18 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
         horizontalLayout_35->addItem(horizontalSpacer_18);
@@ -1211,6 +1243,105 @@ public:
         progressBar->setTextVisible(false);
 
         verticalLayout_6->addWidget(progressBar);
+
+        datasheetGroupBox = new QGroupBox(layoutWidget_2);
+        datasheetGroupBox->setObjectName("datasheetGroupBox");
+        gridLayout_datasheet = new QGridLayout(datasheetGroupBox);
+        gridLayout_datasheet->setObjectName("gridLayout_datasheet");
+        datasheetNameLabel = new QLabel(datasheetGroupBox);
+        datasheetNameLabel->setObjectName("datasheetNameLabel");
+        datasheetNameLabel->setVisible(false);
+
+        gridLayout_datasheet->addWidget(datasheetNameLabel, 0, 0, 1, 1);
+
+        datasheetRefName = new QLineEdit(datasheetGroupBox);
+        datasheetRefName->setObjectName("datasheetRefName");
+        datasheetRefName->setReadOnly(true);
+        datasheetRefName->setVisible(false);
+
+        gridLayout_datasheet->addWidget(datasheetRefName, 0, 1, 1, 1);
+
+        datasheetSectionLabel = new QLabel(datasheetGroupBox);
+        datasheetSectionLabel->setObjectName("datasheetSectionLabel");
+        datasheetSectionLabel->setVisible(false);
+
+        gridLayout_datasheet->addWidget(datasheetSectionLabel, 1, 0, 1, 1);
+
+        datasheetSection = new QLineEdit(datasheetGroupBox);
+        datasheetSection->setObjectName("datasheetSection");
+        datasheetSection->setReadOnly(true);
+        datasheetSection->setVisible(false);
+
+        gridLayout_datasheet->addWidget(datasheetSection, 1, 1, 1, 1);
+
+        datasheetVaLabel = new QLabel(datasheetGroupBox);
+        datasheetVaLabel->setObjectName("datasheetVaLabel");
+
+        gridLayout_datasheet->addWidget(datasheetVaLabel, 2, 0, 1, 1);
+
+        datasheetVa = new QLineEdit(datasheetGroupBox);
+        datasheetVa->setObjectName("datasheetVa");
+        datasheetVa->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetVa, 2, 1, 1, 1);
+
+        datasheetVgLabel = new QLabel(datasheetGroupBox);
+        datasheetVgLabel->setObjectName("datasheetVgLabel");
+
+        gridLayout_datasheet->addWidget(datasheetVgLabel, 3, 0, 1, 1);
+
+        datasheetVg = new QLineEdit(datasheetGroupBox);
+        datasheetVg->setObjectName("datasheetVg");
+        datasheetVg->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetVg, 3, 1, 1, 1);
+
+        datasheetIaLabel = new QLabel(datasheetGroupBox);
+        datasheetIaLabel->setObjectName("datasheetIaLabel");
+
+        gridLayout_datasheet->addWidget(datasheetIaLabel, 4, 0, 1, 1);
+
+        datasheetIa = new QLineEdit(datasheetGroupBox);
+        datasheetIa->setObjectName("datasheetIa");
+        datasheetIa->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetIa, 4, 1, 1, 1);
+
+        datasheetGmLabel = new QLabel(datasheetGroupBox);
+        datasheetGmLabel->setObjectName("datasheetGmLabel");
+
+        gridLayout_datasheet->addWidget(datasheetGmLabel, 5, 0, 1, 1);
+
+        datasheetGm = new QLineEdit(datasheetGroupBox);
+        datasheetGm->setObjectName("datasheetGm");
+        datasheetGm->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetGm, 5, 1, 1, 1);
+
+        datasheetMuLabel = new QLabel(datasheetGroupBox);
+        datasheetMuLabel->setObjectName("datasheetMuLabel");
+
+        gridLayout_datasheet->addWidget(datasheetMuLabel, 6, 0, 1, 1);
+
+        datasheetMu = new QLineEdit(datasheetGroupBox);
+        datasheetMu->setObjectName("datasheetMu");
+        datasheetMu->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetMu, 6, 1, 1, 1);
+
+        datasheetRpLabel = new QLabel(datasheetGroupBox);
+        datasheetRpLabel->setObjectName("datasheetRpLabel");
+
+        gridLayout_datasheet->addWidget(datasheetRpLabel, 7, 0, 1, 1);
+
+        datasheetRp = new QLineEdit(datasheetGroupBox);
+        datasheetRp->setObjectName("datasheetRp");
+        datasheetRp->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetRp, 7, 1, 1, 1);
+
+
+        verticalLayout_6->addWidget(datasheetGroupBox);
 
         verticalSpacer_11 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
 
@@ -1232,9 +1363,13 @@ public:
 
         verticalLayout_6->addWidget(btnImportFromDevice);
 
-        horizontalSpacer_9 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+        verticalSpacer_3 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
 
-        verticalLayout_6->addItem(horizontalSpacer_9);
+        verticalLayout_6->addItem(verticalSpacer_3);
+
+        verticalSpacer_5 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
+
+        verticalLayout_6->addItem(verticalSpacer_5);
 
         tabWidget->addTab(tab_3, QString());
 
@@ -1264,9 +1399,9 @@ public:
 
         verticalLayout_2->addWidget(graphicsView);
 
-        verticalSpacer_3 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
+        verticalSpacer_31 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
 
-        verticalLayout_2->addItem(verticalSpacer_3);
+        verticalLayout_2->addItem(verticalSpacer_31);
 
         horizontalLayout_9 = new QHBoxLayout();
         horizontalLayout_9->setObjectName("horizontalLayout_9");
@@ -1314,9 +1449,9 @@ public:
 
         verticalLayout_2->addLayout(horizontalLayout_9);
 
-        verticalSpacer_5 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
+        verticalSpacer_51 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
 
-        verticalLayout_2->addItem(verticalSpacer_5);
+        verticalLayout_2->addItem(verticalSpacer_51);
 
 
         horizontalLayout->addLayout(verticalLayout_2);
@@ -1447,6 +1582,17 @@ public:
         heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Avg per sample", nullptr));
         heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Max Retry Points", nullptr));
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
+        quickHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Quick Health", nullptr));
+        fullHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Full Health", nullptr));
+        datasheetGroupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Datasheet / Reference", nullptr));
+        datasheetNameLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref name:", nullptr));
+        datasheetSectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Section:", nullptr));
+        datasheetVaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Va (V):", nullptr));
+        datasheetVgLabel->setText(QCoreApplication::translate("ValveWorkbench", "Vg (V):", nullptr));
+        datasheetIaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ia (mA):", nullptr));
+        datasheetGmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (\302\265S):", nullptr));
+        datasheetMuLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274:", nullptr));
+        datasheetRpLabel->setText(QCoreApplication::translate("ValveWorkbench", "rp (\316\251):", nullptr));
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
         btnImportFromDevice->setText(QCoreApplication::translate("ValveWorkbench", "Import from Device", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));

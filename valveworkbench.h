@@ -311,6 +311,7 @@ private:
 
     QJsonObject config;
     QList<Template> templates;
+    QJsonObject datasheetJson; // Opaque datasheet/ref-point block from templates/devices
 
     PreferencesDialog preferencesDialog;
 
@@ -380,6 +381,8 @@ private:
     void queueTriodeModelRun(Model *modelToRun);
     bool measurementHasValidSamples(Measurement *measurement) const;
     void populateDataTableFromMeasurement(Measurement *measurement);
+
+    void updateDatasheetDisplay();
 
     void runHarmonicsScan();
     void runHarmonicsBiasSweep();

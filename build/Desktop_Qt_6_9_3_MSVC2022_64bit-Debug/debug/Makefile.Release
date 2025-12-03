@@ -12112,6 +12112,7 @@ release\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsView \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsview.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainter.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGridLayout \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QHeaderView \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qheaderview.h \

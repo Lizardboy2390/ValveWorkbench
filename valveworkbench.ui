@@ -1860,6 +1860,20 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="quickHealthButton">
+              <property name="text">
+               <string>Quick Health</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="fullHealthButton">
+              <property name="text">
+               <string>Full Health</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <spacer name="horizontalSpacer_18">
               <property name="orientation">
                <enum>Qt::Orientation::Horizontal</enum>
@@ -1882,6 +1896,139 @@
             <property name="textVisible">
              <bool>false</bool>
             </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="datasheetGroupBox">
+            <property name="title">
+             <string>Datasheet / Reference</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_datasheet">
+             <item row="0" column="0">
+              <widget class="QLabel" name="datasheetNameLabel">
+               <property name="text">
+                <string>Ref name:</string>
+               </property>
+               <property name="visible">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="datasheetRefName">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="visible">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="datasheetSectionLabel">
+               <property name="text">
+                <string>Section:</string>
+               </property>
+               <property name="visible">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="datasheetSection">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="visible">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="datasheetVaLabel">
+               <property name="text">
+                <string>Va (V):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="datasheetVa">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="datasheetVgLabel">
+               <property name="text">
+                <string>Vg (V):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLineEdit" name="datasheetVg">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="datasheetIaLabel">
+               <property name="text">
+                <string>Ia (mA):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QLineEdit" name="datasheetIa">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="datasheetGmLabel">
+               <property name="text">
+                <string>gm (µS):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QLineEdit" name="datasheetGm">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="0">
+              <widget class="QLabel" name="datasheetMuLabel">
+               <property name="text">
+                <string>μ:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="1">
+              <widget class="QLineEdit" name="datasheetMu">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="0">
+              <widget class="QLabel" name="datasheetRpLabel">
+               <property name="text">
+                <string>rp (Ω):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="1">
+              <widget class="QLineEdit" name="datasheetRp">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
           <item>
@@ -1931,14 +2078,27 @@
            </widget>
           </item>
           <item>
-           <spacer name="horizontalSpacer_9">
+           <spacer name="verticalSpacer_3">
             <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
+             <enum>Qt::Orientation::Vertical</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
-              <width>40</width>
-              <height>20</height>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_5">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
              </size>
             </property>
            </spacer>

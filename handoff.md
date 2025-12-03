@@ -139,6 +139,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - `valveworkbench.cpp` - **CRITICAL: Verify integrity before any changes**
   - `valvemodel/circuit/singleendedoutput.cpp` - Time-domain harmonic functions
   - `valvemodel/circuit/singleendedoutput.h` - Function declarations
+  - External reference: `refrence code/ilovepdf_pages-to-jpg (1)` — eTracer PC software manual (quick-scan, corners tests, Imax/Pmax usage, tube grading ideas).
 
 ### 2025-11-21 Summary (Harmonics Explorer / time-domain THD helpers)
 

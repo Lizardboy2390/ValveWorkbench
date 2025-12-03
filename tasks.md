@@ -4,9 +4,15 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Active tasks (end-user focused)
 - [ ] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
- - [ ] Integrated SPICE export via Devices:
-   - Extend **Export model to Device** so each device JSON optionally includes a SPICE representation of the fitted tube model (triode and pentode) suitable for `.inc`/`.subckt` use.
-   - Implement **File → Export to Spice...** so it uses the active Device's SPICE block to export (a) tube model only (`.inc`/`.lib`), and (b) optional Designer circuit wrappers (Triode CC, SE Output, PP, etc.) that reference that model.
+- [ ] Integrated SPICE export via Devices:
+  - Extend **Export model to Device** so each device JSON optionally includes a SPICE representation of the fitted tube model (triode and pentode) suitable for `.inc`/`.subckt` use.
+  - Implement **File → Export to Spice...** so it uses the active Device's SPICE block to export (a) tube model only (`.inc`/`.lib`), and (b) optional Designer circuit wrappers (Triode CC, SE Output, PP, etc.) that reference that model.
+- [ ] Datasheet reference stats + tube health metric:
+  - Add a Designer-side "Datasheet / Reference" group box to hold one or more datasheet operating points (Va, Vg, Ia, gm, μ, rp) for each tube/section, with values stored in templates.
+  - Extend template JSON (Load/Save Template and Export-to-Devices) to persist a nested `datasheet.refPoints[]` block carrying these reference stats alongside analyserDefaults and measurement.
+  - Implement a helper that, given a Measurement and a reference point, computes measured Ia/gm/μ/rp at (or near) the datasheet operating point and derives a simple tube "health %" from the ratios.
+  - Surface the health metric and reference vs measured values in the UI (Designer/Modeller panel and/or a small status readout) so users can quickly gauge tube strength and life.
+  - Use the eTracer PC software manual in `refrence code/ilovepdf_pages-to-jpg (1)` (quick scan, corners tests, Imax/Pmax usage) as the primary reference for feature design and defaults.
 
 ## Recently completed
 - [x] 2025-11-30: Designer device selection now auto-replots using `selectStdDevice` and `updateCircuitParameter` so that output-stage axes clamp to device limits and supply/load headroom: X uses `max(currentXStop, max(device.vaMax, 2×VB))` for SE/SE-UL/PP/UL-PP, Y uses `device.iaMax` or `max(device.iaMax, 4000·VB/RAA)` depending on circuit and Autoscale Y mode.

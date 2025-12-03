@@ -2,26 +2,62 @@
     "analyserDefaults": {
         "anode": {
             "start": 0,
-            "step": 5,
-            "stop": 300
+            "step": 0,
+            "stop": 400
         },
         "doubleTriode": true,
         "grid": {
             "start": 0,
             "step": 0.5,
-            "stop": 5
+            "stop": 4
         },
         "limits": {
-            "iaMax": 5,
-            "pMax": 1.125
+            "iaMax": 6,
+            "pMax": 1.25
         },
         "screen": {
             "start": 0,
             "step": 0,
             "stop": 0
         },
-        "testType": 0
+        "testType": 0,
+        "tests": {
+            "anode": {
+                "anode": {
+                    "start": 0,
+                    "step": 0,
+                    "stop": 400
+                },
+                "grid": {
+                    "start": 0,
+                    "step": 0.5,
+                    "stop": 4
+                },
+                "limits": {
+                    "iaMax": 6,
+                    "pMax": 1.25
+                },
+                "screen": {
+                    "start": 0,
+                    "step": 0,
+                    "stop": 0
+                },
+                "testType": 0
+            }
+        }
     },
     "deviceType": "TRIODE",
-    "name": "12AX7"
+    "name": "12AX7",
+    "datasheet": {
+        "refPoints": [
+            {
+                "va": 250.0,
+                "vg": -2.0,
+                "ia": 1.2,
+                "gm": 1600.0,
+                "mu": 100.0,
+                "rp": 62500.0
+            }
+        ]
+    }
 }

@@ -32,6 +32,7 @@
 #include <QMouseEvent>
 #include <QStatusBar>
 #include <QGraphicsTextItem>
+#include <QLineEdit>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -548,7 +549,55 @@ void ValveWorkbench::populateDataTableFromMeasurement(Measurement *measurement)
     qInfo("Data table populated: %d sweeps x %d rows each = %d total rows", numSweeps, rowsPerSweep, numSweeps * rowsPerSweep);
 }
 
- 
+void ValveWorkbench::updateDatasheetDisplay()
+{
+    if (!ui) {
+        return;
+    }
+
+    auto setField = [](QLineEdit *edit, const QString &text) {
+        if (edit) {
+            edit->setText(text);
+        }
+    };
+
+    auto clearAll = [&]() {
+        setField(ui->datasheetVa, QString());
+        setField(ui->datasheetVg, QString());
+        setField(ui->datasheetIa, QString());
+        setField(ui->datasheetGm, QString());
+        setField(ui->datasheetMu, QString());
+        setField(ui->datasheetRp, QString());
+    };
+
+    if (datasheetJson.isEmpty()) {
+        clearAll();
+        return;
+    }
+
+    const QJsonArray refPoints = datasheetJson.value("refPoints").toArray();
+    if (refPoints.isEmpty() || !refPoints.at(0).isObject()) {
+        clearAll();
+        return;
+    }
+
+    const QJsonObject rp = refPoints.at(0).toObject();
+
+    auto numToString = [](const QJsonValue &v, int decimals) -> QString {
+        if (!v.isDouble()) {
+            return QString();
+        }
+        return QString::number(v.toDouble(), 'f', decimals);
+    };
+
+    setField(ui->datasheetVa, numToString(rp.value("va"), 1));
+    setField(ui->datasheetVg, numToString(rp.value("vg"), 1));
+    setField(ui->datasheetIa, numToString(rp.value("ia"), 3));
+    setField(ui->datasheetGm, numToString(rp.value("gm"), 1));
+    setField(ui->datasheetMu, numToString(rp.value("mu"), 1));
+    setField(ui->datasheetRp, numToString(rp.value("rp"), 1));
+}
+
 
 // (Removed duplicate checkbox handlers; using the canonical implementations below.)
 
@@ -645,6 +694,11 @@ void ValveWorkbench::on_pushButton_3_clicked()
         return;
     }
     const QJsonObject obj = doc.object();
+
+    // Optional datasheet block (reference operating points / corners / health thresholds).
+    // This is currently treated as an opaque JSON object that we round-trip in
+    // templates and exported devices so future Designer features can consume it.
+    datasheetJson = obj.value("datasheet").toObject();
 
     // Name
     if (ui && ui->deviceName) {
@@ -798,6 +852,7 @@ void ValveWorkbench::on_pushButton_3_clicked()
 
     // Update UI to reflect loaded values
     updateParameterDisplay();
+    updateDatasheetDisplay();
 }
 
 void ValveWorkbench::on_pushButton_4_clicked()
@@ -848,6 +903,14 @@ void ValveWorkbench::on_pushButton_4_clicked()
     }
 
     obj.insert("analyserDefaults", defs);
+
+    // Preserve any opaque datasheet block that may have been loaded from an
+    // existing template. At this stage ValveWorkbench does not edit the
+    // structure; it is simply round-tripped so future Designer features can
+    // rely on its presence.
+    if (!datasheetJson.isEmpty()) {
+        obj.insert("datasheet", datasheetJson);
+    }
 
     QJsonDocument out(obj);
 
@@ -1661,6 +1724,8 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     loadDevices();
 
     ui->setupUi(this);
+
+    updateDatasheetDisplay();
 
     // Initialise per-tab overlay visibility defaults:
     // 0 = Designer, 1 = Modeller, 2 = Analyser.
@@ -7786,6 +7851,13 @@ void ValveWorkbench::exportFittedModelToDevices()
     analyserDefaults["doubleTriode"] = isDoubleTriode;
 
     root["analyserDefaults"] = analyserDefaults;
+
+    // If a datasheet/refPoint block was loaded from a template or device, carry
+    // it through to the exported preset so future Designer features can use it
+    // for quick tests and tube health grading.
+    if (!datasheetJson.isEmpty()) {
+        root["datasheet"] = datasheetJson;
+    }
 
     // Fitted model parameters: log key values at export time so we can
     // compare against Device/GardinerPentode logs on import.
