@@ -1,5 +1,7 @@
 #include "sweep.h"
 #include "measurement.h"
+#include <QDebug>
+#include <cmath>
 
 Sweep::Sweep(eSweepType type_) : type(type_)
 {
@@ -276,77 +278,138 @@ Measurement *Sweep::getMeasurement() const
 
 void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
-    // qInfo("=== SWEEP::PLOTTRIODEANODE - Sample count: %d ===", samples.count());
-
-    // ADD VALIDATION FOR EMPTY SWEEPS
     if (samples.count() < 2) {
-        // qWarning("Sweep has insufficient samples (%d) for plotting - skipping", samples.count());
         return;
     }
 
-    Sample *firstSample = samples.at(0);
-    double vg = firstSample->getVg1();
+    bool smooth = (measurement && measurement->isSmoothPlotting());
 
-    // qInfo("First sample: vg1=%.6fV, va=%.6fV, ia=%.6fA", vg, firstSample->getVa(), firstSample->getIa());
+    qInfo("Sweep::plotTriodeAnode: smooth=%d samples=%d", smooth ? 1 : 0, samples.count());
 
-    // DEBUG: Show all grid voltages being processed with high precision
-    // qInfo("*** DEBUG: Processing sweep with grid voltage: %.6fV (samples: %d) ***", vg, samples.count());
+    if (!smooth) {
+        qInfo("Sweep::plotTriodeAnode: using raw segments (no smoothing)");
+        Sample *firstSample = samples.at(0);
+        double vg = firstSample->getVg1();
+        double va = firstSample->getVa();
+        double ia = firstSample->getIa();
 
-    // DEBUG: Check for exact -1.5V sweep with high precision
-    if (qAbs(vg - (-1.5)) < 0.0001) {
-        // qInfo("*** DEBUG: FOUND EXACT -1.5V SWEEP with %.6fV and %d samples ***", vg, samples.count());
-    }
+        int nSamples = samples.count();
+        for (int j = 1; j < nSamples; j++) {
+            Sample *sample = samples.at(j);
 
-    // DEBUG: Track segments for problematic voltages
-    if (qAbs(vg - (-2.5)) < 0.1 || qAbs(vg - (-3.0)) < 0.1 || qAbs(vg - (-3.5)) < 0.1 || qAbs(vg - (-4.0)) < 0.1) {
-        // qInfo("*** DEBUG: Processing problematic voltage %.6fV - tracking segments ***", vg);
-    }
+            double vaNext = sample->getVa();
+            double iaNext = sample->getIa();
 
-    double va = firstSample->getVa();
-    double ia = firstSample->getIa();
+            QGraphicsLineItem *segment = plot->createSegment(va, ia, vaNext, iaNext, *samplePen);
+            if (segment != nullptr) {
+                segments->append(segment);
+            } else {
+                continue;
+            }
 
-    int nSamples = samples.count();
-    for (int j = 1; j < nSamples; j++) {
-         Sample *sample = samples.at(j);
-
-         double vaNext = sample->getVa();
-         double iaNext = sample->getIa();
-
-         // qInfo("Segment %d: va=%f->%f, ia=%f->%f", j, va, vaNext, ia, iaNext);
-
-         // DEBUG: Track segments for problematic voltages
-        if (qAbs(vg - (-2.5)) < 0.1 || qAbs(vg - (-3.0)) < 0.1 || qAbs(vg - (-3.5)) < 0.1 || qAbs(vg - (-4.0)) < 0.1) {
-            // qInfo("*** DEBUG: Creating segment %d for %.6fV: va=%.6f->%.6f, ia=%.6f->%.6f ***", j, vg, va, vaNext, ia, iaNext);
-            // qInfo("*** DEBUG: Current segments list size before adding: %d ***", segments->size());
+            va = vaNext;
+            ia = iaNext;
         }
 
-         QGraphicsLineItem *segment = plot->createSegment(va, ia, vaNext, iaNext, *samplePen);
-         if (segment != nullptr) {
-             segments->append(segment);
-            // qInfo("Segment %d added successfully", j);
-
-            // DEBUG: Track successful segment addition for problematic voltages
-            if (qAbs(vg - (-2.5)) < 0.1 || qAbs(vg - (-3.0)) < 0.1 || qAbs(vg - (-3.5)) < 0.1 || qAbs(vg - (-4.0)) < 0.1) {
-                // qInfo("*** DEBUG: Successfully added segment %d for %.6fV - list size now: %d ***", j, vg, segments->size());
-            }
-         } else {
-             // qWarning("Failed to create segment %d", j);
-             // Handle nullptr return
-             continue;
-         }
-
-         va = vaNext;
-         ia = iaNext;
-     }
-
-    segments->append(plot->createLabel(va, ia, vg1Nominal, samplePen->color()));
-    // qInfo("Finished plotting triode anode sweep - %d segments created", nSamples - 1);
-    // qInfo("*** DEBUG: Completed plotting sweep with grid voltage: %.6fV ***", vg);
-
-    // DEBUG: Show final segments list size for problematic voltages
-    if (qAbs(vg - (-2.5)) < 0.1 || qAbs(vg - (-3.0)) < 0.1 || qAbs(vg - (-3.5)) < 0.1 || qAbs(vg - (-4.0)) < 0.1) {
-        // qInfo("*** DEBUG: Final segments list size for %.6fV: %d ***", vg, segments->size());
+        segments->append(plot->createLabel(va, ia, vg1Nominal, samplePen->color()));
+        return;
     }
+    const int nSamples = samples.count();
+
+    QVector<double> x(nSamples), y(nSamples);
+    for (int i = 0; i < nSamples; ++i) {
+        Sample *s = samples.at(i);
+        x[i] = s->getVa();
+        y[i] = s->getIa();
+    }
+
+    QVector<double> h(nSamples - 1), s(nSamples - 1);
+    for (int i = 0; i < nSamples - 1; ++i) {
+        h[i] = x[i + 1] - x[i];
+        if (h[i] == 0.0) {
+            s[i] = 0.0;
+        } else {
+            s[i] = (y[i + 1] - y[i]) / h[i];
+        }
+    }
+
+    QVector<double> m(nSamples);
+    if (nSamples == 2) {
+        m[0] = m[1] = s[0];
+    } else {
+        m[0] = ((2 * h[0] + h[1]) * s[0] - h[0] * s[1]) / (h[0] + h[1]);
+        if (m[0] * s[0] <= 0.0) m[0] = 0.0;
+        else if (std::fabs(m[0] / s[0]) > 3.0) m[0] = 3.0 * s[0];
+
+        for (int i = 1; i < nSamples - 1; ++i) {
+            if (s[i - 1] * s[i] <= 0.0) {
+                m[i] = 0.0;
+            } else {
+                double w1 = 2.0 * h[i] + h[i - 1];
+                double w2 = h[i] + 2.0 * h[i - 1];
+                m[i] = (w1 + w2) / (w1 / s[i - 1] + w2 / s[i]);
+            }
+        }
+
+        m[nSamples - 1] = ((2 * h[nSamples - 2] + h[nSamples - 3]) * s[nSamples - 2] - h[nSamples - 2] * s[nSamples - 3]) / (h[nSamples - 2] + h[nSamples - 3]);
+        if (m[nSamples - 1] * s[nSamples - 2] <= 0.0) m[nSamples - 1] = 0.0;
+        else if (std::fabs(m[nSamples - 1] / s[nSamples - 2]) > 3.0) m[nSamples - 1] = 3.0 * s[nSamples - 2];
+
+        for (int i = 0; i < nSamples - 1; ++i) {
+            if (s[i] == 0.0) {
+                m[i] = 0.0;
+                m[i + 1] = 0.0;
+            } else {
+                double a = m[i] / s[i];
+                double b = m[i + 1] / s[i];
+                double sq = a * a + b * b;
+                if (sq > 9.0) {
+                    double t = 3.0 / std::sqrt(sq);
+                    m[i] = t * a * s[i];
+                    m[i + 1] = t * b * s[i];
+                }
+            }
+        }
+    }
+
+    const int subdivisions = 4; // 4x plotting density when smoothing is enabled
+
+    qInfo("Sweep::plotTriodeAnode: using spline smoothing, samples=%d, subdivisions=%d, expectedSegments=%d",
+          nSamples, subdivisions, (nSamples - 1) * subdivisions);
+
+    for (int i = 0; i < nSamples - 1; ++i) {
+        double xi = x[i];
+        double xi1 = x[i + 1];
+        double hi = xi1 - xi;
+        double yi = y[i];
+        double yi1 = y[i + 1];
+        double mi = m[i];
+        double mi1 = m[i + 1];
+
+        double xPrev = xi;
+        double yPrev = yi;
+        for (int k = 1; k <= subdivisions; ++k) {
+            double t = static_cast<double>(k) / static_cast<double>(subdivisions);
+            double t2 = t * t;
+            double t3 = t2 * t;
+            double h00 = 2.0 * t3 - 3.0 * t2 + 1.0;
+            double h10 = t3 - 2.0 * t2 + t;
+            double h01 = -2.0 * t3 + 3.0 * t2;
+            double h11 = t3 - t2;
+
+            double xT = xi + t * hi;
+            double yT = h00 * yi + h10 * hi * mi + h01 * yi1 + h11 * hi * mi1;
+
+            QGraphicsLineItem *seg = plot->createSegment(xPrev, yPrev, xT, yT, *samplePen);
+            if (seg) {
+                segments->append(seg);
+            }
+            xPrev = xT;
+            yPrev = yT;
+        }
+    }
+
+    segments->append(plot->createLabel(x[nSamples - 1], y[nSamples - 1], vg1Nominal, samplePen->color()));
 }
 
 void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
@@ -400,84 +463,264 @@ void Sweep::plotTriodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem 
 
 void Sweep::plotPentodeScreen(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
-    // qInfo("=== SWEEP::PLOTPENTODESCREEN - Sample count: %d ===", samples.count());
+    if (samples.count() < 2) {
+        return;
+    }
 
-    Sample *firstSample = samples.at(0);
+    bool smooth = (measurement && measurement->isSmoothPlotting());
 
-    double vg = firstSample->getVg1();
-    double va = firstSample->getVa();
-    double ig2 = firstSample->getIg2();
+    if (!smooth) {
+        Sample *firstSample = samples.at(0);
 
-    // qInfo("First sample: vg1=%f, va=%f, ig2=%f", vg, va, ig2);
+        double vg = firstSample->getVg1();
+        double va = firstSample->getVa();
+        double ig2 = firstSample->getIg2();
 
-    int nSamples = samples.count();
-    for (int j = 1; j < nSamples; j++) {
-         Sample *sample = samples.at(j);
+        int nSamples = samples.count();
+        for (int j = 1; j < nSamples; j++) {
+            Sample *sample = samples.at(j);
 
-         double vaNext = sample->getVa();
-         double ig2Next = sample->getIg2();
+            double vaNext = sample->getVa();
+            double ig2Next = sample->getIg2();
 
-         // qInfo("Screen segment %d: va=%f->%f, ig2=%f->%f", j, va, vaNext, ig2, ig2Next);
+            QGraphicsLineItem *segment = plot->createSegment(va, ig2, vaNext, ig2Next, *samplePen);
+            if (segment != nullptr) {
+                segments->append(segment);
+            } else {
+                continue;
+            }
 
-         QGraphicsLineItem *segment = plot->createSegment(va, ig2, vaNext, ig2Next, *samplePen);
-         if (segment != nullptr) {
-             segments->append(segment);
-             // qInfo("Screen segment %d added successfully", j);
-         } else {
-             // qWarning("Failed to create screen segment %d", j);
-             continue;
-         }
+            va = vaNext;
+            ig2 = ig2Next;
+        }
 
-         va = vaNext;
-         ig2 = ig2Next;
-     }
+        segments->append(plot->createLabel(va, ig2, vg1Nominal, samplePen->color()));
+        return;
+    }
+    const int nSamples = samples.count();
 
-    segments->append(plot->createLabel(va, ig2, vg1Nominal, samplePen->color()));
-    // qInfo("Finished plotting pentode screen sweep - %d segments created", nSamples - 1);
+    QVector<double> x(nSamples), y(nSamples);
+    for (int i = 0; i < nSamples; ++i) {
+        Sample *s = samples.at(i);
+        x[i] = s->getVa();
+        y[i] = s->getIg2();
+    }
+
+    QVector<double> h(nSamples - 1), s(nSamples - 1);
+    for (int i = 0; i < nSamples - 1; ++i) {
+        h[i] = x[i + 1] - x[i];
+        if (h[i] == 0.0) {
+            s[i] = 0.0;
+        } else {
+            s[i] = (y[i + 1] - y[i]) / h[i];
+        }
+    }
+
+    QVector<double> m(nSamples);
+    if (nSamples == 2) {
+        m[0] = m[1] = s[0];
+    } else {
+        m[0] = ((2 * h[0] + h[1]) * s[0] - h[0] * s[1]) / (h[0] + h[1]);
+        if (m[0] * s[0] <= 0.0) m[0] = 0.0;
+        else if (std::fabs(m[0] / s[0]) > 3.0) m[0] = 3.0 * s[0];
+
+        for (int i = 1; i < nSamples - 1; ++i) {
+            if (s[i - 1] * s[i] <= 0.0) {
+                m[i] = 0.0;
+            } else {
+                double w1 = 2.0 * h[i] + h[i - 1];
+                double w2 = h[i] + 2.0 * h[i - 1];
+                m[i] = (w1 + w2) / (w1 / s[i - 1] + w2 / s[i]);
+            }
+        }
+
+        m[nSamples - 1] = ((2 * h[nSamples - 2] + h[nSamples - 3]) * s[nSamples - 2] - h[nSamples - 2] * s[nSamples - 3]) / (h[nSamples - 2] + h[nSamples - 3]);
+        if (m[nSamples - 1] * s[nSamples - 2] <= 0.0) m[nSamples - 1] = 0.0;
+        else if (std::fabs(m[nSamples - 1] / s[nSamples - 2]) > 3.0) m[nSamples - 1] = 3.0 * s[nSamples - 2];
+
+        for (int i = 0; i < nSamples - 1; ++i) {
+            if (s[i] == 0.0) {
+                m[i] = 0.0;
+                m[i + 1] = 0.0;
+            } else {
+                double a = m[i] / s[i];
+                double b = m[i + 1] / s[i];
+                double sq = a * a + b * b;
+                if (sq > 9.0) {
+                    double t = 3.0 / std::sqrt(sq);
+                    m[i] = t * a * s[i];
+                    m[i + 1] = t * b * s[i];
+                }
+            }
+        }
+    }
+
+    const int subdivisions = 4; // 4x plotting density when smoothing is enabled
+
+    for (int i = 0; i < nSamples - 1; ++i) {
+        double xi = x[i];
+        double xi1 = x[i + 1];
+        double hi = xi1 - xi;
+        double yi = y[i];
+        double yi1 = y[i + 1];
+        double mi = m[i];
+        double mi1 = m[i + 1];
+
+        double xPrev = xi;
+        double yPrev = yi;
+        for (int k = 1; k <= subdivisions; ++k) {
+            double t = static_cast<double>(k) / static_cast<double>(subdivisions);
+            double t2 = t * t;
+            double t3 = t2 * t;
+            double h00 = 2.0 * t3 - 3.0 * t2 + 1.0;
+            double h10 = t3 - 2.0 * t2 + t;
+            double h01 = -2.0 * t3 + 3.0 * t2;
+            double h11 = t3 - t2;
+
+            double xT = xi + t * hi;
+            double yT = h00 * yi + h10 * hi * mi + h01 * yi1 + h11 * hi * mi1;
+
+            QGraphicsLineItem *seg = plot->createSegment(xPrev, yPrev, xT, yT, *samplePen);
+            if (seg) {
+                segments->append(seg);
+            }
+            xPrev = xT;
+            yPrev = yT;
+        }
+    }
+
+    segments->append(plot->createLabel(x[nSamples - 1], y[nSamples - 1], vg1Nominal, samplePen->color()));
 }
 
 void Sweep::plotPentodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)
 {
-    // qInfo("=== SWEEP::PLOTPENTODEANODE - Sample count: %d ===", samples.count());
-
-    // ADD VALIDATION FOR EMPTY SWEEPS
     if (samples.count() < 2) {
-        // qWarning("Sweep has insufficient samples (%d) for plotting - skipping", samples.count());
         return;
     }
 
-    Sample *firstSample = samples.at(0);
+    bool smooth = (measurement && measurement->isSmoothPlotting());
 
-    double vg = firstSample->getVg1();
-    double va = firstSample->getVa();
-    double ia = firstSample->getIa();
+    if (!smooth) {
+        Sample *firstSample = samples.at(0);
 
-    // qInfo("First sample: vg1=%f, va=%f, ia=%f", vg, va, ia);
+        double vg = firstSample->getVg1();
+        double va = firstSample->getVa();
+        double ia = firstSample->getIa();
 
-    int nSamples = samples.count();
-    for (int j = 1; j < nSamples; j++) {
-         Sample *sample = samples.at(j);
+        int nSamples = samples.count();
+        for (int j = 1; j < nSamples; j++) {
+            Sample *sample = samples.at(j);
 
-         double vaNext = sample->getVa();
-         double iaNext = sample->getIa();
+            double vaNext = sample->getVa();
+            double iaNext = sample->getIa();
 
-         // qInfo("Pentode anode segment %d: va=%f->%f, ia=%f->%f", j, va, vaNext, ia, iaNext);
+            QGraphicsLineItem *segment = plot->createSegment(va, ia, vaNext, iaNext, *samplePen);
+            if (segment != nullptr) {
+                segments->append(segment);
+            } else {
+                continue;
+            }
 
-         QGraphicsLineItem *segment = plot->createSegment(va, ia, vaNext, iaNext, *samplePen);
-         if (segment != nullptr) {
-             segments->append(segment);
-             // qInfo("Pentode anode segment %d added successfully", j);
-         } else {
-             // qWarning("Failed to create pentode anode segment %d", j);
-             continue;
-         }
+            va = vaNext;
+            ia = iaNext;
+        }
 
-         va = vaNext;
-         ia = iaNext;
-     }
+        segments->append(plot->createLabel(va, ia, vg1Nominal, samplePen->color()));
+        return;
+    }
+    const int nSamples = samples.count();
 
-    segments->append(plot->createLabel(va, ia, vg1Nominal, samplePen->color()));
-    // qInfo("Finished plotting pentode anode sweep - %d segments created", nSamples - 1);
+    QVector<double> x(nSamples), y(nSamples);
+    for (int i = 0; i < nSamples; ++i) {
+        Sample *s = samples.at(i);
+        x[i] = s->getVa();
+        y[i] = s->getIa();
+    }
+
+    QVector<double> h(nSamples - 1), s(nSamples - 1);
+    for (int i = 0; i < nSamples - 1; ++i) {
+        h[i] = x[i + 1] - x[i];
+        if (h[i] == 0.0) {
+            s[i] = 0.0;
+        } else {
+            s[i] = (y[i + 1] - y[i]) / h[i];
+        }
+    }
+
+    QVector<double> m(nSamples);
+    if (nSamples == 2) {
+        m[0] = m[1] = s[0];
+    } else {
+        m[0] = ((2 * h[0] + h[1]) * s[0] - h[0] * s[1]) / (h[0] + h[1]);
+        if (m[0] * s[0] <= 0.0) m[0] = 0.0;
+        else if (std::fabs(m[0] / s[0]) > 3.0) m[0] = 3.0 * s[0];
+
+        for (int i = 1; i < nSamples - 1; ++i) {
+            if (s[i - 1] * s[i] <= 0.0) {
+                m[i] = 0.0;
+            } else {
+                double w1 = 2.0 * h[i] + h[i - 1];
+                double w2 = h[i] + 2.0 * h[i - 1];
+                m[i] = (w1 + w2) / (w1 / s[i - 1] + w2 / s[i]);
+            }
+        }
+
+        m[nSamples - 1] = ((2 * h[nSamples - 2] + h[nSamples - 3]) * s[nSamples - 2] - h[nSamples - 2] * s[nSamples - 3]) / (h[nSamples - 2] + h[nSamples - 3]);
+        if (m[nSamples - 1] * s[nSamples - 2] <= 0.0) m[nSamples - 1] = 0.0;
+        else if (std::fabs(m[nSamples - 1] / s[nSamples - 2]) > 3.0) m[nSamples - 1] = 3.0 * s[nSamples - 2];
+
+        for (int i = 0; i < nSamples - 1; ++i) {
+            if (s[i] == 0.0) {
+                m[i] = 0.0;
+                m[i + 1] = 0.0;
+            } else {
+                double a = m[i] / s[i];
+                double b = m[i + 1] / s[i];
+                double sq = a * a + b * b;
+                if (sq > 9.0) {
+                    double t = 3.0 / std::sqrt(sq);
+                    m[i] = t * a * s[i];
+                    m[i + 1] = t * b * s[i];
+                }
+            }
+        }
+    }
+
+    const int subdivisions = 4; // 4x plotting density when smoothing is enabled
+
+    for (int i = 0; i < nSamples - 1; ++i) {
+        double xi = x[i];
+        double xi1 = x[i + 1];
+        double hi = xi1 - xi;
+        double yi = y[i];
+        double yi1 = y[i + 1];
+        double mi = m[i];
+        double mi1 = m[i + 1];
+
+        double xPrev = xi;
+        double yPrev = yi;
+        for (int k = 1; k <= subdivisions; ++k) {
+            double t = static_cast<double>(k) / static_cast<double>(subdivisions);
+            double t2 = t * t;
+            double t3 = t2 * t;
+            double h00 = 2.0 * t3 - 3.0 * t2 + 1.0;
+            double h10 = t3 - 2.0 * t2 + t;
+            double h01 = -2.0 * t3 + 3.0 * t2;
+            double h11 = t3 - t2;
+
+            double xT = xi + t * hi;
+            double yT = h00 * yi + h10 * hi * mi + h01 * yi1 + h11 * hi * mi1;
+
+            QGraphicsLineItem *seg = plot->createSegment(xPrev, yPrev, xT, yT, *samplePen);
+            if (seg) {
+                segments->append(seg);
+            }
+            xPrev = xT;
+            yPrev = yT;
+        }
+    }
+
+    segments->append(plot->createLabel(x[nSamples - 1], y[nSamples - 1], vg1Nominal, samplePen->color()));
 }
 
 void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> *segments)

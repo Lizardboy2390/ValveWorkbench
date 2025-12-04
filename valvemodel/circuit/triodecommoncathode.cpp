@@ -863,6 +863,19 @@ void TriodeCommonCathode::plot(Plot *plot)
     double yMajor = std::max(0.5, yStop / 10.0);
     double xMajor = std::max(5.0, xStop / 10.0);
 
+    // Single helper row between the X-axis line and its numeric labels.
+    // Both symmetric (blue) and max-swing (brown) helpers share this row,
+    // and are mutually exclusive so only one set of labels is drawn.
+    double labelRowMax = -yMajor * 1.8;
+    double labelRowSym = -yMajor * 2.4;
+    const double yScale = plot->getYScale();
+    if (yScale > 0.0) {
+        const double helperOffsetPx = 6.0; // pixels below the axis, above tick labels
+        const double helperY = -helperOffsetPx / yScale;
+        labelRowMax = helperY;
+        labelRowSym = helperY;
+    }
+
     // Preserve existing axes if other plots are already drawn
     if (plot->getScene()->items().isEmpty()) {
         plot->setAxes(0.0, xStop, xMajor, 0.0, yStop, yMajor);
@@ -1061,44 +1074,48 @@ void TriodeCommonCathode::plot(Plot *plot)
             double vaZero = op.x() - op.y() / slope;
             vaZero = std::clamp(vaZero, 0.0, xStop);
 
-            // Draw annotations if valid (vertical cutoff line + labels)
-            swingGroup = new QGraphicsItemGroup();
-            QPen swingPen(QColor::fromRgb(165, 42, 42)); // brown cutoff line
-            swingPen.setWidth(2);
-            if (vaCut >= 0.0) {
-                QGraphicsLineItem *vline = plot->createSegment(vaCut, 0.0, vaCut, yAtCut, swingPen);
-                if (vline) swingGroup->addToGroup(vline);
-                QGraphicsTextItem *labelCut = plot->createLabel(vaCut, -yMajor * 1.8, vaCut, QColor::fromRgb(165,42,42));
-                if (labelCut) {
-                    // Center horizontally at vaCut
-                    QPointF p = labelCut->pos();
-                    double w = labelCut->boundingRect().width();
-                    labelCut->setPos(p.x() - 5.0 - w / 2.0, p.y());
-                    swingGroup->addToGroup(labelCut);
+            // Draw annotations if valid (vertical cutoff line + labels).
+            // When symmetric swing helper is enabled, we suppress the
+            // brown max-swing overlay so that only one helper row is shown.
+            if (!showSymSwing) {
+                swingGroup = new QGraphicsItemGroup();
+                QPen swingPen(QColor::fromRgb(165, 42, 42)); // brown cutoff line
+                swingPen.setWidth(2);
+                if (vaCut >= 0.0) {
+                    QGraphicsLineItem *vline = plot->createSegment(vaCut, 0.0, vaCut, yAtCut, swingPen);
+                    if (vline) swingGroup->addToGroup(vline);
+                    QGraphicsTextItem *labelCut = plot->createLabel(vaCut, labelRowMax, vaCut, QColor::fromRgb(165,42,42));
+                    if (labelCut) {
+                        // Center horizontally at vaCut
+                        QPointF p = labelCut->pos();
+                        double w = labelCut->boundingRect().width();
+                        labelCut->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                        swingGroup->addToGroup(labelCut);
+                    }
                 }
-            }
-            QGraphicsTextItem *labelZero = plot->createLabel(vaZero, -yMajor * 1.8, vaZero, QColor::fromRgb(165,42,42));
-            if (labelZero) {
-                QPointF pz = labelZero->pos();
-                double wz = labelZero->boundingRect().width();
-                labelZero->setPos(pz.x() - 5.0 - wz / 2.0, pz.y());
-                swingGroup->addToGroup(labelZero);
-            }
-            if (vaCut >= 0.0) {
-                double swing = std::abs(vaZero - vaCut);
-                double mid = 0.5 * (vaZero + vaCut);
-                QGraphicsTextItem *labelSwing = plot->createLabel(mid, -yMajor * 1.8, swing, QColor::fromRgb(165,42,42));
-                if (labelSwing) {
-                    QPointF ps = labelSwing->pos();
-                    double ws = labelSwing->boundingRect().width();
-                    labelSwing->setPos(ps.x() - 5.0 - ws / 2.0, ps.y());
-                    swingGroup->addToGroup(labelSwing);
+                QGraphicsTextItem *labelZero = plot->createLabel(vaZero, labelRowMax, vaZero, QColor::fromRgb(165,42,42));
+                if (labelZero) {
+                    QPointF pz = labelZero->pos();
+                    double wz = labelZero->boundingRect().width();
+                    labelZero->setPos(pz.x() - 5.0 - wz / 2.0, pz.y());
+                    swingGroup->addToGroup(labelZero);
                 }
-            }
-            if (!swingGroup->childItems().isEmpty()) {
-                plot->getScene()->addItem(swingGroup);
-            } else {
-                delete swingGroup; swingGroup = nullptr;
+                if (vaCut >= 0.0) {
+                    double swing = std::abs(vaZero - vaCut);
+                    double mid = 0.5 * (vaZero + vaCut);
+                    QGraphicsTextItem *labelSwing = plot->createLabel(mid, labelRowMax, swing, QColor::fromRgb(165,42,42));
+                    if (labelSwing) {
+                        QPointF ps = labelSwing->pos();
+                        double ws = labelSwing->boundingRect().width();
+                        labelSwing->setPos(ps.x() - 5.0 - ws / 2.0, ps.y());
+                        swingGroup->addToGroup(labelSwing);
+                    }
+                }
+                if (!swingGroup->childItems().isEmpty()) {
+                    plot->getScene()->addItem(swingGroup);
+                } else {
+                    delete swingGroup; swingGroup = nullptr;
+                }
             }
         }
     }
@@ -1228,7 +1245,7 @@ void TriodeCommonCathode::plot(Plot *plot)
                 {
                     const QColor tickLabelColor = QColor::fromRgb(100, 149, 237);
                     if (leftX >= 0.0) {
-                        QGraphicsTextItem *lLbl = plot->createLabel(leftX, -yMajor * 2.4, leftX, tickLabelColor);
+                        QGraphicsTextItem *lLbl = plot->createLabel(leftX, labelRowSym, leftX, tickLabelColor);
                         if (lLbl) {
                             QPointF pl = lLbl->pos();
                             double wl = lLbl->boundingRect().width();
@@ -1237,7 +1254,7 @@ void TriodeCommonCathode::plot(Plot *plot)
                         }
                     }
                     if (rightX <= xStop) {
-                        QGraphicsTextItem *rLbl = plot->createLabel(rightX, -yMajor * 2.4, rightX, tickLabelColor);
+                        QGraphicsTextItem *rLbl = plot->createLabel(rightX, labelRowSym, rightX, tickLabelColor);
                         if (rLbl) {
                             QPointF pr = rLbl->pos();
                             double wr = rLbl->boundingRect().width();
@@ -1246,10 +1263,10 @@ void TriodeCommonCathode::plot(Plot *plot)
                         }
                     }
                 }
-                // centered Vpp label (grey, one row below x-axis labels)
+                // centered Vpp label (light blue, one row below x-axis labels)
                 const double vpp = 2.0 * vpk;
                 lastSymVpp = vpp;
-                QGraphicsTextItem *lbl = plot->createLabel(op.x(), -yMajor * 2.4, vpp, QColor::fromRgb(100,149,237));
+                QGraphicsTextItem *lbl = plot->createLabel(op.x(), labelRowSym, vpp, QColor::fromRgb(100,149,237));
                 if (lbl) {
                     QPointF p = lbl->pos();
                     double w = lbl->boundingRect().width();

@@ -248,6 +248,11 @@ bool PreferencesDialog::showScreenCurrent()
     return ui->checkScreenCurrent->isChecked();
 }
 
+bool PreferencesDialog::smoothCurves()
+{
+    return ui->checkSmoothCurves->isChecked();
+}
+
 double PreferencesDialog::getAnodeVoltageCalibration()
 {
     return anodeVoltageSpinBox->value();
@@ -280,15 +285,21 @@ double PreferencesDialog::getGrid2VoltageCalibration()
 
 double PreferencesDialog::grid1CommandForDesired(double desiredVoltage) const
 {
-    return gridCommandForDesired(desiredVoltage, grid1MeasuredLowSpinBox->value(), grid1MeasuredHighSpinBox->value());
+    return gridCommandForDesired(desiredVoltage,
+                                 grid1MeasuredLowSpinBox->value(),
+                                 grid1MeasuredHighSpinBox->value());
 }
 
 double PreferencesDialog::grid2CommandForDesired(double desiredVoltage) const
 {
-    return gridCommandForDesired(desiredVoltage, grid2MeasuredLowSpinBox->value(), grid2MeasuredHighSpinBox->value());
+    return gridCommandForDesired(desiredVoltage,
+                                 grid2MeasuredLowSpinBox->value(),
+                                 grid2MeasuredHighSpinBox->value());
 }
 
-double PreferencesDialog::gridCommandForDesired(double desiredVoltage, double measuredLow, double measuredHigh) const
+double PreferencesDialog::gridCommandForDesired(double desiredVoltage,
+                                                 double measuredLow,
+                                                 double measuredHigh) const
 {
     const double commandLow = -GRID_CAL_LOW_REF;
     const double commandHigh = -GRID_CAL_HIGH_REF;
@@ -352,6 +363,7 @@ void PreferencesDialog::loadFromSettings()
     ui->checkSecondary->setChecked(s.value("preferences/useSecondaryEmission", true).toBool());
     ui->checkFixTriode->setChecked(s.value("preferences/fixTriodeParameters", true).toBool());
     ui->checkFixSecondary->setChecked(s.value("preferences/fixSecondaryEmission", true).toBool());
+    ui->checkSmoothCurves->setChecked(s.value("preferences/smoothCurves", false).toBool());
 
     // Calibration offsets
     anodeVoltageSpinBox->setValue(s.value("cal/anodeVoltage", 0.0).toDouble());
@@ -382,6 +394,7 @@ void PreferencesDialog::saveToSettings() const
     s.setValue("preferences/useSecondaryEmission", ui->checkSecondary->isChecked());
     s.setValue("preferences/fixTriodeParameters", ui->checkFixTriode->isChecked());
     s.setValue("preferences/fixSecondaryEmission", ui->checkFixSecondary->isChecked());
+    s.setValue("preferences/smoothCurves", ui->checkSmoothCurves->isChecked());
 
     s.setValue("cal/anodeVoltage", anodeVoltageSpinBox->value());
     s.setValue("cal/anodeCurrent", anodeCurrentSpinBox->value());

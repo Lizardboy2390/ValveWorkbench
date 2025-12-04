@@ -121,8 +121,6 @@ private slots:
 
     void on_screenStep_editingFinished();
 
-    void on_heaterVoltage_editingFinished();
-
     void on_iaMax_editingFinished();
 
     void on_pMax_editingFinished();
@@ -187,7 +185,37 @@ private slots:
     void on_pushButton_3_clicked();
     void on_pushButton_4_clicked();
 
+    void on_quickHealthButton_clicked();
+    void on_fullHealthButton_clicked();
+
+    void on_datasheetVa_editingFinished();
+    void on_datasheetVg_editingFinished();
+    void on_datasheetIa_editingFinished();
+    void on_datasheetGm_editingFinished();
+    void on_datasheetMu_editingFinished();
+    void on_datasheetRp_editingFinished();
+
 private:
+    enum HealthMode {
+        HEALTH_NONE,
+        HEALTH_QUICK,
+        HEALTH_FULL
+    };
+
+    struct HealthPoint {
+        double va;
+        double vg;
+    };
+
+    struct HealthResult {
+        bool valid;
+        double va;
+        double vg;
+        double ia;
+        double gm;
+        double rp;   // Measured plate resistance (ohms); 0.0 if unavailable
+    };
+
     Ui::ValveWorkbench *ui;
     QCheckBox *designerCheck = nullptr;
     QCheckBox *symSwingCheck = nullptr;
@@ -313,6 +341,24 @@ private:
     QList<Template> templates;
     QJsonObject datasheetJson; // Opaque datasheet/ref-point block from templates/devices
 
+    HealthMode healthMode = HEALTH_NONE;
+    bool healthRunActive = false;
+    int healthRunIndex = 0;
+    QList<HealthPoint> healthPoints;
+    QList<HealthResult> healthResults;
+
+    bool healthStateSaved = false;
+    int savedTestTypeForHealth = 0;
+    double savedAnodeStartForHealth = 0.0;
+    double savedAnodeStopForHealth = 0.0;
+    double savedAnodeStepForHealth = 0.0;
+    double savedGridStartForHealth = 0.0;
+    double savedGridStopForHealth = 0.0;
+    double savedGridStepForHealth = 0.0;
+    double savedScreenStartForHealth = 0.0;
+    double savedScreenStopForHealth = 0.0;
+    double savedScreenStepForHealth = 0.0;
+
     PreferencesDialog preferencesDialog;
 
     SimpleManualPentodeDialog *simplePentodeDialog = nullptr;
@@ -383,6 +429,12 @@ private:
     void populateDataTableFromMeasurement(Measurement *measurement);
 
     void updateDatasheetDisplay();
+    void syncDatasheetFromUi();
+    bool ensureDatasheetRefPoint(double &va0, double &vg0, double &ia0, double &gm0, double &mu0, double &rp0);
+    void startHealthRun(HealthMode mode);
+    void configureTransferForHealthPoint(const HealthPoint &pt);
+    bool computeIaGmAt(Measurement *measurement, const HealthPoint &pt, double &ia_mA, double &gm_mA_V, double &rp_ohms);
+    void finalizeHealthRun();
 
     void runHarmonicsScan();
     void runHarmonicsBiasSweep();

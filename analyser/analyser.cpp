@@ -311,7 +311,7 @@ void Analyser::startTest()
     // but a Fixed mode in Preferences can override this with a user-specified sample count.
     int autoSamples = 3;
     if (iaMax <= 5.0) {
-        autoSamples = 8;  // small-signal tubes
+        autoSamples = 7;  // small-signal tubes
     } else if (iaMax <= 30.0) {
         autoSamples = 5;  // medium-current tubes
     } else {
@@ -786,10 +786,13 @@ void Analyser::nextSample() {
         }
     }
 
-    int progress = ((stepIndex * sweepPoints) + sweepIndex) * 100 / (sweepPoints * stepParameter.length());
-    // qInfo("Sending progress: %d", progress);
-    client->testProgress(progress);
-    // qInfo("Sweep progress: %d%%", progress); // Added debug log
+    const int totalSteps = stepParameter.length();
+    if (sweepPoints > 0 && totalSteps > 0) {
+        int progress = ((stepIndex * sweepPoints) + sweepIndex) * 100 / (sweepPoints * totalSteps);
+        // qInfo("Sending progress: %d", progress);
+        client->testProgress(progress);
+        // qInfo("Sweep progress: %d%%", progress); // Added debug log
+    }
 }
 
 void Analyser::abortTest()

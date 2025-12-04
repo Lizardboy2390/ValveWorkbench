@@ -19340,7 +19340,8 @@ debug\sweep.obj: ..\..\..\valvemodel\data\sweep.cpp ..\..\..\valvemodel\data\swe
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsTextItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
-		..\..\..\valvemodel\data\measurement.h
+		..\..\..\valvemodel\data\measurement.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QDebug
 
 debug\cohenhelietriode.obj: ..\..\..\valvemodel\model\cohenhelietriode.cpp ..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\korentriode.h \

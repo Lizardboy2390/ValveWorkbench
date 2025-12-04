@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-11-30 (Open Items maintenance; marked verification tasks complete)
+Last updated: 2025-12-03 (Quick/Full Health orchestration and crash fix; Open Items update)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -58,6 +58,38 @@ while keeping the **rules** and current **technical state** clear.
   - Result: no spurious straight lines between screen families. Line labels for
     transfer families are currently placed at the last sample of the sweep
     (user reverted an experiment to move these labels mid-curve).
+ 
+- **Quick/Full Health (triode, transfer-based)**
+  - **UI:** The Analyser tab exposes `Quick Health` and `Full Health` buttons which orchestrate short triode transfer tests against a datasheet reference point.
+  - **Preconditions:**
+    - Current device type is `TRIODE`.
+    - The active template/device JSON carries a `datasheet.refPoints[0]` object with at least `va`, `vg`, `ia`, and `gm` (μ and rp are optional).
+  - **Test orchestration:**
+    - `startHealthRun(mode)` uses `ensureDatasheetRefPoint` to read the first reference point, then builds a set of `HealthPoint` targets:
+      - **Quick Health:** a single central point at `(va0, vg0)`.
+      - **Full Health:** the central point plus four Va/Vg “corners” around it; Va offsets are ±20–30% of Va (clamped to 40–100 V), Vg offsets are ±0.5–1.0 V depending on |Vg|.
+    - For each `HealthPoint`, `configureTransferForHealthPoint`:
+      - Sets `testType = TRANSFER_CHARACTERISTICS`.
+      - Fixes anode at `Va = pt.va` (anodeStart = anodeStop = pt.va).
+      - Maps the negative physical grid bias `vg` into a small positive DAC magnitude window around `|vg|` (e.g. |vg| ± 0.5–1.0 V) for the analyser grid range.
+    - Health runs chain via `ValveWorkbench::testFinished()` using a **queued continuation**:
+      - After each sweep completes, `testFinished()` records Ia/gm for the current `HealthPoint`, increments `healthRunIndex`, and if more points remain, it uses `QMetaObject::invokeMethod(this, lambda, Qt::QueuedConnection)` to configure the next point and call `on_runButton_clicked()` on the **event loop**, not directly from inside the analyser callback.
+      - This removes re-entrancy into `Analyser::startTest()` from within `Analyser::nextSample()` and fixes a crash that occurred when Quick/Full Health tried to start a new run while the previous `testFinished()` stack was still unwinding.
+  - **Measurement and metrics:**
+    - After each sweep, `computeIaGmAt` scans the resulting transfer measurement:
+      - Finds the sample nearest to the requested `(Va, Vg)` in a weighted Va/Vg sense.
+      - Reads `Ia` from that sample and estimates local `gm` from neighbouring samples via ΔIa/ΔVg.
+    - `finalizeHealthRun` re-reads the datasheet reference point and computes simple, unitless scores for Ia and gm:
+      - Both are treated as ratios vs reference; 0% deviation → score 1, 30% deviation → score 0, with linear falloff and clipping in between.
+    - **Quick Health** is the average Ia/gm score at the central point, reported as a percentage.
+    - **Full Health** is the average Ia/gm score across all valid HealthPoints.
+    - Results are presented as `"Quick Health: X% Full Health: Y%"` in the status bar and are also attached as tooltips to the Quick/Full Health buttons.
+  - **Robustness notes:**
+    - `Analyser::nextSample()` now guards its progress calculation (`client->testProgress(progress)`) so progress is only computed when both `sweepPoints` and `stepParameter.length()` are non-zero, preventing accidental divide-by-zero if state is reset between runs.
+  - **Limitations / status:**
+    - Currently supports **triode** devices only; double-triode semantics are to be decided.
+    - The scoring envelope (30% tolerance, Va/Vg offsets) is an initial heuristic and should be revisited once sufficient hardware data is available.
+    - Health runs deliberately avoid modifying firmware behaviour; they are a desktop-side orchestration layer over existing transfer tests.
 
 - **Model plotting**
   - The Modeller/Designer model overlays use `Device::anodePlot` and the
@@ -89,6 +121,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 - [ ] Complete time-domain harmonic heatmap using proper methodology
 - [x] Document any changes properly in handoff.md — 2025-11-30: Updated with Designer Autoscale Y semantics and output-stage axis behaviour.
 - [ ] Follow ALL Global Rules without exception
+ - [ ] Validate Quick/Full Health triode metrics against real hardware (central and corner tests) and tune scoring thresholds; decide on double-triode support semantics once the triode path is stable.
 
 ## Global Rules (Authoritative Summary)
 - **Code Quality**

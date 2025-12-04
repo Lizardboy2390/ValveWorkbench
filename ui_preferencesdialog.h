@@ -52,6 +52,7 @@ public:
     QSpinBox *avgSamples;
     QSpacerItem *horizontalSpacer_5;
     QCheckBox *checkScreenCurrent;
+    QCheckBox *checkSmoothCurves;
     QCheckBox *checkRemodel;
     QCheckBox *checkSecondary;
     QCheckBox *checkFixTriode;
@@ -208,6 +209,12 @@ public:
 
         verticalLayout->addWidget(checkScreenCurrent);
 
+        checkSmoothCurves = new QCheckBox(verticalLayoutWidget);
+        checkSmoothCurves->setObjectName("checkSmoothCurves");
+        checkSmoothCurves->setChecked(false);
+
+        verticalLayout->addWidget(checkSmoothCurves);
+
         checkRemodel = new QCheckBox(verticalLayoutWidget);
         checkRemodel->setObjectName("checkRemodel");
         checkRemodel->setChecked(false);
@@ -253,6 +260,7 @@ public:
         label_avgMode->setText(QCoreApplication::translate("PreferencesDialog", "Averaging mode:", nullptr));
         label_avgSamples->setText(QCoreApplication::translate("PreferencesDialog", "Fixed samples:", nullptr));
         checkScreenCurrent->setText(QCoreApplication::translate("PreferencesDialog", "Show screen current on anode plots", nullptr));
+        checkSmoothCurves->setText(QCoreApplication::translate("PreferencesDialog", "Smooth measurement plotting", nullptr));
         checkRemodel->setText(QCoreApplication::translate("PreferencesDialog", "Pentode remodel after screen modelling", nullptr));
         checkSecondary->setText(QCoreApplication::translate("PreferencesDialog", "Use secondary emissions in model", nullptr));
         checkFixTriode->setText(QCoreApplication::translate("PreferencesDialog", "Fix triode parameters for pentode modelling", nullptr));

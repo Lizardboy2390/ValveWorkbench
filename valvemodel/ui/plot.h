@@ -6,8 +6,8 @@
 #include <QColor>
 #include <QPointF>
 
-#define PLOT_WIDTH 430
-#define PLOT_HEIGHT 370
+#define PLOT_WIDTH 660
+#define PLOT_HEIGHT 600
 
 class Plot
 {

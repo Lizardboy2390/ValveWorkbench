@@ -307,6 +307,16 @@
      </widget>
     </item>
     <item>
+     <widget class="QCheckBox" name="checkSmoothCurves">
+      <property name="text">
+       <string>Smooth measurement plotting</string>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QCheckBox" name="checkRemodel">
       <property name="text">
        <string>Pentode remodel after screen modelling</string>

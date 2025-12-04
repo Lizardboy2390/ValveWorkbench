@@ -82,6 +82,9 @@ public:
 
     bool hasTriodeBData() const;
 
+    void setSmoothPlotting(bool enable);
+    bool isSmoothPlotting() const;
+
 protected:
     int deviceType = TRIODE;
     int testType = ANODE_CHARACTERISTICS;
@@ -109,6 +112,8 @@ protected:
 
     bool showScreen = true;
     QColor sampleColor = QColor::fromRgb(0, 0, 0);
+
+    bool smoothPlotting = false;
 
     // Hint flag: true when this pentode measurement was taken in
     // triode-connected pentode mode (anode and screen driven together).

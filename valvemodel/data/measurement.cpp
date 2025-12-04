@@ -117,6 +117,10 @@ void Measurement::fromJson(QJsonObject source)
         for (int i = 0; i < jsonSweeps.size(); i++) {
             if (jsonSweeps.at(i).isObject()) {
                 Sweep *sweep = new Sweep(deviceType, testType);
+                // For deserialized measurements, make sure each Sweep knows
+                // its parent Measurement so plotting can consult
+                // Measurement::isSmoothPlotting() for smoothing.
+                sweep->setMeasurement(this);
                 sweep->fromJson(jsonSweeps.at(i).toObject());
                 sweeps.append(sweep);
             }
@@ -488,6 +492,17 @@ bool Measurement::hasTriodeBData() const
     }
 
     return false;
+}
+
+void Measurement::setSmoothPlotting(bool enable)
+{
+    qInfo("Measurement::setSmoothPlotting: this=%p enable=%d", static_cast<void*>(this), enable ? 1 : 0);
+    smoothPlotting = enable;
+}
+
+bool Measurement::isSmoothPlotting() const
+{
+    return smoothPlotting;
 }
 
 QList<QGraphicsItem *> *Measurement::plotTriodeAnode(Plot *plot, Sweep *sweep)

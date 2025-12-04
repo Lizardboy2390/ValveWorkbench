@@ -598,6 +598,530 @@ void ValveWorkbench::updateDatasheetDisplay()
     setField(ui->datasheetRp, numToString(rp.value("rp"), 1));
 }
 
+void ValveWorkbench::syncDatasheetFromUi()
+{
+    if (!ui) {
+        return;
+    }
+
+    // If all UI fields are blank and we already have a non-empty datasheet
+    // block (e.g. loaded from a template), preserve the existing JSON rather
+    // than overwriting it with an empty refPoint.
+    const QString vaText = ui->datasheetVa ? ui->datasheetVa->text().trimmed() : QString();
+    const QString vgText = ui->datasheetVg ? ui->datasheetVg->text().trimmed() : QString();
+    const QString iaText = ui->datasheetIa ? ui->datasheetIa->text().trimmed() : QString();
+    const QString gmText = ui->datasheetGm ? ui->datasheetGm->text().trimmed() : QString();
+    const QString muText = ui->datasheetMu ? ui->datasheetMu->text().trimmed() : QString();
+    const QString rpText = ui->datasheetRp ? ui->datasheetRp->text().trimmed() : QString();
+
+    const bool allEmpty = vaText.isEmpty() && vgText.isEmpty() && iaText.isEmpty() &&
+                          gmText.isEmpty() && muText.isEmpty() && rpText.isEmpty();
+    if (allEmpty && !datasheetJson.isEmpty()) {
+        return;
+    }
+
+    QJsonArray refPoints = datasheetJson.value(QStringLiteral("refPoints")).toArray();
+    QJsonObject rp;
+    if (!refPoints.isEmpty() && refPoints.at(0).isObject()) {
+        rp = refPoints.at(0).toObject();
+    }
+
+    auto setFromField = [&](const char *key, QLineEdit *edit) {
+        if (!edit) {
+            return;
+        }
+        const QString text = edit->text().trimmed();
+        if (text.isEmpty()) {
+            rp.remove(QLatin1String(key));
+            return;
+        }
+        bool ok = false;
+        const double value = text.toDouble(&ok);
+        if (ok) {
+            rp.insert(QLatin1String(key), value);
+        }
+    };
+
+    setFromField("va", ui->datasheetVa);
+    setFromField("vg", ui->datasheetVg);
+    setFromField("ia", ui->datasheetIa);
+    setFromField("gm", ui->datasheetGm);
+    setFromField("mu", ui->datasheetMu);
+    setFromField("rp", ui->datasheetRp);
+
+    if (refPoints.isEmpty()) {
+        refPoints.append(rp);
+    } else {
+        refPoints[0] = rp;
+    }
+
+    datasheetJson.insert(QStringLiteral("refPoints"), refPoints);
+}
+
+bool ValveWorkbench::ensureDatasheetRefPoint(double &va0, double &vg0, double &ia0, double &gm0, double &mu0, double &rp0)
+{
+    if (datasheetJson.isEmpty()) {
+        return false;
+    }
+
+    const QJsonArray refPoints = datasheetJson.value("refPoints").toArray();
+    if (refPoints.isEmpty() || !refPoints.at(0).isObject()) {
+        return false;
+    }
+
+    const QJsonObject rp = refPoints.at(0).toObject();
+
+    auto read = [&](const char *key, double &out) -> bool {
+        const QJsonValue v = rp.value(QLatin1String(key));
+        if (!v.isDouble()) {
+            return false;
+        }
+        out = v.toDouble();
+        return true;
+    };
+
+    if (!read("va", va0)) return false;
+    if (!read("vg", vg0)) return false;
+    if (!read("ia", ia0)) return false;
+    if (!read("gm", gm0)) return false;
+    // mu and rp are optional for now; treat missing as 0
+    read("mu", mu0);
+    read("rp", rp0);
+
+    return true;
+}
+
+void ValveWorkbench::startHealthRun(HealthMode mode)
+{
+    double va0 = 0.0;
+    double vg0 = 0.0;
+    double ia0 = 0.0;
+    double gm0 = 0.0;
+    double mu0 = 0.0;
+    double rp0 = 0.0;
+
+    if (!ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0)) {
+        QMessageBox::warning(this, tr("Health Test"), tr("No valid datasheet reference point is available. Load a template with datasheet.refPoints[0] first."));
+        return;
+    }
+
+    if (deviceType != TRIODE) {
+        QMessageBox::warning(this, tr("Health Test"), tr("Quick/Full Health currently support triode devices only."));
+        return;
+    }
+
+    // Build central and (for full mode) corner test points around the datasheet operating point.
+    healthPoints.clear();
+    healthResults.clear();
+
+    HealthPoint center;
+    center.va = va0;
+    center.vg = vg0;
+    healthPoints.append(center);
+
+    if (mode == HEALTH_FULL) {
+        const double dVaFrac = 0.2;
+        double dVa = std::fabs(va0) * dVaFrac;
+        if (dVa < 40.0) dVa = 40.0;
+        if (dVa > 100.0) dVa = 100.0;
+
+        double dVg = 0.5;
+        if (std::fabs(vg0) > 2.0) {
+            dVg = 1.0;
+        }
+
+        const double vaLow  = std::max(0.0, va0 - dVa);
+        const double vaHigh = va0 + dVa;
+        const double vgLo   = vg0 - dVg;
+        const double vgHi   = vg0 + dVg;
+
+        HealthPoint p;
+
+        p.va = vaLow;  p.vg = vgLo;  healthPoints.append(p);
+        p.va = vaLow;  p.vg = vgHi;  healthPoints.append(p);
+        p.va = vaHigh; p.vg = vgLo;  healthPoints.append(p);
+        p.va = vaHigh; p.vg = vgHi;  healthPoints.append(p);
+    }
+
+    healthResults.resize(healthPoints.size());
+    for (int i = 0; i < healthResults.size(); ++i) {
+        healthResults[i].valid = false;
+        healthResults[i].va = 0.0;
+        healthResults[i].vg = 0.0;
+        healthResults[i].ia = 0.0;
+        healthResults[i].gm = 0.0;
+    }
+
+    if (!healthStateSaved) {
+        healthStateSaved = true;
+        savedTestTypeForHealth = testType;
+        savedAnodeStartForHealth = anodeStart;
+        savedAnodeStopForHealth = anodeStop;
+        savedAnodeStepForHealth = anodeStep;
+        savedGridStartForHealth = gridStart;
+        savedGridStopForHealth = gridStop;
+        savedGridStepForHealth = gridStep;
+        savedScreenStartForHealth = screenStart;
+        savedScreenStopForHealth = screenStop;
+        savedScreenStepForHealth = screenStep;
+    }
+
+    healthMode = mode;
+    healthRunActive = true;
+    healthRunIndex = 0;
+
+    configureTransferForHealthPoint(healthPoints[0]);
+    on_runButton_clicked();
+}
+
+void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
+{
+    // Configure a triode (or double triode) transfer test around the requested operating point.
+    // Datasheet Vg values are negative physical biases (e.g. -2 V). The analyser, however,
+    // expects positive magnitudes for grid DAC commands (e.g. 2 V meaning -2 V actual), so
+    // map the requested operating point into a small window in magnitude space.
+    testType = TRANSFER_CHARACTERISTICS;
+
+    anodeStart = pt.va;
+    anodeStop  = pt.va;
+    anodeStep  = std::max(1.0, std::fabs(pt.va));
+
+    const double vgMag = std::fabs(pt.vg);
+    const double dMag  = 0.5; // ±0.5 V magnitude window around the target bias
+
+    double startMag = (vgMag > dMag) ? (vgMag - dMag) : 0.0;
+    double stopMag  = vgMag + dMag;
+
+    gridStart = startMag;
+    gridStop  = stopMag;
+}
+
+// Compute measured Ia, gm, and a local plate resistance rp around a desired
+// operating point (Va, Vg) from a Measurement. For Quick/Full Health we only
+// use the transfer measurement to derive Ia/gm; rp is obtained from any
+// available ANODE_CHARACTERISTICS dataset for the same device using a small
+// local LS fit around the nearest sample to (Va, Vg).
+//
+// ia_mA and gm_mA_V are always written; rp_ohms is set to >0.0 on success or
+// 0.0 if no suitable anode data is available.
+bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &pt, double &ia_mA, double &gm_mA_V, double &rp_ohms)
+{
+    ia_mA = 0.0;
+    gm_mA_V = 0.0;
+    rp_ohms = 0.0;
+
+    if (!measurement) {
+        return false;
+    }
+
+    const int sweepCount = measurement->count();
+    if (sweepCount <= 0) {
+        return false;
+    }
+
+    double bestScore = std::numeric_limits<double>::infinity();
+    int bestSweepIdx = -1;
+    int bestSampleIdx = -1;
+
+    for (int sw = 0; sw < sweepCount; ++sw) {
+        Sweep *sweep = measurement->at(sw);
+        if (!sweep) {
+            continue;
+        }
+        const int nSamples = sweep->count();
+        for (int sa = 0; sa < nSamples; ++sa) {
+            Sample *sample = sweep->at(sa);
+            if (!sample) continue;
+
+            const double va = sample->getVa();
+            const double vg = sample->getVg1();
+
+            const double dVa = va - pt.va;
+            const double dVg = vg - pt.vg;
+
+            const double score = dVg * dVg + 0.25 * dVa * dVa;
+            if (score < bestScore) {
+                bestScore = score;
+                bestSweepIdx = sw;
+                bestSampleIdx = sa;
+            }
+        }
+    }
+
+    if (bestSweepIdx < 0 || bestSampleIdx < 0) {
+        return false;
+    }
+
+    Sweep *bestSweep = measurement->at(bestSweepIdx);
+    if (!bestSweep) {
+        return false;
+    }
+
+    const int sampleCount = bestSweep->count();
+    if (sampleCount < 2 || bestSampleIdx >= sampleCount) {
+        return false;
+    }
+
+    Sample *sampleMid = bestSweep->at(bestSampleIdx);
+    if (!sampleMid) {
+        return false;
+    }
+
+    ia_mA = sampleMid->getIa();
+
+    int idxPrev = std::max(0, bestSampleIdx - 1);
+    int idxNext = std::min(sampleCount - 1, bestSampleIdx + 1);
+
+    Sample *samplePrev = bestSweep->at(idxPrev);
+    Sample *sampleNext = bestSweep->at(idxNext);
+    if (!samplePrev || !sampleNext || idxPrev == idxNext) {
+        return false;
+    }
+
+    const double vgPrev = samplePrev->getVg1();
+    const double iaPrev = samplePrev->getIa();
+    const double vgNext = sampleNext->getVg1();
+    const double iaNext = sampleNext->getIa();
+
+    const double dVg = vgNext - vgPrev;
+    if (std::fabs(dVg) < 1e-6) {
+        return false;
+    }
+
+    gm_mA_V = (iaNext - iaPrev) / dVg;
+    if (!std::isfinite(gm_mA_V) || gm_mA_V <= 0.0) {
+        return false;
+    }
+
+    // --- Optional: derive a local plate resistance rp from ANODE_CHARACTERISTICS
+    // data that is closest to the same (Va, Vg) operating point. This reuses the
+    // least-squares logic from updateSmallSignalFromMeasurement but specialises
+    // it for a single HealthPoint.
+    Measurement *anodeMeasurement = findMeasurement(measurement->getDeviceType(), ANODE_CHARACTERISTICS);
+    if (anodeMeasurement && measurementHasValidSamples(anodeMeasurement)) {
+        const int anodeSweeps = anodeMeasurement->count();
+        if (anodeSweeps > 0) {
+            double bestScoreRa = std::numeric_limits<double>::infinity();
+            int bestSweepRa = -1;
+            int bestSampleRa = -1;
+
+            // Find the sample in anode data closest to the same (Va, Vg)
+            for (int sw = 0; sw < anodeSweeps; ++sw) {
+                Sweep *sweep = anodeMeasurement->at(sw);
+                if (!sweep) continue;
+                const int nSamples = sweep->count();
+                for (int sa = 0; sa < nSamples; ++sa) {
+                    Sample *s = sweep->at(sa);
+                    if (!s) continue;
+
+                    const double va = s->getVa();
+                    const double vg = s->getVg1();
+                    const double dVa = va - pt.va;
+                    const double dVg = vg - pt.vg;
+                    const double score = dVg * dVg + 0.25 * dVa * dVa;
+                    if (score < bestScoreRa) {
+                        bestScoreRa = score;
+                        bestSweepRa = sw;
+                        bestSampleRa = sa;
+                    }
+                }
+            }
+
+            if (bestSweepRa >= 0 && bestSampleRa >= 0) {
+                Sweep *sweep = anodeMeasurement->at(bestSweepRa);
+                if (sweep && sweep->count() >= 3) {
+                    const int sampleCount = sweep->count();
+
+                    auto clampIndex = [](int idx, int max) {
+                        if (idx < 0) return 0;
+                        if (idx >= max) return max - 1;
+                        return idx;
+                    };
+
+                    const int sampleIdx = clampIndex(bestSampleRa, sampleCount);
+                    const int iPrev     = clampIndex(sampleIdx - 1, sampleCount);
+                    const int iNext     = clampIndex(sampleIdx + 1, sampleCount);
+
+                    Sample *samplePrev = sweep->at(iPrev);
+                    Sample *sampleNext = sweep->at(iNext);
+                    if (samplePrev && sampleNext) {
+                        int iStart = std::max(0, sampleIdx - 2);
+                        int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+
+                        double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+                        int N = 0;
+
+                        for (int i = iStart; i <= iEnd; ++i) {
+                            Sample *s = sweep->at(i);
+                            if (!s) continue;
+                            const double ia = s->getIa(); // mA
+                            if (ia <= 0.0) continue;
+                            const double va = s->getVa(); // V
+                            Sx  += va;
+                            Sy  += ia;
+                            Sxx += va * va;
+                            Sxy += va * ia;
+                            ++N;
+                        }
+
+                        const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+                        if (N >= 3 && std::fabs(den) > 1e-12) {
+                            const double slope_dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+                            if (std::fabs(slope_dIa_dVa) > 1e-12) {
+                                rp_ohms = 1000.0 / slope_dIa_dVa; // V/mA → Ohms
+                            }
+                        }
+
+                        // Fallback: two-point estimate
+                        if (!(rp_ohms > 0.0)) {
+                            const double vaPrev = samplePrev->getVa();
+                            const double iaPrev = samplePrev->getIa();
+                            const double vaNext = sampleNext->getVa();
+                            const double iaNext = sampleNext->getIa();
+
+                            const double dIa_mA = iaNext - iaPrev;
+                            const double dVa    = vaNext - vaPrev;
+                            if (std::fabs(dIa_mA) > 1e-9) {
+                                const double dVa_dIa_V_per_mA = dVa / dIa_mA;
+                                rp_ohms = dVa_dIa_V_per_mA * 1000.0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+void ValveWorkbench::finalizeHealthRun()
+{
+    double va0 = 0.0;
+    double vg0 = 0.0;
+    double ia0 = 0.0;
+    double gm0 = 0.0;
+    double mu0 = 0.0;
+    double rp0 = 0.0;
+
+    const bool haveRef = ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0);
+
+    auto metricScore = [](double meas, double ref) -> double {
+        if (!(ref > 0.0) || !(meas > 0.0)) {
+            return 0.0;
+        }
+        const double ratio = meas / ref;
+        const double dev = std::fabs(ratio - 1.0);
+        const double tol = 0.3; // 30% deviation → score 0
+        double s = 1.0 - dev / tol;
+        if (s < 0.0) s = 0.0;
+        if (s > 1.0) s = 1.0;
+        return s;
+    };
+
+    double quickPercent = 0.0;
+    double fullPercent = 0.0;
+
+    if (healthResults.size() > 0 && haveRef) {
+        const HealthResult &r0 = healthResults.at(0);
+        if (r0.valid) {
+            const double sIa = metricScore(r0.ia, ia0);
+            const double sGm = metricScore(r0.gm, gm0);
+            quickPercent = 100.0 * 0.5 * (sIa + sGm);
+        }
+    }
+
+    if (healthMode == HEALTH_FULL && haveRef && !healthResults.isEmpty()) {
+        double sum = 0.0;
+        int count = 0;
+        for (const HealthResult &r : healthResults) {
+            if (!r.valid) continue;
+            const double sIa = metricScore(r.ia, ia0);
+            const double sGm = metricScore(r.gm, gm0);
+            sum += 0.5 * (sIa + sGm);
+            ++count;
+        }
+        if (count > 0) {
+            fullPercent = 100.0 * (sum / static_cast<double>(count));
+        }
+    }
+
+    if (healthStateSaved) {
+        testType = savedTestTypeForHealth;
+        anodeStart = savedAnodeStartForHealth;
+        anodeStop = savedAnodeStopForHealth;
+        anodeStep = savedAnodeStepForHealth;
+        gridStart = savedGridStartForHealth;
+        gridStop = savedGridStopForHealth;
+        gridStep = savedGridStepForHealth;
+        screenStart = savedScreenStartForHealth;
+        screenStop = savedScreenStopForHealth;
+        screenStep = savedScreenStepForHealth;
+        healthStateSaved = false;
+
+        updateParameterDisplay();
+    }
+
+    healthRunActive = false;
+    healthMode = HEALTH_NONE;
+    healthRunIndex = 0;
+
+    QString msg;
+    if (healthResults.size() > 0) {
+        if (quickPercent > 0.0) {
+            msg += tr("Quick Health: %1% ").arg(QString::number(quickPercent, 'f', 0));
+        }
+        if (healthResults.size() > 1 && fullPercent > 0.0) {
+            msg += tr("Full Health: %1% ").arg(QString::number(fullPercent, 'f', 0));
+        }
+    }
+
+    if (msg.isEmpty()) {
+        msg = tr("Health run completed, but scores are not available.");
+    }
+
+    if (ui && ui->statusbar) {
+        ui->statusbar->showMessage(msg, 8000);
+    }
+
+    if (ui && ui->quickHealthButton) {
+        ui->quickHealthButton->setToolTip(msg);
+    }
+    if (ui && ui->fullHealthButton) {
+        ui->fullHealthButton->setToolTip(msg);
+    }
+}
+
+void ValveWorkbench::on_quickHealthButton_clicked()
+{
+    if (!analyser) {
+        QMessageBox::warning(this, tr("Health Test"), tr("Analyser is not initialised."));
+        return;
+    }
+
+    if (ui && ui->runButton && ui->runButton->isChecked()) {
+        QMessageBox::warning(this, tr("Health Test"), tr("A test is already running. Please wait for it to finish."));
+        return;
+    }
+
+    startHealthRun(HEALTH_QUICK);
+}
+
+void ValveWorkbench::on_fullHealthButton_clicked()
+{
+    if (!analyser) {
+        QMessageBox::warning(this, tr("Health Test"), tr("Analyser is not initialised."));
+        return;
+    }
+
+    if (ui && ui->runButton && ui->runButton->isChecked()) {
+        QMessageBox::warning(this, tr("Health Test"), tr("A test is already running. Please wait for it to finish."));
+        return;
+    }
+
+    startHealthRun(HEALTH_FULL);
+}
+
 
 // (Removed duplicate checkbox handlers; using the canonical implementations below.)
 
@@ -719,8 +1243,10 @@ void ValveWorkbench::on_pushButton_3_clicked()
     }
 
     // Analyser defaults
+    bool hadAnalyserDefaults = false;
     const QJsonObject defs = obj.value("analyserDefaults").toObject();
     if (!defs.isEmpty()) {
+        hadAnalyserDefaults = true;
         heaterVoltage = defs.value("heaterVoltage").toDouble(heaterVoltage);
 
         const auto setRange = [&](const char *key, double &start, double &stop, double &step){
@@ -762,11 +1288,16 @@ void ValveWorkbench::on_pushButton_3_clicked()
             savedTestType = defs.value("testType").toInt(testType);
         }
 
-        // If per-test snapshots are present, prefer the one whose testType
-        // matches savedTestType and use its ranges/limits to override the
-        // generic anode/grid/screen/limits above.
+        // If per-test snapshots are present and this JSON is a pure template
+        // (no embedded measurement), prefer the one whose testType matches
+        // savedTestType and use its ranges/limits to override the generic
+        // anode/grid/screen/limits above. For device presets that embed a
+        // full measurement, we treat analyserDefaults as authoritative so
+        // that edited sweep ranges are not silently overridden by the
+        // original measurement envelope when reloading as a template.
+        const bool hasMeasurement = obj.contains("measurement") && obj.value("measurement").isObject();
         const QJsonObject testsObj = defs.value("tests").toObject();
-        if (!testsObj.isEmpty()) {
+        if (!hasMeasurement && !testsObj.isEmpty()) {
             QJsonObject snapshot;
             for (auto it = testsObj.begin(); it != testsObj.end(); ++it) {
                 if (!it.value().isObject()) {
@@ -850,8 +1381,16 @@ void ValveWorkbench::on_pushButton_3_clicked()
         }
     }
 
-    // Update UI to reflect loaded values
-    updateParameterDisplay();
+    // Update UI to reflect loaded values. If analyserDefaults were present,
+    // on_testType_currentIndexChanged() has already invoked
+    // updateParameterDisplay() and applied test-type specific UI rules (for
+    // example, clearing the anodeStep field for anode-characteristics tests
+    // where the step control is not used). Avoid calling it again here in
+    // that case, otherwise hidden/disabled fields like anodeStep would be
+    // repopulated from the raw numeric state.
+    if (!hadAnalyserDefaults) {
+        updateParameterDisplay();
+    }
     updateDatasheetDisplay();
 }
 
@@ -904,10 +1443,9 @@ void ValveWorkbench::on_pushButton_4_clicked()
 
     obj.insert("analyserDefaults", defs);
 
-    // Preserve any opaque datasheet block that may have been loaded from an
-    // existing template. At this stage ValveWorkbench does not edit the
-    // structure; it is simply round-tripped so future Designer features can
-    // rely on its presence.
+    // Sync any edited datasheet/reference values from the Analyser UI back
+    // into the datasheetJson block before saving.
+    syncDatasheetFromUi();
     if (!datasheetJson.isEmpty()) {
         obj.insert("datasheet", datasheetJson);
     }
@@ -1264,6 +1802,7 @@ void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
         // measured plot (axes managed by Measurement itself).
         if (currentMeasurement != nullptr) {
             currentMeasurement->setShowScreen(show);
+            currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
             if (measuredCurves != nullptr) {
                 plot.remove(measuredCurves);
                 measuredCurves = nullptr;
@@ -1280,6 +1819,7 @@ void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
         if (currentDevice && currentDevice->getMeasurement()) {
             Measurement *embedded = currentDevice->getMeasurement();
             embedded->setShowScreen(show);
+            embedded->setSmoothPlotting(preferencesDialog.smoothCurves());
 
             if (measuredCurves) {
                 plot.remove(measuredCurves);
@@ -1767,6 +2307,11 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         ui->screenCheck->setChecked(overlayStates[initialRole].showScreen);
     }
 
+    // Health boxes belong logically to the Analyser tab only.
+    const bool analyserInitially = (initialRole == 2);
+    if (ui->Triode_A_Box) ui->Triode_A_Box->setVisible(analyserInitially);
+    if (ui->Triode_B_Box) ui->Triode_B_Box->setVisible(analyserInitially);
+
     // Auto-open a serial port at startup using central routine
     checkComPorts();
 
@@ -1910,12 +2455,6 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         }
     }
 
-    // Remove heater button row to free space (heaters are fixed in hardware)
-    if (ui->heaterButton && ui->heaterLayout) {
-        ui->heaterLayout->removeWidget(ui->heaterButton);
-        ui->heaterButton->hide();
-        ui->heaterButton->deleteLater();
-    }
 
     // Add the Data tab programmatically
     QWidget *dataTab = nullptr;
@@ -2191,6 +2730,8 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         ui->graphicsView->setMouseTracking(true);
         ui->graphicsView->viewport()->setMouseTracking(true);
         ui->graphicsView->viewport()->installEventFilter(this);
+        ui->graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        ui->graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     }
 
     connect(&serialPort, &QSerialPort::readyRead, this, &ValveWorkbench::handleReadyRead);
@@ -3373,6 +3914,7 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         // screen visibility with the Screen checkbox so Ig2 shows/hides
         // according to the current state instead of a stale default.
         embedded->setShowScreen(ui->screenCheck->isChecked());
+        embedded->setSmoothPlotting(preferencesDialog.smoothCurves());
         measuredCurves = embedded->updatePlotWithoutAxes(&plot);
         if (measuredCurves) {
             plot.add(measuredCurves);
@@ -3855,6 +4397,7 @@ void ValveWorkbench::updateCircuitParameter(int index)
         if (ui->measureCheck->isChecked() && device->getMeasurement()) {
             Measurement *embedded = device->getMeasurement();
             embedded->setShowScreen(ui->screenCheck->isChecked());
+            embedded->setSmoothPlotting(preferencesDialog.smoothCurves());
             measuredCurves = embedded->updatePlotWithoutAxes(&plot);
             if (measuredCurves) {
                 plot.add(measuredCurves);
@@ -4740,6 +5283,9 @@ void ValveWorkbench::testFinished()
     if (currentMeasurement) {
         // Apply current checkbox state to measurement so screen overlay can be drawn
         currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+        // Apply smoothing preference for new analyser measurements so that
+        // measurement plotting can optionally use spline smoothing.
+        currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
     }
 
     // Primary (Triode A) curves
@@ -4762,6 +5308,7 @@ void ValveWorkbench::testFinished()
         if (clone != nullptr && measurementHasValidSamples(clone)) {
             triodeMeasurementSecondary = clone;
             triodeMeasurementSecondary->setSampleColor(QColor::fromRgb(0, 0, 255));
+            triodeMeasurementSecondary->setSmoothPlotting(preferencesDialog.smoothCurves());
 
             // Plot Triode B without axes so we don't redraw axes twice.
             measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
@@ -4776,6 +5323,44 @@ void ValveWorkbench::testFinished()
     ui->measureCheck->setChecked(true);
 
     populateDataTableFromMeasurement(currentMeasurement);
+
+    if (healthRunActive) {
+        if (currentMeasurement && healthRunIndex >= 0 && healthRunIndex < healthPoints.size()) {
+            double ia = 0.0;
+            double gm = 0.0;
+            double rp = 0.0;
+            HealthResult result;
+            result.valid = computeIaGmAt(currentMeasurement, healthPoints.at(healthRunIndex), ia, gm, rp);
+            result.va = healthPoints.at(healthRunIndex).va;
+            result.vg = healthPoints.at(healthRunIndex).vg;
+            result.ia = ia;
+            result.gm = gm;
+            result.rp = rp;
+            if (healthRunIndex < healthResults.size()) {
+                healthResults[healthRunIndex] = result;
+            }
+        }
+
+        ++healthRunIndex;
+
+        if (healthRunIndex < healthPoints.size()) {
+            QMetaObject::invokeMethod(
+                this,
+                [this]() {
+                    if (!healthRunActive) {
+                        return;
+                    }
+                    if (healthRunIndex >= 0 && healthRunIndex < healthPoints.size()) {
+                        configureTransferForHealthPoint(healthPoints.at(healthRunIndex));
+                        on_runButton_clicked();
+                    }
+                },
+                Qt::QueuedConnection);
+            return;
+        }
+
+        finalizeHealthRun();
+    }
 }
 
 void ValveWorkbench::testAborted()
@@ -4783,6 +5368,32 @@ void ValveWorkbench::testAborted()
     qInfo("Test aborted");
     ui->runButton->setChecked(false);
     ui->progressBar->setVisible(false);
+
+    if (healthRunActive) {
+        healthRunActive = false;
+        healthMode = HEALTH_NONE;
+        healthRunIndex = 0;
+
+        if (healthStateSaved) {
+            testType = savedTestTypeForHealth;
+            anodeStart = savedAnodeStartForHealth;
+            anodeStop = savedAnodeStopForHealth;
+            anodeStep = savedAnodeStepForHealth;
+            gridStart = savedGridStartForHealth;
+            gridStop = savedGridStopForHealth;
+            gridStep = savedGridStepForHealth;
+            screenStart = savedScreenStartForHealth;
+            screenStop = savedScreenStopForHealth;
+            screenStep = savedScreenStepForHealth;
+            healthStateSaved = false;
+
+            updateParameterDisplay();
+        }
+
+        if (ui && ui->statusbar) {
+            ui->statusbar->showMessage(tr("Health run aborted."), 8000);
+        }
+    }
 }
 
 void ValveWorkbench::checkComPorts() {
@@ -5026,7 +5637,7 @@ void ValveWorkbench::loadTemplate(int index)
 
 void ValveWorkbench::updateParameterDisplay()
 {
-    updateDoubleValue(ui->heaterVoltage, heaterVoltage);
+
     updateDoubleValue(ui->anodeStart, anodeStart);
     updateDoubleValue(ui->anodeStop, anodeStop);
     updateDoubleValue(ui->anodeStep, anodeStep);
@@ -5337,6 +5948,7 @@ void ValveWorkbench::on_actionOptions_triggered()
     preferencesDialog.setPort(port);
 
     if (preferencesDialog.exec() == 1) {
+        qInfo("ValveWorkbench::on_actionOptions_triggered: preferences accepted; saving and applying");
         // Persist preferences and calibration values
         preferencesDialog.saveToSettings();
 
@@ -5347,6 +5959,27 @@ void ValveWorkbench::on_actionOptions_triggered()
         samplingType = preferencesDialog.getSamplingType();
 
         analyser->reset();
+
+        qInfo("ValveWorkbench::on_actionOptions_triggered: clearing existing measurement curves for redraw");
+
+        // After preferences (including smoothing) change, rebuild any
+        // existing measurement curves so the currently displayed plots
+        // immediately reflect the new settings on whichever tab is active.
+        if (measuredCurves) {
+            plot.remove(measuredCurves);
+            measuredCurves = nullptr;
+        }
+        if (measuredCurvesSecondary) {
+            plot.remove(measuredCurvesSecondary);
+            measuredCurvesSecondary = nullptr;
+        }
+
+        if (ui->measureCheck && ui->measureCheck->isChecked()) {
+            qInfo("ValveWorkbench::on_actionOptions_triggered: Show Measurement is ON - forcing on_measureCheck_stateChanged");
+            on_measureCheck_stateChanged(ui->measureCheck->checkState());
+        } else {
+            qInfo("ValveWorkbench::on_actionOptions_triggered: Show Measurement is OFF - no measurement redraw");
+        }
     }
 }
 
@@ -5637,6 +6270,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
             currentMeasurement->updateProperties(ui->properties);
             currentMeasurement->setShowScreen(showScreen);
+            currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
            // plot.add(measuredCurves);
             modelledCurves = nullptr;
             qInfo("=== BEFORE MEASUREMENT PLOT - Scene items count: %d ===", plot.getScene()->items().count());
@@ -5651,7 +6285,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                     plot.remove(measuredCurvesSecondary);
                     measuredCurvesSecondary = nullptr;
                 }
-
+                triodeMeasurementSecondary->setSmoothPlotting(preferencesDialog.smoothCurves());
                 measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
                 if (measuredCurvesSecondary != nullptr) {
                     plot.add(measuredCurvesSecondary);
@@ -5728,7 +6362,8 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 // Reset measuredCurves to nullptr before updating
                 measuredCurves = nullptr;
                 qInfo("Reset measuredCurves to nullptr");
-                
+
+                currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
                 measuredCurves = currentMeasurement->updatePlot(&plot, sweep);
                 qInfo("=== AFTER UPDATE PLOT - measuredCurves items: %d, Scene items: %d ===", measuredCurves ? measuredCurves->childItems().count() : 0, plot.getScene()->items().count());
                 plot.add(measuredCurves);
@@ -5755,6 +6390,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                     }
 
                     if (secondarySweep != nullptr) {
+                        triodeMeasurementSecondary->setSmoothPlotting(preferencesDialog.smoothCurves());
                         measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot, secondarySweep);
                         if (measuredCurvesSecondary != nullptr) {
                             plot.add(measuredCurvesSecondary);
@@ -6143,7 +6779,8 @@ void ValveWorkbench::on_testType_currentIndexChanged(int index)
         ui->screenStep->setText("");
     }
 
-    switch (ui->testType->itemData(index).toInt()) {
+    const int newTestType = ui->testType->itemData(index).toInt();
+    switch (newTestType) {
     case ANODE_CHARACTERISTICS: // Anode swept and Grid stepped
         ui->anodeStop->setEnabled(true);
         ui->anodeStep->setEnabled(false);
@@ -6192,7 +6829,19 @@ void ValveWorkbench::on_testType_currentIndexChanged(int index)
         break;
     }
 
-    testType = ui->testType->itemData(index).toInt();
+    testType = newTestType;
+
+    // For Double Triode + Anode Characteristics, do not show a numeric step
+    // value for the second anode. Keep the layout intact but make the
+    // second-anode step box disabled and blank.
+    const bool isDoubleTriodeMode =
+        (ui->deviceType && ui->deviceType->currentText() == QLatin1String("Double Triode"));
+    if (isDoubleTriodeMode && newTestType == ANODE_CHARACTERISTICS) {
+        if (ui->screenStep) {
+            ui->screenStep->setEnabled(false);
+            ui->screenStep->setText("");
+        }
+    }
 }
 
 void ValveWorkbench::on_anodeStart_editingFinished()
@@ -6279,10 +6928,6 @@ void ValveWorkbench::on_screenStep_editingFinished()
     }
 }
 
-void ValveWorkbench::on_heaterVoltage_editingFinished()
-{
-    heaterVoltage = updateVoltage(ui->heaterVoltage, heaterVoltage, HEATER);
-}
 
 void ValveWorkbench::on_iaMax_editingFinished()
 {
@@ -6293,6 +6938,42 @@ void ValveWorkbench::on_iaMax_editingFinished()
 void ValveWorkbench::on_pMax_editingFinished()
 {
     updatePMax();
+}
+
+void ValveWorkbench::on_datasheetVa_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
+}
+
+void ValveWorkbench::on_datasheetVg_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
+}
+
+void ValveWorkbench::on_datasheetIa_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
+}
+
+void ValveWorkbench::on_datasheetGm_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
+}
+
+void ValveWorkbench::on_datasheetMu_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
+}
+
+void ValveWorkbench::on_datasheetRp_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
 }
 void ValveWorkbench::on_runButton_clicked()
 {
@@ -6540,6 +7221,7 @@ void ValveWorkbench::importFromDevice()
     // Attach to project tree and plot on Modeller plot.
     cloned->buildTree(currentProject);
     currentMeasurement = cloned;
+    cloned->setSmoothPlotting(preferencesDialog.smoothCurves());
 
     if (measuredCurves) {
         plot.remove(measuredCurves);
@@ -6749,6 +7431,7 @@ void ValveWorkbench::loadModel()
             measuredCurves = nullptr;
         }
 
+        triodeMeasurementPrimary->setSmoothPlotting(preferencesDialog.smoothCurves());
         measuredCurves = triodeMeasurementPrimary->updatePlot(&plot);
         if (measuredCurves != nullptr) {
             plot.add(measuredCurves);
@@ -6761,6 +7444,7 @@ void ValveWorkbench::loadModel()
             measuredCurvesSecondary = nullptr;
         }
         // Plot secondary without axes to avoid re-drawing axes twice
+        triodeMeasurementSecondary->setSmoothPlotting(preferencesDialog.smoothCurves());
         measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
         if (measuredCurvesSecondary != nullptr) {
             plot.add(measuredCurvesSecondary);
@@ -6784,6 +7468,7 @@ void ValveWorkbench::loadModel()
                 measuredCurves = nullptr;
             }
 
+            pentodeMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
             measuredCurves = pentodeMeasurement->updatePlot(&plot);
             if (measuredCurves != nullptr) {
                 plot.add(measuredCurves);
@@ -7099,6 +7784,11 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
         }
     }
 
+    // Health boxes under the shared plot are only relevant to the Analyser tab.
+    const bool onAnalyserTab = (tabRole == 2);
+    if (ui->Triode_A_Box) ui->Triode_A_Box->setVisible(onAnalyserTab);
+    if (ui->Triode_B_Box) ui->Triode_B_Box->setVisible(onAnalyserTab);
+
     if (tabRole == 2) {
         // Analyser tab: ensure measurement/model/screen toggles are visible.
         if (ui->measureCheck) ui->measureCheck->setVisible(true);
@@ -7201,6 +7891,8 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
         overlayStates[tabRole].showMeasurement = wantVisible;
     }
 
+    qInfo("ValveWorkbench::on_measureCheck_stateChanged: wantVisible=%d, tabRole=%d", wantVisible ? 1 : 0, tabRole);
+
     // If curves already exist, just toggle visibility.
     if (measuredCurves != nullptr) {
         measuredCurves->setVisible(wantVisible);
@@ -7214,13 +7906,29 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
     // source. This keeps behaviour intuitive when returning to a tab or
     // enabling Show Measurement after plot groups were cleared.
     if (!wantVisible) {
+        qInfo("ValveWorkbench::on_measureCheck_stateChanged: measurement visibility turned OFF; no rebuild");
         return;
+    }
+
+    // Rebuild measurement groups using the latest smoothing preference
+    // whenever Show Measurement is turned ON. This ensures that changes
+    // to the smoothing option or screen overlay state are reflected
+    // immediately on the active tab.
+    if (measuredCurves) {
+        plot.remove(measuredCurves);
+        measuredCurves = nullptr;
+    }
+    if (measuredCurvesSecondary) {
+        plot.remove(measuredCurvesSecondary);
+        measuredCurvesSecondary = nullptr;
     }
 
     // Analyser tab (role 2): use currentMeasurement with full axes, and
     // restore any Triode B overlay if a secondary measurement exists.
-    if (tabRole == 2 && !measuredCurves && currentMeasurement) {
+    if (tabRole == 2 && currentMeasurement) {
+        qInfo("ValveWorkbench::on_measureCheck_stateChanged: rebuilding Analyser measurement curves");
         currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+        currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
         measuredCurves = currentMeasurement->updatePlot(&plot);
         if (measuredCurves) {
             plot.add(measuredCurves);
@@ -7228,6 +7936,8 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
         }
 
         if (triodeMeasurementSecondary && !measuredCurvesSecondary) {
+            qInfo("ValveWorkbench::on_measureCheck_stateChanged: rebuilding Analyser Triode B overlay");
+            triodeMeasurementSecondary->setSmoothPlotting(preferencesDialog.smoothCurves());
             measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
             if (measuredCurvesSecondary) {
                 plot.add(measuredCurvesSecondary);
@@ -7238,8 +7948,10 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
 
     // Modeller tab (role 1): use currentMeasurement and any available
     // Triode B clone for secondary overlays.
-    if (tabRole == 1 && !measuredCurves && currentMeasurement) {
+    if (tabRole == 1 && currentMeasurement) {
+        qInfo("ValveWorkbench::on_measureCheck_stateChanged: rebuilding Modeller measurement curves");
         currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+        currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
         measuredCurves = currentMeasurement->updatePlot(&plot);
         if (measuredCurves) {
             plot.add(measuredCurves);
@@ -7258,9 +7970,11 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
 
     // Designer tab (role 0): use embedded Measurement on current Device
     // (tube-style preset) without changing Designer axes.
-    if (tabRole == 0 && !measuredCurves && currentDevice && currentDevice->getMeasurement()) {
+    if (tabRole == 0 && currentDevice && currentDevice->getMeasurement()) {
+        qInfo("ValveWorkbench::on_measureCheck_stateChanged: rebuilding Designer embedded measurement curves");
         Measurement *embedded = currentDevice->getMeasurement();
         embedded->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+        embedded->setSmoothPlotting(preferencesDialog.smoothCurves());
 
         measuredCurves = embedded->updatePlotWithoutAxes(&plot);
         if (measuredCurves) {
@@ -7852,9 +8566,9 @@ void ValveWorkbench::exportFittedModelToDevices()
 
     root["analyserDefaults"] = analyserDefaults;
 
-    // If a datasheet/refPoint block was loaded from a template or device, carry
-    // it through to the exported preset so future Designer features can use it
-    // for quick tests and tube health grading.
+    // Sync any edited datasheet/reference values from the Analyser UI back
+    // into the datasheetJson block before exporting this device preset.
+    syncDatasheetFromUi();
     if (!datasheetJson.isEmpty()) {
         root["datasheet"] = datasheetJson;
     }

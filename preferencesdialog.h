@@ -33,6 +33,7 @@ public:
     bool fixSecondaryEmission();
     bool fixTriodeParameters();
     bool showScreenCurrent();
+    bool smoothCurves();
 
     double getAnodeVoltageCalibration();
     double getAnodeCurrentCalibration();
