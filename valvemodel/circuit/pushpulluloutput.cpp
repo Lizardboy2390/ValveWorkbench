@@ -47,6 +47,14 @@ void PushPullUlOutput::setGainMode(int mode)
     update(PPUL_HEADROOM);
 }
 
+// Toggle symmetric vs max-swing helper preference for Designer overlays.
+// This mirrors the SE/PP output stages; the actual visual update is driven
+// by ValveWorkbench::on_symSwingCheck_stateChanged calling plot().
+void PushPullUlOutput::setSymSwingEnabled(bool enabled)
+{
+    showSymSwing = enabled;
+}
+
 void PushPullUlOutput::setInductiveLoad(bool enabled)
 {
     inductiveLoad = enabled;
@@ -318,6 +326,498 @@ void PushPullUlOutput::update(int index)
     parameter[PPUL_IK]->setValue(ik_mA);
     parameter[PPUL_RK]->setValue(rk_ohms);
     parameter[PPUL_POUT]->setValue(pout_W);
+
+    // Headroom / harmonics / sensitivity (UL PP parity with PP).
+    effectiveHeadroomVpk = 0.0;
+    inputSensitivityVpp  = 0.0;
+    double phead_W = 0.0;
+    double hd2 = 0.0;
+    double hd3 = 0.0;
+    double hd4 = 0.0;
+    double thd = 0.0;
+
+    const double headroomManual = parameter[PPUL_HEADROOM]->getValue();
+
+    // Determine effective headroom (Vpk at anode) driving PHEAD/THD/sensitivity.
+    // - If manual Headroom>0, use that directly.
+    // - If Headroom==0 and swing helpers are available, use Vpp_sym/2 when
+    //   showSymSwing is true, otherwise use Vpp_max/2.
+    double symVpp = 0.0;
+    double maxVpp = 0.0;
+
+    if (raa > 0.0 && device1) {
+        const double slope = -2000.0 / raa; // mA/V, same as AC load line
+        const double ia0   = ia;
+        double va0   = vb;
+
+        // For a resistive load, each valve effectively sees RAA/2 at DC, so
+        // bias lies near Va_bias = Vb - Ia * (RAA/2).
+        if (!inductiveLoad) {
+            const double ia_A     = ia / 1000.0;
+            const double rPerValve = raa / 2.0;
+            double vaBias = vb;
+            if (rPerValve > 0.0 && ia_A > 0.0) {
+                vaBias = vb - ia_A * rPerValve;
+                if (!std::isfinite(vaBias)) {
+                    vaBias = vb;
+                }
+            }
+            va0 = std::clamp(vaBias, 0.0, vaMax);
+        }
+
+        auto ia_line_mA = [&](double va_val) {
+            return ia0 + slope * (va_val - va0);
+        };
+
+        // Left limit: intersection of AC load line with Vg1=0 curve at UL tap
+        // screen voltage.
+        double vaLeft = -1.0;
+        auto f_left = [&](double va_val) {
+            const double vg2 = va_val * tap + vb * (1.0 - tap);
+            double ia_curve_mA = device1->anodeCurrent(va_val, 0.0, vg2) * 1000.0;
+            double ia_line = ia_line_mA(va_val);
+            return ia_curve_mA - ia_line;
+        };
+
+        {
+            const int samples = 400;
+            double lastVa = std::clamp(va0, 0.0, vaMax);
+            double lastF  = f_left(lastVa);
+            for (int i = 1; i <= samples; ++i) {
+                double va_val = va0 * (1.0 - static_cast<double>(i) / samples);
+                va_val = std::max(va_val, 0.0);
+                double curF = f_left(va_val);
+                if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                    double denom = (curF - lastF);
+                    double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                    t = std::clamp(t, 0.0, 1.0);
+                    vaLeft = lastVa + t * (va_val - lastVa);
+                    break;
+                }
+                lastVa = va_val;
+                lastF  = curF;
+            }
+        }
+
+        // Right limits along the AC load line: Ia = 0 crossing and optional Pa_max.
+        double vaRight = -1.0;
+        if (vaLeft >= 0.0) {
+            double vaZero = va0 - ia0 / slope;
+            vaZero = std::clamp(vaZero, 0.0, vaMax);
+
+            double vaPa = vaMax + 1.0;
+            const double paMaxW = device1->getPaMax();
+            if (paMaxW > 0.0) {
+                auto g_pa = [&](double va_val) {
+                    if (va_val <= 0.0) return 1e9;
+                    double ia_line = ia_line_mA(va_val);
+                    double ia_pa_mA = 1000.0 * paMaxW / va_val;
+                    return ia_line - ia_pa_mA;
+                };
+                const int samples = 400;
+                double lastVa = std::max(va0, 1e-3);
+                double lastF  = g_pa(lastVa);
+                for (int i = 1; i <= samples; ++i) {
+                    double va_val = va0 + (vaMax - va0) * (static_cast<double>(i) / samples);
+                    double curF = g_pa(va_val);
+                    if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                        double denom = (curF - lastF);
+                        double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                        t = std::clamp(t, 0.0, 1.0);
+                        vaPa = lastVa + t * (va_val - lastVa);
+                        break;
+                    }
+                    lastVa = va_val;
+                    lastF  = curF;
+                }
+            }
+
+            vaRight = std::min(vaZero, vaPa);
+            vaRight = std::clamp(vaRight, 0.0, vaMax);
+        }
+
+        if (vaLeft >= 0.0 && vaRight > va0 && vaLeft < va0) {
+            maxVpp = vaRight - vaLeft;
+
+            const double vpk_sym = std::min(va0 - vaLeft, vaRight - va0);
+            if (vpk_sym > 0.0) {
+                symVpp = 2.0 * vpk_sym;
+            }
+        }
+    }
+
+    double effective = 0.0;
+    if (headroomManual > 0.0) {
+        effective = headroomManual;
+    } else {
+        if (showSymSwing && symVpp > 0.0) {
+            effective = symVpp / 2.0;
+        } else if (maxVpp > 0.0) {
+            effective = maxVpp / 2.0;
+        }
+    }
+    effectiveHeadroomVpk = effective;
+
+    if (effectiveHeadroomVpk > 0.0 && raa > 0.0) {
+        // For push-pull, each valve effectively sees a fraction of RAA, so
+        // scale headroom power by ~2× compared to a simple SE helper.
+        phead_W = 2.0 * (effectiveHeadroomVpk * effectiveHeadroomVpk) / raa;
+
+        if (simulateHarmonicsTimeDomain(vb,
+                                        ia,
+                                        raa,
+                                        effectiveHeadroomVpk,
+                                        tap,
+                                        hd2,
+                                        hd3,
+                                        hd4,
+                                        thd)) {
+
+            // If cathode is unbypassed (gainMode == 0), approximate the effect
+            // of local feedback by reducing the harmonic amplitudes by (1 + gm*Rk)
+            // based on a small-signal gm estimate around the operating point.
+            if (gainMode == 0 && rk_ohms > 0.0) {
+                const double rPerValve = raa / 2.0;
+                const double ia_A      = ia / 1000.0;
+                double vaBias          = vb;
+                if (rPerValve > 0.0 && ia_A > 0.0) {
+                    vaBias = vb - ia_A * rPerValve;
+                    if (!std::isfinite(vaBias)) {
+                        vaBias = vb;
+                    }
+                }
+                const double vgBias  = -bestVg1;
+                const double vsBias  = vaBias * tap + vb * (1.0 - tap);
+                const double dVg     = std::max(0.05, std::abs(vgBias) * 0.02);
+                double iaPlus_mA     = device1->anodeCurrent(vaBias, vgBias + dVg, vsBias);
+                double iaMinus_mA    = device1->anodeCurrent(vaBias, vgBias - dVg, vsBias);
+                double gm_mA_per_V   = 0.0;
+                if (std::isfinite(iaPlus_mA) && std::isfinite(iaMinus_mA) && dVg > 0.0) {
+                    gm_mA_per_V = (iaPlus_mA - iaMinus_mA) / (2.0 * dVg);
+                }
+                if (std::isfinite(gm_mA_per_V)) {
+                    const double gm_A_per_V = gm_mA_per_V / 1000.0;
+                    const double feedback   = 1.0 + gm_A_per_V * rk_ohms;
+                    if (feedback > 1.0 && std::isfinite(feedback)) {
+                        hd2 /= feedback;
+                        hd3 /= feedback;
+                        hd4 /= feedback;
+                        thd /= feedback;
+                    }
+                }
+            }
+        }
+    }
+
+    parameter[PPUL_PHEAD]->setValue(phead_W);
+    parameter[PPUL_HD2]->setValue(hd2);
+    parameter[PPUL_HD3]->setValue(hd3);
+    parameter[PPUL_HD4]->setValue(hd4);
+    parameter[PPUL_THD]->setValue(thd);
+
+    // Input sensitivity: approximate gain from small-signal gm·(RAA/2) around
+    // the UL operating point, respecting K-bypass.
+    double vppIn = 0.0;
+    if (device1 && effectiveHeadroomVpk > 0.0 && raa > 0.0) {
+        const double ia_A      = ia / 1000.0;
+        const double rPerValve = raa / 2.0;
+        double vaBias          = vb;
+        if (rPerValve > 0.0 && ia_A > 0.0) {
+            vaBias = vb - ia_A * rPerValve;
+            if (!std::isfinite(vaBias)) {
+                vaBias = vb;
+            }
+        }
+        const double vgBias = -bestVg1;
+        const double vsBias = vaBias * tap + vb * (1.0 - tap);
+        const double dVg    = std::max(0.05, std::abs(vgBias) * 0.02);
+
+        const double Vpp = 2.0 * effectiveHeadroomVpk;
+
+        double iaPlus  = device1->anodeCurrent(vaBias, vgBias + dVg, vsBias);
+        double iaMinus = device1->anodeCurrent(vaBias, vgBias - dVg, vsBias);
+        double gm_mA_per_V = 0.0;
+        if (std::isfinite(iaPlus) && std::isfinite(iaMinus) && dVg > 0.0) {
+            gm_mA_per_V = (iaPlus - iaMinus) / (2.0 * dVg);
+        }
+
+        double gain = 0.0;
+        if (std::isfinite(gm_mA_per_V) && raa > 0.0) {
+            const double gm_A_per_V = gm_mA_per_V / 1000.0;
+            gain = std::abs(gm_A_per_V * (raa / 2.0));
+
+            if (gainMode == 0 && rk_ohms > 0.0) {
+                const double feedback = 1.0 + gm_A_per_V * rk_ohms;
+                if (feedback > 1.0 && std::isfinite(feedback)) {
+                    gain /= feedback;
+                }
+            }
+        }
+
+        if (std::isfinite(gain) && gain > 1e-6) {
+            vppIn = Vpp / gain;
+        }
+    }
+
+    if (vppIn > 0.0) {
+        inputSensitivityVpp = vppIn;
+    } else {
+        inputSensitivityVpp = 0.0;
+    }
+}
+
+double PushPullUlOutput::dcLoadlineCurrent(double vb, double raa, double va) const
+{
+    const double q = vb / raa;
+    const double m = -q / vb;
+    return m * va + q;
+}
+
+double PushPullUlOutput::findGridBiasForCurrent(double targetIa_A,
+                                                 double vb,
+                                                 double tap,
+                                                 double raa) const
+{
+    const double va = vb - targetIa_A * raa;
+    if (va <= 0.0 || !std::isfinite(va)) {
+        return 0.0;
+    }
+
+    const double vg1Max = device1->getVg1Max() * 2.0;
+    double bestVg1 = 0.0;
+    double minErr = std::numeric_limits<double>::infinity();
+    const int vgSteps = 400;
+
+    const double vsBias = va * tap + vb * (1.0 - tap);
+
+    for (int i = 0; i <= vgSteps; ++i) {
+        const double vg1 = vg1Max * static_cast<double>(i) / vgSteps;
+        const double iaTest = device1->anodeCurrent(va, -vg1, vsBias);
+        if (!std::isfinite(iaTest) || iaTest < 0.0) {
+            continue;
+        }
+        const double err = std::abs(targetIa_A - iaTest);
+        if (err < minErr) {
+            minErr = err;
+            bestVg1 = vg1;
+        }
+    }
+
+    return bestVg1;
+}
+
+double PushPullUlOutput::findVaFromVg(double vg1,
+                                      double vb,
+                                      double tap,
+                                      double raa) const
+{
+    double va = 0.0;
+    double incr = vb / 10.0;
+
+    for (;;) {
+        const double vs = va * tap + vb * (1.0 - tap);
+        const double it = device1->anodeCurrent(va, -vg1, vs);
+        const double il = dcLoadlineCurrent(vb, raa, va);
+
+        if (!std::isfinite(it) || !std::isfinite(il)) {
+            break;
+        }
+
+        if (it >= il && incr <= 1e-6) {
+            break;
+        } else if (it >= il) {
+            va -= incr;
+            incr *= 0.1;
+        }
+
+        va += incr;
+
+        if (va < 0.0 || va > 2.0 * vb) {
+            break;
+        }
+    }
+
+    return va;
+}
+
+bool PushPullUlOutput::computeHeadroomHarmonicCurrents(double vb,
+                                                        double ia_mA,
+                                                        double raa,
+                                                        double headroom,
+                                                        double tap,
+                                                        double &Ia,
+                                                        double &Ib,
+                                                        double &Ic,
+                                                        double &Id,
+                                                        double &Ie) const
+{
+    const double biasCurrent_A = ia_mA / 1000.0;
+
+    const double qA = vb / raa;
+    const double mA = -qA / vb;
+    const double vOperating = (biasCurrent_A - qA) / mA;
+
+    double vMin = vOperating - headroom;
+    double vMax = vOperating + headroom;
+
+    const double kMinVa = 1e-3;
+    const double kMaxVa = 2.0 * vb;
+    vMin = std::max(vMin, kMinVa);
+    vMax = std::clamp(vMax, vMin + 1e-6, kMaxVa);
+
+    const double I_max = dcLoadlineCurrent(vb, raa, vMin);
+    const double I_min = dcLoadlineCurrent(vb, raa, vMax);
+    if (!std::isfinite(I_max) || !std::isfinite(I_min)) {
+        return false;
+    }
+
+    const double Vg_bias = findGridBiasForCurrent(biasCurrent_A, vb, tap, raa);
+    const double Vg_max  = findGridBiasForCurrent(I_max,          vb, tap, raa);
+
+    const double Vg_max_mid = Vg_bias + (Vg_max - Vg_bias) / 2.0;
+    const double Vg_min_mid = Vg_bias - (Vg_max - Vg_bias) / 2.0;
+    const double Vg_min     = Vg_bias - (Vg_max - Vg_bias);
+
+    const double V_min_mid_distorted = findVaFromVg(Vg_max_mid, vb, tap, raa);
+    const double V_max_mid_distorted = findVaFromVg(Vg_min_mid, vb, tap, raa);
+    const double V_max_distorted     = findVaFromVg(Vg_min,     vb, tap, raa);
+
+    const double I_max_mid_distorted = dcLoadlineCurrent(vb, raa, V_min_mid_distorted);
+    const double I_min_mid_distorted = dcLoadlineCurrent(vb, raa, V_max_mid_distorted);
+    const double I_min_distorted     = dcLoadlineCurrent(vb, raa, V_max_distorted);
+
+    if (!std::isfinite(I_max_mid_distorted) ||
+        !std::isfinite(I_min_mid_distorted) ||
+        !std::isfinite(I_min_distorted)) {
+        return false;
+    }
+
+    Ia = I_max;
+    Ib = I_max_mid_distorted;
+    Ic = biasCurrent_A;
+    Id = I_min_mid_distorted;
+    Ie = I_min_distorted;
+
+    return true;
+}
+
+bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
+                                                   double iaBias_mA,
+                                                   double raa,
+                                                   double headroomVpk,
+                                                   double tap,
+                                                   double &hd2,
+                                                   double &hd3,
+                                                   double &hd4,
+                                                   double &thd) const
+{
+    hd2 = 0.0;
+    hd3 = 0.0;
+    hd4 = 0.0;
+    thd = 0.0;
+
+    if (!device1) {
+        return false;
+    }
+
+    if (vb <= 0.0 || raa <= 0.0 || iaBias_mA <= 0.0 || headroomVpk <= 0.0) {
+        return false;
+    }
+
+    double Ia_base = 0.0;
+    double Ib_base = 0.0;
+    double Ic_base = 0.0;
+    double Id_base = 0.0;
+    double Ie_base = 0.0;
+    if (!computeHeadroomHarmonicCurrents(vb,
+                                         iaBias_mA,
+                                         raa,
+                                         headroomVpk,
+                                         tap,
+                                         Ia_base,
+                                         Ib_base,
+                                         Ic_base,
+                                         Id_base,
+                                         Ie_base)) {
+        return false;
+    }
+
+    // Map the single-ended 5-point currents into a push-pull primary current
+    // waveform, mirroring PushPullOutput::simulateHarmonicsTimeDomain.
+    const double Ia_pp = Ia_base - Ie_base;
+    const double Ib_pp = Ib_base - Id_base;
+    const double Ic_pp = 0.0;
+    const double Id_pp = Id_base - Ib_base;
+    const double Ie_pp = Ie_base - Ia_base;
+
+    double samples[5];
+    samples[0] = Ia_pp;
+    samples[1] = Ib_pp;
+    samples[2] = Ic_pp;
+    samples[3] = Id_pp;
+    samples[4] = Ie_pp;
+
+    const int sampleCount = 512;
+    const double twoPi = 6.28318530717958647692; // 2 * pi
+
+    double a[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double b[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    for (int k = 0; k < sampleCount; ++k) {
+        const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
+        const double u = phase / twoPi;
+
+        const double pos = u * 5.0;
+        const double indexF = std::floor(pos);
+        int i0 = static_cast<int>(indexF);
+        if (i0 < 0) i0 = 0;
+        if (i0 >= 5) i0 = i0 % 5;
+        const int i1 = (i0 + 1) % 5;
+        const double frac = pos - indexF;
+
+        const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+
+        const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
+                                                   static_cast<double>(sampleCount - 1)));
+        const double v = ip * window;
+
+        for (int n = 1; n <= 4; ++n) {
+            const double angle = static_cast<double>(n) * phase;
+            const double c = std::cos(angle);
+            const double s = std::sin(angle);
+            a[n] += v * c;
+            b[n] += v * s;
+        }
+    }
+
+    const double scale = 2.0 / static_cast<double>(sampleCount);
+    double A[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    for (int n = 1; n <= 4; ++n) {
+        a[n] *= scale;
+        b[n] *= scale;
+        A[n] = std::sqrt(a[n] * a[n] + b[n] * b[n]);
+    }
+
+    const double fundamental = A[1];
+    if (!(fundamental > 0.0) || !std::isfinite(fundamental)) {
+        return false;
+    }
+
+    const double invFund = 100.0 / fundamental;
+    hd2 = A[2] * invFund;
+    hd3 = A[3] * invFund;
+    hd4 = A[4] * invFund;
+
+    if (!std::isfinite(hd2) || hd2 < 0.0) hd2 = 0.0;
+    if (!std::isfinite(hd3) || hd3 < 0.0) hd3 = 0.0;
+    if (!std::isfinite(hd4) || hd4 < 0.0) hd4 = 0.0;
+
+    thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4);
+    if (!std::isfinite(thd) || thd < 0.0) {
+        thd = 0.0;
+    }
+
+    return true;
 }
 
 void PushPullUlOutput::plot(Plot *plot)
@@ -352,6 +852,7 @@ void PushPullUlOutput::plot(Plot *plot)
     const double iaMax = device1->getIaMax();
 
     const double vb  = parameter[PPUL_VB]->getValue();
+    const double tap = parameter[PPUL_TAP]->getValue();
     const double ia  = parameter[PPUL_IA]->getValue();
     const double raa = parameter[PPUL_RAA]->getValue();
 
@@ -369,6 +870,14 @@ void PushPullUlOutput::plot(Plot *plot)
 
     if (plot->getScene()->items().isEmpty()) {
         plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
+    }
+
+    // Shared helper label row positioned between the plot and X-axis
+    // labels, consistent with other output-stage circuits.
+    double labelRowHelper = -yMajor * 2.0;
+    const double yScalePlot = plot->getYScale();
+    if (yScalePlot > 0.0) {
+        labelRowHelper = -6.0 / yScalePlot;
     }
 
     // Determine an effective DC anode voltage per valve when treating the
@@ -421,11 +930,11 @@ void PushPullUlOutput::plot(Plot *plot)
         }
     }
 
-    // Draw AC load line (green)
+    // Draw AC load line (yellow), matching PushPullOutput small-signal line colour.
     acSignalLine = new QGraphicsItemGroup();
     {
         QPen pen;
-        pen.setColor(QColor::fromRgb(0, 127, 0));
+        pen.setColor(QColor::fromRgb(255, 215, 0));
         pen.setWidth(2);
         for (int i = 0; i < acLine.size() - 1; ++i) {
             const QPointF s = acLine[i];
@@ -469,6 +978,33 @@ void PushPullUlOutput::plot(Plot *plot)
         }
     }
 
+    // DC/Class-B reference load line for UL PP, using the same Class B concept
+    // as in update(). Drawn on cathodeLoadLine so it parallels SE/PP visuals.
+    if (raa > 0.0) {
+        cathodeLoadLine = new QGraphicsItemGroup();
+        QPen dcPen;
+        dcPen.setColor(QColor::fromRgb(0, 128, 0));
+        dcPen.setWidth(2);
+
+        // Reference line from (0, Ia_maxB) to (Vb, 0) in mA space.
+        const double iaMaxB_mA = 4000.0 * vb / raa;
+        const double x1 = 0.0;
+        const double y1 = std::clamp(iaMaxB_mA, 0.0, iaMax);
+        const double x2 = std::min(vb, axisVaMax);
+        const double y2 = 0.0;
+
+        if (auto *seg = plot->createSegment(x1, y1, x2, y2, dcPen)) {
+            cathodeLoadLine->addToGroup(seg);
+        }
+
+        if (!cathodeLoadLine->childItems().isEmpty()) {
+            plot->getScene()->addItem(cathodeLoadLine);
+        } else {
+            delete cathodeLoadLine;
+            cathodeLoadLine = nullptr;
+        }
+    }
+
     // Mark the DC operating point on the load line
     opMarker = new QGraphicsItemGroup();
     {
@@ -485,6 +1021,190 @@ void PushPullUlOutput::plot(Plot *plot)
         } else {
             delete opMarker;
             opMarker = nullptr;
+        }
+    }
+
+    // Max swing (brown) and symmetric swing (blue) tick/label helpers along
+    // the AC load line, mirroring the non-UL PushPullOutput behaviour. Both
+    // helpers share a single label row and are mutually exclusive via
+    // showSymSwing.
+    {
+        const double slope = -2000.0 / raa; // same as gradient
+        const double ia0   = ia;
+        const double va0   = vb;
+
+        auto ia_line_mA = [&](double va) {
+            return ia0 + slope * (va - va0);
+        };
+
+        // Left limit: intersection of AC load line with the Vg1=0 curve at
+        // UL screen voltage.
+        double vaLeft = -1.0;
+        if (device1) {
+            auto f = [&](double va) {
+                const double vg2 = va * tap + vb * (1.0 - tap);
+                double ia_curve_mA = device1->anodeCurrent(va, 0.0, vg2) * 1000.0;
+                double ia_line = ia_line_mA(va);
+                return ia_curve_mA - ia_line;
+            };
+
+            const int samples = 400;
+            double lastVa = std::clamp(va0, 0.0, axisVaMax);
+            double lastF  = f(lastVa);
+            for (int i = 1; i <= samples; ++i) {
+                double va = va0 * (1.0 - static_cast<double>(i) / samples);
+                va = std::max(va, 0.0);
+                double curF = f(va);
+                if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                    double denom = (curF - lastF);
+                    double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                    t = std::clamp(t, 0.0, 1.0);
+                    vaLeft = lastVa + t * (va - lastVa);
+                    break;
+                }
+                lastVa = va;
+                lastF  = curF;
+            }
+        }
+
+        // Right limits: Ia = 0 and optional Pa_max limit.
+        double vaRight = -1.0;
+        if (vaLeft >= 0.0) {
+            // Ia = 0 crossing
+            double vaZero = va0 - ia0 / slope;
+            vaZero = std::clamp(vaZero, 0.0, axisVaMax);
+
+            double vaPa = axisVaMax + 1.0;
+            const double paMaxW = device1 ? device1->getPaMax() : 0.0;
+            if (device1 && paMaxW > 0.0) {
+                auto g_pa = [&](double va) {
+                    if (va <= 0.0) return 1e9;
+                    double ia_line = ia_line_mA(va);
+                    double ia_pa_mA = 1000.0 * paMaxW / va;
+                    return ia_line - ia_pa_mA;
+                };
+                const int samples = 400;
+                double lastVa = std::max(va0, 1e-3);
+                double lastF  = g_pa(lastVa);
+                for (int i = 1; i <= samples; ++i) {
+                    double va = va0 + (axisVaMax - va0) * (static_cast<double>(i) / samples);
+                    double curF = g_pa(va);
+                    if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                        double denom = (curF - lastF);
+                        double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                        t = std::clamp(t, 0.0, 1.0);
+                        vaPa = lastVa + t * (va - lastVa);
+                        break;
+                    }
+                    lastVa = va;
+                    lastF  = curF;
+                }
+            }
+
+            vaRight = std::min(vaZero, vaPa);
+            vaRight = std::clamp(vaRight, 0.0, axisVaMax);
+        }
+
+        if (vaLeft >= 0.0 && vaRight > va0 && vaLeft < va0) {
+            // Max swing (brown): span between vaLeft and vaRight.
+            const double Vpp_max = vaRight - vaLeft;
+            const double midMax  = 0.5 * (vaLeft + vaRight);
+
+            if (!showSymSwing) {
+                QGraphicsItemGroup *maxSwingGroup = new QGraphicsItemGroup();
+                QPen maxPen(QColor::fromRgb(165, 42, 42)); // brown
+                maxPen.setWidth(2);
+
+                const double labelRow = labelRowHelper;
+
+                // Vertical ticks at the swing limits down to Ia = 0.
+                const double iaLeft  = ia_line_mA(vaLeft);
+                const double iaRight = ia_line_mA(vaRight);
+                if (auto *lt = plot->createSegment(vaLeft, 0.0, vaLeft, iaLeft, maxPen)) {
+                    maxSwingGroup->addToGroup(lt);
+                }
+                if (auto *rt = plot->createSegment(vaRight, 0.0, vaRight, iaRight, maxPen)) {
+                    maxSwingGroup->addToGroup(rt);
+                }
+
+                // Labels at tick positions on the helper row.
+                if (auto *lLbl = plot->createLabel(vaLeft, labelRow, vaLeft, maxPen.color())) {
+                    QPointF p = lLbl->pos();
+                    double w = lLbl->boundingRect().width();
+                    lLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(lLbl);
+                }
+                if (auto *rLbl = plot->createLabel(vaRight, labelRow, vaRight, maxPen.color())) {
+                    QPointF p = rLbl->pos();
+                    double w = rLbl->boundingRect().width();
+                    rLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(rLbl);
+                }
+
+                // Centered Vpp_max label.
+                if (auto *lbl = plot->createLabel(midMax, labelRow, Vpp_max, maxPen.color())) {
+                    QPointF p = lbl->pos();
+                    double w = lbl->boundingRect().width();
+                    lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(lbl);
+                }
+
+                if (!acSignalLine) {
+                    acSignalLine = new QGraphicsItemGroup();
+                    plot->getScene()->addItem(acSignalLine);
+                }
+                acSignalLine->addToGroup(maxSwingGroup);
+            }
+
+            // Symmetric swing (blue): around the operating point when
+            // showSymSwing is enabled.
+            const double vpk_sym = std::min(va0 - vaLeft, vaRight - va0);
+            if (showSymSwing && vpk_sym > 0.0) {
+                const double leftX  = va0 - vpk_sym;
+                const double rightX = va0 + vpk_sym;
+
+                QGraphicsItemGroup *symSwingGroup = new QGraphicsItemGroup();
+                QPen symPen(QColor::fromRgb(100, 149, 237)); // light blue
+                symPen.setWidth(2);
+
+                const double iaLeftSym  = ia_line_mA(leftX);
+                const double iaRightSym = ia_line_mA(rightX);
+                if (auto *lt = plot->createSegment(leftX, 0.0, leftX, iaLeftSym, symPen)) {
+                    symSwingGroup->addToGroup(lt);
+                }
+                if (auto *rt = plot->createSegment(rightX, 0.0, rightX, iaRightSym, symPen)) {
+                    symSwingGroup->addToGroup(rt);
+                }
+
+                const double labelRowSym = labelRowHelper;
+                const QColor symColor = symPen.color();
+                if (auto *lLbl = plot->createLabel(leftX, labelRowSym, leftX, symColor)) {
+                    QPointF p = lLbl->pos();
+                    double w = lLbl->boundingRect().width();
+                    lLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    symSwingGroup->addToGroup(lLbl);
+                }
+                if (auto *rLbl = plot->createLabel(rightX, labelRowSym, rightX, symColor)) {
+                    QPointF p = rLbl->pos();
+                    double w = rLbl->boundingRect().width();
+                    rLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    symSwingGroup->addToGroup(rLbl);
+                }
+
+                const double Vpp_sym = 2.0 * vpk_sym;
+                if (auto *lbl = plot->createLabel(va0, labelRowSym, Vpp_sym, symColor)) {
+                    QPointF p = lbl->pos();
+                    double w = lbl->boundingRect().width();
+                    lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    symSwingGroup->addToGroup(lbl);
+                }
+
+                if (!acSignalLine) {
+                    acSignalLine = new QGraphicsItemGroup();
+                    plot->getScene()->addItem(acSignalLine);
+                }
+                acSignalLine->addToGroup(symSwingGroup);
+            }
         }
     }
 }

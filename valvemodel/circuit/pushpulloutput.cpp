@@ -923,6 +923,11 @@ void PushPullOutput::plot(Plot *plot)
 
     const double xMajor = std::max(5.0, axisVaMax / 10.0);
     const double yMajor = std::max(0.5, iaMax / 10.0);
+    double labelRowHelper = -yMajor * 2.0;
+    const double yScalePlot = plot->getYScale();
+    if (yScalePlot > 0.0) {
+        labelRowHelper = -6.0 / yScalePlot;
+    }
 
     if (plot->getScene()->items().isEmpty()) {
         plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
@@ -1206,7 +1211,7 @@ void PushPullOutput::plot(Plot *plot)
                 QPen maxPen(QColor::fromRgb(165, 42, 42)); // brown
                 maxPen.setWidth(2);
 
-                const double labelRow = -yMajor * 2.0;
+                const double labelRow = labelRowHelper;
 
                 // Vertical ticks at the swing limits down to Ia = 0.
                 const double iaLeft  = ia_line_mA(vaLeft);
@@ -1294,7 +1299,7 @@ void PushPullOutput::plot(Plot *plot)
                     symSwingGroup->addToGroup(rt);
                 }
 
-                const double labelRowSym = -yMajor * 2.4;
+                const double labelRowSym = labelRowHelper;
                 const QColor symColor = symPen.color();
                 if (auto *lLbl = plot->createLabel(leftX, labelRowSym, leftX, symColor)) {
                     QPointF p = lLbl->pos();

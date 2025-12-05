@@ -8062,6 +8062,14 @@ void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
         pp->setSymSwingEnabled(enabled);
         pp->plot(&plot);
         pp->updateUI(circuitLabels, circuitValues);
+    } else if (auto *seul = dynamic_cast<SingleEndedUlOutput*>(c)) {
+        seul->setSymSwingEnabled(enabled);
+        seul->plot(&plot);
+        seul->updateUI(circuitLabels, circuitValues);
+    } else if (auto *ppul = dynamic_cast<PushPullUlOutput*>(c)) {
+        ppul->setSymSwingEnabled(enabled);
+        ppul->plot(&plot);
+        ppul->updateUI(circuitLabels, circuitValues);
     }
 }
 

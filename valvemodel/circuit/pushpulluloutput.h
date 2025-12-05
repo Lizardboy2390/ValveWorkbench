@@ -35,6 +35,8 @@ public:
     // Gain mode for AC calculations: 1 = cathode bypassed (default, higher gain),
     // 0 = unbypassed (lower gain due to local feedback).
     void setGainMode(int mode);
+    // Toggle symmetric vs max-swing helper preference for Designer overlays.
+    void setSymSwingEnabled(bool enabled);
     void setInductiveLoad(bool enabled);
 
 protected:
@@ -80,5 +82,6 @@ private:
     double effectiveHeadroomVpk = 0.0;
     double inputSensitivityVpp = 0.0;
     int gainMode = 1;
+    bool showSymSwing = true;
     bool inductiveLoad = true;
 };

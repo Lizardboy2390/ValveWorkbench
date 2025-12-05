@@ -580,11 +580,117 @@ void SingleEndedUlOutput::update(int index)
     double hd4 = 0.0;
     double thd = 0.0;
 
-    const double headroom = parameter[SEUL_HEADROOM]->getValue();
-    if (headroom > 0.0 && raa > 0.0) {
-        effectiveHeadroomVpk = headroom;
-        // Single-ended UL behaves like SE for power at headroom with respect to the
-        // anode load.
+    const double headroomManual = parameter[SEUL_HEADROOM]->getValue();
+
+    // Determine effective headroom (Vpk at anode) driving PHEAD/THD/sensitivity.
+    // - If manual Headroom>0, use that directly.
+    // - If Headroom==0 and swing helpers are available, use Vpp_sym/2 when
+    //   showSymSwing is true, otherwise use Vpp_max/2, mirroring SE behaviour.
+    double symVpp = 0.0;
+    double maxVpp = 0.0;
+
+    if (raa > 0.0 && device1) {
+        const double slope = -1000.0 / raa; // mA/V, same as AC load line
+        const double ia0   = ia;
+        const double va0   = vb;
+
+        auto ia_line_mA = [&](double va_val) {
+            return ia0 + slope * (va_val - va0);
+        };
+
+        // Left limit: intersection of AC load line with the Vg1=0 curve at UL
+        // tap screen voltage.
+        double vaLeft = -1.0;
+        auto f_left = [&](double va_val) {
+            const double vg2 = va_val * tap + vb * (1.0 - tap);
+            double ia_curve_mA = device1->anodeCurrent(va_val, 0.0, vg2) * 1000.0;
+            double ia_line = ia_line_mA(va_val);
+            return ia_curve_mA - ia_line;
+        };
+
+        {
+            const int samples = 400;
+            double lastVa = std::clamp(va0, 0.0, vaMax);
+            double lastF  = f_left(lastVa);
+            for (int i = 1; i <= samples; ++i) {
+                double va_val = va0 * (1.0 - static_cast<double>(i) / samples);
+                va_val = std::max(va_val, 0.0);
+                double curF = f_left(va_val);
+                if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                    double denom = (curF - lastF);
+                    double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                    t = std::clamp(t, 0.0, 1.0);
+                    vaLeft = lastVa + t * (va_val - lastVa);
+                    break;
+                }
+                lastVa = va_val;
+                lastF  = curF;
+            }
+        }
+
+        // Right limits: Ia = 0 and optional Pa_max limit.
+        double vaRight = -1.0;
+        if (vaLeft >= 0.0) {
+            // Ia = 0 crossing
+            double vaZero = va0 - ia0 / slope;
+            vaZero = std::clamp(vaZero, 0.0, vaMax);
+
+            double vaPa = vaMax + 1.0;
+            const double paMaxW = device1->getPaMax();
+            if (paMaxW > 0.0) {
+                auto g_pa = [&](double va_val) {
+                    if (va_val <= 0.0) return 1e9;
+                    double ia_line = ia_line_mA(va_val);
+                    double ia_pa_mA = 1000.0 * paMaxW / va_val;
+                    return ia_line - ia_pa_mA;
+                };
+                const int samples = 400;
+                double lastVa = std::max(va0, 1e-3);
+                double lastF  = g_pa(lastVa);
+                for (int i = 1; i <= samples; ++i) {
+                    double va_val = va0 + (vaMax - va0) * (static_cast<double>(i) / samples);
+                    double curF = g_pa(va_val);
+                    if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                        double denom = (curF - lastF);
+                        double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                        t = std::clamp(t, 0.0, 1.0);
+                        vaPa = lastVa + t * (va_val - lastVa);
+                        break;
+                    }
+                    lastVa = va_val;
+                    lastF  = curF;
+                }
+            }
+
+            vaRight = std::min(vaZero, vaPa);
+            vaRight = std::clamp(vaRight, 0.0, vaMax);
+        }
+
+        if (vaLeft >= 0.0 && vaRight > va0 && vaLeft < va0) {
+            maxVpp = vaRight - vaLeft;
+
+            const double vpk_sym = std::min(va0 - vaLeft, vaRight - va0);
+            if (vpk_sym > 0.0) {
+                symVpp = 2.0 * vpk_sym;
+            }
+        }
+    }
+
+    double effective = 0.0;
+    if (headroomManual > 0.0) {
+        effective = headroomManual;
+    } else {
+        if (showSymSwing && symVpp > 0.0) {
+            effective = symVpp / 2.0;
+        } else if (maxVpp > 0.0) {
+            effective = maxVpp / 2.0;
+        }
+    }
+    effectiveHeadroomVpk = effective;
+
+    if (effectiveHeadroomVpk > 0.0 && raa > 0.0) {
+        // Single-ended UL behaves like SE for power at headroom with respect to
+        // the anode load.
         phead_W = (effectiveHeadroomVpk * effectiveHeadroomVpk) / (2.0 * raa);
 
         if (simulateHarmonicsTimeDomain(vb,
@@ -710,6 +816,7 @@ void SingleEndedUlOutput::plot(Plot *plot)
     const double iaMax = device1->getIaMax();
 
     const double vb  = parameter[SEUL_VB]->getValue();
+    const double tap = parameter[SEUL_TAP]->getValue();
     const double ia  = parameter[SEUL_IA]->getValue();
     const double raa = parameter[SEUL_RA]->getValue();
 
@@ -727,6 +834,14 @@ void SingleEndedUlOutput::plot(Plot *plot)
 
     if (plot->getScene()->items().isEmpty()) {
         plot->setAxes(0.0, axisVaMax, xMajor, 0.0, iaMax, yMajor);
+    }
+
+    // Shared helper label row: one row between the plot and X-axis labels,
+    // in scene coordinates, consistent with other output-stage circuits.
+    double labelRowHelper = -yMajor * 1.8;
+    const double yScalePlot = plot->getYScale();
+    if (yScalePlot > 0.0) {
+        labelRowHelper = -6.0 / yScalePlot;
     }
 
     // Determine an effective DC anode voltage when treating the load as
@@ -767,11 +882,11 @@ void SingleEndedUlOutput::plot(Plot *plot)
         }
     }
 
-    // Draw AC load line (green)
+    // Draw AC load line (yellow), matching SingleEndedOutput small-signal line colour.
     acSignalLine = new QGraphicsItemGroup();
     {
         QPen pen;
-        pen.setColor(QColor::fromRgb(0, 127, 0));
+        pen.setColor(QColor::fromRgb(255, 215, 0));
         pen.setWidth(2);
         for (int i = 0; i < acLine.size() - 1; ++i) {
             const QPointF s = acLine[i];
@@ -815,6 +930,32 @@ void SingleEndedUlOutput::plot(Plot *plot)
         }
     }
 
+    // DC reference load line from (0, Vb/Ra) to (Vb, 0), matching the SE
+    // output stage's green DC line.
+    if (raa > 0.0) {
+        cathodeLoadLine = new QGraphicsItemGroup();
+        QPen dcPen;
+        dcPen.setColor(QColor::fromRgb(0, 128, 0));
+        dcPen.setWidth(2);
+
+        const double ia_dc_0 = (vb / raa) * 1000.0; // mA at Va=0
+        const double x1 = 0.0;
+        const double y1 = std::clamp(ia_dc_0, 0.0, iaMax);
+        const double x2 = std::min(vb, axisVaMax);
+        const double y2 = 0.0;
+
+        if (auto *seg = plot->createSegment(x1, y1, x2, y2, dcPen)) {
+            cathodeLoadLine->addToGroup(seg);
+        }
+
+        if (!cathodeLoadLine->childItems().isEmpty()) {
+            plot->getScene()->addItem(cathodeLoadLine);
+        } else {
+            delete cathodeLoadLine;
+            cathodeLoadLine = nullptr;
+        }
+    }
+
     // Mark the DC operating point on the load line
     opMarker = new QGraphicsItemGroup();
     {
@@ -831,6 +972,189 @@ void SingleEndedUlOutput::plot(Plot *plot)
         } else {
             delete opMarker;
             opMarker = nullptr;
+        }
+    }
+
+    // Max swing (brown) and symmetric swing (blue) tick/label helpers along
+    // the AC load line. These mirror the SE/PP helpers and share a single
+    // label row just below the graph, controlled by showSymSwing.
+    {
+        const double slope = -1000.0 / raa; // same as gradient
+        const double ia0   = ia;
+        const double va0   = vb;
+
+        auto ia_line_mA = [&](double va) {
+            return ia0 + slope * (va - va0);
+        };
+
+        // Left limit: intersection of AC load line with the Vg1=0 curve at
+        // the UL tap screen voltage.
+        double vaLeft = -1.0;
+        if (device1) {
+            auto f = [&](double va) {
+                const double vg2 = va * tap + vb * (1.0 - tap);
+                double ia_curve_mA = device1->anodeCurrent(va, 0.0, vg2) * 1000.0;
+                double ia_line = ia_line_mA(va);
+                return ia_curve_mA - ia_line;
+            };
+
+            const int samples = 400;
+            double lastVa = std::clamp(va0, 0.0, axisVaMax);
+            double lastF  = f(lastVa);
+            for (int i = 1; i <= samples; ++i) {
+                double va = va0 * (1.0 - static_cast<double>(i) / samples);
+                va = std::max(va, 0.0);
+                double curF = f(va);
+                if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                    double denom = (curF - lastF);
+                    double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                    t = std::clamp(t, 0.0, 1.0);
+                    vaLeft = lastVa + t * (va - lastVa);
+                    break;
+                }
+                lastVa = va;
+                lastF  = curF;
+            }
+        }
+
+        // Right limits: Ia = 0 and optional Pa_max limit.
+        double vaRight = -1.0;
+        if (vaLeft >= 0.0) {
+            // Ia = 0 crossing
+            double vaZero = va0 - ia0 / slope;
+            vaZero = std::clamp(vaZero, 0.0, axisVaMax);
+
+            double vaPa = axisVaMax + 1.0;
+            const double paMaxW = device1 ? device1->getPaMax() : 0.0;
+            if (device1 && paMaxW > 0.0) {
+                auto g_pa = [&](double va) {
+                    if (va <= 0.0) return 1e9;
+                    double ia_line = ia_line_mA(va);
+                    double ia_pa_mA = 1000.0 * paMaxW / va;
+                    return ia_line - ia_pa_mA;
+                };
+                const int samples = 400;
+                double lastVa = std::max(va0, 1e-3);
+                double lastF  = g_pa(lastVa);
+                for (int i = 1; i <= samples; ++i) {
+                    double va = va0 + (axisVaMax - va0) * (static_cast<double>(i) / samples);
+                    double curF = g_pa(va);
+                    if ((lastF <= 0.0 && curF >= 0.0) || (lastF >= 0.0 && curF <= 0.0)) {
+                        double denom = (curF - lastF);
+                        double t = (std::abs(denom) > 1e-12) ? (-lastF / denom) : 0.5;
+                        t = std::clamp(t, 0.0, 1.0);
+                        vaPa = lastVa + t * (va - lastVa);
+                        break;
+                    }
+                    lastVa = va;
+                    lastF  = curF;
+                }
+            }
+
+            vaRight = std::min(vaZero, vaPa);
+            vaRight = std::clamp(vaRight, 0.0, axisVaMax);
+        }
+
+        if (vaLeft >= 0.0 && vaRight > va0 && vaLeft < va0) {
+            // Max swing (brown): span between vaLeft and vaRight.
+            const double Vpp_max = vaRight - vaLeft;
+            const double midMax  = 0.5 * (vaLeft + vaRight);
+
+            if (!showSymSwing) {
+                QGraphicsItemGroup *maxSwingGroup = new QGraphicsItemGroup();
+                QPen maxPen(QColor::fromRgb(165, 42, 42)); // brown
+                maxPen.setWidth(2);
+
+                const double labelRow = labelRowHelper;
+
+                // Vertical ticks at the swing limits down to Ia = 0.
+                const double iaLeft  = ia_line_mA(vaLeft);
+                const double iaRight = ia_line_mA(vaRight);
+                if (auto *lt = plot->createSegment(vaLeft, 0.0, vaLeft, iaLeft, maxPen)) {
+                    maxSwingGroup->addToGroup(lt);
+                }
+                if (auto *rt = plot->createSegment(vaRight, 0.0, vaRight, iaRight, maxPen)) {
+                    maxSwingGroup->addToGroup(rt);
+                }
+
+                // Labels at tick positions, placed on the helper row.
+                if (auto *lLbl = plot->createLabel(vaLeft, labelRow, vaLeft, maxPen.color())) {
+                    QPointF p = lLbl->pos();
+                    double w = lLbl->boundingRect().width();
+                    lLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(lLbl);
+                }
+                if (auto *rLbl = plot->createLabel(vaRight, labelRow, vaRight, maxPen.color())) {
+                    QPointF p = rLbl->pos();
+                    double w = rLbl->boundingRect().width();
+                    rLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(rLbl);
+                }
+
+                // Centered Vpp_max label.
+                if (auto *lbl = plot->createLabel(midMax, labelRow, Vpp_max, maxPen.color())) {
+                    QPointF p = lbl->pos();
+                    double w = lbl->boundingRect().width();
+                    lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(lbl);
+                }
+
+                if (!acSignalLine) {
+                    acSignalLine = new QGraphicsItemGroup();
+                    plot->getScene()->addItem(acSignalLine);
+                }
+                acSignalLine->addToGroup(maxSwingGroup);
+            }
+
+            // Symmetric swing (blue): around the operating point when
+            // showSymSwing is enabled.
+            const double vpk_sym = std::min(va0 - vaLeft, vaRight - va0);
+            if (showSymSwing && vpk_sym > 0.0) {
+                const double leftX  = va0 - vpk_sym;
+                const double rightX = va0 + vpk_sym;
+
+                QGraphicsItemGroup *symSwingGroup = new QGraphicsItemGroup();
+                QPen symPen(QColor::fromRgb(100, 149, 237)); // light blue
+                symPen.setWidth(2);
+
+                const double iaLeftSym  = ia_line_mA(leftX);
+                const double iaRightSym = ia_line_mA(rightX);
+                if (auto *lt = plot->createSegment(leftX, 0.0, leftX, iaLeftSym, symPen)) {
+                    symSwingGroup->addToGroup(lt);
+                }
+                if (auto *rt = plot->createSegment(rightX, 0.0, rightX, iaRightSym, symPen)) {
+                    symSwingGroup->addToGroup(rt);
+                }
+
+                const double labelRowSym = labelRowHelper;
+                const QColor symColor = symPen.color();
+                if (auto *lLbl = plot->createLabel(leftX, labelRowSym, leftX, symColor)) {
+                    QPointF p = lLbl->pos();
+                    double w = lLbl->boundingRect().width();
+                    lLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    symSwingGroup->addToGroup(lLbl);
+                }
+                if (auto *rLbl = plot->createLabel(rightX, labelRowSym, rightX, symColor)) {
+                    QPointF p = rLbl->pos();
+                    double w = rLbl->boundingRect().width();
+                    rLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    symSwingGroup->addToGroup(rLbl);
+                }
+
+                const double Vpp_sym = 2.0 * vpk_sym;
+                if (auto *lbl = plot->createLabel(va0, labelRowSym, Vpp_sym, symColor)) {
+                    QPointF p = lbl->pos();
+                    double w = lbl->boundingRect().width();
+                    lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    symSwingGroup->addToGroup(lbl);
+                }
+
+                if (!acSignalLine) {
+                    acSignalLine = new QGraphicsItemGroup();
+                    plot->getScene()->addItem(acSignalLine);
+                }
+                acSignalLine->addToGroup(symSwingGroup);
+            }
         }
     }
 }

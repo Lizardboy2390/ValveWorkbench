@@ -1471,6 +1471,11 @@ void SingleEndedOutput::plot(Plot *plot)
 
     const double xMajor = std::max(5.0, axisVaMax / 10.0);
     const double yMajor = std::max(0.5, iaMax / 10.0);
+    double labelRowHelper = -yMajor * 1.8;
+    const double yScalePlot = plot->getYScale();
+    if (yScalePlot > 0.0) {
+        labelRowHelper = -6.0 / yScalePlot;
+    }
 
     // Only set axes when the scene is empty so that re-plotting (for example
     // when toggling Max Sym Swing) does not clear existing model or
@@ -1755,50 +1760,52 @@ void SingleEndedOutput::plot(Plot *plot)
             const double Vpp_max = vaRight - vaLeft;
             const double midMax  = 0.5 * (vaLeft + vaRight);
 
-            QGraphicsItemGroup *maxSwingGroup = new QGraphicsItemGroup();
-            QPen maxPen(QColor::fromRgb(165, 42, 42)); // brown
-            maxPen.setWidth(2);
+            if (!showSymSwing) {
+                QGraphicsItemGroup *maxSwingGroup = new QGraphicsItemGroup();
+                QPen maxPen(QColor::fromRgb(165, 42, 42)); // brown
+                maxPen.setWidth(2);
 
-            // Vertical ticks up to the AC line
-            const double iaLeft  = ia_line_mA(vaLeft);
-            const double iaRight = ia_line_mA(vaRight);
-            if (auto *lt = plot->createSegment(vaLeft, 0.0, vaLeft, iaLeft, maxPen)) {
-                maxSwingGroup->addToGroup(lt);
-            }
-            if (auto *rt = plot->createSegment(vaRight, 0.0, vaRight, iaRight, maxPen)) {
-                maxSwingGroup->addToGroup(rt);
-            }
+                // Vertical ticks up to the AC line
+                const double iaLeft  = ia_line_mA(vaLeft);
+                const double iaRight = ia_line_mA(vaRight);
+                if (auto *lt = plot->createSegment(vaLeft, 0.0, vaLeft, iaLeft, maxPen)) {
+                    maxSwingGroup->addToGroup(lt);
+                }
+                if (auto *rt = plot->createSegment(vaRight, 0.0, vaRight, iaRight, maxPen)) {
+                    maxSwingGroup->addToGroup(rt);
+                }
 
-            // Labels at tick positions
-            const double labelRow = -yMajor * 1.8;
-            if (auto *lLbl = plot->createLabel(vaLeft, labelRow, vaLeft, maxPen.color())) {
-                QPointF p = lLbl->pos();
-                double w = lLbl->boundingRect().width();
-                lLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
-                maxSwingGroup->addToGroup(lLbl);
-            }
-            if (auto *rLbl = plot->createLabel(vaRight, labelRow, vaRight, maxPen.color())) {
-                QPointF p = rLbl->pos();
-                double w = rLbl->boundingRect().width();
-                rLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
-                maxSwingGroup->addToGroup(rLbl);
-            }
+                // Labels at tick positions
+                const double labelRow = labelRowHelper;
+                if (auto *lLbl = plot->createLabel(vaLeft, labelRow, vaLeft, maxPen.color())) {
+                    QPointF p = lLbl->pos();
+                    double w = lLbl->boundingRect().width();
+                    lLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(lLbl);
+                }
+                if (auto *rLbl = plot->createLabel(vaRight, labelRow, vaRight, maxPen.color())) {
+                    QPointF p = rLbl->pos();
+                    double w = rLbl->boundingRect().width();
+                    rLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(rLbl);
+                }
 
-            // Centered Vpp_max label
-            if (auto *lbl = plot->createLabel(midMax, labelRow, Vpp_max, maxPen.color())) {
-                QPointF p = lbl->pos();
-                double w = lbl->boundingRect().width();
-                lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
-                maxSwingGroup->addToGroup(lbl);
-            }
+                // Centered Vpp_max label
+                if (auto *lbl = plot->createLabel(midMax, labelRow, Vpp_max, maxPen.color())) {
+                    QPointF p = lbl->pos();
+                    double w = lbl->boundingRect().width();
+                    lbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                    maxSwingGroup->addToGroup(lbl);
+                }
 
-            // Attach to existing anodeLoadLine group if present, otherwise create one
-            if (!anodeLoadLine) {
-                anodeLoadLine = new QGraphicsItemGroup();
-            }
-            anodeLoadLine->addToGroup(maxSwingGroup);
-            if (!plot->getScene()->items().contains(anodeLoadLine)) {
-                plot->getScene()->addItem(anodeLoadLine);
+                // Attach to existing anodeLoadLine group if present, otherwise create one
+                if (!anodeLoadLine) {
+                    anodeLoadLine = new QGraphicsItemGroup();
+                }
+                anodeLoadLine->addToGroup(maxSwingGroup);
+                if (!plot->getScene()->items().contains(anodeLoadLine)) {
+                    plot->getScene()->addItem(anodeLoadLine);
+                }
             }
 
             // Symmetric swing (blue): around the operating point, shown only
@@ -1807,6 +1814,13 @@ void SingleEndedOutput::plot(Plot *plot)
             if (showSymSwing && vpk_sym > 0.0) {
                 const double leftX  = va0 - vpk_sym;
                 const double rightX = va0 + vpk_sym;
+
+                // Ensure we always have a parent group for helper overlays
+                // even when there is no manual headroom segment and we are
+                // in symmetric-swing mode from the outset.
+                if (!anodeLoadLine) {
+                    anodeLoadLine = new QGraphicsItemGroup();
+                }
 
                 QGraphicsItemGroup *symSwingGroup = new QGraphicsItemGroup();
                 QPen symPen(QColor::fromRgb(100, 149, 237)); // light blue
@@ -1821,7 +1835,7 @@ void SingleEndedOutput::plot(Plot *plot)
                     symSwingGroup->addToGroup(rt);
                 }
 
-                const double labelRowSym = -yMajor * 2.4;
+                const double labelRowSym = labelRowHelper;
                 const QColor symColor = symPen.color();
                 if (auto *lLbl = plot->createLabel(leftX, labelRowSym, leftX, symColor)) {
                     QPointF p = lLbl->pos();
