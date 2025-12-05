@@ -15,6 +15,7 @@
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QGraphicsView>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
@@ -49,6 +50,7 @@ public:
     QAction *actionOptions;
     QAction *actionExport_Model;
     QAction *actionExport_to_Spice;
+    QAction *actionExport_SE_Output_to_Spice;
     QWidget *centralwidget;
     QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
@@ -64,6 +66,8 @@ public:
     QHBoxLayout *horizontalLayout_17;
     QLabel *label_5;
     QComboBox *stdDeviceSelection2;
+    QCheckBox *autoscaleYCheck;
+    QCheckBox *inductiveLoadCheck;
     QHBoxLayout *horizontalLayout_5;
     QLabel *cir1Label;
     QLineEdit *cir1Value;
@@ -125,6 +129,7 @@ public:
     QLCDNumber *gmLcd;
     QLCDNumber *raLcd;
     QLCDNumber *lcdNumber_3;
+    QCheckBox *mes_mod_select;
     QLabel *label;
     QTableWidget *properties;
     QSpacerItem *verticalSpacer_2;
@@ -151,9 +156,6 @@ public:
     QComboBox *testType;
     QSpacerItem *verticalSpacer_8;
     QHBoxLayout *horizontalLayout_28;
-    QLabel *heaterLabel_2;
-    QLineEdit *heaterVoltage;
-    QSpacerItem *horizontalSpacer_11;
     QHBoxLayout *horizontalLayout_29;
     QSpacerItem *horizontalSpacer_16;
     QLabel *label_15;
@@ -185,32 +187,58 @@ public:
     QSpacerItem *horizontalSpacer_5;
     QSpacerItem *verticalSpacer_9;
     QHBoxLayout *heaterLayout;
-    QPushButton *heaterButton;
-    QSpacerItem *horizontalSpacer_13;
     QHBoxLayout *horizontalLayout_33;
     QLabel *heaterVLabel;
-    QSpacerItem *horizontalSpacer_14;
+    QSpacerItem *horizontalSpacer_9;
     QLCDNumber *heaterVlcd;
+    QSpacerItem *horizontalSpacer_14;
     QHBoxLayout *horizontalLayout_34;
     QLabel *heaterILabel;
-    QSpacerItem *horizontalSpacer_17;
+    QSpacerItem *horizontalSpacer_13;
     QLCDNumber *heaterIlcd;
+    QSpacerItem *horizontalSpacer_17;
     QSpacerItem *verticalSpacer_10;
     QHBoxLayout *horizontalLayout_35;
     QPushButton *runButton;
+    QPushButton *quickHealthButton;
+    QPushButton *fullHealthButton;
     QSpacerItem *horizontalSpacer_18;
+    QSpacerItem *verticalSpacer_6;
     QProgressBar *progressBar;
     QSpacerItem *verticalSpacer_11;
-    QHBoxLayout *horizontalLayout_2;
-    QSpacerItem *horizontalSpacer_8;
+    QHBoxLayout *horizontalLayout_36;
+    QPushButton *btnImportFromDevice;
+    QHBoxLayout *horizontalLayout_39;
     QPushButton *btnAddToProject;
-    QSpacerItem *horizontalSpacer_9;
+    QHBoxLayout *horizontalLayout_38;
+    QSpacerItem *verticalSpacer_7;
+    QHBoxLayout *horizontalLayout_2;
+    QGroupBox *datasheetGroupBox;
+    QGridLayout *gridLayout_datasheet;
+    QLabel *datasheetNameLabel;
+    QLineEdit *datasheetRefName;
+    QLabel *datasheetSectionLabel;
+    QLineEdit *datasheetSection;
+    QLabel *datasheetVaLabel;
+    QLineEdit *datasheetVa;
+    QLabel *datasheetVgLabel;
+    QLineEdit *datasheetVg;
+    QLabel *datasheetIaLabel;
+    QLineEdit *datasheetIa;
+    QLabel *datasheetGmLabel;
+    QLineEdit *datasheetGm;
+    QLabel *datasheetMuLabel;
+    QLineEdit *datasheetMu;
+    QLabel *datasheetRpLabel;
+    QLineEdit *datasheetRp;
+    QSpacerItem *horizontalSpacer_8;
+    QSpacerItem *verticalSpacer_3;
     QSpacerItem *horizontalSpacer;
     QVBoxLayout *verticalLayout_2;
+    QGraphicsView *graphicsView;
     QSpacerItem *verticalSpacer_4;
     QLabel *plotTitle;
-    QGraphicsView *graphicsView;
-    QSpacerItem *verticalSpacer_3;
+    QSpacerItem *verticalSpacer_31;
     QHBoxLayout *horizontalLayout_9;
     QSpacerItem *horizontalSpacer_3;
     QCheckBox *measureCheck;
@@ -221,7 +249,63 @@ public:
     QCheckBox *screenCheck;
     QSpacerItem *horizontalSpacer_15;
     QSpacerItem *horizontalSpacer_6;
-    QSpacerItem *verticalSpacer_5;
+    QHBoxLayout *horizontalLayout_health;
+    QGroupBox *Triode_A_Box;
+    QVBoxLayout *verticalLayout_TriodeAHealth;
+    QHBoxLayout *horizontalLayout_TriodeAHeader;
+    QLabel *triodeAHeaderMetric;
+    QLabel *triodeAHeaderValue1;
+    QLabel *triodeAHeaderValue2;
+    QLabel *triodeAHeaderCheck;
+    QGridLayout *gridLayout_TriodeAHealth;
+    QLabel *triodeA_row1Label;
+    QLineEdit *triodeA_row1Value1;
+    QLineEdit *triodeA_row1Value2;
+    QCheckBox *triodeA_row1Check;
+    QLabel *triodeA_row2Label;
+    QLineEdit *triodeA_row2Value1;
+    QLineEdit *triodeA_row2Value2;
+    QCheckBox *triodeA_row2Check;
+    QLabel *triodeA_row3Label;
+    QLineEdit *triodeA_row3Value1;
+    QLineEdit *triodeA_row3Value2;
+    QCheckBox *triodeA_row3Check;
+    QLabel *triodeA_row4Label;
+    QLineEdit *triodeA_row4Value1;
+    QLineEdit *triodeA_row4Value2;
+    QCheckBox *triodeA_row4Check;
+    QLabel *triodeA_row5Label;
+    QLineEdit *triodeA_row5Value1;
+    QLineEdit *triodeA_row5Value2;
+    QCheckBox *triodeA_row5Check;
+    QGroupBox *Triode_B_Box;
+    QVBoxLayout *verticalLayout_TriodeBHealth;
+    QHBoxLayout *horizontalLayout_TriodeBHeader;
+    QLabel *triodeBHeaderMetric;
+    QLabel *triodeBHeaderValue1;
+    QLabel *triodeBHeaderValue2;
+    QLabel *triodeBHeaderCheck;
+    QGridLayout *gridLayout_TriodeBHealth;
+    QLabel *triodeB_row1Label;
+    QLineEdit *triodeB_row1Value1;
+    QLineEdit *triodeB_row1Value2;
+    QCheckBox *triodeB_row1Check;
+    QLabel *triodeB_row2Label;
+    QLineEdit *triodeB_row2Value1;
+    QLineEdit *triodeB_row2Value2;
+    QCheckBox *triodeB_row2Check;
+    QLabel *triodeB_row3Label;
+    QLineEdit *triodeB_row3Value1;
+    QLineEdit *triodeB_row3Value2;
+    QCheckBox *triodeB_row3Check;
+    QLabel *triodeB_row4Label;
+    QLineEdit *triodeB_row4Value1;
+    QLineEdit *triodeB_row4Value2;
+    QCheckBox *triodeB_row4Check;
+    QLabel *triodeB_row5Label;
+    QLineEdit *triodeB_row5Value1;
+    QLineEdit *triodeB_row5Value2;
+    QCheckBox *triodeB_row5Check;
     QSpacerItem *horizontalSpacer_2;
     QMenuBar *menubar;
     QMenu *menuFile;
@@ -232,7 +316,7 @@ public:
     {
         if (ValveWorkbench->objectName().isEmpty())
             ValveWorkbench->setObjectName("ValveWorkbench");
-        ValveWorkbench->resize(997, 777);
+        ValveWorkbench->resize(1229, 1080);
         actionLoad_Model = new QAction(ValveWorkbench);
         actionLoad_Model->setObjectName("actionLoad_Model");
         actionExit = new QAction(ValveWorkbench);
@@ -253,11 +337,13 @@ public:
         actionExport_Model->setObjectName("actionExport_Model");
         actionExport_to_Spice = new QAction(ValveWorkbench);
         actionExport_to_Spice->setObjectName("actionExport_to_Spice");
+        actionExport_SE_Output_to_Spice = new QAction(ValveWorkbench);
+        actionExport_SE_Output_to_Spice->setObjectName("actionExport_SE_Output_to_Spice");
         centralwidget = new QWidget(ValveWorkbench);
         centralwidget->setObjectName("centralwidget");
         horizontalLayoutWidget = new QWidget(centralwidget);
         horizontalLayoutWidget->setObjectName("horizontalLayoutWidget");
-        horizontalLayoutWidget->setGeometry(QRect(19, 9, 1064, 700));
+        horizontalLayoutWidget->setGeometry(QRect(26, 9, 1221, 1011));
         horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
         horizontalLayout->setObjectName("horizontalLayout");
         horizontalLayout->setContentsMargins(0, 0, 0, 0);
@@ -268,7 +354,7 @@ public:
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(tabWidget->sizePolicy().hasHeightForWidth());
         tabWidget->setSizePolicy(sizePolicy);
-        tabWidget->setMinimumSize(QSize(350, 0));
+        tabWidget->setMinimumSize(QSize(360, 0));
         tab = new QWidget();
         tab->setObjectName("tab");
         verticalLayout = new QVBoxLayout(tab);
@@ -336,6 +422,18 @@ public:
 
 
         verticalLayout->addLayout(horizontalLayout_17);
+
+        autoscaleYCheck = new QCheckBox(tab);
+        autoscaleYCheck->setObjectName("autoscaleYCheck");
+        autoscaleYCheck->setChecked(true);
+
+        verticalLayout->addWidget(autoscaleYCheck);
+
+        inductiveLoadCheck = new QCheckBox(tab);
+        inductiveLoadCheck->setObjectName("inductiveLoadCheck");
+        inductiveLoadCheck->setChecked(true);
+
+        verticalLayout->addWidget(inductiveLoadCheck);
 
         horizontalLayout_5 = new QHBoxLayout();
         horizontalLayout_5->setObjectName("horizontalLayout_5");
@@ -639,7 +737,7 @@ public:
         tab_2->setObjectName("tab_2");
         layoutWidget = new QWidget(tab_2);
         layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(10, 10, 312, 670));
+        layoutWidget->setGeometry(QRect(10, 0, 337, 670));
         verticalLayout_4 = new QVBoxLayout(layoutWidget);
         verticalLayout_4->setObjectName("verticalLayout_4");
         verticalLayout_4->setContentsMargins(0, 0, 0, 0);
@@ -663,18 +761,18 @@ public:
         groupBox = new QGroupBox(layoutWidget);
         groupBox->setObjectName("groupBox");
         groupBox->setEnabled(true);
-        groupBox->setMinimumSize(QSize(40, 150));
+        groupBox->setMinimumSize(QSize(40, 100));
         gmLabel = new QLabel(groupBox);
         gmLabel->setObjectName("gmLabel");
-        gmLabel->setGeometry(QRect(0, 30, 91, 20));
+        gmLabel->setGeometry(QRect(0, 40, 91, 20));
         gmLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
         raLabel = new QLabel(groupBox);
         raLabel->setObjectName("raLabel");
-        raLabel->setGeometry(QRect(120, 30, 63, 20));
+        raLabel->setGeometry(QRect(120, 40, 63, 20));
         raLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
         muLabel = new QLabel(groupBox);
         muLabel->setObjectName("muLabel");
-        muLabel->setGeometry(QRect(230, 30, 63, 20));
+        muLabel->setGeometry(QRect(230, 40, 63, 20));
         muLabel->setAlignment(Qt::AlignmentFlag::AlignCenter);
         gmLcd = new QLCDNumber(groupBox);
         gmLcd->setObjectName("gmLcd");
@@ -691,11 +789,16 @@ public:
         lcdNumber_3->setGeometry(QRect(230, 60, 64, 31));
         lcdNumber_3->setDigitCount(6);
         lcdNumber_3->setSegmentStyle(QLCDNumber::SegmentStyle::Flat);
-        label = new QLabel(groupBox);
-        label->setObjectName("label");
-        label->setGeometry(QRect(0, 130, 310, 20));
+        mes_mod_select = new QCheckBox(groupBox);
+        mes_mod_select->setObjectName("mes_mod_select");
+        mes_mod_select->setGeometry(QRect(210, 10, 91, 24));
 
         verticalLayout_4->addWidget(groupBox);
+
+        label = new QLabel(layoutWidget);
+        label->setObjectName("label");
+
+        verticalLayout_4->addWidget(label);
 
         properties = new QTableWidget(layoutWidget);
         if (properties->columnCount() < 2)
@@ -754,7 +857,7 @@ public:
         tab_3->setObjectName("tab_3");
         layoutWidget_2 = new QWidget(tab_3);
         layoutWidget_2->setObjectName("layoutWidget_2");
-        layoutWidget_2->setGeometry(QRect(10, 10, 300, 656));
+        layoutWidget_2->setGeometry(QRect(20, 10, 332, 1026));
         verticalLayout_6 = new QVBoxLayout(layoutWidget_2);
         verticalLayout_6->setObjectName("verticalLayout_6");
         verticalLayout_6->setContentsMargins(0, 0, 0, 0);
@@ -837,27 +940,6 @@ public:
 
         horizontalLayout_28 = new QHBoxLayout();
         horizontalLayout_28->setObjectName("horizontalLayout_28");
-        heaterLabel_2 = new QLabel(layoutWidget_2);
-        heaterLabel_2->setObjectName("heaterLabel_2");
-        sizePolicy3.setHeightForWidth(heaterLabel_2->sizePolicy().hasHeightForWidth());
-        heaterLabel_2->setSizePolicy(sizePolicy3);
-        heaterLabel_2->setMinimumSize(QSize(100, 0));
-
-        horizontalLayout_28->addWidget(heaterLabel_2);
-
-        heaterVoltage = new QLineEdit(layoutWidget_2);
-        heaterVoltage->setObjectName("heaterVoltage");
-        sizePolicy2.setHeightForWidth(heaterVoltage->sizePolicy().hasHeightForWidth());
-        heaterVoltage->setSizePolicy(sizePolicy2);
-        heaterVoltage->setMinimumSize(QSize(50, 0));
-        heaterVoltage->setMaximumSize(QSize(50, 16777215));
-
-        horizontalLayout_28->addWidget(heaterVoltage);
-
-        horizontalSpacer_11 = new QSpacerItem(112, 20, QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Minimum);
-
-        horizontalLayout_28->addItem(horizontalSpacer_11);
-
 
         verticalLayout_6->addLayout(horizontalLayout_28);
 
@@ -1083,25 +1165,12 @@ public:
 
         verticalLayout_6->addLayout(verticalLayout_7);
 
-        verticalSpacer_9 = new QSpacerItem(20, 20, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
+        verticalSpacer_9 = new QSpacerItem(20, 10, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
 
         verticalLayout_6->addItem(verticalSpacer_9);
 
         heaterLayout = new QHBoxLayout();
         heaterLayout->setObjectName("heaterLayout");
-        heaterButton = new QPushButton(layoutWidget_2);
-        heaterButton->setObjectName("heaterButton");
-        sizePolicy2.setHeightForWidth(heaterButton->sizePolicy().hasHeightForWidth());
-        heaterButton->setSizePolicy(sizePolicy2);
-        heaterButton->setMinimumSize(QSize(80, 0));
-        heaterButton->setCheckable(false);
-
-        heaterLayout->addWidget(heaterButton);
-
-        horizontalSpacer_13 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        heaterLayout->addItem(horizontalSpacer_13);
-
 
         verticalLayout_6->addLayout(heaterLayout);
 
@@ -1115,9 +1184,9 @@ public:
 
         horizontalLayout_33->addWidget(heaterVLabel);
 
-        horizontalSpacer_14 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+        horizontalSpacer_9 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
-        horizontalLayout_33->addItem(horizontalSpacer_14);
+        horizontalLayout_33->addItem(horizontalSpacer_9);
 
         heaterVlcd = new QLCDNumber(layoutWidget_2);
         heaterVlcd->setObjectName("heaterVlcd");
@@ -1126,11 +1195,15 @@ public:
         sizePolicy6.setVerticalStretch(0);
         sizePolicy6.setHeightForWidth(heaterVlcd->sizePolicy().hasHeightForWidth());
         heaterVlcd->setSizePolicy(sizePolicy6);
-        heaterVlcd->setMinimumSize(QSize(133, 0));
+        heaterVlcd->setMinimumSize(QSize(50, 0));
         heaterVlcd->setDigitCount(6);
         heaterVlcd->setSegmentStyle(QLCDNumber::SegmentStyle::Flat);
 
         horizontalLayout_33->addWidget(heaterVlcd);
+
+        horizontalSpacer_14 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_33->addItem(horizontalSpacer_14);
 
 
         verticalLayout_6->addLayout(horizontalLayout_33);
@@ -1145,25 +1218,29 @@ public:
 
         horizontalLayout_34->addWidget(heaterILabel);
 
-        horizontalSpacer_17 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+        horizontalSpacer_13 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
-        horizontalLayout_34->addItem(horizontalSpacer_17);
+        horizontalLayout_34->addItem(horizontalSpacer_13);
 
         heaterIlcd = new QLCDNumber(layoutWidget_2);
         heaterIlcd->setObjectName("heaterIlcd");
         sizePolicy6.setHeightForWidth(heaterIlcd->sizePolicy().hasHeightForWidth());
         heaterIlcd->setSizePolicy(sizePolicy6);
-        heaterIlcd->setMinimumSize(QSize(133, 0));
+        heaterIlcd->setMinimumSize(QSize(50, 0));
         heaterIlcd->setLineWidth(1);
         heaterIlcd->setDigitCount(6);
         heaterIlcd->setSegmentStyle(QLCDNumber::SegmentStyle::Flat);
 
         horizontalLayout_34->addWidget(heaterIlcd);
 
+        horizontalSpacer_17 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_34->addItem(horizontalSpacer_17);
+
 
         verticalLayout_6->addLayout(horizontalLayout_34);
 
-        verticalSpacer_10 = new QSpacerItem(20, 20, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
+        verticalSpacer_10 = new QSpacerItem(20, 15, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
 
         verticalLayout_6->addItem(verticalSpacer_10);
 
@@ -1175,12 +1252,26 @@ public:
 
         horizontalLayout_35->addWidget(runButton);
 
+        quickHealthButton = new QPushButton(layoutWidget_2);
+        quickHealthButton->setObjectName("quickHealthButton");
+
+        horizontalLayout_35->addWidget(quickHealthButton);
+
+        fullHealthButton = new QPushButton(layoutWidget_2);
+        fullHealthButton->setObjectName("fullHealthButton");
+
+        horizontalLayout_35->addWidget(fullHealthButton);
+
         horizontalSpacer_18 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
         horizontalLayout_35->addItem(horizontalSpacer_18);
 
 
         verticalLayout_6->addLayout(horizontalLayout_35);
+
+        verticalSpacer_6 = new QSpacerItem(40, 10, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
+
+        verticalLayout_6->addItem(verticalSpacer_6);
 
         progressBar = new QProgressBar(layoutWidget_2);
         progressBar->setObjectName("progressBar");
@@ -1189,28 +1280,154 @@ public:
 
         verticalLayout_6->addWidget(progressBar);
 
-        verticalSpacer_11 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
+        verticalSpacer_11 = new QSpacerItem(20, 15, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
 
         verticalLayout_6->addItem(verticalSpacer_11);
 
-        horizontalLayout_2 = new QHBoxLayout();
-        horizontalLayout_2->setObjectName("horizontalLayout_2");
-        horizontalSpacer_8 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+        horizontalLayout_36 = new QHBoxLayout();
+        horizontalLayout_36->setObjectName("horizontalLayout_36");
 
-        horizontalLayout_2->addItem(horizontalSpacer_8);
+        verticalLayout_6->addLayout(horizontalLayout_36);
+
+        btnImportFromDevice = new QPushButton(layoutWidget_2);
+        btnImportFromDevice->setObjectName("btnImportFromDevice");
+        btnImportFromDevice->setEnabled(true);
+
+        verticalLayout_6->addWidget(btnImportFromDevice);
+
+        horizontalLayout_39 = new QHBoxLayout();
+        horizontalLayout_39->setObjectName("horizontalLayout_39");
+
+        verticalLayout_6->addLayout(horizontalLayout_39);
 
         btnAddToProject = new QPushButton(layoutWidget_2);
         btnAddToProject->setObjectName("btnAddToProject");
-        btnAddToProject->setEnabled(false);
+        btnAddToProject->setEnabled(true);
+        btnAddToProject->setMinimumSize(QSize(0, 0));
 
-        horizontalLayout_2->addWidget(btnAddToProject);
+        verticalLayout_6->addWidget(btnAddToProject);
 
-        horizontalSpacer_9 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+        horizontalLayout_38 = new QHBoxLayout();
+        horizontalLayout_38->setObjectName("horizontalLayout_38");
 
-        horizontalLayout_2->addItem(horizontalSpacer_9);
+        verticalLayout_6->addLayout(horizontalLayout_38);
 
+        verticalSpacer_7 = new QSpacerItem(20, 15, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
+
+        verticalLayout_6->addItem(verticalSpacer_7);
+
+        horizontalLayout_2 = new QHBoxLayout();
+        horizontalLayout_2->setObjectName("horizontalLayout_2");
 
         verticalLayout_6->addLayout(horizontalLayout_2);
+
+        datasheetGroupBox = new QGroupBox(layoutWidget_2);
+        datasheetGroupBox->setObjectName("datasheetGroupBox");
+        datasheetGroupBox->setEnabled(true);
+        gridLayout_datasheet = new QGridLayout(datasheetGroupBox);
+        gridLayout_datasheet->setObjectName("gridLayout_datasheet");
+        datasheetNameLabel = new QLabel(datasheetGroupBox);
+        datasheetNameLabel->setObjectName("datasheetNameLabel");
+        datasheetNameLabel->setVisible(false);
+
+        gridLayout_datasheet->addWidget(datasheetNameLabel, 0, 0, 1, 1);
+
+        datasheetRefName = new QLineEdit(datasheetGroupBox);
+        datasheetRefName->setObjectName("datasheetRefName");
+        datasheetRefName->setVisible(false);
+        datasheetRefName->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetRefName, 0, 1, 1, 1);
+
+        datasheetSectionLabel = new QLabel(datasheetGroupBox);
+        datasheetSectionLabel->setObjectName("datasheetSectionLabel");
+        datasheetSectionLabel->setVisible(false);
+
+        gridLayout_datasheet->addWidget(datasheetSectionLabel, 1, 0, 1, 1);
+
+        datasheetSection = new QLineEdit(datasheetGroupBox);
+        datasheetSection->setObjectName("datasheetSection");
+        datasheetSection->setVisible(false);
+        datasheetSection->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetSection, 1, 1, 1, 1);
+
+        datasheetVaLabel = new QLabel(datasheetGroupBox);
+        datasheetVaLabel->setObjectName("datasheetVaLabel");
+
+        gridLayout_datasheet->addWidget(datasheetVaLabel, 2, 0, 1, 1);
+
+        datasheetVa = new QLineEdit(datasheetGroupBox);
+        datasheetVa->setObjectName("datasheetVa");
+        datasheetVa->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetVa, 2, 1, 1, 1);
+
+        datasheetVgLabel = new QLabel(datasheetGroupBox);
+        datasheetVgLabel->setObjectName("datasheetVgLabel");
+
+        gridLayout_datasheet->addWidget(datasheetVgLabel, 3, 0, 1, 1);
+
+        datasheetVg = new QLineEdit(datasheetGroupBox);
+        datasheetVg->setObjectName("datasheetVg");
+        datasheetVg->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetVg, 3, 1, 1, 1);
+
+        datasheetIaLabel = new QLabel(datasheetGroupBox);
+        datasheetIaLabel->setObjectName("datasheetIaLabel");
+
+        gridLayout_datasheet->addWidget(datasheetIaLabel, 4, 0, 1, 1);
+
+        datasheetIa = new QLineEdit(datasheetGroupBox);
+        datasheetIa->setObjectName("datasheetIa");
+        datasheetIa->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetIa, 4, 1, 1, 1);
+
+        datasheetGmLabel = new QLabel(datasheetGroupBox);
+        datasheetGmLabel->setObjectName("datasheetGmLabel");
+
+        gridLayout_datasheet->addWidget(datasheetGmLabel, 5, 0, 1, 1);
+
+        datasheetGm = new QLineEdit(datasheetGroupBox);
+        datasheetGm->setObjectName("datasheetGm");
+        datasheetGm->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetGm, 5, 1, 1, 1);
+
+        datasheetMuLabel = new QLabel(datasheetGroupBox);
+        datasheetMuLabel->setObjectName("datasheetMuLabel");
+
+        gridLayout_datasheet->addWidget(datasheetMuLabel, 6, 0, 1, 1);
+
+        datasheetMu = new QLineEdit(datasheetGroupBox);
+        datasheetMu->setObjectName("datasheetMu");
+        datasheetMu->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetMu, 6, 1, 1, 1);
+
+        datasheetRpLabel = new QLabel(datasheetGroupBox);
+        datasheetRpLabel->setObjectName("datasheetRpLabel");
+
+        gridLayout_datasheet->addWidget(datasheetRpLabel, 7, 0, 1, 1);
+
+        datasheetRp = new QLineEdit(datasheetGroupBox);
+        datasheetRp->setObjectName("datasheetRp");
+        datasheetRp->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetRp, 7, 1, 1, 1);
+
+
+        verticalLayout_6->addWidget(datasheetGroupBox);
+
+        horizontalSpacer_8 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        verticalLayout_6->addItem(horizontalSpacer_8);
+
+        verticalSpacer_3 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
+
+        verticalLayout_6->addItem(verticalSpacer_3);
 
         tabWidget->addTab(tab_3, QString());
 
@@ -1222,6 +1439,16 @@ public:
 
         verticalLayout_2 = new QVBoxLayout();
         verticalLayout_2->setObjectName("verticalLayout_2");
+        graphicsView = new QGraphicsView(horizontalLayoutWidget);
+        graphicsView->setObjectName("graphicsView");
+        sizePolicy2.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
+        graphicsView->setSizePolicy(sizePolicy2);
+        graphicsView->setMinimumSize(QSize(720, 640));
+        graphicsView->setMaximumSize(QSize(720, 640));
+        graphicsView->setSizeIncrement(QSize(11, 0));
+
+        verticalLayout_2->addWidget(graphicsView);
+
         verticalSpacer_4 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
 
         verticalLayout_2->addItem(verticalSpacer_4);
@@ -1231,18 +1458,9 @@ public:
 
         verticalLayout_2->addWidget(plotTitle);
 
-        graphicsView = new QGraphicsView(horizontalLayoutWidget);
-        graphicsView->setObjectName("graphicsView");
-        sizePolicy2.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
-        graphicsView->setSizePolicy(sizePolicy2);
-        graphicsView->setMinimumSize(QSize(550, 500));
-        graphicsView->setMaximumSize(QSize(550, 500));
+        verticalSpacer_31 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
 
-        verticalLayout_2->addWidget(graphicsView);
-
-        verticalSpacer_3 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
-
-        verticalLayout_2->addItem(verticalSpacer_3);
+        verticalLayout_2->addItem(verticalSpacer_31);
 
         horizontalLayout_9 = new QHBoxLayout();
         horizontalLayout_9->setObjectName("horizontalLayout_9");
@@ -1290,9 +1508,304 @@ public:
 
         verticalLayout_2->addLayout(horizontalLayout_9);
 
-        verticalSpacer_5 = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
+        horizontalLayout_health = new QHBoxLayout();
+        horizontalLayout_health->setObjectName("horizontalLayout_health");
+        Triode_A_Box = new QGroupBox(horizontalLayoutWidget);
+        Triode_A_Box->setObjectName("Triode_A_Box");
+        verticalLayout_TriodeAHealth = new QVBoxLayout(Triode_A_Box);
+        verticalLayout_TriodeAHealth->setObjectName("verticalLayout_TriodeAHealth");
+        horizontalLayout_TriodeAHeader = new QHBoxLayout();
+        horizontalLayout_TriodeAHeader->setObjectName("horizontalLayout_TriodeAHeader");
+        triodeAHeaderMetric = new QLabel(Triode_A_Box);
+        triodeAHeaderMetric->setObjectName("triodeAHeaderMetric");
 
-        verticalLayout_2->addItem(verticalSpacer_5);
+        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderMetric);
+
+        triodeAHeaderValue1 = new QLabel(Triode_A_Box);
+        triodeAHeaderValue1->setObjectName("triodeAHeaderValue1");
+
+        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderValue1);
+
+        triodeAHeaderValue2 = new QLabel(Triode_A_Box);
+        triodeAHeaderValue2->setObjectName("triodeAHeaderValue2");
+
+        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderValue2);
+
+        triodeAHeaderCheck = new QLabel(Triode_A_Box);
+        triodeAHeaderCheck->setObjectName("triodeAHeaderCheck");
+
+        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderCheck);
+
+
+        verticalLayout_TriodeAHealth->addLayout(horizontalLayout_TriodeAHeader);
+
+        gridLayout_TriodeAHealth = new QGridLayout();
+        gridLayout_TriodeAHealth->setObjectName("gridLayout_TriodeAHealth");
+        triodeA_row1Label = new QLabel(Triode_A_Box);
+        triodeA_row1Label->setObjectName("triodeA_row1Label");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row1Label, 0, 0, 1, 1);
+
+        triodeA_row1Value1 = new QLineEdit(Triode_A_Box);
+        triodeA_row1Value1->setObjectName("triodeA_row1Value1");
+        triodeA_row1Value1->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row1Value1, 0, 1, 1, 1);
+
+        triodeA_row1Value2 = new QLineEdit(Triode_A_Box);
+        triodeA_row1Value2->setObjectName("triodeA_row1Value2");
+        triodeA_row1Value2->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row1Value2, 0, 2, 1, 1);
+
+        triodeA_row1Check = new QCheckBox(Triode_A_Box);
+        triodeA_row1Check->setObjectName("triodeA_row1Check");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row1Check, 0, 3, 1, 1);
+
+        triodeA_row2Label = new QLabel(Triode_A_Box);
+        triodeA_row2Label->setObjectName("triodeA_row2Label");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row2Label, 1, 0, 1, 1);
+
+        triodeA_row2Value1 = new QLineEdit(Triode_A_Box);
+        triodeA_row2Value1->setObjectName("triodeA_row2Value1");
+        triodeA_row2Value1->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row2Value1, 1, 1, 1, 1);
+
+        triodeA_row2Value2 = new QLineEdit(Triode_A_Box);
+        triodeA_row2Value2->setObjectName("triodeA_row2Value2");
+        triodeA_row2Value2->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row2Value2, 1, 2, 1, 1);
+
+        triodeA_row2Check = new QCheckBox(Triode_A_Box);
+        triodeA_row2Check->setObjectName("triodeA_row2Check");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row2Check, 1, 3, 1, 1);
+
+        triodeA_row3Label = new QLabel(Triode_A_Box);
+        triodeA_row3Label->setObjectName("triodeA_row3Label");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row3Label, 2, 0, 1, 1);
+
+        triodeA_row3Value1 = new QLineEdit(Triode_A_Box);
+        triodeA_row3Value1->setObjectName("triodeA_row3Value1");
+        triodeA_row3Value1->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row3Value1, 2, 1, 1, 1);
+
+        triodeA_row3Value2 = new QLineEdit(Triode_A_Box);
+        triodeA_row3Value2->setObjectName("triodeA_row3Value2");
+        triodeA_row3Value2->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row3Value2, 2, 2, 1, 1);
+
+        triodeA_row3Check = new QCheckBox(Triode_A_Box);
+        triodeA_row3Check->setObjectName("triodeA_row3Check");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row3Check, 2, 3, 1, 1);
+
+        triodeA_row4Label = new QLabel(Triode_A_Box);
+        triodeA_row4Label->setObjectName("triodeA_row4Label");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row4Label, 3, 0, 1, 1);
+
+        triodeA_row4Value1 = new QLineEdit(Triode_A_Box);
+        triodeA_row4Value1->setObjectName("triodeA_row4Value1");
+        triodeA_row4Value1->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row4Value1, 3, 1, 1, 1);
+
+        triodeA_row4Value2 = new QLineEdit(Triode_A_Box);
+        triodeA_row4Value2->setObjectName("triodeA_row4Value2");
+        triodeA_row4Value2->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row4Value2, 3, 2, 1, 1);
+
+        triodeA_row4Check = new QCheckBox(Triode_A_Box);
+        triodeA_row4Check->setObjectName("triodeA_row4Check");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row4Check, 3, 3, 1, 1);
+
+        triodeA_row5Label = new QLabel(Triode_A_Box);
+        triodeA_row5Label->setObjectName("triodeA_row5Label");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row5Label, 4, 0, 1, 1);
+
+        triodeA_row5Value1 = new QLineEdit(Triode_A_Box);
+        triodeA_row5Value1->setObjectName("triodeA_row5Value1");
+        triodeA_row5Value1->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row5Value1, 4, 1, 1, 1);
+
+        triodeA_row5Value2 = new QLineEdit(Triode_A_Box);
+        triodeA_row5Value2->setObjectName("triodeA_row5Value2");
+        triodeA_row5Value2->setReadOnly(true);
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row5Value2, 4, 2, 1, 1);
+
+        triodeA_row5Check = new QCheckBox(Triode_A_Box);
+        triodeA_row5Check->setObjectName("triodeA_row5Check");
+
+        gridLayout_TriodeAHealth->addWidget(triodeA_row5Check, 4, 3, 1, 1);
+
+
+        verticalLayout_TriodeAHealth->addLayout(gridLayout_TriodeAHealth);
+
+
+        horizontalLayout_health->addWidget(Triode_A_Box);
+
+        Triode_B_Box = new QGroupBox(horizontalLayoutWidget);
+        Triode_B_Box->setObjectName("Triode_B_Box");
+        verticalLayout_TriodeBHealth = new QVBoxLayout(Triode_B_Box);
+        verticalLayout_TriodeBHealth->setObjectName("verticalLayout_TriodeBHealth");
+        horizontalLayout_TriodeBHeader = new QHBoxLayout();
+        horizontalLayout_TriodeBHeader->setObjectName("horizontalLayout_TriodeBHeader");
+        triodeBHeaderMetric = new QLabel(Triode_B_Box);
+        triodeBHeaderMetric->setObjectName("triodeBHeaderMetric");
+
+        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderMetric);
+
+        triodeBHeaderValue1 = new QLabel(Triode_B_Box);
+        triodeBHeaderValue1->setObjectName("triodeBHeaderValue1");
+
+        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderValue1);
+
+        triodeBHeaderValue2 = new QLabel(Triode_B_Box);
+        triodeBHeaderValue2->setObjectName("triodeBHeaderValue2");
+
+        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderValue2);
+
+        triodeBHeaderCheck = new QLabel(Triode_B_Box);
+        triodeBHeaderCheck->setObjectName("triodeBHeaderCheck");
+
+        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderCheck);
+
+
+        verticalLayout_TriodeBHealth->addLayout(horizontalLayout_TriodeBHeader);
+
+        gridLayout_TriodeBHealth = new QGridLayout();
+        gridLayout_TriodeBHealth->setObjectName("gridLayout_TriodeBHealth");
+        triodeB_row1Label = new QLabel(Triode_B_Box);
+        triodeB_row1Label->setObjectName("triodeB_row1Label");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row1Label, 0, 0, 1, 1);
+
+        triodeB_row1Value1 = new QLineEdit(Triode_B_Box);
+        triodeB_row1Value1->setObjectName("triodeB_row1Value1");
+        triodeB_row1Value1->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row1Value1, 0, 1, 1, 1);
+
+        triodeB_row1Value2 = new QLineEdit(Triode_B_Box);
+        triodeB_row1Value2->setObjectName("triodeB_row1Value2");
+        triodeB_row1Value2->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row1Value2, 0, 2, 1, 1);
+
+        triodeB_row1Check = new QCheckBox(Triode_B_Box);
+        triodeB_row1Check->setObjectName("triodeB_row1Check");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row1Check, 0, 3, 1, 1);
+
+        triodeB_row2Label = new QLabel(Triode_B_Box);
+        triodeB_row2Label->setObjectName("triodeB_row2Label");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row2Label, 1, 0, 1, 1);
+
+        triodeB_row2Value1 = new QLineEdit(Triode_B_Box);
+        triodeB_row2Value1->setObjectName("triodeB_row2Value1");
+        triodeB_row2Value1->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row2Value1, 1, 1, 1, 1);
+
+        triodeB_row2Value2 = new QLineEdit(Triode_B_Box);
+        triodeB_row2Value2->setObjectName("triodeB_row2Value2");
+        triodeB_row2Value2->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row2Value2, 1, 2, 1, 1);
+
+        triodeB_row2Check = new QCheckBox(Triode_B_Box);
+        triodeB_row2Check->setObjectName("triodeB_row2Check");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row2Check, 1, 3, 1, 1);
+
+        triodeB_row3Label = new QLabel(Triode_B_Box);
+        triodeB_row3Label->setObjectName("triodeB_row3Label");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row3Label, 2, 0, 1, 1);
+
+        triodeB_row3Value1 = new QLineEdit(Triode_B_Box);
+        triodeB_row3Value1->setObjectName("triodeB_row3Value1");
+        triodeB_row3Value1->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row3Value1, 2, 1, 1, 1);
+
+        triodeB_row3Value2 = new QLineEdit(Triode_B_Box);
+        triodeB_row3Value2->setObjectName("triodeB_row3Value2");
+        triodeB_row3Value2->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row3Value2, 2, 2, 1, 1);
+
+        triodeB_row3Check = new QCheckBox(Triode_B_Box);
+        triodeB_row3Check->setObjectName("triodeB_row3Check");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row3Check, 2, 3, 1, 1);
+
+        triodeB_row4Label = new QLabel(Triode_B_Box);
+        triodeB_row4Label->setObjectName("triodeB_row4Label");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row4Label, 3, 0, 1, 1);
+
+        triodeB_row4Value1 = new QLineEdit(Triode_B_Box);
+        triodeB_row4Value1->setObjectName("triodeB_row4Value1");
+        triodeB_row4Value1->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row4Value1, 3, 1, 1, 1);
+
+        triodeB_row4Value2 = new QLineEdit(Triode_B_Box);
+        triodeB_row4Value2->setObjectName("triodeB_row4Value2");
+        triodeB_row4Value2->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row4Value2, 3, 2, 1, 1);
+
+        triodeB_row4Check = new QCheckBox(Triode_B_Box);
+        triodeB_row4Check->setObjectName("triodeB_row4Check");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row4Check, 3, 3, 1, 1);
+
+        triodeB_row5Label = new QLabel(Triode_B_Box);
+        triodeB_row5Label->setObjectName("triodeB_row5Label");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row5Label, 4, 0, 1, 1);
+
+        triodeB_row5Value1 = new QLineEdit(Triode_B_Box);
+        triodeB_row5Value1->setObjectName("triodeB_row5Value1");
+        triodeB_row5Value1->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row5Value1, 4, 1, 1, 1);
+
+        triodeB_row5Value2 = new QLineEdit(Triode_B_Box);
+        triodeB_row5Value2->setObjectName("triodeB_row5Value2");
+        triodeB_row5Value2->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row5Value2, 4, 2, 1, 1);
+
+        triodeB_row5Check = new QCheckBox(Triode_B_Box);
+        triodeB_row5Check->setObjectName("triodeB_row5Check");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_row5Check, 4, 3, 1, 1);
+
+
+        verticalLayout_TriodeBHealth->addLayout(gridLayout_TriodeBHealth);
+
+
+        horizontalLayout_health->addWidget(Triode_B_Box);
+
+
+        verticalLayout_2->addLayout(horizontalLayout_health);
 
 
         horizontalLayout->addLayout(verticalLayout_2);
@@ -1304,7 +1817,7 @@ public:
         ValveWorkbench->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ValveWorkbench);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 997, 26));
+        menubar->setGeometry(QRect(0, 0, 1229, 26));
         menuFile = new QMenu(menubar);
         menuFile->setObjectName("menuFile");
         menuHelp = new QMenu(menubar);
@@ -1326,11 +1839,12 @@ public:
         menuFile->addSeparator();
         menuFile->addAction(actionOptions);
         menuFile->addAction(actionExport_Model);
+        menuFile->addAction(actionExport_SE_Output_to_Spice);
         menuFile->addAction(actionExport_to_Spice);
 
         retranslateUi(ValveWorkbench);
 
-        tabWidget->setCurrentIndex(1);
+        tabWidget->setCurrentIndex(2);
 
 
         QMetaObject::connectSlotsByName(ValveWorkbench);
@@ -1365,14 +1879,17 @@ public:
         actionClose_Project->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+W", nullptr));
 #endif // QT_CONFIG(shortcut)
         actionOptions->setText(QCoreApplication::translate("ValveWorkbench", "Edit Preferences...", nullptr));
-        actionExport_Model->setText(QCoreApplication::translate("ValveWorkbench", "Export Model...", nullptr));
+        actionExport_Model->setText(QCoreApplication::translate("ValveWorkbench", "Export to Device...", nullptr));
 #if QT_CONFIG(shortcut)
         actionExport_Model->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+E", nullptr));
 #endif // QT_CONFIG(shortcut)
-        actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export to Spice...", nullptr));
+        actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export Model to Spice...", nullptr));
+        actionExport_SE_Output_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export SE Output to SPICE...", nullptr));
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
         label_4->setText(QCoreApplication::translate("ValveWorkbench", "Device 1:", nullptr));
         label_5->setText(QCoreApplication::translate("ValveWorkbench", "Device 2:", nullptr));
+        autoscaleYCheck->setText(QCoreApplication::translate("ValveWorkbench", "Autoscale Y", nullptr));
+        inductiveLoadCheck->setText(QCoreApplication::translate("ValveWorkbench", "Inductive Load", nullptr));
         cir1Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel1", nullptr));
         cir2Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel2", nullptr));
         cir3Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel3", nullptr));
@@ -1390,11 +1907,12 @@ public:
         cir15Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel15", nullptr));
         cir16Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel16", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab), QCoreApplication::translate("ValveWorkbench", "Designer", nullptr));
-        label_2->setText(QCoreApplication::translate("ValveWorkbench", "Project prowser", nullptr));
+        label_2->setText(QCoreApplication::translate("ValveWorkbench", "Project Browser", nullptr));
         groupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Small-signal (gm/ra/\316\274)", nullptr));
         gmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (mA/V)", nullptr));
         raLabel->setText(QCoreApplication::translate("ValveWorkbench", "ra (k\316\251)", nullptr));
         muLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274", nullptr));
+        mes_mod_select->setText(QCoreApplication::translate("ValveWorkbench", "Mes/Mod", nullptr));
         label->setText(QCoreApplication::translate("ValveWorkbench", "Properties", nullptr));
         fitTriodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Triode", nullptr));
         fitPentodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Pentode...", nullptr));
@@ -1405,7 +1923,6 @@ public:
         label_13->setText(QCoreApplication::translate("ValveWorkbench", "Device Name:", nullptr));
         deviceTypeLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Device Type: ", nullptr));
         label_14->setText(QCoreApplication::translate("ValveWorkbench", "Test Type:", nullptr));
-        heaterLabel_2->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage:", nullptr));
         label_15->setText(QCoreApplication::translate("ValveWorkbench", "Start", nullptr));
         label_16->setText(QCoreApplication::translate("ValveWorkbench", "Stop", nullptr));
         label_17->setText(QCoreApplication::translate("ValveWorkbench", "Step", nullptr));
@@ -1414,17 +1931,58 @@ public:
         screenLabel->setText(QCoreApplication::translate("ValveWorkbench", "Screen Voltage:", nullptr));
         label_18->setText(QCoreApplication::translate("ValveWorkbench", "Max Ia (mA):", nullptr));
         label_19->setText(QCoreApplication::translate("ValveWorkbench", "Max P (W):", nullptr));
-        heaterButton->setText(QCoreApplication::translate("ValveWorkbench", "Heater", nullptr));
-        heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Voltage (V)", nullptr));
-        heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Heater Current (A)", nullptr));
+        heaterVLabel->setText(QCoreApplication::translate("ValveWorkbench", "Avg per sample", nullptr));
+        heaterILabel->setText(QCoreApplication::translate("ValveWorkbench", "Max Retry Points", nullptr));
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
+        quickHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Quick Health", nullptr));
+        fullHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Full Health", nullptr));
+        btnImportFromDevice->setText(QCoreApplication::translate("ValveWorkbench", "Import from Device", nullptr));
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
+        datasheetGroupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Datasheet / Reference", nullptr));
+        datasheetNameLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref name:", nullptr));
+        datasheetSectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Section:", nullptr));
+        datasheetVaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Va (V):", nullptr));
+        datasheetVgLabel->setText(QCoreApplication::translate("ValveWorkbench", "Vg (V):", nullptr));
+        datasheetIaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ia (mA):", nullptr));
+        datasheetGmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (\302\265S):", nullptr));
+        datasheetMuLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274:", nullptr));
+        datasheetRpLabel->setText(QCoreApplication::translate("ValveWorkbench", "rp (\316\251):", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         plotTitle->setText(QString());
         measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));
         modelCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Fitted Model", nullptr));
         designerCheck->setText(QCoreApplication::translate("ValveWorkbench", "Designer Overlays", nullptr));
         screenCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Screen Current", nullptr));
+        Triode_A_Box->setTitle(QCoreApplication::translate("ValveWorkbench", "Triode A Health", nullptr));
+        triodeAHeaderMetric->setText(QCoreApplication::translate("ValveWorkbench", "Metric", nullptr));
+        triodeAHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Value 1", nullptr));
+        triodeAHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Value 2", nullptr));
+        triodeAHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "OK?", nullptr));
+        triodeA_row1Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 1", nullptr));
+        triodeA_row1Check->setText(QString());
+        triodeA_row2Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 2", nullptr));
+        triodeA_row2Check->setText(QString());
+        triodeA_row3Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 3", nullptr));
+        triodeA_row3Check->setText(QString());
+        triodeA_row4Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 4", nullptr));
+        triodeA_row4Check->setText(QString());
+        triodeA_row5Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 5", nullptr));
+        triodeA_row5Check->setText(QString());
+        Triode_B_Box->setTitle(QCoreApplication::translate("ValveWorkbench", "Triode B Health", nullptr));
+        triodeBHeaderMetric->setText(QCoreApplication::translate("ValveWorkbench", "Metric", nullptr));
+        triodeBHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Value 1", nullptr));
+        triodeBHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Value 2", nullptr));
+        triodeBHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "OK?", nullptr));
+        triodeB_row1Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 1", nullptr));
+        triodeB_row1Check->setText(QString());
+        triodeB_row2Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 2", nullptr));
+        triodeB_row2Check->setText(QString());
+        triodeB_row3Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 3", nullptr));
+        triodeB_row3Check->setText(QString());
+        triodeB_row4Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 4", nullptr));
+        triodeB_row4Check->setText(QString());
+        triodeB_row5Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 5", nullptr));
+        triodeB_row5Check->setText(QString());
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));
     } // retranslateUi

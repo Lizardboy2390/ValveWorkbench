@@ -55,6 +55,7 @@
 #include "valvemodel/circuit/pushpulluloutput.h"
 #include "valvemodel/circuit/triodeaccathodefollower.h"
 #include "valvemodel/circuit/triodedccathodefollower.h"
+#include "valvemodel/circuit/triodecc_dccf_twostage.h"
 #include "ledindicator/ledindicator.h"
 #include "preferencesdialog.h"
 #include "projectdialog.h"
@@ -2772,6 +2773,7 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     circuits[ULTRALINEAR_PUSH_PULL]   = new PushPullUlOutput();
     circuits[AC_CATHODE_FOLLOWER]     = new TriodeACCathodeFollower();
     circuits[DC_CATHODE_FOLLOWER]     = new TriodeDCCathodeFollower();
+    circuits[TEST_CALCULATOR]         = new TriodeCcDccfTwoStage();
 }
 
 void ValveWorkbench::runHarmonicsScan()
@@ -3714,7 +3716,7 @@ void ValveWorkbench::buildCircuitSelection()
     ui->circuitSelection->addItem("Ultralinear Single Ended", ULTRALINEAR_SINGLE_ENDED);
     ui->circuitSelection->addItem("Push Pull Output", PUSH_PULL_OUTPUT);
     ui->circuitSelection->addItem("Ultralinear Push Pull", ULTRALINEAR_PUSH_PULL);
-    ui->circuitSelection->addItem("Test Calculator", TEST_CALCULATOR);  // New test item
+    ui->circuitSelection->addItem("Triode CC + DC Follower (2-stage)", TEST_CALCULATOR);
 }
 
 void ValveWorkbench::selectStdDevice(int index, int deviceNumber)

@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-03 (Quick/Full Health orchestration and crash fix; Open Items update)
+Last updated: 2025-12-04 (Triode CC + DC cathode follower two-stage headroom/THD wiring; documentation updates)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -486,6 +486,16 @@ With this fix, using the same triode-connected 6L6-GC data:
 - `Plot::createSegment` uses Liang–Barsky clipping against axes in data space to avoid null segments.
 
 ### 5) Analyser: auto-averaging and VH/IH metadata (2025-11-21)
+
+### 6) Designer: Triode CC + DC cathode follower two-stage headroom/THD (2025-12-04)
+- Files:
+  - `valvemodel/circuit/triodecc_dccf_twostage.h/.cpp`
+- Circuit: two-stage **Triode CC + DC cathode follower** (TEST_CALCULATOR in `eCircuitType`, labelled "Triode CC + DC Follower (2-stage)" in Designer).
+- Behaviour:
+  - Stage 1 (CC) DC operating point is computed as before (Va1, Vk1, Ia1, Gain1), but Stage 1 gain is now kept as a computed parameter only and is not shown in the Designer UI for this circuit.
+  - Stage 2 (DC cathode follower) now has a **Stage 2 headroom (Vpk)** parameter at the anode, exposed as an editable Designer row.
+  - A local VTADIY-style time-domain helper (`computeFollowerHeadroomHarmonicCurrents` + `simulateFollowerHarmonicsTimeDomain`) samples five anode-current points around the Stage 2 operating point over the requested headroom swing, reconstructs a windowed waveform, and computes HD2/3/4/5 + THD via a small DFT, mirroring the Triode CC/SE output helpers.
+  - The Designer panel exposes a **Stage 2 THD at headroom (%)** metric for this circuit; per-harmonic HD2/4 and HD3/5 rows are not yet surfaced for TEST_CALCULATOR and can be added later if row budget allows.
 - **Intent:** Improve measurement integrity by adopting a uTmax-style automatic current-averaging scheme while repurposing legacy heater fields (VH/IH) for averaging diagnostics.
 - **Desktop (ValveWorkbench / analyser):**
   - Heater control is fully decoupled from the analyser:

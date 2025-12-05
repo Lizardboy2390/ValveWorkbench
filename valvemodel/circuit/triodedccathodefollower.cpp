@@ -10,11 +10,11 @@
 
 TriodeDCCathodeFollower::TriodeDCCathodeFollower()
 {
-    // Input parameters matching the web DCCathodeFollower
-    parameter[TRI_DCCF_VB] = new Parameter("Supply voltage (V)", 300.0);
-    parameter[TRI_DCCF_RK] = new Parameter("Cathode resistor Rk (\u03a9)", 100000.0);
-    parameter[TRI_DCCF_RA] = new Parameter("Anode resistor Ra (\u03a9)", 0.0);
-    parameter[TRI_DCCF_RL] = new Parameter("Load impedance Rl (\u03a9)", 82000.0);
+    // Input parameters for the Stage 1 gain stage and the follower load.
+    parameter[TRI_DCCF_VB] = new Parameter("Stage 1 supply Vb (V)", 300.0);
+    parameter[TRI_DCCF_RK] = new Parameter("Stage 1 cathode resistor Rk (\u03a9)", 1500.0);    // 1.5ka9
+    parameter[TRI_DCCF_RA] = new Parameter("Stage 1 anode resistor Ra (\u03a9)", 100000.0);   // 100ka9
+    parameter[TRI_DCCF_RL] = new Parameter("Follower load resistor Rl (\u03a9)", 82000.0);
 
     // Calculated values (stage 1 bias, gain, and follower DC state)
     parameter[TRI_DCCF_VK]   = new Parameter("Bias point Vk (V)", 0.0);
@@ -62,12 +62,30 @@ void TriodeDCCathodeFollower::updateUI(QLabel *labels[], QLineEdit *values[])
 
         QString labelText;
         switch (i) {
-        case TRI_DCCF_VK:   labelText = "Bias point Vk (V):"; break;
-        case TRI_DCCF_VA:   labelText = "Anode voltage Va (V):"; break;
-        case TRI_DCCF_IA:   labelText = "Anode current Ia (mA):"; break;
-        case TRI_DCCF_GAIN: labelText = "Gain:"; break;
-        case TRI_DCCF_VK2:  labelText = "Follower voltage Vk2 (V):"; break;
-        case TRI_DCCF_IK2:  labelText = "Follower current Ik2 (mA):"; break;
+        case TRI_DCCF_VK:
+            // Stage 1 cathode bias voltage
+            labelText = "Stage 1 cathode voltage Vk (V):";
+            break;
+        case TRI_DCCF_VA:
+            // Stage 1 anode DC voltage
+            labelText = "Stage 1 anode voltage Va (V):";
+            break;
+        case TRI_DCCF_IA:
+            // Stage 1 anode DC current
+            labelText = "Stage 1 anode current Ia (mA):";
+            break;
+        case TRI_DCCF_GAIN:
+            // Small-signal gain of the Stage 1 common-cathode stage
+            labelText = "Stage 1 gain (approx Av):";
+            break;
+        case TRI_DCCF_VK2:
+            // DC output voltage at the follower cathode
+            labelText = "Follower cathode voltage Vk2 (V):";
+            break;
+        case TRI_DCCF_IK2:
+            // DC current through the follower into Rl
+            labelText = "Follower current Ik2 (mA):";
+            break;
         default: break;
         }
 

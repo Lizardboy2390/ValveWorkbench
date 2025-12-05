@@ -38,6 +38,7 @@ SOURCES += \
     valvemodel/circuit/pushpulloutput.cpp \
     valvemodel/circuit/pushpulluloutput.cpp \
     valvemodel/circuit/triodedccathodefollower.cpp \
+    valvemodel/circuit/triodecc_dccf_twostage.cpp \
     valvemodel/data/dataset.cpp \
     valvemodel/data/measurement.cpp \
     valvemodel/data/project.cpp \
@@ -88,6 +89,7 @@ HEADERS += \
     valvemodel/circuit/pushpulloutput.h \
     valvemodel/circuit/pushpulluloutput.h \
     valvemodel/circuit/triodedccathodefollower.h \
+    valvemodel/circuit/triodecc_dccf_twostage.h \
     valvemodel/ui/parameter.h \
     valvemodel/ui/simplemanualpentodedialog.h \
     valvemodel/model/quadraticsolver.h
