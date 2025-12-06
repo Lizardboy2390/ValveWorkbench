@@ -2266,6 +2266,43 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
 
     ui->setupUi(this);
 
+    // Narrow the Analyser Triode A/B health value columns (Measured / Ref / Pct)
+    // so they visually behave like ~4-digit fields.
+    auto narrowHealthField = [&](QLineEdit *edit) {
+        if (!edit) return;
+        edit->setMaxLength(4);
+        edit->setMaximumWidth(40);
+        edit->setAlignment(Qt::AlignCenter);
+    };
+
+    // Triode A health rows
+    narrowHealthField(ui->triodeA_Ia_measured);
+    narrowHealthField(ui->triodeA_Ia_ref);
+    narrowHealthField(ui->triodeA_Ia_pct);
+    narrowHealthField(ui->triodeA_rp_measured);
+    narrowHealthField(ui->triodeA_rp_ref);
+    narrowHealthField(ui->triodeA_rp_pct);
+    narrowHealthField(ui->triodeA_gm_measured);
+    narrowHealthField(ui->triodeA_gm_ref);
+    narrowHealthField(ui->triodeA_gm_pct);
+    narrowHealthField(ui->triodeA_mu_measured);
+    narrowHealthField(ui->triodeA_mu_ref);
+    narrowHealthField(ui->triodeA_mu_pct);
+
+    // Triode B health rows
+    narrowHealthField(ui->triodeB_Ia_measured);
+    narrowHealthField(ui->triodeB_Ia_ref);
+    narrowHealthField(ui->triodeB_Ia_pct);
+    narrowHealthField(ui->triodeB_rp_measured);
+    narrowHealthField(ui->triodeB_rp_ref);
+    narrowHealthField(ui->triodeB_rp_pct);
+    narrowHealthField(ui->triodeB_gm_measured);
+    narrowHealthField(ui->triodeB_gm_ref);
+    narrowHealthField(ui->triodeB_gm_pct);
+    narrowHealthField(ui->triodeB_mu_measured);
+    narrowHealthField(ui->triodeB_mu_ref);
+    narrowHealthField(ui->triodeB_mu_pct);
+
     updateDatasheetDisplay();
 
     // Initialise per-tab overlay visibility defaults:

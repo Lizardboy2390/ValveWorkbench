@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1229</width>
+    <width>1278</width>
     <height>1080</height>
    </rect>
   </property>
@@ -2225,6 +2225,19 @@
           </widget>
          </item>
          <item>
+          <spacer name="horizontalSpacer_6">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
           <widget class="QCheckBox" name="screenCheck">
            <property name="text">
             <string>Show Screen Current</string>
@@ -2244,23 +2257,23 @@
            </property>
           </spacer>
          </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_health">
          <item>
-          <spacer name="horizontalSpacer_6">
+          <spacer name="horizontalSpacer_19">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>20</width>
+             <width>40</width>
              <height>20</height>
             </size>
            </property>
           </spacer>
          </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_health">
          <item>
           <widget class="QGroupBox" name="Triode_A_Box">
            <property name="title">
@@ -2268,176 +2281,195 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_TriodeAHealth">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_TriodeAHeader">
-              <item>
+             <layout class="QGridLayout" name="gridLayout_TriodeAHealth">
+              <property name="horizontalSpacing">
+               <number>2</number>
+              </property>
+              <item row="0" column="0">
                <widget class="QLabel" name="triodeAHeaderMetric">
                 <property name="text">
-                 <string>Metric</string>
+                 <string/>
                 </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="triodeAHeaderValue1">
-                <property name="text">
-                 <string>Value 1</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="triodeAHeaderValue2">
-                <property name="text">
-                 <string>Value 2</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="triodeAHeaderCheck">
-                <property name="text">
-                 <string>OK?</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QGridLayout" name="gridLayout_TriodeAHealth">
-              <item row="0" column="0">
-               <widget class="QLabel" name="triodeA_row1Label">
-                <property name="text">
-                 <string>Row 1</string>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
                 </property>
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="triodeA_row1Value1">
-                <property name="readOnly">
-                 <bool>true</bool>
+               <widget class="QLabel" name="triodeAHeaderValue1">
+                <property name="text">
+                 <string>Measured</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
                 </property>
                </widget>
               </item>
               <item row="0" column="2">
-               <widget class="QLineEdit" name="triodeA_row1Value2">
-                <property name="readOnly">
-                 <bool>true</bool>
+               <widget class="QLabel" name="triodeAHeaderValue2">
+                <property name="text">
+                 <string>Ref</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
                 </property>
                </widget>
               </item>
               <item row="0" column="3">
-               <widget class="QCheckBox" name="triodeA_row1Check">
+               <widget class="QLabel" name="triodeAHeaderCheck">
                 <property name="text">
-                 <string/>
+                 <string>Pct(%)</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
                 </property>
                </widget>
               </item>
               <item row="1" column="0">
-               <widget class="QLabel" name="triodeA_row2Label">
+               <widget class="QLabel" name="triodeA_Ia_label">
                 <property name="text">
-                 <string>Row 2</string>
+                 <string>Ia(mA)</string>
                 </property>
                </widget>
               </item>
               <item row="1" column="1">
-               <widget class="QLineEdit" name="triodeA_row2Value1">
+               <widget class="QLineEdit" name="triodeA_Ia_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="1" column="2">
-               <widget class="QLineEdit" name="triodeA_row2Value2">
+               <widget class="QLineEdit" name="triodeA_Ia_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="1" column="3">
-               <widget class="QCheckBox" name="triodeA_row2Check">
-                <property name="text">
-                 <string/>
+               <widget class="QLineEdit" name="triodeA_Ia_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="2" column="0">
-               <widget class="QLabel" name="triodeA_row3Label">
+               <widget class="QLabel" name="triodeA_rp_label">
                 <property name="text">
-                 <string>Row 3</string>
+                 <string>rp(Ohms)</string>
                 </property>
                </widget>
               </item>
               <item row="2" column="1">
-               <widget class="QLineEdit" name="triodeA_row3Value1">
+               <widget class="QLineEdit" name="triodeA_rp_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="2" column="2">
-               <widget class="QLineEdit" name="triodeA_row3Value2">
+               <widget class="QLineEdit" name="triodeA_rp_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="2" column="3">
-               <widget class="QCheckBox" name="triodeA_row3Check">
-                <property name="text">
-                 <string/>
+               <widget class="QLineEdit" name="triodeA_rp_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="3" column="0">
-               <widget class="QLabel" name="triodeA_row4Label">
+               <widget class="QLabel" name="triodeA_gm_label">
                 <property name="text">
-                 <string>Row 4</string>
+                 <string>gm((umhos)</string>
                 </property>
                </widget>
               </item>
               <item row="3" column="1">
-               <widget class="QLineEdit" name="triodeA_row4Value1">
+               <widget class="QLineEdit" name="triodeA_gm_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="3" column="2">
-               <widget class="QLineEdit" name="triodeA_row4Value2">
+               <widget class="QLineEdit" name="triodeA_gm_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="3" column="3">
-               <widget class="QCheckBox" name="triodeA_row4Check">
-                <property name="text">
-                 <string/>
+               <widget class="QLineEdit" name="triodeA_gm_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="4" column="0">
-               <widget class="QLabel" name="triodeA_row5Label">
+               <widget class="QLabel" name="triodeA_mu_label">
                 <property name="text">
-                 <string>Row 5</string>
+                 <string>mu((V/V)</string>
                 </property>
                </widget>
               </item>
               <item row="4" column="1">
-               <widget class="QLineEdit" name="triodeA_row5Value1">
+               <widget class="QLineEdit" name="triodeA_mu_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="4" column="2">
-               <widget class="QLineEdit" name="triodeA_row5Value2">
+               <widget class="QLineEdit" name="triodeA_mu_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="4" column="3">
-               <widget class="QCheckBox" name="triodeA_row5Check">
-                <property name="text">
-                 <string/>
+               <widget class="QLineEdit" name="triodeA_mu_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
@@ -2453,176 +2485,195 @@
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_TriodeBHealth">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_TriodeBHeader">
-              <item>
-               <widget class="QLabel" name="triodeBHeaderMetric">
-                <property name="text">
-                 <string>Metric</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="triodeBHeaderValue1">
-                <property name="text">
-                 <string>Value 1</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="triodeBHeaderValue2">
-                <property name="text">
-                 <string>Value 2</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="triodeBHeaderCheck">
-                <property name="text">
-                 <string>OK?</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
              <layout class="QGridLayout" name="gridLayout_TriodeBHealth">
-              <item row="0" column="0">
-               <widget class="QLabel" name="triodeB_row1Label">
-                <property name="text">
-                 <string>Row 1</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="triodeB_row1Value1">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLineEdit" name="triodeB_row1Value2">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QCheckBox" name="triodeB_row1Check">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="triodeB_row2Label">
-                <property name="text">
-                 <string>Row 2</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="triodeB_row2Value1">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLineEdit" name="triodeB_row2Value2">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QCheckBox" name="triodeB_row2Check">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="triodeB_row3Label">
-                <property name="text">
-                 <string>Row 3</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="triodeB_row3Value1">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="triodeB_row3Value2">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="3">
-               <widget class="QCheckBox" name="triodeB_row3Check">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="triodeB_row4Label">
-                <property name="text">
-                 <string>Row 4</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QLineEdit" name="triodeB_row4Value1">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="2">
-               <widget class="QLineEdit" name="triodeB_row4Value2">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
+              <property name="horizontalSpacing">
+               <number>2</number>
+              </property>
               <item row="3" column="3">
-               <widget class="QCheckBox" name="triodeB_row4Check">
-                <property name="text">
-                 <string/>
+               <widget class="QLineEdit" name="triodeB_gm_pct">
+                <property name="maxLength">
+                 <number>4</number>
                 </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="triodeB_row5Label">
-                <property name="text">
-                 <string>Row 5</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="1">
-               <widget class="QLineEdit" name="triodeB_row5Value1">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="2">
-               <widget class="QLineEdit" name="triodeB_row5Value2">
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="4" column="3">
-               <widget class="QCheckBox" name="triodeB_row5Check">
+               <widget class="QLineEdit" name="triodeB_mu_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QLineEdit" name="triodeB_gm_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLineEdit" name="triodeB_Ia_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="triodeB_mu_label">
+                <property name="text">
+                 <string>mu((V/V)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="triodeB_gm_label">
+                <property name="text">
+                 <string>gm((umhos)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="triodeBHeaderMetric">
                 <property name="text">
                  <string/>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="triodeB_rp_label">
+                <property name="text">
+                 <string>rp(Ohms)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="triodeBHeaderValue1">
+                <property name="text">
+                 <string>Measured</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QLabel" name="triodeBHeaderCheck">
+                <property name="text">
+                 <string>Pct(%)</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="3">
+               <widget class="QLineEdit" name="triodeB_rp_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QLineEdit" name="triodeB_mu_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QLineEdit" name="triodeB_mu_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="QLineEdit" name="triodeB_Ia_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="triodeB_Ia_label">
+                <property name="text">
+                 <string>Ia(mA)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="triodeB_rp_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="triodeB_Ia_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLineEdit" name="triodeB_gm_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="triodeBHeaderValue2">
+                <property name="text">
+                 <string>Ref</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLineEdit" name="triodeB_rp_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
@@ -2630,6 +2681,19 @@
             </item>
            </layout>
           </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_11">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </item>
@@ -2656,7 +2720,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1229</width>
+     <width>1278</width>
      <height>26</height>
     </rect>
    </property>
