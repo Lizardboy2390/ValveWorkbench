@@ -562,13 +562,31 @@ void ValveWorkbench::updateDatasheetDisplay()
         }
     };
 
+    auto clearHealthRefs = [&]() {
+        // Clear Triode A health Ref column
+        setField(ui->triodeA_Ia_ref, QString());
+        setField(ui->triodeA_rp_ref, QString());
+        setField(ui->triodeA_gm_ref, QString());
+        setField(ui->triodeA_mu_ref, QString());
+
+        // Clear Triode B health Ref column
+        setField(ui->triodeB_Ia_ref, QString());
+        setField(ui->triodeB_rp_ref, QString());
+        setField(ui->triodeB_gm_ref, QString());
+        setField(ui->triodeB_mu_ref, QString());
+    };
+
     auto clearAll = [&]() {
+        // Datasheet panel
         setField(ui->datasheetVa, QString());
         setField(ui->datasheetVg, QString());
         setField(ui->datasheetIa, QString());
         setField(ui->datasheetGm, QString());
         setField(ui->datasheetMu, QString());
         setField(ui->datasheetRp, QString());
+
+        // Health Ref columns
+        clearHealthRefs();
     };
 
     if (datasheetJson.isEmpty()) {
@@ -591,12 +609,33 @@ void ValveWorkbench::updateDatasheetDisplay()
         return QString::number(v.toDouble(), 'f', decimals);
     };
 
-    setField(ui->datasheetVa, numToString(rp.value("va"), 1));
-    setField(ui->datasheetVg, numToString(rp.value("vg"), 1));
-    setField(ui->datasheetIa, numToString(rp.value("ia"), 3));
-    setField(ui->datasheetGm, numToString(rp.value("gm"), 1));
-    setField(ui->datasheetMu, numToString(rp.value("mu"), 1));
-    setField(ui->datasheetRp, numToString(rp.value("rp"), 1));
+    // Datasheet panel values
+    const QString vaStr = numToString(rp.value("va"), 1);
+    const QString vgStr = numToString(rp.value("vg"), 1);
+    const QString iaStr = numToString(rp.value("ia"), 3);
+    const QString gmStr = numToString(rp.value("gm"), 1);
+    const QString muStr = numToString(rp.value("mu"), 1);
+    const QString rpStr = numToString(rp.value("rp"), 1);
+
+    setField(ui->datasheetVa, vaStr);
+    setField(ui->datasheetVg, vgStr);
+    setField(ui->datasheetIa, iaStr);
+    setField(ui->datasheetGm, gmStr);
+    setField(ui->datasheetMu, muStr);
+    setField(ui->datasheetRp, rpStr);
+
+    // Mirror reference metrics into the Triode A/B Health Ref columns.
+    // Ia is in mA, gm in mA/V, mu dimensionless, rp in ohms (matching
+    // the units used by the health computation helpers).
+    setField(ui->triodeA_Ia_ref, iaStr);
+    setField(ui->triodeA_gm_ref, gmStr);
+    setField(ui->triodeA_mu_ref, muStr);
+    setField(ui->triodeA_rp_ref, rpStr);
+
+    setField(ui->triodeB_Ia_ref, iaStr);
+    setField(ui->triodeB_gm_ref, gmStr);
+    setField(ui->triodeB_mu_ref, muStr);
+    setField(ui->triodeB_rp_ref, rpStr);
 }
 
 void ValveWorkbench::syncDatasheetFromUi()
@@ -2265,6 +2304,43 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     loadDevices();
 
     ui->setupUi(this);
+
+    // Narrow the Analyser Triode A/B health value columns (Measured / Ref / Pct)
+    // so they visually behave like ~4-digit fields.
+    auto narrowHealthField = [&](QLineEdit *edit) {
+        if (!edit) return;
+        edit->setMaxLength(4);
+        edit->setMaximumWidth(40);
+        edit->setAlignment(Qt::AlignCenter);
+    };
+
+    // Triode A health rows
+    narrowHealthField(ui->triodeA_Ia_measured);
+    narrowHealthField(ui->triodeA_Ia_ref);
+    narrowHealthField(ui->triodeA_Ia_pct);
+    narrowHealthField(ui->triodeA_rp_measured);
+    narrowHealthField(ui->triodeA_rp_ref);
+    narrowHealthField(ui->triodeA_rp_pct);
+    narrowHealthField(ui->triodeA_gm_measured);
+    narrowHealthField(ui->triodeA_gm_ref);
+    narrowHealthField(ui->triodeA_gm_pct);
+    narrowHealthField(ui->triodeA_mu_measured);
+    narrowHealthField(ui->triodeA_mu_ref);
+    narrowHealthField(ui->triodeA_mu_pct);
+
+    // Triode B health rows
+    narrowHealthField(ui->triodeB_Ia_measured);
+    narrowHealthField(ui->triodeB_Ia_ref);
+    narrowHealthField(ui->triodeB_Ia_pct);
+    narrowHealthField(ui->triodeB_rp_measured);
+    narrowHealthField(ui->triodeB_rp_ref);
+    narrowHealthField(ui->triodeB_rp_pct);
+    narrowHealthField(ui->triodeB_gm_measured);
+    narrowHealthField(ui->triodeB_gm_ref);
+    narrowHealthField(ui->triodeB_gm_pct);
+    narrowHealthField(ui->triodeB_mu_measured);
+    narrowHealthField(ui->triodeB_mu_ref);
+    narrowHealthField(ui->triodeB_mu_pct);
 
     updateDatasheetDisplay();
 

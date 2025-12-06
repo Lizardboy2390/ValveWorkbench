@@ -246,66 +246,58 @@ public:
     QCheckBox *modelCheck;
     QSpacerItem *horizontalSpacer_171;
     QCheckBox *designerCheck;
+    QSpacerItem *horizontalSpacer_6;
     QCheckBox *screenCheck;
     QSpacerItem *horizontalSpacer_15;
-    QSpacerItem *horizontalSpacer_6;
     QHBoxLayout *horizontalLayout_health;
+    QSpacerItem *horizontalSpacer_19;
     QGroupBox *Triode_A_Box;
     QVBoxLayout *verticalLayout_TriodeAHealth;
-    QHBoxLayout *horizontalLayout_TriodeAHeader;
+    QGridLayout *gridLayout_TriodeAHealth;
     QLabel *triodeAHeaderMetric;
     QLabel *triodeAHeaderValue1;
     QLabel *triodeAHeaderValue2;
     QLabel *triodeAHeaderCheck;
-    QGridLayout *gridLayout_TriodeAHealth;
-    QLabel *triodeA_row1Label;
-    QLineEdit *triodeA_row1Value1;
-    QLineEdit *triodeA_row1Value2;
-    QCheckBox *triodeA_row1Check;
-    QLabel *triodeA_row2Label;
-    QLineEdit *triodeA_row2Value1;
-    QLineEdit *triodeA_row2Value2;
-    QCheckBox *triodeA_row2Check;
-    QLabel *triodeA_row3Label;
-    QLineEdit *triodeA_row3Value1;
-    QLineEdit *triodeA_row3Value2;
-    QCheckBox *triodeA_row3Check;
-    QLabel *triodeA_row4Label;
-    QLineEdit *triodeA_row4Value1;
-    QLineEdit *triodeA_row4Value2;
-    QCheckBox *triodeA_row4Check;
-    QLabel *triodeA_row5Label;
-    QLineEdit *triodeA_row5Value1;
-    QLineEdit *triodeA_row5Value2;
-    QCheckBox *triodeA_row5Check;
+    QLabel *triodeA_Ia_label;
+    QLineEdit *triodeA_Ia_measured;
+    QLineEdit *triodeA_Ia_ref;
+    QLineEdit *triodeA_Ia_pct;
+    QLabel *triodeA_rp_label;
+    QLineEdit *triodeA_rp_measured;
+    QLineEdit *triodeA_rp_ref;
+    QLineEdit *triodeA_rp_pct;
+    QLabel *triodeA_gm_label;
+    QLineEdit *triodeA_gm_measured;
+    QLineEdit *triodeA_gm_ref;
+    QLineEdit *triodeA_gm_pct;
+    QLabel *triodeA_mu_label;
+    QLineEdit *triodeA_mu_measured;
+    QLineEdit *triodeA_mu_ref;
+    QLineEdit *triodeA_mu_pct;
     QGroupBox *Triode_B_Box;
     QVBoxLayout *verticalLayout_TriodeBHealth;
-    QHBoxLayout *horizontalLayout_TriodeBHeader;
-    QLabel *triodeBHeaderMetric;
-    QLabel *triodeBHeaderValue1;
-    QLabel *triodeBHeaderValue2;
-    QLabel *triodeBHeaderCheck;
     QGridLayout *gridLayout_TriodeBHealth;
-    QLabel *triodeB_row1Label;
-    QLineEdit *triodeB_row1Value1;
-    QLineEdit *triodeB_row1Value2;
-    QCheckBox *triodeB_row1Check;
-    QLabel *triodeB_row2Label;
-    QLineEdit *triodeB_row2Value1;
-    QLineEdit *triodeB_row2Value2;
-    QCheckBox *triodeB_row2Check;
-    QLabel *triodeB_row3Label;
-    QLineEdit *triodeB_row3Value1;
-    QLineEdit *triodeB_row3Value2;
-    QCheckBox *triodeB_row3Check;
-    QLabel *triodeB_row4Label;
-    QLineEdit *triodeB_row4Value1;
-    QLineEdit *triodeB_row4Value2;
-    QCheckBox *triodeB_row4Check;
-    QLabel *triodeB_row5Label;
-    QLineEdit *triodeB_row5Value1;
-    QLineEdit *triodeB_row5Value2;
-    QCheckBox *triodeB_row5Check;
+    QLineEdit *triodeB_gm_pct;
+    QLineEdit *triodeB_mu_pct;
+    QLineEdit *triodeB_gm_ref;
+    QLineEdit *triodeB_Ia_ref;
+    QLabel *triodeB_mu_label;
+    QLabel *triodeB_gm_label;
+    QLabel *triodeBHeaderMetric;
+    QLabel *triodeB_rp_label;
+    QLabel *triodeBHeaderValue1;
+    QLabel *triodeBHeaderCheck;
+    QLineEdit *triodeB_rp_pct;
+    QLineEdit *triodeB_mu_measured;
+    QLineEdit *triodeB_mu_ref;
+    QLineEdit *triodeB_Ia_pct;
+    QLabel *triodeB_Ia_label;
+    QLineEdit *triodeB_rp_measured;
+    QLineEdit *triodeB_Ia_measured;
+    QLineEdit *triodeB_gm_measured;
+    QLabel *triodeBHeaderValue2;
+    QLineEdit *triodeB_rp_ref;
+    QSpacerItem *horizontalSpacer_11;
     QSpacerItem *horizontalSpacer_2;
     QMenuBar *menubar;
     QMenu *menuFile;
@@ -316,7 +308,7 @@ public:
     {
         if (ValveWorkbench->objectName().isEmpty())
             ValveWorkbench->setObjectName("ValveWorkbench");
-        ValveWorkbench->resize(1229, 1080);
+        ValveWorkbench->resize(1278, 1080);
         actionLoad_Model = new QAction(ValveWorkbench);
         actionLoad_Model->setObjectName("actionLoad_Model");
         actionExit = new QAction(ValveWorkbench);
@@ -1492,6 +1484,10 @@ public:
 
         horizontalLayout_9->addWidget(designerCheck);
 
+        horizontalSpacer_6 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_9->addItem(horizontalSpacer_6);
+
         screenCheck = new QCheckBox(horizontalLayoutWidget);
         screenCheck->setObjectName("screenCheck");
 
@@ -1501,155 +1497,149 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_15);
 
-        horizontalSpacer_6 = new QSpacerItem(20, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        horizontalLayout_9->addItem(horizontalSpacer_6);
-
 
         verticalLayout_2->addLayout(horizontalLayout_9);
 
         horizontalLayout_health = new QHBoxLayout();
         horizontalLayout_health->setObjectName("horizontalLayout_health");
+        horizontalSpacer_19 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_health->addItem(horizontalSpacer_19);
+
         Triode_A_Box = new QGroupBox(horizontalLayoutWidget);
         Triode_A_Box->setObjectName("Triode_A_Box");
         verticalLayout_TriodeAHealth = new QVBoxLayout(Triode_A_Box);
         verticalLayout_TriodeAHealth->setObjectName("verticalLayout_TriodeAHealth");
-        horizontalLayout_TriodeAHeader = new QHBoxLayout();
-        horizontalLayout_TriodeAHeader->setObjectName("horizontalLayout_TriodeAHeader");
+        gridLayout_TriodeAHealth = new QGridLayout();
+        gridLayout_TriodeAHealth->setObjectName("gridLayout_TriodeAHealth");
+        gridLayout_TriodeAHealth->setHorizontalSpacing(2);
         triodeAHeaderMetric = new QLabel(Triode_A_Box);
         triodeAHeaderMetric->setObjectName("triodeAHeaderMetric");
+        triodeAHeaderMetric->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderMetric);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderMetric, 0, 0, 1, 1);
 
         triodeAHeaderValue1 = new QLabel(Triode_A_Box);
         triodeAHeaderValue1->setObjectName("triodeAHeaderValue1");
+        triodeAHeaderValue1->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderValue1);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderValue1, 0, 1, 1, 1);
 
         triodeAHeaderValue2 = new QLabel(Triode_A_Box);
         triodeAHeaderValue2->setObjectName("triodeAHeaderValue2");
+        triodeAHeaderValue2->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderValue2);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderValue2, 0, 2, 1, 1);
 
         triodeAHeaderCheck = new QLabel(Triode_A_Box);
         triodeAHeaderCheck->setObjectName("triodeAHeaderCheck");
+        triodeAHeaderCheck->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderCheck);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderCheck, 0, 3, 1, 1);
 
+        triodeA_Ia_label = new QLabel(Triode_A_Box);
+        triodeA_Ia_label->setObjectName("triodeA_Ia_label");
 
-        verticalLayout_TriodeAHealth->addLayout(horizontalLayout_TriodeAHeader);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_label, 1, 0, 1, 1);
 
-        gridLayout_TriodeAHealth = new QGridLayout();
-        gridLayout_TriodeAHealth->setObjectName("gridLayout_TriodeAHealth");
-        triodeA_row1Label = new QLabel(Triode_A_Box);
-        triodeA_row1Label->setObjectName("triodeA_row1Label");
+        triodeA_Ia_measured = new QLineEdit(Triode_A_Box);
+        triodeA_Ia_measured->setObjectName("triodeA_Ia_measured");
+        triodeA_Ia_measured->setMaxLength(4);
+        triodeA_Ia_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row1Label, 0, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_measured, 1, 1, 1, 1);
 
-        triodeA_row1Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row1Value1->setObjectName("triodeA_row1Value1");
-        triodeA_row1Value1->setReadOnly(true);
+        triodeA_Ia_ref = new QLineEdit(Triode_A_Box);
+        triodeA_Ia_ref->setObjectName("triodeA_Ia_ref");
+        triodeA_Ia_ref->setMaxLength(4);
+        triodeA_Ia_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row1Value1, 0, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_ref, 1, 2, 1, 1);
 
-        triodeA_row1Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row1Value2->setObjectName("triodeA_row1Value2");
-        triodeA_row1Value2->setReadOnly(true);
+        triodeA_Ia_pct = new QLineEdit(Triode_A_Box);
+        triodeA_Ia_pct->setObjectName("triodeA_Ia_pct");
+        triodeA_Ia_pct->setMaxLength(4);
+        triodeA_Ia_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row1Value2, 0, 2, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_pct, 1, 3, 1, 1);
 
-        triodeA_row1Check = new QCheckBox(Triode_A_Box);
-        triodeA_row1Check->setObjectName("triodeA_row1Check");
+        triodeA_rp_label = new QLabel(Triode_A_Box);
+        triodeA_rp_label->setObjectName("triodeA_rp_label");
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row1Check, 0, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_label, 2, 0, 1, 1);
 
-        triodeA_row2Label = new QLabel(Triode_A_Box);
-        triodeA_row2Label->setObjectName("triodeA_row2Label");
+        triodeA_rp_measured = new QLineEdit(Triode_A_Box);
+        triodeA_rp_measured->setObjectName("triodeA_rp_measured");
+        triodeA_rp_measured->setMaxLength(4);
+        triodeA_rp_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row2Label, 1, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_measured, 2, 1, 1, 1);
 
-        triodeA_row2Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row2Value1->setObjectName("triodeA_row2Value1");
-        triodeA_row2Value1->setReadOnly(true);
+        triodeA_rp_ref = new QLineEdit(Triode_A_Box);
+        triodeA_rp_ref->setObjectName("triodeA_rp_ref");
+        triodeA_rp_ref->setMaxLength(4);
+        triodeA_rp_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row2Value1, 1, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_ref, 2, 2, 1, 1);
 
-        triodeA_row2Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row2Value2->setObjectName("triodeA_row2Value2");
-        triodeA_row2Value2->setReadOnly(true);
+        triodeA_rp_pct = new QLineEdit(Triode_A_Box);
+        triodeA_rp_pct->setObjectName("triodeA_rp_pct");
+        triodeA_rp_pct->setMaxLength(4);
+        triodeA_rp_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row2Value2, 1, 2, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_pct, 2, 3, 1, 1);
 
-        triodeA_row2Check = new QCheckBox(Triode_A_Box);
-        triodeA_row2Check->setObjectName("triodeA_row2Check");
+        triodeA_gm_label = new QLabel(Triode_A_Box);
+        triodeA_gm_label->setObjectName("triodeA_gm_label");
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row2Check, 1, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_label, 3, 0, 1, 1);
 
-        triodeA_row3Label = new QLabel(Triode_A_Box);
-        triodeA_row3Label->setObjectName("triodeA_row3Label");
+        triodeA_gm_measured = new QLineEdit(Triode_A_Box);
+        triodeA_gm_measured->setObjectName("triodeA_gm_measured");
+        triodeA_gm_measured->setMaxLength(4);
+        triodeA_gm_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row3Label, 2, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_measured, 3, 1, 1, 1);
 
-        triodeA_row3Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row3Value1->setObjectName("triodeA_row3Value1");
-        triodeA_row3Value1->setReadOnly(true);
+        triodeA_gm_ref = new QLineEdit(Triode_A_Box);
+        triodeA_gm_ref->setObjectName("triodeA_gm_ref");
+        triodeA_gm_ref->setMaxLength(4);
+        triodeA_gm_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row3Value1, 2, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_ref, 3, 2, 1, 1);
 
-        triodeA_row3Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row3Value2->setObjectName("triodeA_row3Value2");
-        triodeA_row3Value2->setReadOnly(true);
+        triodeA_gm_pct = new QLineEdit(Triode_A_Box);
+        triodeA_gm_pct->setObjectName("triodeA_gm_pct");
+        triodeA_gm_pct->setMaxLength(4);
+        triodeA_gm_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row3Value2, 2, 2, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_pct, 3, 3, 1, 1);
 
-        triodeA_row3Check = new QCheckBox(Triode_A_Box);
-        triodeA_row3Check->setObjectName("triodeA_row3Check");
+        triodeA_mu_label = new QLabel(Triode_A_Box);
+        triodeA_mu_label->setObjectName("triodeA_mu_label");
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row3Check, 2, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_label, 4, 0, 1, 1);
 
-        triodeA_row4Label = new QLabel(Triode_A_Box);
-        triodeA_row4Label->setObjectName("triodeA_row4Label");
+        triodeA_mu_measured = new QLineEdit(Triode_A_Box);
+        triodeA_mu_measured->setObjectName("triodeA_mu_measured");
+        triodeA_mu_measured->setMaxLength(4);
+        triodeA_mu_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row4Label, 3, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_measured, 4, 1, 1, 1);
 
-        triodeA_row4Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row4Value1->setObjectName("triodeA_row4Value1");
-        triodeA_row4Value1->setReadOnly(true);
+        triodeA_mu_ref = new QLineEdit(Triode_A_Box);
+        triodeA_mu_ref->setObjectName("triodeA_mu_ref");
+        triodeA_mu_ref->setMaxLength(4);
+        triodeA_mu_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row4Value1, 3, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_ref, 4, 2, 1, 1);
 
-        triodeA_row4Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row4Value2->setObjectName("triodeA_row4Value2");
-        triodeA_row4Value2->setReadOnly(true);
+        triodeA_mu_pct = new QLineEdit(Triode_A_Box);
+        triodeA_mu_pct->setObjectName("triodeA_mu_pct");
+        triodeA_mu_pct->setMaxLength(4);
+        triodeA_mu_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row4Value2, 3, 2, 1, 1);
-
-        triodeA_row4Check = new QCheckBox(Triode_A_Box);
-        triodeA_row4Check->setObjectName("triodeA_row4Check");
-
-        gridLayout_TriodeAHealth->addWidget(triodeA_row4Check, 3, 3, 1, 1);
-
-        triodeA_row5Label = new QLabel(Triode_A_Box);
-        triodeA_row5Label->setObjectName("triodeA_row5Label");
-
-        gridLayout_TriodeAHealth->addWidget(triodeA_row5Label, 4, 0, 1, 1);
-
-        triodeA_row5Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row5Value1->setObjectName("triodeA_row5Value1");
-        triodeA_row5Value1->setReadOnly(true);
-
-        gridLayout_TriodeAHealth->addWidget(triodeA_row5Value1, 4, 1, 1, 1);
-
-        triodeA_row5Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row5Value2->setObjectName("triodeA_row5Value2");
-        triodeA_row5Value2->setReadOnly(true);
-
-        gridLayout_TriodeAHealth->addWidget(triodeA_row5Value2, 4, 2, 1, 1);
-
-        triodeA_row5Check = new QCheckBox(Triode_A_Box);
-        triodeA_row5Check->setObjectName("triodeA_row5Check");
-
-        gridLayout_TriodeAHealth->addWidget(triodeA_row5Check, 4, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_pct, 4, 3, 1, 1);
 
 
         verticalLayout_TriodeAHealth->addLayout(gridLayout_TriodeAHealth);
@@ -1661,148 +1651,146 @@ public:
         Triode_B_Box->setObjectName("Triode_B_Box");
         verticalLayout_TriodeBHealth = new QVBoxLayout(Triode_B_Box);
         verticalLayout_TriodeBHealth->setObjectName("verticalLayout_TriodeBHealth");
-        horizontalLayout_TriodeBHeader = new QHBoxLayout();
-        horizontalLayout_TriodeBHeader->setObjectName("horizontalLayout_TriodeBHeader");
+        gridLayout_TriodeBHealth = new QGridLayout();
+        gridLayout_TriodeBHealth->setObjectName("gridLayout_TriodeBHealth");
+        gridLayout_TriodeBHealth->setHorizontalSpacing(2);
+        triodeB_gm_pct = new QLineEdit(Triode_B_Box);
+        triodeB_gm_pct->setObjectName("triodeB_gm_pct");
+        triodeB_gm_pct->setMaxLength(4);
+        triodeB_gm_pct->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_pct, 3, 3, 1, 1);
+
+        triodeB_mu_pct = new QLineEdit(Triode_B_Box);
+        triodeB_mu_pct->setObjectName("triodeB_mu_pct");
+        triodeB_mu_pct->setMaxLength(4);
+        triodeB_mu_pct->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_pct, 4, 3, 1, 1);
+
+        triodeB_gm_ref = new QLineEdit(Triode_B_Box);
+        triodeB_gm_ref->setObjectName("triodeB_gm_ref");
+        triodeB_gm_ref->setMaxLength(4);
+        triodeB_gm_ref->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_ref, 3, 2, 1, 1);
+
+        triodeB_Ia_ref = new QLineEdit(Triode_B_Box);
+        triodeB_Ia_ref->setObjectName("triodeB_Ia_ref");
+        triodeB_Ia_ref->setMaxLength(4);
+        triodeB_Ia_ref->setReadOnly(true);
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_ref, 1, 2, 1, 1);
+
+        triodeB_mu_label = new QLabel(Triode_B_Box);
+        triodeB_mu_label->setObjectName("triodeB_mu_label");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_label, 4, 0, 1, 1);
+
+        triodeB_gm_label = new QLabel(Triode_B_Box);
+        triodeB_gm_label->setObjectName("triodeB_gm_label");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_label, 3, 0, 1, 1);
+
         triodeBHeaderMetric = new QLabel(Triode_B_Box);
         triodeBHeaderMetric->setObjectName("triodeBHeaderMetric");
+        triodeBHeaderMetric->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderMetric);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderMetric, 0, 0, 1, 1);
+
+        triodeB_rp_label = new QLabel(Triode_B_Box);
+        triodeB_rp_label->setObjectName("triodeB_rp_label");
+
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_label, 2, 0, 1, 1);
 
         triodeBHeaderValue1 = new QLabel(Triode_B_Box);
         triodeBHeaderValue1->setObjectName("triodeBHeaderValue1");
+        triodeBHeaderValue1->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderValue1);
-
-        triodeBHeaderValue2 = new QLabel(Triode_B_Box);
-        triodeBHeaderValue2->setObjectName("triodeBHeaderValue2");
-
-        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderValue2);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderValue1, 0, 1, 1, 1);
 
         triodeBHeaderCheck = new QLabel(Triode_B_Box);
         triodeBHeaderCheck->setObjectName("triodeBHeaderCheck");
+        triodeBHeaderCheck->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderCheck);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderCheck, 0, 3, 1, 1);
 
+        triodeB_rp_pct = new QLineEdit(Triode_B_Box);
+        triodeB_rp_pct->setObjectName("triodeB_rp_pct");
+        triodeB_rp_pct->setMaxLength(4);
+        triodeB_rp_pct->setReadOnly(true);
 
-        verticalLayout_TriodeBHealth->addLayout(horizontalLayout_TriodeBHeader);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_pct, 2, 3, 1, 1);
 
-        gridLayout_TriodeBHealth = new QGridLayout();
-        gridLayout_TriodeBHealth->setObjectName("gridLayout_TriodeBHealth");
-        triodeB_row1Label = new QLabel(Triode_B_Box);
-        triodeB_row1Label->setObjectName("triodeB_row1Label");
+        triodeB_mu_measured = new QLineEdit(Triode_B_Box);
+        triodeB_mu_measured->setObjectName("triodeB_mu_measured");
+        triodeB_mu_measured->setMaxLength(4);
+        triodeB_mu_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row1Label, 0, 0, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_measured, 4, 1, 1, 1);
 
-        triodeB_row1Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row1Value1->setObjectName("triodeB_row1Value1");
-        triodeB_row1Value1->setReadOnly(true);
+        triodeB_mu_ref = new QLineEdit(Triode_B_Box);
+        triodeB_mu_ref->setObjectName("triodeB_mu_ref");
+        triodeB_mu_ref->setMaxLength(4);
+        triodeB_mu_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row1Value1, 0, 1, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_ref, 4, 2, 1, 1);
 
-        triodeB_row1Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row1Value2->setObjectName("triodeB_row1Value2");
-        triodeB_row1Value2->setReadOnly(true);
+        triodeB_Ia_pct = new QLineEdit(Triode_B_Box);
+        triodeB_Ia_pct->setObjectName("triodeB_Ia_pct");
+        triodeB_Ia_pct->setMaxLength(4);
+        triodeB_Ia_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row1Value2, 0, 2, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_pct, 1, 3, 1, 1);
 
-        triodeB_row1Check = new QCheckBox(Triode_B_Box);
-        triodeB_row1Check->setObjectName("triodeB_row1Check");
+        triodeB_Ia_label = new QLabel(Triode_B_Box);
+        triodeB_Ia_label->setObjectName("triodeB_Ia_label");
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row1Check, 0, 3, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_label, 1, 0, 1, 1);
 
-        triodeB_row2Label = new QLabel(Triode_B_Box);
-        triodeB_row2Label->setObjectName("triodeB_row2Label");
+        triodeB_rp_measured = new QLineEdit(Triode_B_Box);
+        triodeB_rp_measured->setObjectName("triodeB_rp_measured");
+        triodeB_rp_measured->setMaxLength(4);
+        triodeB_rp_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row2Label, 1, 0, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_measured, 2, 1, 1, 1);
 
-        triodeB_row2Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row2Value1->setObjectName("triodeB_row2Value1");
-        triodeB_row2Value1->setReadOnly(true);
+        triodeB_Ia_measured = new QLineEdit(Triode_B_Box);
+        triodeB_Ia_measured->setObjectName("triodeB_Ia_measured");
+        triodeB_Ia_measured->setMaxLength(4);
+        triodeB_Ia_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row2Value1, 1, 1, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_measured, 1, 1, 1, 1);
 
-        triodeB_row2Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row2Value2->setObjectName("triodeB_row2Value2");
-        triodeB_row2Value2->setReadOnly(true);
+        triodeB_gm_measured = new QLineEdit(Triode_B_Box);
+        triodeB_gm_measured->setObjectName("triodeB_gm_measured");
+        triodeB_gm_measured->setMaxLength(4);
+        triodeB_gm_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row2Value2, 1, 2, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_measured, 3, 1, 1, 1);
 
-        triodeB_row2Check = new QCheckBox(Triode_B_Box);
-        triodeB_row2Check->setObjectName("triodeB_row2Check");
+        triodeBHeaderValue2 = new QLabel(Triode_B_Box);
+        triodeBHeaderValue2->setObjectName("triodeBHeaderValue2");
+        triodeBHeaderValue2->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row2Check, 1, 3, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderValue2, 0, 2, 1, 1);
 
-        triodeB_row3Label = new QLabel(Triode_B_Box);
-        triodeB_row3Label->setObjectName("triodeB_row3Label");
+        triodeB_rp_ref = new QLineEdit(Triode_B_Box);
+        triodeB_rp_ref->setObjectName("triodeB_rp_ref");
+        triodeB_rp_ref->setMaxLength(4);
+        triodeB_rp_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row3Label, 2, 0, 1, 1);
-
-        triodeB_row3Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row3Value1->setObjectName("triodeB_row3Value1");
-        triodeB_row3Value1->setReadOnly(true);
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row3Value1, 2, 1, 1, 1);
-
-        triodeB_row3Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row3Value2->setObjectName("triodeB_row3Value2");
-        triodeB_row3Value2->setReadOnly(true);
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row3Value2, 2, 2, 1, 1);
-
-        triodeB_row3Check = new QCheckBox(Triode_B_Box);
-        triodeB_row3Check->setObjectName("triodeB_row3Check");
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row3Check, 2, 3, 1, 1);
-
-        triodeB_row4Label = new QLabel(Triode_B_Box);
-        triodeB_row4Label->setObjectName("triodeB_row4Label");
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row4Label, 3, 0, 1, 1);
-
-        triodeB_row4Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row4Value1->setObjectName("triodeB_row4Value1");
-        triodeB_row4Value1->setReadOnly(true);
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row4Value1, 3, 1, 1, 1);
-
-        triodeB_row4Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row4Value2->setObjectName("triodeB_row4Value2");
-        triodeB_row4Value2->setReadOnly(true);
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row4Value2, 3, 2, 1, 1);
-
-        triodeB_row4Check = new QCheckBox(Triode_B_Box);
-        triodeB_row4Check->setObjectName("triodeB_row4Check");
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row4Check, 3, 3, 1, 1);
-
-        triodeB_row5Label = new QLabel(Triode_B_Box);
-        triodeB_row5Label->setObjectName("triodeB_row5Label");
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row5Label, 4, 0, 1, 1);
-
-        triodeB_row5Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row5Value1->setObjectName("triodeB_row5Value1");
-        triodeB_row5Value1->setReadOnly(true);
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row5Value1, 4, 1, 1, 1);
-
-        triodeB_row5Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row5Value2->setObjectName("triodeB_row5Value2");
-        triodeB_row5Value2->setReadOnly(true);
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row5Value2, 4, 2, 1, 1);
-
-        triodeB_row5Check = new QCheckBox(Triode_B_Box);
-        triodeB_row5Check->setObjectName("triodeB_row5Check");
-
-        gridLayout_TriodeBHealth->addWidget(triodeB_row5Check, 4, 3, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_ref, 2, 2, 1, 1);
 
 
         verticalLayout_TriodeBHealth->addLayout(gridLayout_TriodeBHealth);
 
 
         horizontalLayout_health->addWidget(Triode_B_Box);
+
+        horizontalSpacer_11 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_health->addItem(horizontalSpacer_11);
 
 
         verticalLayout_2->addLayout(horizontalLayout_health);
@@ -1817,7 +1805,7 @@ public:
         ValveWorkbench->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ValveWorkbench);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1229, 26));
+        menubar->setGeometry(QRect(0, 0, 1278, 26));
         menuFile = new QMenu(menubar);
         menuFile->setObjectName("menuFile");
         menuHelp = new QMenu(menubar);
@@ -1954,35 +1942,23 @@ public:
         designerCheck->setText(QCoreApplication::translate("ValveWorkbench", "Designer Overlays", nullptr));
         screenCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Screen Current", nullptr));
         Triode_A_Box->setTitle(QCoreApplication::translate("ValveWorkbench", "Triode A Health", nullptr));
-        triodeAHeaderMetric->setText(QCoreApplication::translate("ValveWorkbench", "Metric", nullptr));
-        triodeAHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Value 1", nullptr));
-        triodeAHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Value 2", nullptr));
-        triodeAHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "OK?", nullptr));
-        triodeA_row1Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 1", nullptr));
-        triodeA_row1Check->setText(QString());
-        triodeA_row2Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 2", nullptr));
-        triodeA_row2Check->setText(QString());
-        triodeA_row3Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 3", nullptr));
-        triodeA_row3Check->setText(QString());
-        triodeA_row4Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 4", nullptr));
-        triodeA_row4Check->setText(QString());
-        triodeA_row5Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 5", nullptr));
-        triodeA_row5Check->setText(QString());
+        triodeAHeaderMetric->setText(QString());
+        triodeAHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Measured", nullptr));
+        triodeAHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
+        triodeAHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "Pct(%)", nullptr));
+        triodeA_Ia_label->setText(QCoreApplication::translate("ValveWorkbench", "Ia(mA)", nullptr));
+        triodeA_rp_label->setText(QCoreApplication::translate("ValveWorkbench", "rp(Ohms)", nullptr));
+        triodeA_gm_label->setText(QCoreApplication::translate("ValveWorkbench", "gm((umhos)", nullptr));
+        triodeA_mu_label->setText(QCoreApplication::translate("ValveWorkbench", "mu((V/V)", nullptr));
         Triode_B_Box->setTitle(QCoreApplication::translate("ValveWorkbench", "Triode B Health", nullptr));
-        triodeBHeaderMetric->setText(QCoreApplication::translate("ValveWorkbench", "Metric", nullptr));
-        triodeBHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Value 1", nullptr));
-        triodeBHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Value 2", nullptr));
-        triodeBHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "OK?", nullptr));
-        triodeB_row1Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 1", nullptr));
-        triodeB_row1Check->setText(QString());
-        triodeB_row2Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 2", nullptr));
-        triodeB_row2Check->setText(QString());
-        triodeB_row3Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 3", nullptr));
-        triodeB_row3Check->setText(QString());
-        triodeB_row4Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 4", nullptr));
-        triodeB_row4Check->setText(QString());
-        triodeB_row5Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 5", nullptr));
-        triodeB_row5Check->setText(QString());
+        triodeB_mu_label->setText(QCoreApplication::translate("ValveWorkbench", "mu((V/V)", nullptr));
+        triodeB_gm_label->setText(QCoreApplication::translate("ValveWorkbench", "gm((umhos)", nullptr));
+        triodeBHeaderMetric->setText(QString());
+        triodeB_rp_label->setText(QCoreApplication::translate("ValveWorkbench", "rp(Ohms)", nullptr));
+        triodeBHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Measured", nullptr));
+        triodeBHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "Pct(%)", nullptr));
+        triodeB_Ia_label->setText(QCoreApplication::translate("ValveWorkbench", "Ia(mA)", nullptr));
+        triodeBHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));
     } // retranslateUi
