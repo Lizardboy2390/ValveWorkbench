@@ -12733,37 +12733,18 @@ release\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.
 		..\..\..\ledindicator\ledindicator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QWidget \
 		ui_valveworkbench.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVariant \
-		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QAction \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QApplication \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qapplication.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsView \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsview.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGridLayout \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QHBoxLayout \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QHeaderView \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qheaderview.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QLCDNumber \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlcdnumber.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QMenu \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qmenu.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QMenuBar \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qmenubar.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QProgressBar \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qprogressbar.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QPushButton \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qpushbutton.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpacerItem \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QStatusBar \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qstatusbar.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTabWidget \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QFile \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QMessageBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qmessagebox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qdialogbuttonbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QDebug \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QPushButton \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qpushbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QAction \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QMenu \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qmenu.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QMenuBar \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qmenubar.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QFileInfo \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QInputDialog \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qinputdialog.h \
@@ -12772,7 +12753,12 @@ release\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QBrush \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTextEdit \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtextedit.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsView \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsview.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainter.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QMouseEvent \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QStatusBar \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qstatusbar.h \
 		..\..\..\valvemodel\data\sample.h \
 		..\..\..\valvemodel\data\sweep.h \
 		..\..\..\valvemodel\circuit\triodecommoncathode.h \
