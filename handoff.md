@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-04 (Triode CC + DC cathode follower two-stage headroom/THD wiring; documentation updates)
+Last updated: 2025-12-07 (Quick/Full Health double-triode robustness + Triode B clone behaviour; Ia/gm drift notes)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -59,15 +59,22 @@ while keeping the **rules** and current **technical state** clear.
     transfer families are currently placed at the last sample of the sweep
     (user reverted an experiment to move these labels mid-curve).
  
-- **Quick/Full Health (triode, transfer-based)**
-  - **UI:** The Analyser tab exposes `Quick Health` and `Full Health` buttons which orchestrate short triode transfer tests against a datasheet reference point.
+- **Quick/Full Health (triode + double triode, transfer-based)**
+  - **UI:** The Analyser tab exposes `Quick Health` and `Full Health` buttons which orchestrate short transfer tests against a datasheet reference point for both single and double triodes.
   - **Preconditions:**
     - Current device type is `TRIODE`.
     - The active template/device JSON carries a `datasheet.refPoints[0]` object with at least `va`, `vg`, `ia`, and `gm` (μ and rp are optional).
   - **Test orchestration:**
     - `startHealthRun(mode)` uses `ensureDatasheetRefPoint` to read the first reference point, then builds a set of `HealthPoint` targets:
-      - **Quick Health:** a single central point at `(va0, vg0)`.
-      - **Full Health:** the central point plus four Va/Vg “corners” around it; Va offsets are ±20–30% of Va (clamped to 40–100 V), Vg offsets are ±0.5–1.0 V depending on |Vg|.
+      - **Quick Health:** a 3×3 grid of operating points around `(va0, vg0)`:
+        - Centre point at `(va0, vg0)`.
+        - Middle row at fixed `va0` with three Vg values: `(va0, vg0 - dVg)`, `(va0, vg0)`, `(va0, vg0 + dVg)`.
+        - Lower row at `vaLow` (≈ va0 − 10%·va0, clamped to 20–60 V): `(vaLow, vg0 - dVg)`, `(vaLow, vg0)`, `(vaLow, vg0 + dVg)`.
+        - Upper row at `vaHigh` (≈ va0 + 10%·va0, clamped to 20–60 V): `(vaHigh, vg0 - dVg)`, `(vaHigh, vg0)`, `(vaHigh, vg0 + dVg)`.
+        - `dVg` is 0.3 V for small |vg0|, increasing to 0.5 V when |vg0| > 2 V.
+      - **Full Health:** central point plus four Va/Vg “corners” around it:
+        - Va offsets are ≈ ±20% of Va (clamped to 40–100 V), Vg offsets are ≈ ±0.5–1.0 V depending on |vg0|.
+        - For each corner, three HealthPoints are scheduled at the same Va with a small Vg cluster `(vgCorner, vgCorner ± dVgCorner)` so each corner is represented by **three sweeps**.
     - For each `HealthPoint`, `configureTransferForHealthPoint`:
       - Sets `testType = TRANSFER_CHARACTERISTICS`.
       - Fixes anode at `Va = pt.va` (anodeStart = anodeStop = pt.va).
@@ -78,18 +85,33 @@ while keeping the **rules** and current **technical state** clear.
   - **Measurement and metrics:**
     - After each sweep, `computeIaGmAt` scans the resulting transfer measurement:
       - Finds the sample nearest to the requested `(Va, Vg)` in a weighted Va/Vg sense.
-      - Reads `Ia` from that sample and estimates local `gm` from neighbouring samples via ΔIa/ΔVg.
-    - `finalizeHealthRun` re-reads the datasheet reference point and computes simple, unitless scores for Ia and gm:
-      - Both are treated as ratios vs reference; 0% deviation → score 1, 30% deviation → score 0, with linear falloff and clipping in between.
-    - **Quick Health** is the average Ia/gm score at the central point, reported as a percentage.
-    - **Full Health** is the average Ia/gm score across all valid HealthPoints.
-    - Results are presented as `"Quick Health: X% Full Health: Y%"` in the status bar and are also attached as tooltips to the Quick/Full Health buttons.
-  - **Robustness notes:**
-    - `Analyser::nextSample()` now guards its progress calculation (`client->testProgress(progress)`) so progress is only computed when both `sweepPoints` and `stepParameter.length()` are non-zero, preventing accidental divide-by-zero if state is reset between runs.
+      - Reads `Ia` from that sample and estimates local `gm` from neighbouring samples via a small least-squares fit / ΔIa/ΔVg.
+    - `finalizeHealthRun` re-reads the datasheet reference point and, when available, builds an Ia/gm reference “surface” from any embedded `currentDevice->getMeasurement()` so each HealthPoint can be compared against a reference at the **same** Va/Vg.
+    - A small helper (`robust3xCluster`) performs median-based outlier rejection and averaging over up to three nearby values (40% deviation gate) and is used for both DUT and reference clusters.
+    - **Quick Health centre cluster (Triode A):**
+      - Uses the three middle-row HealthPoints (fixed Va, three nearby Vg values) to form robust Ia and gm estimates for Triode A.
+      - Quick Health % is computed from the average of Ia and gm scores vs the datasheet `(ia0, gm0)`, preferring the clustered values and falling back to the central point when clustering fails.
+    - **Quick Health centre cluster (Triode B):**
+      - For double triodes, `createTriodeBMeasurementClone` maps Triode B data into a primary-style measurement (`vg1 ← vg3`, `va ← va2`, `ia ← ia2`) and `computeIaGmAt` is applied at the same three centre-row HealthPoints.
+      - The same `robust3xCluster` logic is used to derive robust Ia/gm for Triode B’s “measured” and “%” columns.
+    - **Full Health corners:**
+      - Full Health % combines the centre Quick Health score with four Ia-only corner scores.
+      - Each corner aggregates the three Ia values at that corner via `robust3xCluster` and compares them either to the datasheet point or, when present, to the reference Ia from the embedded measurement at the same Va/Vg corner.
+      - Corner percentages shown in the 4 Cor Pct columns are Ia-only; gm is currently not used at the corners.
+  - **Double-triode behaviour and observed drift:**
+    - The Triode B clone path is strictly a remapping of fields; no rescaling is applied, and `computeIaGmAt` uses the same geometry (HealthPoints and nearest-sample search) for both A and B.
+    - Bench tests with a 12AT7 double triode around Va≈300 V and |Vg|≈1.1–1.3 V show:
+      - Raw Mode(2) samples often have **Ia_B only ~5–10% higher than Ia_A** at a given Vg, but **gm_B ≈ 1.6–2.0× gm_A** because Ia2 rises about twice as fast with Vg3 as Ia with Vg1 in that region.
+      - The `Health gm @ target ...` logs match simple ΔIa/ΔVg slopes computed from these raw samples; no asymmetric scaling has been observed in the clone or health maths.
+      - Re-running Quick Health after full warm-up can bring A/B gm and Ia much closer, suggesting some combination of real device asymmetry and slow thermal drift rather than a software-only bug.
+    - **Status:** no compensation is applied for run-to-run drift; the current recommendation is to allow proper warm-up and, if necessary, discard the very first Quick/Full Health run when grading tubes. Further hardware investigation (A/B channel calibration, long-run stability) is still open.
+  - **Robustness / implementation notes:**
+    - `Analyser::nextSample()` guards its progress calculation (`client->testProgress(progress)`) so progress is only computed when both `sweepPoints` and `stepParameter.length()` are non-zero, preventing accidental divide-by-zero if state is reset between runs.
+    - All 9 Quick Health and 13 Full Health transfer sweeps (centre + neighbours/corners) are plotted together on the same transfer axes; label placement and optional spline smoothing are handled in `valvemodel/data/sweep.cpp`.
   - **Limitations / status:**
-    - Currently supports **triode** devices only; double-triode semantics are to be decided.
-    - The scoring envelope (30% tolerance, Va/Vg offsets) is an initial heuristic and should be revisited once sufficient hardware data is available.
     - Health runs deliberately avoid modifying firmware behaviour; they are a desktop-side orchestration layer over existing transfer tests.
+    - Health currently supports triode and double-triode transfer tests only; pentode “health” remains undefined.
+    - The 30% scoring envelope and current Va/Vg offsets are heuristic and should be revisited once more bench data (including double-triode A/B drift) has been collected.
 
 - **Model plotting**
   - The Modeller/Designer model overlays use `Device::anodePlot` and the
@@ -121,7 +143,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 - [ ] Complete time-domain harmonic heatmap using proper methodology
 - [x] Document any changes properly in handoff.md — 2025-11-30: Updated with Designer Autoscale Y semantics and output-stage axis behaviour.
 - [ ] Follow ALL Global Rules without exception
- - [ ] Validate Quick/Full Health triode metrics against real hardware (central and corner tests) and tune scoring thresholds; decide on double-triode support semantics once the triode path is stable.
+ - [ ] Validate Quick/Full Health triode metrics against real hardware (central and corner tests) and tune scoring thresholds; decide on double-triode support semantics once the triode path is stable, including double-triode A/B symmetry and run-to-run Ia/gm drift.
 
 ## Global Rules (Authoritative Summary)
 - **Code Quality**
