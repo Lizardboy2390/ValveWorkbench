@@ -2934,13 +2934,10 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     narrowHealthField(ui->triodeA_mu_measured);
     narrowHealthField(ui->triodeA_mu_ref);
     narrowHealthField(ui->triodeA_mu_pct);
-<<<<<<< HEAD
     narrowHealthField(ui->triodeA_corner1_pct);
     narrowHealthField(ui->triodeA_corner2_pct);
     narrowHealthField(ui->triodeA_corner3_pct);
     narrowHealthField(ui->triodeA_corner4_pct);
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
 
     // Triode B health rows
     narrowHealthField(ui->triodeB_Ia_measured);
@@ -2955,7 +2952,6 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     narrowHealthField(ui->triodeB_mu_measured);
     narrowHealthField(ui->triodeB_mu_ref);
     narrowHealthField(ui->triodeB_mu_pct);
-<<<<<<< HEAD
     narrowHealthField(ui->triodeB_corner1_pct);
     narrowHealthField(ui->triodeB_corner2_pct);
     narrowHealthField(ui->triodeB_corner3_pct);
@@ -3020,8 +3016,6 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
             ui->gridLayout_TriodeBHealth->setColumnStretch(c, 1);
         }
     }
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
 
     updateDatasheetDisplay();
 

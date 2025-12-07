@@ -2285,12 +2285,9 @@
               <property name="horizontalSpacing">
                <number>2</number>
               </property>
-<<<<<<< HEAD
               <property name="verticalSpacing">
                <number>0</number>
               </property>
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
               <item row="0" column="0">
                <widget class="QLabel" name="triodeAHeaderMetric">
                 <property name="text">
@@ -2328,7 +2325,6 @@
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignmentFlag::AlignCenter</set>
-<<<<<<< HEAD
                 </property>
                </widget>
               </item>
@@ -2342,8 +2338,6 @@
                 </property>
                 <property name="styleSheet">
                  <string notr="true">color: rgb(255,140,0); border-top: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-bottom: 0px;</string>
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
                 </property>
                </widget>
               </item>
@@ -2381,7 +2375,6 @@
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
-<<<<<<< HEAD
                 </property>
                </widget>
               </item>
@@ -2395,8 +2388,6 @@
                 </property>
                 <property name="styleSheet">
                  <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
                 </property>
                </widget>
               </item>
@@ -2434,7 +2425,6 @@
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
-<<<<<<< HEAD
                 </property>
                </widget>
               </item>
@@ -2448,8 +2438,6 @@
                 </property>
                 <property name="styleSheet">
                  <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
                 </property>
                </widget>
               </item>
@@ -2487,7 +2475,6 @@
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
-<<<<<<< HEAD
                 </property>
                </widget>
               </item>
@@ -2501,8 +2488,6 @@
                 </property>
                 <property name="styleSheet">
                  <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
                 </property>
                </widget>
               </item>
@@ -2540,7 +2525,6 @@
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
-<<<<<<< HEAD
                 </property>
                </widget>
               </item>
@@ -2554,8 +2538,6 @@
                 </property>
                 <property name="styleSheet">
                  <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
                 </property>
                </widget>
               </item>
@@ -2575,7 +2557,6 @@
               <property name="horizontalSpacing">
                <number>2</number>
               </property>
-<<<<<<< HEAD
               <property name="verticalSpacing">
                <number>0</number>
               </property>
@@ -2766,13 +2747,10 @@
                 </property>
                </widget>
               </item>
-=======
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
               <item row="3" column="3">
                <widget class="QLineEdit" name="triodeB_gm_pct">
                 <property name="maxLength">
                  <number>4</number>
-<<<<<<< HEAD
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
@@ -2807,9 +2785,6 @@
                 <property name="maxLength">
                  <number>4</number>
                 </property>
-=======
-                </property>
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
@@ -2825,181 +2800,16 @@
                 </property>
                </widget>
               </item>
-<<<<<<< HEAD
               <item row="4" column="4">
                <widget class="QLineEdit" name="triodeB_corner4_pct">
-=======
-              <item row="3" column="2">
-               <widget class="QLineEdit" name="triodeB_gm_ref">
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
                 <property name="maxLength">
                  <number>4</number>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
-<<<<<<< HEAD
                 <property name="styleSheet">
                  <string notr="true">color: rgb(255,140,0); border-bottom: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px;</string>
-=======
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLineEdit" name="triodeB_Ia_ref">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="triodeB_mu_label">
-                <property name="text">
-                 <string>mu((V/V)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="triodeB_gm_label">
-                <property name="text">
-                 <string>gm((umhos)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="triodeBHeaderMetric">
-                <property name="text">
-                 <string/>
->>>>>>> 88c325618fbd5972f0bca3a12ce96e209edbe93f
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="triodeB_rp_label">
-                <property name="text">
-                 <string>rp(Ohms)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="triodeBHeaderValue1">
-                <property name="text">
-                 <string>Measured</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QLabel" name="triodeBHeaderCheck">
-                <property name="text">
-                 <string>Pct(%)</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="3">
-               <widget class="QLineEdit" name="triodeB_rp_pct">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="1">
-               <widget class="QLineEdit" name="triodeB_mu_measured">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="2">
-               <widget class="QLineEdit" name="triodeB_mu_ref">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QLineEdit" name="triodeB_Ia_pct">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="triodeB_Ia_label">
-                <property name="text">
-                 <string>Ia(mA)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="triodeB_rp_measured">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="triodeB_Ia_measured">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QLineEdit" name="triodeB_gm_measured">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="triodeBHeaderValue2">
-                <property name="text">
-                 <string>Ref</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="triodeB_rp_ref">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
                 </property>
                </widget>
               </item>
