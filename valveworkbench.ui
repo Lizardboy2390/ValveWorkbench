@@ -2285,6 +2285,9 @@
               <property name="horizontalSpacing">
                <number>2</number>
               </property>
+              <property name="verticalSpacing">
+               <number>0</number>
+              </property>
               <item row="0" column="0">
                <widget class="QLabel" name="triodeAHeaderMetric">
                 <property name="text">
@@ -2325,6 +2328,19 @@
                 </property>
                </widget>
               </item>
+              <item row="0" column="4">
+               <widget class="QLabel" name="triodeAHeaderFourCornerPct">
+                <property name="text">
+                 <string>4 Cor Pct</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-top: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-bottom: 0px;</string>
+                </property>
+               </widget>
+              </item>
               <item row="1" column="0">
                <widget class="QLabel" name="triodeA_Ia_label">
                 <property name="text">
@@ -2359,6 +2375,19 @@
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="4">
+               <widget class="QLineEdit" name="triodeA_corner1_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
                 </property>
                </widget>
               </item>
@@ -2399,6 +2428,19 @@
                 </property>
                </widget>
               </item>
+              <item row="2" column="4">
+               <widget class="QLineEdit" name="triodeA_corner2_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
+                </property>
+               </widget>
+              </item>
               <item row="3" column="0">
                <widget class="QLabel" name="triodeA_gm_label">
                 <property name="text">
@@ -2433,6 +2475,19 @@
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="4">
+               <widget class="QLineEdit" name="triodeA_corner3_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
                 </property>
                </widget>
               </item>
@@ -2473,6 +2528,19 @@
                 </property>
                </widget>
               </item>
+              <item row="4" column="4">
+               <widget class="QLineEdit" name="triodeA_corner4_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </item>
            </layout>
@@ -2489,28 +2557,92 @@
               <property name="horizontalSpacing">
                <number>2</number>
               </property>
-              <item row="3" column="3">
-               <widget class="QLineEdit" name="triodeB_gm_pct">
-                <property name="maxLength">
-                 <number>4</number>
+              <property name="verticalSpacing">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="QLabel" name="triodeBHeaderMetric">
+                <property name="text">
+                 <string/>
                 </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="3">
-               <widget class="QLineEdit" name="triodeB_mu_pct">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="3" column="2">
-               <widget class="QLineEdit" name="triodeB_gm_ref">
+              <item row="0" column="1">
+               <widget class="QLabel" name="triodeBHeaderValue1">
+                <property name="text">
+                 <string>Measured</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="triodeBHeaderValue2">
+                <property name="text">
+                 <string>Ref</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QLabel" name="triodeBHeaderCheck">
+                <property name="text">
+                 <string>Pct(%)</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="4">
+               <widget class="QLabel" name="triodeBHeaderFourCornerPct">
+                <property name="text">
+                 <string>4 Cor Pct</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-top: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-bottom: 0px;</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="triodeB_Ia_label">
+                <property name="text">
+                 <string>Ia(mA)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="triodeB_rp_label">
+                <property name="text">
+                 <string>rp(Ohms)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="triodeB_gm_label">
+                <property name="text">
+                 <string>gm((umhos)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="triodeB_mu_label">
+                <property name="text">
+                 <string>mu((V/V)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="triodeB_Ia_measured">
                 <property name="maxLength">
                  <number>4</number>
                 </property>
@@ -2529,54 +2661,46 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="triodeB_mu_label">
-                <property name="text">
-                 <string>mu((V/V)</string>
+              <item row="1" column="3">
+               <widget class="QLineEdit" name="triodeB_Ia_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="triodeB_gm_label">
-                <property name="text">
-                 <string>gm((umhos)</string>
+              <item row="1" column="4">
+               <widget class="QLineEdit" name="triodeB_corner1_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
                 </property>
                </widget>
               </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="triodeBHeaderMetric">
-                <property name="text">
-                 <string/>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="triodeB_rp_measured">
+                <property name="maxLength">
+                 <number>4</number>
                 </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="triodeB_rp_label">
-                <property name="text">
-                 <string>rp(Ohms)</string>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="triodeBHeaderValue1">
-                <property name="text">
-                 <string>Measured</string>
+              <item row="2" column="2">
+               <widget class="QLineEdit" name="triodeB_rp_ref">
+                <property name="maxLength">
+                 <number>4</number>
                 </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QLabel" name="triodeBHeaderCheck">
-                <property name="text">
-                 <string>Pct(%)</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
@@ -2587,6 +2711,62 @@
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="4">
+               <widget class="QLineEdit" name="triodeB_corner2_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLineEdit" name="triodeB_gm_measured">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QLineEdit" name="triodeB_gm_ref">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3">
+               <widget class="QLineEdit" name="triodeB_gm_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="4">
+               <widget class="QLineEdit" name="triodeB_corner3_pct">
+                <property name="maxLength">
+                 <number>4</number>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;</string>
                 </property>
                </widget>
               </item>
@@ -2610,8 +2790,8 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="3">
-               <widget class="QLineEdit" name="triodeB_Ia_pct">
+              <item row="4" column="3">
+               <widget class="QLineEdit" name="triodeB_mu_pct">
                 <property name="maxLength">
                  <number>4</number>
                 </property>
@@ -2620,60 +2800,16 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="triodeB_Ia_label">
-                <property name="text">
-                 <string>Ia(mA)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="triodeB_rp_measured">
+              <item row="4" column="4">
+               <widget class="QLineEdit" name="triodeB_corner4_pct">
                 <property name="maxLength">
                  <number>4</number>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
                 </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="triodeB_Ia_measured">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QLineEdit" name="triodeB_gm_measured">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="triodeBHeaderValue2">
-                <property name="text">
-                 <string>Ref</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="triodeB_rp_ref">
-                <property name="maxLength">
-                 <number>4</number>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(255,140,0); border-bottom: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px;</string>
                 </property>
                </widget>
               </item>

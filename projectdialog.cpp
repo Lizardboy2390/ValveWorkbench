@@ -12,6 +12,7 @@ ProjectDialog::ProjectDialog(QWidget *parent) :
     ui->setupUi(this);
 
     ui->radioTriode->setChecked(true);
+    ui->projectName->setText(tr("DUT"));
 }
 
 /**

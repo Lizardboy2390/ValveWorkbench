@@ -723,7 +723,13 @@ bool ValveWorkbench::ensureDatasheetRefPoint(double &va0, double &vg0, double &i
     if (!read("va", va0)) return false;
     if (!read("vg", vg0)) return false;
     if (!read("ia", ia0)) return false;
-    if (!read("gm", gm0)) return false;
+
+    // Datasheet gm is stored in micro-siemens (µS / "micromhos") for UI
+    // consistency. Convert to mA/V for internal use so it matches the units
+    // returned by computeIaGmAt(), which works in mA/V.
+    double gm_uS = 0.0;
+    if (!read("gm", gm_uS)) return false;
+    gm0 = gm_uS / 1000.0; // 1000 µS = 1 mA/V
     // mu and rp are optional for now; treat missing as 0
     read("mu", mu0);
     read("rp", rp0);
@@ -750,7 +756,10 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
         return;
     }
 
-    // Build central and (for full mode) corner test points around the datasheet operating point.
+    // Build health test points around the datasheet operating point.
+    // Quick Health: 3x3 grid (centre + 8 neighbours) to stabilise gm/Ia
+    // using multiple nearby sweeps.
+    // Full Health: centre + 4 wider corners for a larger operating box.
     healthPoints.clear();
     healthResults.clear();
 
@@ -759,7 +768,42 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
     center.vg = vg0;
     healthPoints.append(center);
 
-    if (mode == HEALTH_FULL) {
+    if (mode == HEALTH_QUICK) {
+        // 3x3 grid: smaller offsets around the centre for quick stability.
+        const double dVaFracQuick = 0.10;
+        double dVa = std::fabs(va0) * dVaFracQuick;
+        if (dVa < 20.0) dVa = 20.0;
+        if (dVa > 60.0) dVa = 60.0;
+
+        double dVg = 0.3;
+        if (std::fabs(vg0) > 2.0) {
+            dVg = 0.5;
+        }
+
+        const double vaLow  = std::max(0.0, va0 - dVa);
+        const double vaHigh = va0 + dVa;
+        const double vgLo   = vg0 - dVg;
+        const double vgHi   = vg0 + dVg;
+
+        HealthPoint p;
+
+        // Middle row (same Va, varying Vg)
+        p.va = va0;    p.vg = vgLo;   healthPoints.append(p);
+        p.va = va0;    p.vg = vgHi;   healthPoints.append(p);
+
+        // Lower row (Va low)
+        p.va = vaLow;  p.vg = vg0;    healthPoints.append(p);
+        p.va = vaLow;  p.vg = vgLo;   healthPoints.append(p);
+        p.va = vaLow;  p.vg = vgHi;   healthPoints.append(p);
+
+        // Upper row (Va high)
+        p.va = vaHigh; p.vg = vg0;    healthPoints.append(p);
+        p.va = vaHigh; p.vg = vgLo;   healthPoints.append(p);
+        p.va = vaHigh; p.vg = vgHi;   healthPoints.append(p);
+    } else if (mode == HEALTH_FULL) {
+        // Wider 4-corner box for Full Health. For each corner, schedule
+        // three nearby transfer sweeps (same Va, small Vg offsets) so corner
+        // Ia can be estimated robustly in the same way as Quick Health.
         const double dVaFrac = 0.2;
         double dVa = std::fabs(va0) * dVaFrac;
         if (dVa < 40.0) dVa = 40.0;
@@ -775,12 +819,26 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
         const double vgLo   = vg0 - dVg;
         const double vgHi   = vg0 + dVg;
 
+        const double vaCorners[4] = { vaLow, vaLow, vaHigh, vaHigh };
+        const double vgCorners[4] = { vgLo,  vgHi,  vgLo,   vgHi  };
+
         HealthPoint p;
 
-        p.va = vaLow;  p.vg = vgLo;  healthPoints.append(p);
-        p.va = vaLow;  p.vg = vgHi;  healthPoints.append(p);
-        p.va = vaHigh; p.vg = vgLo;  healthPoints.append(p);
-        p.va = vaHigh; p.vg = vgHi;  healthPoints.append(p);
+        for (int c = 0; c < 4; ++c) {
+            const double vaCorner = vaCorners[c];
+            const double vgCorner = vgCorners[c];
+
+            // Use a small Vg offset around each corner to build a 3-sweep
+            // cluster, mirroring the Quick Health centre-row strategy.
+            double dVgCorner = 0.3;
+            if (std::fabs(vgCorner) > 2.0) {
+                dVgCorner = 0.5;
+            }
+
+            p.va = vaCorner; p.vg = vgCorner;              healthPoints.append(p);
+            p.va = vaCorner; p.vg = vgCorner - dVgCorner;  healthPoints.append(p);
+            p.va = vaCorner; p.vg = vgCorner + dVgCorner;  healthPoints.append(p);
+        }
     }
 
     healthResults.resize(healthPoints.size());
@@ -902,36 +960,83 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &
         return false;
     }
 
+    auto clampIndex = [](int idx, int max) {
+        if (idx < 0) return 0;
+        if (idx >= max) return max - 1;
+        return idx;
+    };
+
     Sample *sampleMid = bestSweep->at(bestSampleIdx);
     if (!sampleMid) {
         return false;
     }
 
     ia_mA = sampleMid->getIa();
+    const double vaMid = sampleMid->getVa();
+    const double vgMid = sampleMid->getVg1();
 
-    int idxPrev = std::max(0, bestSampleIdx - 1);
-    int idxNext = std::min(sampleCount - 1, bestSampleIdx + 1);
+    int iStart = clampIndex(bestSampleIdx - 2, sampleCount);
+    int iEnd   = clampIndex(bestSampleIdx + 2, sampleCount);
 
-    Sample *samplePrev = bestSweep->at(idxPrev);
-    Sample *sampleNext = bestSweep->at(idxNext);
-    if (!samplePrev || !sampleNext || idxPrev == idxNext) {
-        return false;
+    double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+    int N = 0;
+
+    for (int i = iStart; i <= iEnd; ++i) {
+        Sample *s = bestSweep->at(i);
+        if (!s) continue;
+        const double ia = s->getIa();
+        const double vg = s->getVg1();
+        if (!std::isfinite(ia) || !std::isfinite(vg) || ia <= 0.0) {
+            continue;
+        }
+        Sx  += vg;
+        Sy  += ia;
+        Sxx += vg * vg;
+        Sxy += vg * ia;
+        ++N;
     }
 
-    const double vgPrev = samplePrev->getVg1();
-    const double iaPrev = samplePrev->getIa();
-    const double vgNext = sampleNext->getVg1();
-    const double iaNext = sampleNext->getIa();
-
-    const double dVg = vgNext - vgPrev;
-    if (std::fabs(dVg) < 1e-6) {
-        return false;
+    if (N >= 3) {
+        const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+        if (std::fabs(den) > 1e-12) {
+            gm_mA_V = (static_cast<double>(N) * Sxy - Sx * Sy) / den;
+        }
     }
 
-    gm_mA_V = (iaNext - iaPrev) / dVg;
+    if (!(gm_mA_V > 0.0)) {
+        int idxPrev = std::max(0, bestSampleIdx - 1);
+        int idxNext = std::min(sampleCount - 1, bestSampleIdx + 1);
+
+        Sample *samplePrev = bestSweep->at(idxPrev);
+        Sample *sampleNext = bestSweep->at(idxNext);
+        if (!samplePrev || !sampleNext || idxPrev == idxNext) {
+            return false;
+        }
+
+        const double vgPrev = samplePrev->getVg1();
+        const double iaPrev = samplePrev->getIa();
+        const double vgNext = sampleNext->getVg1();
+        const double iaNext = sampleNext->getIa();
+
+        const double dVg = vgNext - vgPrev;
+        if (std::fabs(dVg) < 1e-6) {
+            return false;
+        }
+
+        gm_mA_V = (iaNext - iaPrev) / dVg;
+    }
+
     if (!std::isfinite(gm_mA_V) || gm_mA_V <= 0.0) {
         return false;
     }
+
+    qInfo("Health gm @ target (Va=%.3f, Vg=%.3f) -> sample (Va=%.3f, Vg=%.3f) Ia=%.6f mA, gm=%.6f mA/V",
+          pt.va,
+          pt.vg,
+          vaMid,
+          vgMid,
+          ia_mA,
+          gm_mA_V);
 
     // --- Optional: derive a local plate resistance rp from ANODE_CHARACTERISTICS
     // data that is closest to the same (Va, Vg) operating point. This reuses the
@@ -1062,27 +1167,524 @@ void ValveWorkbench::finalizeHealthRun()
     double quickPercent = 0.0;
     double fullPercent = 0.0;
 
+    // Optional reference surface for Full Health: if the currently selected
+    // Designer Device has an embedded Measurement, use it as a "good tube"
+    // surface so each health point (centre + corners) is compared against
+    // Ia/gm at the same Va/Vg instead of always comparing to the central
+    // datasheet point.
+    Measurement *refMeasurementForHealth = nullptr;
+    if (currentDevice) {
+        Measurement *m = currentDevice->getMeasurement();
+        if (m && measurementHasValidSamples(m)) {
+            refMeasurementForHealth = m;
+        }
+    }
+
+    const bool haveHealthSurface = (refMeasurementForHealth != nullptr && !healthPoints.isEmpty());
+
+    QVector<double> iaRefSurface;
+    QVector<double> gmRefSurface;
+    if (haveHealthSurface) {
+        const int n = healthPoints.size();
+        iaRefSurface.resize(n);
+        gmRefSurface.resize(n);
+        for (int i = 0; i < n; ++i) {
+            double iaRef = 0.0;
+            double gmRef = 0.0;
+            double rpRef = 0.0;
+            if (computeIaGmAt(refMeasurementForHealth,
+                              healthPoints.at(i),
+                              iaRef,
+                              gmRef,
+                              rpRef)) {
+                iaRefSurface[i] = iaRef;
+                gmRefSurface[i] = gmRef;
+            } else {
+                iaRefSurface[i] = 0.0;
+                gmRefSurface[i] = 0.0;
+            }
+        }
+    }
+
+    // Robust cluster estimator for up to three nearby values (Quick Health
+    // centre row). Uses a median-based outlier gate and averages the
+    // survivors. Returns true and writes 'effective' on success.
+    auto robust3xCluster = [](const QVector<double> &values, double outlierTol, double &effective) -> bool {
+        if (values.isEmpty()) {
+            return false;
+        }
+
+        QVector<double> sorted = values;
+        std::sort(sorted.begin(), sorted.end());
+
+        double median = 0.0;
+        if (sorted.size() == 1) {
+            median = sorted[0];
+        } else if (sorted.size() == 2) {
+            median = 0.5 * (sorted[0] + sorted[1]);
+        } else {
+            median = sorted[1];
+        }
+
+        if (!(median > 0.0)) {
+            return false;
+        }
+
+        double sum = 0.0;
+        int count = 0;
+        for (double v : values) {
+            if (!(v > 0.0)) {
+                continue;
+            }
+            const double ratio = v / median;
+            const double dev = std::fabs(ratio - 1.0);
+            if (dev > outlierTol) {
+                continue;
+            }
+            sum += v;
+            ++count;
+        }
+
+        if (count > 0) {
+            effective = sum / static_cast<double>(count);
+        } else {
+            effective = median;
+        }
+
+        return (effective > 0.0);
+    };
+
+    const double outlierTol = 0.40; // 40% deviation from median
+
+    // Robust Ia/gm for Triode A Quick Health: use the three centre-row
+    // points (same Va, Vg offsets) to stabilise both Ia and gm.
+    double iaQuickEffective = 0.0;
+    double gmQuickEffective = 0.0;
+    bool haveIaQuickEffective = false;
+    bool haveGmQuickEffective = false;
+
+    if (healthMode == HEALTH_QUICK && healthResults.size() >= 3) {
+        QVector<double> iaCandidates;
+        QVector<double> gmCandidates;
+        iaCandidates.reserve(3);
+        gmCandidates.reserve(3);
+
+        for (int i = 0; i < 3; ++i) {
+            const HealthResult &hr = healthResults.at(i);
+            if (!hr.valid) {
+                continue;
+            }
+            if (hr.ia > 0.0) {
+                iaCandidates.append(hr.ia);
+            }
+            if (hr.gm > 0.0) {
+                gmCandidates.append(hr.gm);
+            }
+        }
+
+        if (!iaCandidates.isEmpty()) {
+            haveIaQuickEffective = robust3xCluster(iaCandidates, outlierTol, iaQuickEffective);
+        }
+        if (!gmCandidates.isEmpty()) {
+            haveGmQuickEffective = robust3xCluster(gmCandidates, outlierTol, gmQuickEffective);
+        }
+    }
+
     if (healthResults.size() > 0 && haveRef) {
         const HealthResult &r0 = healthResults.at(0);
         if (r0.valid) {
-            const double sIa = metricScore(r0.ia, ia0);
-            const double sGm = metricScore(r0.gm, gm0);
+            const double iaForQuick = haveIaQuickEffective ? iaQuickEffective : r0.ia;
+            const double gmForQuick = haveGmQuickEffective ? gmQuickEffective : r0.gm;
+            const double sIa = metricScore(iaForQuick, ia0);
+            const double sGm = metricScore(gmForQuick, gm0);
             quickPercent = 100.0 * 0.5 * (sIa + sGm);
         }
     }
 
     if (healthMode == HEALTH_FULL && haveRef && !healthResults.isEmpty()) {
-        double sum = 0.0;
-        int count = 0;
-        for (const HealthResult &r : healthResults) {
-            if (!r.valid) continue;
-            const double sIa = metricScore(r.ia, ia0);
-            const double sGm = metricScore(r.gm, gm0);
-            sum += 0.5 * (sIa + sGm);
-            ++count;
+        // Full Health combines the centre Quick Health score (Ia+gm at the
+        // datasheet operating point) with four Ia-only corner scores. Each
+        // corner now uses a 3-sweep cluster (same Va, three nearby Vg
+        // values) and both DUT and reference Ia are aggregated with the
+        // same robust3xCluster logic.
+        double sumScores = 0.0;
+        int scoreCount = 0;
+
+        // Include centre Quick Health as one score in the aggregate.
+        if (quickPercent > 0.0) {
+            sumScores += quickPercent / 100.0; // normalised 0..1
+            ++scoreCount;
         }
-        if (count > 0) {
-            fullPercent = 100.0 * (sum / static_cast<double>(count));
+
+        // Corner layout for HEALTH_FULL: index 0 is centre; each of the four
+        // corners contributes three HealthPoints (cluster of Vg offsets) in
+        // order, so indices [1..3], [4..6], [7..9], [10..12].
+        const int clusterSize = 3;
+        const int cornerCount = 4;
+
+        if (healthResults.size() >= 1 + clusterSize) {
+            for (int corner = 0; corner < cornerCount; ++corner) {
+                const int baseIdx = 1 + corner * clusterSize;
+                if (baseIdx >= healthResults.size()) {
+                    break;
+                }
+
+                QVector<double> iaCorner;
+                QVector<double> iaRefCorner;
+                iaCorner.reserve(clusterSize);
+                iaRefCorner.reserve(clusterSize);
+
+                for (int k = 0; k < clusterSize; ++k) {
+                    const int idx = baseIdx + k;
+                    if (idx >= healthResults.size()) {
+                        break;
+                    }
+                    const HealthResult &r = healthResults.at(idx);
+                    if (r.valid && r.ia > 0.0) {
+                        iaCorner.append(r.ia);
+                    }
+
+                    double iaRef = ia0;
+                    if (haveHealthSurface && idx < iaRefSurface.size() && iaRefSurface.at(idx) > 0.0) {
+                        iaRef = iaRefSurface.at(idx);
+                    }
+                    iaRefCorner.append(iaRef);
+                }
+
+                double iaCornerEff = 0.0;
+                double iaRefEff    = 0.0;
+                bool haveIaCorner  = !iaCorner.isEmpty() && robust3xCluster(iaCorner, outlierTol, iaCornerEff);
+                bool haveIaRef     = !iaRefCorner.isEmpty() && robust3xCluster(iaRefCorner, outlierTol, iaRefEff);
+
+                if (haveIaCorner && haveIaRef && iaRefEff > 0.0) {
+                    const double sIa = metricScore(iaCornerEff, iaRefEff);
+                    sumScores += sIa;
+                    ++scoreCount;
+                }
+            }
+        }
+
+        if (scoreCount > 0) {
+            fullPercent = 100.0 * (sumScores / static_cast<double>(scoreCount));
+        }
+    }
+
+    // Populate the Triode A/B Health "Measured" and "%" columns using the
+    // central health result and the datasheet reference point. Also populate
+    // the per-corner 4 Cor Pct column for Full Health runs.
+    if (ui) {
+        auto setEdit = [](QLineEdit *edit, const QString &text) {
+            if (edit) {
+                edit->setText(text);
+            }
+        };
+
+        auto formatValue = [](double v, int decimals) -> QString {
+            if (!std::isfinite(v)) {
+                return QString();
+            }
+            return QString::number(v, 'f', decimals);
+        };
+
+        auto formatPercent = [](double meas, double ref) -> QString {
+            if (!(ref > 0.0) || !(meas > 0.0)) {
+                return QString();
+            }
+            const double percent = 100.0 * meas / ref;
+            if (!std::isfinite(percent)) {
+                return QString();
+            }
+            return QString::number(percent, 'f', 0);
+        };
+
+        if (!healthResults.isEmpty()) {
+            const HealthResult &r0 = healthResults.first();
+            if (r0.valid) {
+                const double iaForDisplayA = haveIaQuickEffective ? iaQuickEffective : r0.ia;
+                const double gmForDisplayA = haveGmQuickEffective ? gmQuickEffective : r0.gm;
+                const double muMeasuredA = (r0.rp > 0.0 && gmForDisplayA > 0.0)
+                                           ? (gmForDisplayA * r0.rp / 1000.0)
+                                           : 0.0;
+
+                // Triode A measured values
+                // Ia is in mA; gm is displayed in µS for consistency with
+                // datasheet/reference values (gm field is labeled gm (µS)).
+                setEdit(ui->triodeA_Ia_measured, formatValue(iaForDisplayA, 3));
+                setEdit(ui->triodeA_gm_measured, formatValue(gmForDisplayA * 1000.0, 0));
+                setEdit(ui->triodeA_mu_measured,
+                        (muMeasuredA > 0.0) ? formatValue(muMeasuredA, 1) : QString());
+                setEdit(ui->triodeA_rp_measured,
+                        (r0.rp > 0.0) ? formatValue(r0.rp, 0) : QString());
+
+                if (haveRef) {
+                    setEdit(ui->triodeA_Ia_pct, formatPercent(iaForDisplayA, ia0));
+                    setEdit(ui->triodeA_gm_pct, formatPercent(gmForDisplayA, gm0));
+                    setEdit(ui->triodeA_mu_pct,
+                            (mu0 > 0.0 && muMeasuredA > 0.0)
+                                ? formatPercent(muMeasuredA, mu0)
+                                : QString());
+                    setEdit(ui->triodeA_rp_pct,
+                            (rp0 > 0.0 && r0.rp > 0.0)
+                                ? formatPercent(r0.rp, rp0)
+                                : QString());
+                } else {
+                    setEdit(ui->triodeA_Ia_pct, QString());
+                    setEdit(ui->triodeA_gm_pct, QString());
+                    setEdit(ui->triodeA_mu_pct, QString());
+                    setEdit(ui->triodeA_rp_pct, QString());
+                }
+
+                // Triode B measured values for double triodes with valid B data
+                if (isDoubleTriode && triodeMeasurementSecondary &&
+                    measurementHasValidSamples(triodeMeasurementSecondary)) {
+                    double iaB = 0.0;
+                    double gmB = 0.0;
+                    double rpB = 0.0;
+
+                    HealthPoint centerPoint;
+                    centerPoint.va = va0;
+                    centerPoint.vg = vg0;
+                    if (!healthPoints.isEmpty()) {
+                        centerPoint = healthPoints.first();
+                    }
+
+                    const bool okB = computeIaGmAt(triodeMeasurementSecondary,
+                                                   centerPoint,
+                                                   iaB,
+                                                   gmB,
+                                                   rpB);
+                    if (okB) {
+                        double iaBDisplay = iaB;
+                        double gmBDisplay = gmB;
+
+                        // Apply the same three-point robustness to Triode B
+                        // Ia/gm during Quick Health, using the B clone and
+                        // the three centre-row HealthPoints.
+                        if (healthMode == HEALTH_QUICK && healthPoints.size() >= 3) {
+                            QVector<double> iaBCandidates;
+                            QVector<double> gmBCandidates;
+                            iaBCandidates.reserve(3);
+                            gmBCandidates.reserve(3);
+
+                            for (int i = 0; i < 3; ++i) {
+                                const HealthPoint &hp = healthPoints.at(i);
+                                double iaTmp = 0.0;
+                                double gmTmp = 0.0;
+                                double rpTmp = 0.0;
+                                if (computeIaGmAt(triodeMeasurementSecondary,
+                                                   hp,
+                                                   iaTmp,
+                                                   gmTmp,
+                                                   rpTmp)) {
+                                    if (iaTmp > 0.0) {
+                                        iaBCandidates.append(iaTmp);
+                                    }
+                                    if (gmTmp > 0.0) {
+                                        gmBCandidates.append(gmTmp);
+                                    }
+                                }
+                            }
+
+                            double iaBQuickEffective = 0.0;
+                            double gmBQuickEffective = 0.0;
+
+                            if (!iaBCandidates.isEmpty() &&
+                                robust3xCluster(iaBCandidates, outlierTol, iaBQuickEffective)) {
+                                iaBDisplay = iaBQuickEffective;
+                            }
+                            if (!gmBCandidates.isEmpty() &&
+                                robust3xCluster(gmBCandidates, outlierTol, gmBQuickEffective)) {
+                                gmBDisplay = gmBQuickEffective;
+                            }
+                        }
+
+                        const double muMeasuredB = (rpB > 0.0 && gmBDisplay > 0.0)
+                                                   ? (gmBDisplay * rpB / 1000.0)
+                                                   : 0.0;
+
+                        setEdit(ui->triodeB_Ia_measured, formatValue(iaBDisplay, 3));
+                        // gm displayed in µS
+                        setEdit(ui->triodeB_gm_measured, formatValue(gmBDisplay * 1000.0, 0));
+                        setEdit(ui->triodeB_mu_measured,
+                                (muMeasuredB > 0.0) ? formatValue(muMeasuredB, 1) : QString());
+                        setEdit(ui->triodeB_rp_measured,
+                                (rpB > 0.0) ? formatValue(rpB, 0) : QString());
+
+                        if (haveRef) {
+                            setEdit(ui->triodeB_Ia_pct, formatPercent(iaBDisplay, ia0));
+                            setEdit(ui->triodeB_gm_pct, formatPercent(gmBDisplay, gm0));
+                            setEdit(ui->triodeB_mu_pct,
+                                    (mu0 > 0.0 && muMeasuredB > 0.0)
+                                        ? formatPercent(muMeasuredB, mu0)
+                                        : QString());
+                            setEdit(ui->triodeB_rp_pct,
+                                    (rp0 > 0.0 && rpB > 0.0)
+                                        ? formatPercent(rpB, rp0)
+                                        : QString());
+                        } else {
+                            setEdit(ui->triodeB_Ia_pct, QString());
+                            setEdit(ui->triodeB_gm_pct, QString());
+                            setEdit(ui->triodeB_mu_pct, QString());
+                            setEdit(ui->triodeB_rp_pct, QString());
+                        }
+                    } else {
+                        setEdit(ui->triodeB_Ia_measured, QString());
+                        setEdit(ui->triodeB_gm_measured, QString());
+                        setEdit(ui->triodeB_mu_measured, QString());
+                        setEdit(ui->triodeB_rp_measured, QString());
+                        setEdit(ui->triodeB_Ia_pct, QString());
+                        setEdit(ui->triodeB_gm_pct, QString());
+                        setEdit(ui->triodeB_mu_pct, QString());
+                        setEdit(ui->triodeB_rp_pct, QString());
+                    }
+                } else {
+                    // Not a double triode or no Triode B data: clear B health display
+                    setEdit(ui->triodeB_Ia_measured, QString());
+                    setEdit(ui->triodeB_gm_measured, QString());
+                    setEdit(ui->triodeB_mu_measured, QString());
+                    setEdit(ui->triodeB_rp_measured, QString());
+                    setEdit(ui->triodeB_Ia_pct, QString());
+                    setEdit(ui->triodeB_gm_pct, QString());
+                    setEdit(ui->triodeB_mu_pct, QString());
+                    setEdit(ui->triodeB_rp_pct, QString());
+                }
+            }
+        }
+
+        // Populate the 4-corner percentage (orange) fields for Full Health runs.
+        // Always clear them first so Quick Health (single point) leaves them empty.
+        // Corners are Ia-only checks using a 3-sweep cluster at each corner for
+        // both DUT and reference Ia.
+        auto formatCornerScore = [&](int cornerIdx) -> QString {
+            const int clusterSize = 3;
+            const int baseIdx = 1 + cornerIdx * clusterSize;
+            if (!haveRef || baseIdx < 1 || baseIdx >= healthResults.size()) {
+                return QString();
+            }
+
+            QVector<double> iaCorner;
+            QVector<double> iaRefCorner;
+            iaCorner.reserve(clusterSize);
+            iaRefCorner.reserve(clusterSize);
+
+            for (int k = 0; k < clusterSize; ++k) {
+                const int idx = baseIdx + k;
+                if (idx >= healthResults.size()) {
+                    break;
+                }
+                const HealthResult &hr = healthResults.at(idx);
+                if (hr.valid && hr.ia > 0.0) {
+                    iaCorner.append(hr.ia);
+                }
+
+                double iaRef = ia0;
+                if (haveHealthSurface && idx < iaRefSurface.size()) {
+                    if (iaRefSurface.at(idx) > 0.0) iaRef = iaRefSurface.at(idx);
+                }
+                iaRefCorner.append(iaRef);
+            }
+
+            double iaCornerEff = 0.0;
+            double iaRefEff    = 0.0;
+            bool haveIaCorner  = !iaCorner.isEmpty() && robust3xCluster(iaCorner, outlierTol, iaCornerEff);
+            bool haveIaRef     = !iaRefCorner.isEmpty() && robust3xCluster(iaRefCorner, outlierTol, iaRefEff);
+
+            if (!haveIaCorner || !haveIaRef || iaRefEff <= 0.0) {
+                return QString();
+            }
+
+            const double sIa = metricScore(iaCornerEff, iaRefEff);
+            const double pct = 100.0 * sIa;
+            if (!std::isfinite(pct)) {
+                return QString();
+            }
+            return QString::number(pct, 'f', 0);
+        };
+
+        // Clear Triode A/B corner columns by default.
+        setEdit(ui->triodeA_corner1_pct, QString());
+        setEdit(ui->triodeA_corner2_pct, QString());
+        setEdit(ui->triodeA_corner3_pct, QString());
+        setEdit(ui->triodeA_corner4_pct, QString());
+        setEdit(ui->triodeB_corner1_pct, QString());
+        setEdit(ui->triodeB_corner2_pct, QString());
+        setEdit(ui->triodeB_corner3_pct, QString());
+        setEdit(ui->triodeB_corner4_pct, QString());
+
+        if (healthMode == HEALTH_FULL && haveRef && healthResults.size() >= 13) {
+            // Corner clusters for Triode A: indices [1..3], [4..6], [7..9], [10..12].
+            setEdit(ui->triodeA_corner1_pct, formatCornerScore(0));
+            setEdit(ui->triodeA_corner2_pct, formatCornerScore(1));
+            setEdit(ui->triodeA_corner3_pct, formatCornerScore(2));
+            setEdit(ui->triodeA_corner4_pct, formatCornerScore(3));
+
+            // For double triodes, derive matching corner scores for Triode B
+            // from the secondary measurement using the same 3-sweep corner
+            // clusters.
+            if (isDoubleTriode && triodeMeasurementSecondary &&
+                measurementHasValidSamples(triodeMeasurementSecondary)) {
+
+                auto formatCornerScoreB = [&](int cornerIdx) -> QString {
+                    const int clusterSize = 3;
+                    const int baseIdx = 1 + cornerIdx * clusterSize;
+                    if (baseIdx < 1 || baseIdx >= healthPoints.size()) {
+                        return QString();
+                    }
+
+                    QVector<double> iaBCorner;
+                    QVector<double> iaRefCorner;
+                    iaBCorner.reserve(clusterSize);
+                    iaRefCorner.reserve(clusterSize);
+
+                    for (int k = 0; k < clusterSize; ++k) {
+                        const int idx = baseIdx + k;
+                        if (idx >= healthPoints.size()) {
+                            break;
+                        }
+
+                        double iaB = 0.0;
+                        double gmB = 0.0;
+                        double rpB = 0.0;
+                        if (!computeIaGmAt(triodeMeasurementSecondary,
+                                           healthPoints.at(idx),
+                                           iaB,
+                                           gmB,
+                                           rpB)) {
+                            continue;
+                        }
+                        if (iaB > 0.0) {
+                            iaBCorner.append(iaB);
+                        }
+
+                        double iaRef = ia0;
+                        if (haveHealthSurface && idx < iaRefSurface.size()) {
+                            if (iaRefSurface.at(idx) > 0.0) iaRef = iaRefSurface.at(idx);
+                        }
+                        iaRefCorner.append(iaRef);
+                    }
+
+                    double iaBEff   = 0.0;
+                    double iaRefEff = 0.0;
+                    bool haveIaB    = !iaBCorner.isEmpty() && robust3xCluster(iaBCorner, outlierTol, iaBEff);
+                    bool haveIaRef  = !iaRefCorner.isEmpty() && robust3xCluster(iaRefCorner, outlierTol, iaRefEff);
+
+                    if (!haveRef || !haveIaB || !haveIaRef || iaRefEff <= 0.0) {
+                        return QString();
+                    }
+
+                    const double sIa = metricScore(iaBEff, iaRefEff);
+                    const double pct = 100.0 * sIa;
+                    if (!std::isfinite(pct)) {
+                        return QString();
+                    }
+                    return QString::number(pct, 'f', 0);
+                };
+
+                setEdit(ui->triodeB_corner1_pct, formatCornerScoreB(0));
+                setEdit(ui->triodeB_corner2_pct, formatCornerScoreB(1));
+                setEdit(ui->triodeB_corner3_pct, formatCornerScoreB(2));
+                setEdit(ui->triodeB_corner4_pct, formatCornerScoreB(3));
+            }
         }
     }
 
@@ -1678,6 +2280,11 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
 
         Sweep *cloneSweep = new Sweep(source->getDeviceType(), source->getTestType());
         clone->addSweep(cloneSweep);
+
+        // Preserve the nominal anode voltage for this sweep so transfer plots
+        // for the Triode B clone are labelled with the same Va as the source
+        // measurement instead of defaulting to 0.0 V.
+        cloneSweep->setVaNominal(sourceSweep->getVaNominal());
 
         for (Sample *cloneSample : std::as_const(bufferedSamples)) {
             cloneSweep->addSample(cloneSample);
@@ -2327,6 +2934,10 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     narrowHealthField(ui->triodeA_mu_measured);
     narrowHealthField(ui->triodeA_mu_ref);
     narrowHealthField(ui->triodeA_mu_pct);
+    narrowHealthField(ui->triodeA_corner1_pct);
+    narrowHealthField(ui->triodeA_corner2_pct);
+    narrowHealthField(ui->triodeA_corner3_pct);
+    narrowHealthField(ui->triodeA_corner4_pct);
 
     // Triode B health rows
     narrowHealthField(ui->triodeB_Ia_measured);
@@ -2341,6 +2952,70 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     narrowHealthField(ui->triodeB_mu_measured);
     narrowHealthField(ui->triodeB_mu_ref);
     narrowHealthField(ui->triodeB_mu_pct);
+    narrowHealthField(ui->triodeB_corner1_pct);
+    narrowHealthField(ui->triodeB_corner2_pct);
+    narrowHealthField(ui->triodeB_corner3_pct);
+    narrowHealthField(ui->triodeB_corner4_pct);
+
+    // Color-code health fields by dependency so users can see which tests
+    // drive which values:
+    // - Quick Health only: Ia / gm measured and percent (blue).
+    // - Anode-curve dependent: rp / mu measured and percent (green).
+    // 4-corner Full Health column is styled in the .ui (orange border/text).
+    auto setColor = [](QWidget *w, const char *rgb){
+        if (!w) return;
+        w->setStyleSheet(QStringLiteral("color: %1;").arg(QLatin1String(rgb)));
+    };
+
+    // Quick-health metrics: Ia and gm (Triode A & B)
+    const char *quickColor = "rgb(0,0,192)";
+    setColor(ui->triodeA_Ia_measured, quickColor);
+    setColor(ui->triodeA_Ia_pct, quickColor);
+    setColor(ui->triodeA_gm_measured, quickColor);
+    setColor(ui->triodeA_gm_pct, quickColor);
+    setColor(ui->triodeB_Ia_measured, quickColor);
+    setColor(ui->triodeB_Ia_pct, quickColor);
+    setColor(ui->triodeB_gm_measured, quickColor);
+    setColor(ui->triodeB_gm_pct, quickColor);
+
+    // Anode-dependent metrics: rp and mu (Triode A & B)
+    const char *anodeColor = "rgb(0,128,0)";
+    setColor(ui->triodeA_rp_measured, anodeColor);
+    setColor(ui->triodeA_rp_pct, anodeColor);
+    setColor(ui->triodeA_mu_measured, anodeColor);
+    setColor(ui->triodeA_mu_pct, anodeColor);
+    setColor(ui->triodeB_rp_measured, anodeColor);
+    setColor(ui->triodeB_rp_pct, anodeColor);
+    setColor(ui->triodeB_mu_measured, anodeColor);
+    setColor(ui->triodeB_mu_pct, anodeColor);
+
+    // Style the analyser health buttons to match their roles.
+    if (ui->runButton) {
+        ui->runButton->setStyleSheet("color: rgb(0,128,0);");
+    }
+    if (ui->quickHealthButton) {
+        ui->quickHealthButton->setStyleSheet("color: rgb(0,0,192);");
+    }
+    if (ui->fullHealthButton) {
+        ui->fullHealthButton->setStyleSheet("color: rgb(255,140,0);");
+    }
+    // Save to Project is also a required step in the workflow, so give it
+    // the same green accent as other anode/required actions.
+    if (ui->btnAddToProject) {
+        ui->btnAddToProject->setStyleSheet("color: rgb(0,128,0);");
+    }
+
+    // Ensure all 5 columns in the Triode A/B health grids share width equally.
+    if (ui->gridLayout_TriodeAHealth) {
+        for (int c = 0; c < 5; ++c) {
+            ui->gridLayout_TriodeAHealth->setColumnStretch(c, 1);
+        }
+    }
+    if (ui->gridLayout_TriodeBHealth) {
+        for (int c = 0; c < 5; ++c) {
+            ui->gridLayout_TriodeBHealth->setColumnStretch(c, 1);
+        }
+    }
 
     updateDatasheetDisplay();
 
@@ -5364,12 +6039,25 @@ void ValveWorkbench::testFinished()
         // Apply smoothing preference for new analyser measurements so that
         // measurement plotting can optionally use spline smoothing.
         currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
-    }
 
-    // Primary (Triode A) curves
-    measuredCurves = currentMeasurement ? currentMeasurement->updatePlot(&plot) : nullptr;
-    if (measuredCurves) {
-        plot.add(measuredCurves);
+        // During Quick/Full Health, leave all health transfer sweeps visible on
+        // the plot. Only the first health point configures axes; subsequent
+        // points overlay without clearing.
+        const bool overlayHealth = (healthRunActive && healthRunIndex > 0);
+
+        if (overlayHealth) {
+            QGraphicsItemGroup *overlayGroup = currentMeasurement->updatePlotWithoutAxes(&plot);
+            if (overlayGroup) {
+                plot.add(overlayGroup);
+            }
+        } else {
+            // Default behaviour: reconfigure axes from this measurement and
+            // draw its sweeps as the primary measured curves.
+            measuredCurves = currentMeasurement->updatePlot(&plot);
+            if (measuredCurves) {
+                plot.add(measuredCurves);
+            }
+        }
     }
 
     // For double triode measurements, create a Triode B clone directly from
@@ -6712,11 +7400,18 @@ QTreeWidgetItem *ValveWorkbench::getParent(QTreeWidgetItem *current, int type)
 
 Model *ValveWorkbench::findModel(int type)
 {
+    if (!currentProject) {
+        return nullptr;
+    }
+
     int children = currentProject->childCount();
     Model *foundModel = nullptr;
 
     for (int i = 0; i < children && foundModel == nullptr; i++) {
         QTreeWidgetItem *child = currentProject->child(i);
+        if (!child) {
+            continue;
+        }
         if (child->type() == TYP_MODEL) {
             Model *model = (Model *) child->data(0, Qt::UserRole).value<void *>();
             if (model->getType() == type) {
@@ -6730,11 +7425,18 @@ Model *ValveWorkbench::findModel(int type)
 
 Measurement *ValveWorkbench::findMeasurement(int deviceType, int testType)
 {
+    if (!currentProject) {
+        return nullptr;
+    }
+
     int children = currentProject->childCount();
     Measurement *foundMeasurement = nullptr;
 
     for (int i = 0; i < children && foundMeasurement == nullptr; i++) {
         QTreeWidgetItem *child = currentProject->child(i);
+        if (!child) {
+            continue;
+        }
         if (child->type() == TYP_MEASUREMENT) {
             Measurement *measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
             if (measurement->getDeviceType() == deviceType && measurement->getTestType() == testType) {
