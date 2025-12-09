@@ -1821,6 +1821,64 @@
            </layout>
           </item>
           <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_healthScores">
+            <item>
+             <spacer name="horizontalSpacer_healthScoresLeft">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="quickHealthDsLabel">
+              <property name="text">
+               <string>DS:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="quickHealthRefLabel">
+              <property name="text">
+               <string>Ref:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="fullHealthDsLabel">
+              <property name="text">
+               <string>DS:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="fullHealthRefLabel">
+              <property name="text">
+               <string>Ref:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_healthScoresRight">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
            <spacer name="verticalSpacer_6">
             <property name="orientation">
              <enum>Qt::Orientation::Vertical</enum>
@@ -1976,6 +2034,20 @@
               <widget class="QLineEdit" name="datasheetVa">
                <property name="readOnly">
                 <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="2">
+              <widget class="QLabel" name="datasheetRefCountLabel">
+               <property name="text">
+                <string>Ref</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="3">
+              <widget class="QLabel" name="datasheetRefCountValue">
+               <property name="text">
+                <string/>
                </property>
               </widget>
              </item>
@@ -2401,7 +2473,7 @@
               <item row="2" column="1">
                <widget class="QLineEdit" name="triodeA_rp_measured">
                 <property name="maxLength">
-                 <number>4</number>
+                 <number>5</number>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
@@ -2411,7 +2483,7 @@
               <item row="2" column="2">
                <widget class="QLineEdit" name="triodeA_rp_ref">
                 <property name="maxLength">
-                 <number>4</number>
+                 <number>5</number>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
@@ -2687,7 +2759,7 @@
               <item row="2" column="1">
                <widget class="QLineEdit" name="triodeB_rp_measured">
                 <property name="maxLength">
-                 <number>4</number>
+                 <number>5</number>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
@@ -2697,7 +2769,7 @@
               <item row="2" column="2">
                <widget class="QLineEdit" name="triodeB_rp_ref">
                 <property name="maxLength">
-                 <number>4</number>
+                 <number>5</number>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>
@@ -2876,6 +2948,8 @@
     <addaction name="actionExport_Model"/>
     <addaction name="actionExport_SE_Output_to_Spice"/>
     <addaction name="actionExport_to_Spice"/>
+    <addaction name="actionSave_as_Reference_Tube"/>
+    <addaction name="actionReset_Reference_Tube"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -2950,6 +3024,16 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionSave_as_Reference_Tube">
+   <property name="text">
+    <string>Save as Reference Tube...</string>
+   </property>
+  </action>
+  <action name="actionReset_Reference_Tube">
+   <property name="text">
+    <string>Reset Reference Tube</string>
    </property>
   </action>
   <action name="actionExport_to_Spice">

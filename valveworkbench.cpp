@@ -574,6 +574,12 @@ void ValveWorkbench::updateDatasheetDisplay()
         setField(ui->triodeB_rp_ref, QString());
         setField(ui->triodeB_gm_ref, QString());
         setField(ui->triodeB_mu_ref, QString());
+
+        // Clear sample-count display in Datasheet / Reference panel
+        if (ui->datasheetRefCountValue) {
+            ui->datasheetRefCountValue->clear();
+            ui->datasheetRefCountValue->setToolTip(QString());
+        }
     };
 
     auto clearAll = [&]() {
@@ -623,6 +629,26 @@ void ValveWorkbench::updateDatasheetDisplay()
     setField(ui->datasheetGm, gmStr);
     setField(ui->datasheetMu, muStr);
     setField(ui->datasheetRp, rpStr);
+
+    // Optional reference-tube sample count surfaced as "Ref xN" in the
+    // Datasheet / Reference box on the Va row. This is derived from the
+    // datasheet.healthReference.sampleCount accumulated by
+    // captureHealthReferenceFromLastRun().
+    QString refCountText;
+    QString refCountTooltip;
+
+    const QJsonObject healthRefObj = datasheetJson.value(QStringLiteral("healthReference")).toObject();
+    const int sampleCount = healthRefObj.value(QStringLiteral("sampleCount")).toInt(0);
+    if (sampleCount > 0) {
+        refCountText = tr("x%1").arg(sampleCount);
+        refCountTooltip = tr("Reference tube averages are based on %1 saved run(s) for this template.")
+                               .arg(sampleCount);
+    }
+
+    if (ui->datasheetRefCountValue) {
+        ui->datasheetRefCountValue->setText(refCountText);
+        ui->datasheetRefCountValue->setToolTip(refCountTooltip);
+    }
 
     // Mirror reference metrics into the Triode A/B Health Ref columns.
     // Ia is in mA, gm in mA/V, mu dimensionless, rp in ohms (matching
@@ -763,6 +789,15 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
     healthPoints.clear();
     healthResults.clear();
 
+    // For double-triode Health runs, discard any existing Triode B clone so
+    // a fresh secondary measurement will be created from the Health
+    // TRANSFER_CHARACTERISTICS dataset rather than reusing an earlier anode
+    // run clone.
+    if (isDoubleTriode && triodeMeasurementSecondary != nullptr) {
+        deleteMeasurementClone(triodeMeasurementSecondary);
+        triodeMeasurementSecondary = nullptr;
+    }
+
     HealthPoint center;
     center.va = va0;
     center.vg = vg0;
@@ -801,43 +836,71 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
         p.va = vaHigh; p.vg = vgLo;   healthPoints.append(p);
         p.va = vaHigh; p.vg = vgHi;   healthPoints.append(p);
     } else if (mode == HEALTH_FULL) {
-        // Wider 4-corner box for Full Health. For each corner, schedule
-        // three nearby transfer sweeps (same Va, small Vg offsets) so corner
-        // Ia can be estimated robustly in the same way as Quick Health.
-        const double dVaFrac = 0.2;
-        double dVa = std::fabs(va0) * dVaFrac;
-        if (dVa < 40.0) dVa = 40.0;
-        if (dVa > 100.0) dVa = 100.0;
+        const int clusterSize = 3;
+        bool usedStoredCorners = false;
 
-        double dVg = 0.5;
-        if (std::fabs(vg0) > 2.0) {
-            dVg = 1.0;
+        if (!datasheetJson.isEmpty()) {
+            const QJsonObject healthRefObj = datasheetJson.value("healthReference").toObject();
+            const QJsonArray cornersArr = healthRefObj.value("corners").toArray();
+
+            if (cornersArr.size() >= 4) {
+                HealthPoint p;
+                for (int c = 0; c < 4; ++c) {
+                    const QJsonObject cObj = cornersArr.at(c).toObject();
+                    const double vaCorner = cObj.value("va").toDouble();
+                    const double vgCorner = cObj.value("vg").toDouble();
+
+                    double dVgCorner = 0.3;
+                    if (std::fabs(vgCorner) > 2.0) {
+                        dVgCorner = 0.5;
+                    }
+
+                    p.va = vaCorner; p.vg = vgCorner;              healthPoints.append(p);
+                    p.va = vaCorner; p.vg = vgCorner - dVgCorner;  healthPoints.append(p);
+                    p.va = vaCorner; p.vg = vgCorner + dVgCorner;  healthPoints.append(p);
+                }
+
+                if (healthPoints.size() >= 1 + 4 * clusterSize) {
+                    usedStoredCorners = true;
+                } else {
+                    healthPoints.resize(1);
+                }
+            }
         }
 
-        const double vaLow  = std::max(0.0, va0 - dVa);
-        const double vaHigh = va0 + dVa;
-        const double vgLo   = vg0 - dVg;
-        const double vgHi   = vg0 + dVg;
+        if (!usedStoredCorners) {
+            const double dVaFrac = 0.2;
+            double dVa = std::fabs(va0) * dVaFrac;
+            if (dVa < 40.0) dVa = 40.0;
+            if (dVa > 100.0) dVa = 100.0;
 
-        const double vaCorners[4] = { vaLow, vaLow, vaHigh, vaHigh };
-        const double vgCorners[4] = { vgLo,  vgHi,  vgLo,   vgHi  };
-
-        HealthPoint p;
-
-        for (int c = 0; c < 4; ++c) {
-            const double vaCorner = vaCorners[c];
-            const double vgCorner = vgCorners[c];
-
-            // Use a small Vg offset around each corner to build a 3-sweep
-            // cluster, mirroring the Quick Health centre-row strategy.
-            double dVgCorner = 0.3;
-            if (std::fabs(vgCorner) > 2.0) {
-                dVgCorner = 0.5;
+            double dVg = 0.5;
+            if (std::fabs(vg0) > 2.0) {
+                dVg = 1.0;
             }
 
-            p.va = vaCorner; p.vg = vgCorner;              healthPoints.append(p);
-            p.va = vaCorner; p.vg = vgCorner - dVgCorner;  healthPoints.append(p);
-            p.va = vaCorner; p.vg = vgCorner + dVgCorner;  healthPoints.append(p);
+            const double vaLow  = std::max(0.0, va0 - dVa);
+            const double vaHigh = va0 + dVa;
+            const double vgLo   = vg0 - dVg;
+            const double vgHi   = vg0 + dVg;
+
+            const double vaCorners[4] = { vaLow, vaLow, vaHigh, vaHigh };
+            const double vgCorners[4] = { vgLo,  vgHi,  vgLo,   vgHi  };
+
+            HealthPoint p;
+            for (int c = 0; c < 4; ++c) {
+                const double vaCorner = vaCorners[c];
+                const double vgCorner = vgCorners[c];
+
+                double dVgCorner = 0.3;
+                if (std::fabs(vgCorner) > 2.0) {
+                    dVgCorner = 0.5;
+                }
+
+                p.va = vaCorner; p.vg = vgCorner;              healthPoints.append(p);
+                p.va = vaCorner; p.vg = vgCorner - dVgCorner;  healthPoints.append(p);
+                p.va = vaCorner; p.vg = vgCorner + dVgCorner;  healthPoints.append(p);
+            }
         }
     }
 
@@ -885,13 +948,25 @@ void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
     anodeStep  = std::max(1.0, std::fabs(pt.va));
 
     const double vgMag = std::fabs(pt.vg);
-    const double dMag  = 0.5; // ±0.5 V magnitude window around the target bias
+    // Use a tighter ±0.3 V window around the target bias during Health runs to
+    // stabilise gm by keeping the transfer fit more local to the datasheet
+    // operating point.
+    const double dMag  = 0.3;
 
     double startMag = (vgMag > dMag) ? (vgMag - dMag) : 0.0;
     double stopMag  = vgMag + dMag;
 
     gridStart = startMag;
     gridStop  = stopMag;
+
+    // During Quick/Full Health runs, override the grid step to 0.2 V so the
+    // transfer measurement around each HealthPoint has finer Vg resolution.
+    // The original gridStep is saved in startHealthRun() and restored in
+    // finalizeHealthRun(), so this does not affect the user's normal analyser
+    // settings outside of Health.
+    if (healthRunActive) {
+        gridStep = 0.2;
+    }
 }
 
 // Compute measured Ia, gm, and a local plate resistance rp around a desired
@@ -1039,18 +1114,25 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &
           gm_mA_V);
 
     // --- Optional: derive a local plate resistance rp from ANODE_CHARACTERISTICS
-    // data that is closest to the same (Va, Vg) operating point. This reuses the
-    // least-squares logic from updateSmallSignalFromMeasurement but specialises
-    // it for a single HealthPoint.
+    // data that is closest to the same (Va, Vg) operating point. For double
+    // triodes, use Triode A anode data for Triode A and Triode B anode data
+    // (Va2/Ia2/Vg3) for Triode B so each triode gets its own rp.
     Measurement *anodeMeasurement = findMeasurement(measurement->getDeviceType(), ANODE_CHARACTERISTICS);
     if (anodeMeasurement && measurementHasValidSamples(anodeMeasurement)) {
         const int anodeSweeps = anodeMeasurement->count();
         if (anodeSweeps > 0) {
+            const bool usingTriodeB = (isDoubleTriode &&
+                                       triodeMeasurementSecondary &&
+                                       measurement == triodeMeasurementSecondary &&
+                                       measurementHasTriodeBData(anodeMeasurement));
+
             double bestScoreRa = std::numeric_limits<double>::infinity();
             int bestSweepRa = -1;
             int bestSampleRa = -1;
 
-            // Find the sample in anode data closest to the same (Va, Vg)
+            // Find the sample in anode data closest to the same (Va, Vg),
+            // using either the primary Ia/Va/Vg1 (Triode A) or the secondary
+            // Ia2/Va2/Vg3 (Triode B) channels depending on context.
             for (int sw = 0; sw < anodeSweeps; ++sw) {
                 Sweep *sweep = anodeMeasurement->at(sw);
                 if (!sweep) continue;
@@ -1059,8 +1141,13 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &
                     Sample *s = sweep->at(sa);
                     if (!s) continue;
 
-                    const double va = s->getVa();
-                    const double vg = s->getVg1();
+                    const double va = usingTriodeB ? s->getVa2() : s->getVa();
+                    const double vg = usingTriodeB ? s->getVg3() : s->getVg1();
+                    const double ia = usingTriodeB ? s->getIa2() : s->getIa();
+                    if (!std::isfinite(va) || !std::isfinite(vg) || !std::isfinite(ia) || ia <= 0.0) {
+                        continue;
+                    }
+
                     const double dVa = va - pt.va;
                     const double dVg = vg - pt.vg;
                     const double score = dVg * dVg + 0.25 * dVa * dVa;
@@ -1099,9 +1186,11 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &
                         for (int i = iStart; i <= iEnd; ++i) {
                             Sample *s = sweep->at(i);
                             if (!s) continue;
-                            const double ia = s->getIa(); // mA
-                            if (ia <= 0.0) continue;
-                            const double va = s->getVa(); // V
+                            const double ia = usingTriodeB ? s->getIa2() : s->getIa(); // mA
+                            const double va = usingTriodeB ? s->getVa2() : s->getVa(); // V
+                            if (!std::isfinite(ia) || !std::isfinite(va) || ia <= 0.0) {
+                                continue;
+                            }
                             Sx  += va;
                             Sy  += ia;
                             Sxx += va * va;
@@ -1119,10 +1208,10 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &
 
                         // Fallback: two-point estimate
                         if (!(rp_ohms > 0.0)) {
-                            const double vaPrev = samplePrev->getVa();
-                            const double iaPrev = samplePrev->getIa();
-                            const double vaNext = sampleNext->getVa();
-                            const double iaNext = sampleNext->getIa();
+                            const double vaPrev = usingTriodeB ? samplePrev->getVa2() : samplePrev->getVa();
+                            const double iaPrev = usingTriodeB ? samplePrev->getIa2() : samplePrev->getIa();
+                            const double vaNext = usingTriodeB ? sampleNext->getVa2() : sampleNext->getVa();
+                            const double iaNext = usingTriodeB ? sampleNext->getIa2() : sampleNext->getIa();
 
                             const double dIa_mA = iaNext - iaPrev;
                             const double dVa    = vaNext - vaPrev;
@@ -1151,21 +1240,31 @@ void ValveWorkbench::finalizeHealthRun()
 
     const bool haveRef = ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0);
 
+    // Health metric: treat the score as the complement of fractional
+    // deviation from the reference. A tube at 120% of spec (ratio 1.2)
+    // has |1.2-1| = 0.2 deviation, so health = 1 - 0.2 = 0.8 (80%).
+    // Likewise a tube at 80% of spec also scores 80%. Values at or
+    // beyond 0% or 200% of spec collapse to 0% health.
     auto metricScore = [](double meas, double ref) -> double {
         if (!(ref > 0.0) || !(meas > 0.0)) {
             return 0.0;
         }
         const double ratio = meas / ref;
-        const double dev = std::fabs(ratio - 1.0);
-        const double tol = 0.3; // 30% deviation → score 0
-        double s = 1.0 - dev / tol;
+        const double dev   = std::fabs(ratio - 1.0);
+        double s = 1.0 - dev;
         if (s < 0.0) s = 0.0;
         if (s > 1.0) s = 1.0;
         return s;
     };
 
     double quickPercent = 0.0;
-    double fullPercent = 0.0;
+    double fullPercent  = 0.0;
+
+    // Optional reference-tube-based health scores (centre and 4-corner Ia)
+    // derived from datasheet.healthReference.center/corners. These are
+    // surfaced on the Ref: labels under the Quick/Full Health buttons.
+    double quickPercentRef = 0.0;
+    double fullPercentRef  = 0.0;
 
     // Optional reference surface for Full Health: if the currently selected
     // Designer Device has an embedded Measurement, use it as a "good tube"
@@ -1180,14 +1279,25 @@ void ValveWorkbench::finalizeHealthRun()
         }
     }
 
-    const bool haveHealthSurface = (refMeasurementForHealth != nullptr && !healthPoints.isEmpty());
-
     QVector<double> iaRefSurface;
     QVector<double> gmRefSurface;
-    if (haveHealthSurface) {
+    QVector<double> iaRefSurfaceB; // per-triode reference for Triode B
+    bool haveHealthReference = false;
+
+    if (!healthPoints.isEmpty()) {
         const int n = healthPoints.size();
         iaRefSurface.resize(n);
         gmRefSurface.resize(n);
+        iaRefSurfaceB.resize(n);
+        for (int i = 0; i < n; ++i) {
+            iaRefSurface[i]  = 0.0;
+            gmRefSurface[i]  = 0.0;
+            iaRefSurfaceB[i] = 0.0;
+        }
+    }
+
+    if (refMeasurementForHealth && !healthPoints.isEmpty()) {
+        const int n = healthPoints.size();
         for (int i = 0; i < n; ++i) {
             double iaRef = 0.0;
             double gmRef = 0.0;
@@ -1199,10 +1309,71 @@ void ValveWorkbench::finalizeHealthRun()
                               rpRef)) {
                 iaRefSurface[i] = iaRef;
                 gmRefSurface[i] = gmRef;
-            } else {
-                iaRefSurface[i] = 0.0;
-                gmRefSurface[i] = 0.0;
             }
+        }
+    }
+
+    if (!healthPoints.isEmpty() && !datasheetJson.isEmpty()) {
+        const QJsonObject healthRefObj = datasheetJson.value("healthReference").toObject();
+        const QJsonArray cornersArr = healthRefObj.value("corners").toArray();
+        const int clusterSize = 3;
+
+        if (cornersArr.size() >= 4 && iaRefSurface.size() >= 1 + clusterSize * 4) {
+            for (int corner = 0; corner < 4; ++corner) {
+                const QJsonObject cObj = cornersArr.at(corner).toObject();
+
+                // Legacy single reference current (pre per-triode support).
+                const double iaRefLegacy = cObj.value("iaRef_mA").toDouble(0.0);
+                // Optional per-triode reference currents.
+                const double iaRefAStored = cObj.value("iaRefA_mA").toDouble(0.0);
+                const double iaRefBStored = cObj.value("iaRefB_mA").toDouble(0.0);
+
+                // Triode A reference: prefer iaRefA_mA, fall back to legacy.
+                const double iaRefA = (iaRefAStored > 0.0) ? iaRefAStored : iaRefLegacy;
+                // Triode B reference: prefer iaRefB_mA, fall back to A / legacy.
+                double iaRefB = 0.0;
+                if (iaRefBStored > 0.0) {
+                    iaRefB = iaRefBStored;
+                } else if (iaRefAStored > 0.0) {
+                    iaRefB = iaRefAStored;
+                } else {
+                    iaRefB = iaRefLegacy;
+                }
+
+                if (!(iaRefA > 0.0) && !(iaRefB > 0.0)) {
+                    continue;
+                }
+
+                const int baseIdx = 1 + corner * clusterSize;
+                for (int k = 0; k < clusterSize; ++k) {
+                    const int idx = baseIdx + k;
+                    if (idx >= iaRefSurface.size()) {
+                        break;
+                    }
+                    if (iaRefA > 0.0) {
+                        iaRefSurface[idx] = iaRefA;
+                    }
+                    if (iaRefB > 0.0 && idx < iaRefSurfaceB.size()) {
+                        iaRefSurfaceB[idx] = iaRefB;
+                    }
+                }
+            }
+            haveHealthReference = true;
+        }
+    }
+
+    const bool haveHealthSurface = (!healthPoints.isEmpty() &&
+                                    (refMeasurementForHealth != nullptr || haveHealthReference));
+
+    // Centre reference Ia used for per-triode corner scaling. Prefer the
+    // embedded reference surface at the central HealthPoint when available,
+    // otherwise fall back to the datasheet Ia0.
+    double iaRefCentreForOffsets = 0.0;
+    if (!healthPoints.isEmpty()) {
+        if (haveHealthSurface && iaRefSurface.size() > 0 && iaRefSurface.at(0) > 0.0) {
+            iaRefCentreForOffsets = iaRefSurface.at(0);
+        } else if (haveRef && ia0 > 0.0) {
+            iaRefCentreForOffsets = ia0;
         }
     }
 
@@ -1256,6 +1427,14 @@ void ValveWorkbench::finalizeHealthRun()
 
     const double outlierTol = 0.40; // 40% deviation from median
 
+    // Per-triode centre-based scaling factors applied to the reference Ia
+    // at each corner during Full Health 4-corner scoring. This makes the
+    // corner test primarily a shape check (pattern of Ia across corners)
+    // while Quick Health remains responsible for catching large centre
+    // Ia/gm differences.
+    double iaScaleAForCorners = 1.0;
+    double iaScaleBForCorners = 1.0;
+
     // Robust Ia/gm for Triode A Quick Health: use the three centre-row
     // points (same Va, Vg offsets) to stabilise both Ia and gm.
     double iaQuickEffective = 0.0;
@@ -1298,6 +1477,14 @@ void ValveWorkbench::finalizeHealthRun()
             const double sIa = metricScore(iaForQuick, ia0);
             const double sGm = metricScore(gmForQuick, gm0);
             quickPercent = 100.0 * 0.5 * (sIa + sGm);
+            qInfo("Health Quick: Ia_meas=%.6f mA, Ia_ref=%.6f mA, sIa=%.3f, gm_meas=%.6f mA/V, gm_ref=%.6f mA/V, sGm=%.3f, quickPercent=%.1f%%",
+                  iaForQuick,
+                  ia0,
+                  sIa,
+                  gmForQuick,
+                  gm0,
+                  sGm,
+                  quickPercent);
         }
     }
 
@@ -1358,6 +1545,11 @@ void ValveWorkbench::finalizeHealthRun()
 
                 if (haveIaCorner && haveIaRef && iaRefEff > 0.0) {
                     const double sIa = metricScore(iaCornerEff, iaRefEff);
+                    qInfo("Health Full A corner %d: Ia_meas_eff=%.6f mA, Ia_ref_eff=%.6f mA, sIa=%.3f",
+                          corner,
+                          iaCornerEff,
+                          iaRefEff,
+                          sIa);
                     sumScores += sIa;
                     ++scoreCount;
                 }
@@ -1366,6 +1558,117 @@ void ValveWorkbench::finalizeHealthRun()
 
         if (scoreCount > 0) {
             fullPercent = 100.0 * (sumScores / static_cast<double>(scoreCount));
+        }
+    }
+
+    // --- Optional reference-tube-based scores (Quick/Full) ---
+    if (!datasheetJson.isEmpty()) {
+        const QJsonObject healthRefObj = datasheetJson.value("healthReference").toObject();
+        const QJsonObject centerObj    = healthRefObj.value("center").toObject();
+
+        // Centre Ia/gm for Triode A reference tube
+        const double iaRefA_centre = centerObj.value("iaRefA_mA").toDouble(0.0);
+        const double gmRefA_centre = centerObj.value("gmRefA_mA_V").toDouble(0.0);
+
+        if (healthResults.size() > 0) {
+            const HealthResult &r0 = healthResults.at(0);
+            if (r0.valid && iaRefA_centre > 0.0 && gmRefA_centre > 0.0) {
+                const double iaForQuick = haveIaQuickEffective ? iaQuickEffective : r0.ia;
+                const double gmForQuick = haveGmQuickEffective ? gmQuickEffective : r0.gm;
+                const double sIaRef = metricScore(iaForQuick, iaRefA_centre);
+                const double sGmRef = metricScore(gmForQuick, gmRefA_centre);
+                quickPercentRef = 100.0 * 0.5 * (sIaRef + sGmRef);
+            }
+        }
+
+        // For Full Health, also compute per-corner Ia-only reference scores
+        if (healthMode == HEALTH_FULL) {
+            const QJsonArray cornersArr = healthRefObj.value("corners").toArray();
+            const int clusterSize = 3;
+
+            if (cornersArr.size() >= 4 && healthPoints.size() >= 1 + 4 * clusterSize) {
+                double sumRefScores = 0.0;
+                int    refCount     = 0;
+
+                for (int corner = 0; corner < 4; ++corner) {
+                    const QJsonObject cObj = cornersArr.at(corner).toObject();
+                    const double iaRefCornerA = cObj.value("iaRefA_mA").toDouble(0.0);
+                    if (!(iaRefCornerA > 0.0)) {
+                        continue;
+                    }
+
+                    const int baseIdx = 1 + corner * clusterSize;
+                    QVector<double> iaCorner;
+                    iaCorner.reserve(clusterSize);
+
+                    for (int k = 0; k < clusterSize; ++k) {
+                        const int idx = baseIdx + k;
+                        if (idx >= healthResults.size()) {
+                            break;
+                        }
+                        const HealthResult &hr = healthResults.at(idx);
+                        if (hr.valid && hr.ia > 0.0) {
+                            iaCorner.append(hr.ia);
+                        }
+                    }
+
+                    if (iaCorner.isEmpty()) {
+                        continue;
+                    }
+
+                    double iaCornerEff = 0.0;
+                    if (!robust3xCluster(iaCorner, outlierTol, iaCornerEff) || !(iaCornerEff > 0.0)) {
+                        continue;
+                    }
+
+                    const double sIaRefCorner = metricScore(iaCornerEff, iaRefCornerA);
+                    sumRefScores += sIaRefCorner;
+                    ++refCount;
+                }
+
+                if (refCount > 0) {
+                    const double fullRefFromCorners = 100.0 * (sumRefScores / static_cast<double>(refCount));
+                    // Combine centre (Quick) and corners equally for the
+                    // reference-tube Full score, mirroring the datasheet path.
+                    if (quickPercentRef > 0.0) {
+                        fullPercentRef = 0.5 * quickPercentRef + 0.5 * fullRefFromCorners;
+                    } else {
+                        fullPercentRef = fullRefFromCorners;
+                    }
+                }
+            }
+        }
+    }
+
+    // Update the per-button health labels under Quick/Full Health using a
+    // compact format so they fit alongside the existing controls.
+    //
+    //  - Quick label (Q): shows the datasheet-based Quick score only.
+    //  - Full label  (F): shows the reference-tube-based Full score when
+    //    available, otherwise falls back to the datasheet-based Full score.
+    if (ui) {
+        if (healthMode == HEALTH_QUICK || healthMode == HEALTH_FULL) {
+            if (ui->quickHealthDsLabel) {
+                ui->quickHealthDsLabel->setText(
+                    tr("Q %1").arg(QString::number(quickPercent, 'f', 0)));
+            }
+        }
+        if (healthMode == HEALTH_FULL) {
+            if (ui->fullHealthDsLabel) {
+                double labelValue = (fullPercentRef > 0.0) ? fullPercentRef : fullPercent;
+                ui->fullHealthDsLabel->setText(
+                    tr("F %1").arg(QString::number(labelValue, 'f', 0)));
+            }
+        }
+
+        // Hide the separate Ref labels to avoid consuming horizontal space;
+        // we now encode both DS and Ref scores in the single compact label
+        // per test.
+        if (ui->quickHealthRefLabel) {
+            ui->quickHealthRefLabel->setVisible(false);
+        }
+        if (ui->fullHealthRefLabel) {
+            ui->fullHealthRefLabel->setVisible(false);
         }
     }
 
@@ -1434,9 +1737,18 @@ void ValveWorkbench::finalizeHealthRun()
                     setEdit(ui->triodeA_rp_pct, QString());
                 }
 
+                // Capture Triode A's centre Ia offset versus the chosen
+                // reference centre so that Full Health 4-corner scores for A
+                // can use a scaled Ia reference at each corner.
+                // (Centre-based scaling for corners is currently disabled;
+                //  keep iaScaleAForCorners at its default of 1.0.)
+
                 // Triode B measured values for double triodes with valid B data
                 if (isDoubleTriode && triodeMeasurementSecondary &&
                     measurementHasValidSamples(triodeMeasurementSecondary)) {
+                    qInfo("Health TriodeB: secondary present at finalizeHealthRun - sweeps=%d, testType=%d",
+                          triodeMeasurementSecondary->count(),
+                          triodeMeasurementSecondary->getTestType());
                     double iaB = 0.0;
                     double gmB = 0.0;
                     double rpB = 0.0;
@@ -1454,6 +1766,12 @@ void ValveWorkbench::finalizeHealthRun()
                                                    gmB,
                                                    rpB);
                     if (okB) {
+                        qInfo("Health TriodeB: centre OK (Va=%.3f, Vg=%.3f) Ia=%.6f mA, gm=%.6f mA/V, rp=%.1f ohms",
+                              centerPoint.va,
+                              centerPoint.vg,
+                              iaB,
+                              gmB,
+                              rpB);
                         double iaBDisplay = iaB;
                         double gmBDisplay = gmB;
 
@@ -1527,7 +1845,17 @@ void ValveWorkbench::finalizeHealthRun()
                             setEdit(ui->triodeB_mu_pct, QString());
                             setEdit(ui->triodeB_rp_pct, QString());
                         }
+
+                        // Capture Triode B's centre Ia offset versus the same
+                        // reference centre so that its Full Health 4-corner
+                        // scores are judged against a scaled Ia reference at
+                        // each corner.
+                        // (Centre-based scaling for corners is currently disabled;
+                        //  keep iaScaleBForCorners at its default of 1.0.)
                     } else {
+                        qInfo("Health TriodeB: computeIaGmAt FAILED at centre point (Va=%.3f, Vg=%.3f)",
+                              centerPoint.va,
+                              centerPoint.vg);
                         setEdit(ui->triodeB_Ia_measured, QString());
                         setEdit(ui->triodeB_gm_measured, QString());
                         setEdit(ui->triodeB_mu_measured, QString());
@@ -1539,6 +1867,9 @@ void ValveWorkbench::finalizeHealthRun()
                     }
                 } else {
                     // Not a double triode or no Triode B data: clear B health display
+                    qInfo("Health TriodeB: no valid secondary at finalizeHealthRun (isDoubleTriode=%d, secondaryPtr=%p)",
+                          isDoubleTriode ? 1 : 0,
+                          static_cast<void *>(triodeMeasurementSecondary));
                     setEdit(ui->triodeB_Ia_measured, QString());
                     setEdit(ui->triodeB_gm_measured, QString());
                     setEdit(ui->triodeB_mu_measured, QString());
@@ -1572,6 +1903,7 @@ void ValveWorkbench::finalizeHealthRun()
                 if (idx >= healthResults.size()) {
                     break;
                 }
+
                 const HealthResult &hr = healthResults.at(idx);
                 if (hr.valid && hr.ia > 0.0) {
                     iaCorner.append(hr.ia);
@@ -1642,14 +1974,20 @@ void ValveWorkbench::finalizeHealthRun()
                             break;
                         }
 
+                        const HealthPoint &hp = healthPoints.at(idx);
                         double iaB = 0.0;
                         double gmB = 0.0;
                         double rpB = 0.0;
                         if (!computeIaGmAt(triodeMeasurementSecondary,
-                                           healthPoints.at(idx),
+                                           hp,
                                            iaB,
                                            gmB,
                                            rpB)) {
+                            qInfo("Health TriodeB: corner %d idx=%d computeIaGmAt FAILED (Va=%.3f, Vg=%.3f)",
+                                  cornerIdx,
+                                  idx,
+                                  hp.va,
+                                  hp.vg);
                             continue;
                         }
                         if (iaB > 0.0) {
@@ -1657,9 +1995,19 @@ void ValveWorkbench::finalizeHealthRun()
                         }
 
                         double iaRef = ia0;
-                        if (haveHealthSurface && idx < iaRefSurface.size()) {
-                            if (iaRefSurface.at(idx) > 0.0) iaRef = iaRefSurface.at(idx);
+                        if (haveHealthSurface) {
+                            // Prefer Triode B's own reference surface when available.
+                            if (idx < iaRefSurfaceB.size() && iaRefSurfaceB.at(idx) > 0.0) {
+                                iaRef = iaRefSurfaceB.at(idx);
+                            } else if (idx < iaRefSurface.size() && iaRefSurface.at(idx) > 0.0) {
+                                // Fall back to the shared/triode-A reference surface.
+                                iaRef = iaRefSurface.at(idx);
+                            }
                         }
+                        // For Triode B, compare Ia directly against the
+                        // per-triode reference surface at each corner,
+                        // falling back to the shared reference or datasheet
+                        // Ia0 when a dedicated B reference is not available.
                         iaRefCorner.append(iaRef);
                     }
 
@@ -1673,6 +2021,11 @@ void ValveWorkbench::finalizeHealthRun()
                     }
 
                     const double sIa = metricScore(iaBEff, iaRefEff);
+                    qInfo("Health Full B corner %d: Ia_meas_eff=%.6f mA, Ia_ref_eff=%.6f mA, sIa=%.3f",
+                          cornerIdx,
+                          iaBEff,
+                          iaRefEff,
+                          sIa);
                     const double pct = 100.0 * sIa;
                     if (!std::isfinite(pct)) {
                         return QString();
@@ -1732,6 +2085,335 @@ void ValveWorkbench::finalizeHealthRun()
     if (ui && ui->fullHealthButton) {
         ui->fullHealthButton->setToolTip(msg);
     }
+}
+
+bool ValveWorkbench::captureHealthReferenceFromLastRun()
+{
+    const int clusterSize = 3;
+    const int requiredPoints = 1 + 4 * clusterSize;
+
+    if (deviceType != TRIODE) {
+        QMessageBox::warning(this,
+                             tr("Save Reference Tube"),
+                             tr("Reference tubes are currently supported for triode devices only."));
+        return false;
+    }
+    if (datasheetJson.isEmpty()) {
+        QMessageBox::warning(this,
+                             tr("Save Reference Tube"),
+                             tr("No datasheet block is loaded. Load a template first."));
+        return false;
+    }
+    if (healthResults.size() < requiredPoints || healthPoints.size() < requiredPoints) {
+        QMessageBox::warning(this,
+                             tr("Save Reference Tube"),
+                             tr("Full Health results are not available. Run a Full Health test first."));
+        return false;
+    }
+
+    auto robust3xCluster = [](const QVector<double> &values, double outlierTol, double &effective) -> bool {
+        if (values.isEmpty()) {
+            return false;
+        }
+
+        QVector<double> sorted = values;
+        std::sort(sorted.begin(), sorted.end());
+
+        double median = 0.0;
+        if (sorted.size() == 1) {
+            median = sorted[0];
+        } else if (sorted.size() == 2) {
+            median = 0.5 * (sorted[0] + sorted[1]);
+        } else {
+            median = sorted[1];
+        }
+
+        if (!(median > 0.0)) {
+            return false;
+        }
+
+        double sum = 0.0;
+        int count = 0;
+        for (double v : values) {
+            if (!(v > 0.0)) {
+                continue;
+            }
+            const double ratio = v / median;
+            const double dev = std::fabs(ratio - 1.0);
+            if (dev > outlierTol) {
+                continue;
+            }
+            sum += v;
+            ++count;
+        }
+
+        if (count > 0) {
+            effective = sum / static_cast<double>(count);
+        } else {
+            effective = median;
+        }
+
+        return (effective > 0.0);
+    };
+
+    const double outlierTol = 0.40;
+
+    // Capture centre reference metrics for Triode A/B so Quick/Full Health
+    // can compute scores versus this specific reference tube in addition to
+    // the datasheet operating point.
+    HealthPoint centerPoint;
+    bool haveCenterPoint = false;
+    if (!healthPoints.isEmpty()) {
+        centerPoint = healthPoints.first();
+        haveCenterPoint = true;
+    }
+
+    double iaCentreA = 0.0;
+    double gmCentreA = 0.0;
+    bool haveCentreA = false;
+    if (!healthResults.isEmpty()) {
+        const HealthResult &hr0 = healthResults.first();
+        if (hr0.valid && hr0.ia > 0.0 && hr0.gm > 0.0) {
+            iaCentreA = hr0.ia;
+            gmCentreA = hr0.gm;
+            haveCentreA = true;
+        }
+    }
+
+    double iaCentreB = 0.0;
+    double gmCentreB = 0.0;
+    bool haveCentreB = false;
+    if (isDoubleTriode && triodeMeasurementSecondary &&
+        measurementHasValidSamples(triodeMeasurementSecondary) &&
+        haveCenterPoint) {
+        double rpB = 0.0;
+        if (computeIaGmAt(triodeMeasurementSecondary,
+                          centerPoint,
+                          iaCentreB,
+                          gmCentreB,
+                          rpB) &&
+            iaCentreB > 0.0 && gmCentreB > 0.0) {
+            haveCentreB = true;
+        }
+    }
+
+    QJsonArray cornersArr;
+    for (int corner = 0; corner < 4; ++corner) {
+        const int baseIdx = 1 + corner * clusterSize;
+        if (baseIdx < 0 || baseIdx >= healthResults.size()) {
+            continue;
+        }
+
+        // Triode A reference Ia cluster from HealthResult data.
+        QVector<double> iaValuesA;
+        iaValuesA.reserve(clusterSize);
+        for (int k = 0; k < clusterSize; ++k) {
+            const int idx = baseIdx + k;
+            if (idx >= healthResults.size()) {
+                break;
+            }
+            const HealthResult &hr = healthResults.at(idx);
+            if (hr.valid && hr.ia > 0.0) {
+                iaValuesA.append(hr.ia);
+            }
+        }
+        if (iaValuesA.isEmpty()) {
+            continue;
+        }
+
+        double iaEffA = 0.0;
+        if (!robust3xCluster(iaValuesA, outlierTol, iaEffA)) {
+            continue;
+        }
+
+        // Optional Triode B reference Ia cluster using the secondary
+        // measurement at the same HealthPoints when available.
+        double iaEffB = 0.0;
+        bool haveIaB = false;
+        if (isDoubleTriode && triodeMeasurementSecondary &&
+            measurementHasValidSamples(triodeMeasurementSecondary)) {
+
+            QVector<double> iaValuesB;
+            iaValuesB.reserve(clusterSize);
+            for (int k = 0; k < clusterSize; ++k) {
+                const int idx = baseIdx + k;
+                if (idx >= healthPoints.size()) {
+                    break;
+                }
+                const HealthPoint &hp = healthPoints.at(idx);
+
+                double iaB = 0.0;
+                double gmB = 0.0;
+                double rpB = 0.0;
+                if (computeIaGmAt(triodeMeasurementSecondary,
+                                   hp,
+                                   iaB,
+                                   gmB,
+                                   rpB) && iaB > 0.0) {
+                    iaValuesB.append(iaB);
+                }
+            }
+
+            if (!iaValuesB.isEmpty() && robust3xCluster(iaValuesB, outlierTol, iaEffB) && iaEffB > 0.0) {
+                haveIaB = true;
+            }
+        }
+
+        const HealthResult &hr0 = healthResults.at(baseIdx);
+
+        QJsonObject cornerObj;
+        cornerObj.insert(QStringLiteral("va"), hr0.va);
+        cornerObj.insert(QStringLiteral("vg"), hr0.vg);
+        // Legacy single reference current (Triode A).
+        cornerObj.insert(QStringLiteral("iaRef_mA"), iaEffA);
+        // Per-triode reference for Triode A.
+        cornerObj.insert(QStringLiteral("iaRefA_mA"), iaEffA);
+        // Per-triode reference for Triode B when a valid B cluster exists.
+        if (haveIaB) {
+            cornerObj.insert(QStringLiteral("iaRefB_mA"), iaEffB);
+        }
+        cornersArr.append(cornerObj);
+    }
+
+    if (cornersArr.size() != 4) {
+        QMessageBox::warning(this,
+                             tr("Save Reference Tube"),
+                             tr("Could not derive four valid corner clusters from the last Full Health run."));
+        return false;
+    }
+
+    // Merge the newly derived reference values with any existing
+    // datasheet.healthReference using a cumulative average so repeated
+    // "Save as Reference Tube" operations refine the stored reference
+    // instead of overwriting it.
+    QJsonObject healthRefObj = datasheetJson.value(QStringLiteral("healthReference")).toObject();
+
+    const QJsonArray existingCorners = healthRefObj.value(QStringLiteral("corners")).toArray();
+    const QJsonObject existingCenter = healthRefObj.value(QStringLiteral("center")).toObject();
+
+    int prevCount = healthRefObj.value(QStringLiteral("sampleCount")).toInt(0);
+    if (prevCount <= 0) {
+        // If we already had some reference data but no explicit sampleCount,
+        // treat it as a single prior sample for backwards compatibility.
+        if (existingCorners.size() == 4 || !existingCenter.isEmpty()) {
+            prevCount = 1;
+        }
+    }
+
+    auto accumulateScalar = [prevCount](double oldVal, double newVal) -> double {
+        if (!(newVal > 0.0)) {
+            return oldVal;
+        }
+        if (!(oldVal > 0.0) || prevCount <= 0) {
+            return newVal;
+        }
+        return (oldVal * static_cast<double>(prevCount) + newVal) /
+               static_cast<double>(prevCount + 1);
+    };
+
+    // --- Centre accumulation ---
+    if (haveCenterPoint && (haveCentreA || haveCentreB)) {
+        QJsonObject centerMerged;
+        centerMerged.insert(QStringLiteral("va"), centerPoint.va);
+        centerMerged.insert(QStringLiteral("vg"), centerPoint.vg);
+
+        if (haveCentreA || !existingCenter.isEmpty()) {
+            const double oldIaA = existingCenter.value(QStringLiteral("iaRefA_mA")).toDouble(0.0);
+            const double oldGmA = existingCenter.value(QStringLiteral("gmRefA_mA_V")).toDouble(0.0);
+            const double iaA = accumulateScalar(oldIaA, iaCentreA);
+            const double gmA = accumulateScalar(oldGmA, gmCentreA);
+            if (iaA > 0.0) centerMerged.insert(QStringLiteral("iaRefA_mA"), iaA);
+            if (gmA > 0.0) centerMerged.insert(QStringLiteral("gmRefA_mA_V"), gmA);
+        }
+
+        if (haveCentreB || !existingCenter.isEmpty()) {
+            const double oldIaB = existingCenter.value(QStringLiteral("iaRefB_mA")).toDouble(0.0);
+            const double oldGmB = existingCenter.value(QStringLiteral("gmRefB_mA_V")).toDouble(0.0);
+            const double iaB = accumulateScalar(oldIaB, iaCentreB);
+            const double gmB = accumulateScalar(oldGmB, gmCentreB);
+            if (iaB > 0.0) centerMerged.insert(QStringLiteral("iaRefB_mA"), iaB);
+            if (gmB > 0.0) centerMerged.insert(QStringLiteral("gmRefB_mA_V"), gmB);
+        }
+
+        healthRefObj.insert(QStringLiteral("center"), centerMerged);
+    }
+
+    // --- Corner accumulation ---
+    QJsonArray mergedCorners;
+
+    for (int corner = 0; corner < 4; ++corner) {
+        const QJsonObject newCorner = cornersArr.at(corner).toObject();
+        const QJsonObject oldCorner =
+            (existingCorners.size() == 4) ? existingCorners.at(corner).toObject() : QJsonObject();
+
+        QJsonObject merged;
+        merged.insert(QStringLiteral("va"), newCorner.value(QStringLiteral("va"))); // latest Va
+        merged.insert(QStringLiteral("vg"), newCorner.value(QStringLiteral("vg"))); // latest Vg
+
+        const double newIaALegacy = newCorner.value(QStringLiteral("iaRef_mA")).toDouble(0.0);
+        const double newIaA       = newCorner.value(QStringLiteral("iaRefA_mA")).toDouble(newIaALegacy);
+        const double oldIaALegacy = oldCorner.value(QStringLiteral("iaRef_mA")).toDouble(0.0);
+        const double oldIaA       = oldCorner.value(QStringLiteral("iaRefA_mA")).toDouble(oldIaALegacy);
+
+        const double iaANewAccum = accumulateScalar(oldIaA, newIaA);
+        if (iaANewAccum > 0.0) {
+            merged.insert(QStringLiteral("iaRef_mA"), iaANewAccum);
+            merged.insert(QStringLiteral("iaRefA_mA"), iaANewAccum);
+        }
+
+        const double newIaB = newCorner.value(QStringLiteral("iaRefB_mA")).toDouble(0.0);
+        const double oldIaB = oldCorner.value(QStringLiteral("iaRefB_mA")).toDouble(0.0);
+        const double iaBAccum = accumulateScalar(oldIaB, newIaB);
+        if (iaBAccum > 0.0) {
+            merged.insert(QStringLiteral("iaRefB_mA"), iaBAccum);
+        }
+
+        mergedCorners.append(merged);
+    }
+
+    healthRefObj.insert(QStringLiteral("version"), 1);
+    healthRefObj.insert(QStringLiteral("sampleCount"), prevCount + 1);
+    healthRefObj.insert(QStringLiteral("corners"), mergedCorners);
+    datasheetJson.insert(QStringLiteral("healthReference"), healthRefObj);
+
+    return true;
+}
+
+void ValveWorkbench::on_actionSave_as_Reference_Tube_triggered()
+{
+    if (!captureHealthReferenceFromLastRun()) {
+        return;
+    }
+
+    updateDatasheetDisplay();
+
+    on_pushButton_4_clicked();
+}
+
+void ValveWorkbench::on_actionReset_Reference_Tube_triggered()
+{
+    if (datasheetJson.isEmpty()) {
+        QMessageBox::warning(this,
+                             tr("Reset Reference Tube"),
+                             tr("No datasheet block is loaded. Load a template first."));
+        return;
+    }
+
+    // Remove the stored healthReference block (including any sampleCount) so
+    // future Health runs and saves start from a clean slate.
+    datasheetJson.remove(QStringLiteral("healthReference"));
+
+    // Refresh the datasheet and Health Reference columns so the UI no longer
+    // shows any stale reference-tube metrics.
+    updateDatasheetDisplay();
+
+    if (ui && ui->statusbar) {
+        ui->statusbar->showMessage(tr("Reference tube calibration has been reset for this template."), 8000);
+    }
+
+    // Persist the cleared reference into the template using the existing
+    // "Save Template" handler.
+    on_pushButton_4_clicked();
 }
 
 void ValveWorkbench::on_quickHealthButton_clicked()
@@ -1866,9 +2548,15 @@ void ValveWorkbench::on_pushButton_3_clicked()
     // templates and exported devices so future Designer features can consume it.
     datasheetJson = obj.value("datasheet").toObject();
 
-    // Name
+    // Name: prefer the filename base (what the user actually picked) and
+    // fall back to the JSON 'name' if no usable base name is available.
     if (ui && ui->deviceName) {
-        ui->deviceName->setText(obj.value("name").toString(QFileInfo(fileName).baseName()));
+        const QString baseName = QFileInfo(fileName).baseName().trimmed();
+        const QString jsonName = obj.value("name").toString().trimmed();
+        const QString chosenName = !baseName.isEmpty() ? baseName
+                                                       : (!jsonName.isEmpty() ? jsonName
+                                                                              : QStringLiteral("Device"));
+        ui->deviceName->setText(chosenName);
     }
 
     // Device type
@@ -5170,7 +5858,9 @@ static bool pickOperatingPointFromAnode(Measurement *measurement,
                                         int &sampleIdx,
                                         double &vaOp,
                                         double &vg1Op,
-                                        double &vg2Op)
+                                        double &vg2Op,
+                                        double vaTarget,
+                                        double vg1Target)
 {
     if (!measurement) return false;
 
@@ -5179,32 +5869,65 @@ static bool pickOperatingPointFromAnode(Measurement *measurement,
         return false;
     }
 
-    const double iaTarget = std::max(0.0, measurement->getIaMax() * 0.5);
-    double bestDiff = std::numeric_limits<double>::infinity();
+    const bool haveTarget = std::isfinite(vaTarget) && std::isfinite(vg1Target);
 
     sweepIdx  = sweepCount / 2;
     sampleIdx = -1;
     Sweep *sweep = nullptr;
 
-    for (int sw = 0; sw < sweepCount; ++sw) {
-        Sweep *s = measurement->at(sw);
-        if (!s || s->count() < 1) {
-            continue;
-        }
-        const int nSamples = s->count();
-        for (int sa = 0; sa < nSamples; ++sa) {
-            Sample *sample = s->at(sa);
-            if (!sample) continue;
-            const double ia = sample->getIa();
-            if (ia <= 0.0) {
-                continue; // skip non-conducting points
+    if (haveTarget) {
+        double bestScore = std::numeric_limits<double>::infinity();
+
+        for (int sw = 0; sw < sweepCount; ++sw) {
+            Sweep *s = measurement->at(sw);
+            if (!s || s->count() < 1) {
+                continue;
             }
-            const double diff = std::fabs(ia - iaTarget);
-            if (diff < bestDiff) {
-                bestDiff = diff;
-                sweepIdx = sw;
-                sampleIdx = sa;
-                sweep = s;
+            const int nSamples = s->count();
+            for (int sa = 0; sa < nSamples; ++sa) {
+                Sample *sample = s->at(sa);
+                if (!sample) continue;
+                const double ia = sample->getIa();
+                if (ia <= 0.0) {
+                    continue; // skip non-conducting points
+                }
+                const double va = sample->getVa();
+                const double vg = sample->getVg1();
+                const double dVa = va - vaTarget;
+                const double dVg = vg - vg1Target;
+                const double score = dVg * dVg + 0.25 * dVa * dVa;
+                if (score < bestScore) {
+                    bestScore = score;
+                    sweepIdx  = sw;
+                    sampleIdx = sa;
+                    sweep     = s;
+                }
+            }
+        }
+    } else {
+        const double iaTarget = std::max(0.0, measurement->getIaMax() * 0.5);
+        double bestDiff = std::numeric_limits<double>::infinity();
+
+        for (int sw = 0; sw < sweepCount; ++sw) {
+            Sweep *s = measurement->at(sw);
+            if (!s || s->count() < 1) {
+                continue;
+            }
+            const int nSamples = s->count();
+            for (int sa = 0; sa < nSamples; ++sa) {
+                Sample *sample = s->at(sa);
+                if (!sample) continue;
+                const double ia = sample->getIa();
+                if (ia <= 0.0) {
+                    continue; // skip non-conducting points
+                }
+                const double diff = std::fabs(ia - iaTarget);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    sweepIdx  = sw;
+                    sampleIdx = sa;
+                    sweep     = s;
+                }
             }
         }
     }
@@ -5401,6 +6124,17 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
     int   opSampleIdx = -1;
     double vaOp = 0.0, vg1Op = 0.0, vg2Op = 0.0;
 
+    // Prefer the datasheet reference operating point when available so that
+    // small-signal gm/ra/mu are anchored to the same Va/Vg used for
+    // datasheet comparisons and Health tests.
+    double va0 = 0.0;
+    double vg0 = 0.0;
+    double ia0 = 0.0;
+    double gm0 = 0.0;
+    double mu0 = 0.0;
+    double rp0 = 0.0;
+    const bool haveDatasheetRef = ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0);
+
     Measurement *anodeMeasurement = measurement;
     if (testType != ANODE_CHARACTERISTICS) {
         // If current measurement is not anode characteristics, try to find one
@@ -5413,7 +6147,14 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
 
     if (!anodeMeasurement ||
         anodeMeasurement->getTestType() != ANODE_CHARACTERISTICS ||
-        !pickOperatingPointFromAnode(anodeMeasurement, opSweepIdx, opSampleIdx, vaOp, vg1Op, vg2Op)) {
+        !pickOperatingPointFromAnode(anodeMeasurement,
+                                     opSweepIdx,
+                                     opSampleIdx,
+                                     vaOp,
+                                     vg1Op,
+                                     vg2Op,
+                                     haveDatasheetRef ? va0 : std::numeric_limits<double>::quiet_NaN(),
+                                     haveDatasheetRef ? vg0 : std::numeric_limits<double>::quiet_NaN())) {
         // Fallback: original central sweep/sample heuristic on the provided measurement.
         opSweepIdx  = sweepCount / 2;
         Sweep *s    = measurement->at(opSweepIdx);
@@ -6060,30 +6801,80 @@ void ValveWorkbench::testFinished()
         }
     }
 
-    // For double triode measurements, create a Triode B clone directly from
-    // the analyser result so Analyser can display both sections (A and B)
-    // together when Show Measurement is enabled.
+    // For double triode measurements, build a Triode B clone from the latest
+    // analyser result. During Health runs we use the clone from the *first*
+    // (centre) health point for Triode B statistics, and create additional
+    // temporary clones for later points purely for plotting so that blue
+    // curves accumulate in the same way as the black Triode A curves.
     if (isDoubleTriode && currentMeasurement && measurementHasTriodeBData(currentMeasurement)) {
-        // Clean up any previous secondary measurement created in a prior run
-        if (triodeMeasurementSecondary != nullptr) {
-            deleteMeasurementClone(triodeMeasurementSecondary);
-            triodeMeasurementSecondary = nullptr;
-        }
-
         Measurement *clone = createTriodeBMeasurementClone(currentMeasurement);
         if (clone != nullptr && measurementHasValidSamples(clone)) {
-            triodeMeasurementSecondary = clone;
-            triodeMeasurementSecondary->setSampleColor(QColor::fromRgb(0, 0, 255));
-            triodeMeasurementSecondary->setSmoothPlotting(preferencesDialog.smoothCurves());
-
-            // Plot Triode B without axes so we don't redraw axes twice.
-            measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
-            if (measuredCurvesSecondary) {
-                plot.add(measuredCurvesSecondary);
+            // When a Health run is active, always overlay this clone's curves
+            // so that Triode B sweeps from every health point are visible.
+            if (healthRunActive) {
+                clone->setSampleColor(QColor::fromRgb(0, 0, 255));
+                clone->setSmoothPlotting(preferencesDialog.smoothCurves());
+                QGraphicsItemGroup *overlayGroupB = clone->updatePlotWithoutAxes(&plot);
+                if (overlayGroupB) {
+                    plot.add(overlayGroupB);
+                }
             }
-        } else if (clone) {
-            // Clone had no valid samples; discard it.
+
+            // Decide whether this clone should be kept for Triode B health
+            // calculations / general use, or discarded after plotting.
+            bool adoptForMetrics = false;
+            if (!healthRunActive) {
+                // Normal (non-Health) double-triode runs always adopt the
+                // latest clone for Triode B overlays and analysis.
+                adoptForMetrics = true;
+            } else if (healthRunIndex == 0) {
+                // For Quick/Full Health, only the *first* health point (the
+                // central operating point) should define the Triode B Health
+                // statistics so that later corner sweeps do not change the
+                // measured Ia/gm once the run is complete.
+                adoptForMetrics = true;
+            }
+
+            if (adoptForMetrics) {
+                if (triodeMeasurementSecondary != nullptr) {
+                    deleteMeasurementClone(triodeMeasurementSecondary);
+                    triodeMeasurementSecondary = nullptr;
+                }
+
+                triodeMeasurementSecondary = clone;
+                qInfo("Health TriodeB: adopted secondary clone in testFinished - sweeps=%d, testType=%d, healthRunActive=%d, healthRunIndex=%d",
+                      triodeMeasurementSecondary->count(),
+                      triodeMeasurementSecondary->getTestType(),
+                      healthRunActive ? 1 : 0,
+                      healthRunIndex);
+                triodeMeasurementSecondary->setSampleColor(QColor::fromRgb(0, 0, 255));
+                triodeMeasurementSecondary->setSmoothPlotting(preferencesDialog.smoothCurves());
+
+                // Ownership of clone has been transferred.
+                clone = nullptr;
+            }
+        }
+
+        // Discard any temporary clone that was not adopted for metrics.
+        if (clone) {
             deleteMeasurementClone(clone);
+        }
+    }
+
+    // Outside of Health runs, keep a single Triode B overlay in sync with the
+    // current secondary clone. During Quick/Full Health we instead create
+    // per-sweep temporary clones above so blue curves accumulate just like the
+    // primary black curves.
+    if (!healthRunActive && isDoubleTriode && triodeMeasurementSecondary &&
+        measurementHasValidSamples(triodeMeasurementSecondary)) {
+        if (measuredCurvesSecondary != nullptr) {
+            plot.remove(measuredCurvesSecondary);
+            measuredCurvesSecondary = nullptr;
+        }
+
+        measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
+        if (measuredCurvesSecondary) {
+            plot.add(measuredCurvesSecondary);
         }
     }
     ui->measureCheck->setChecked(true);

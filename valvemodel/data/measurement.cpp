@@ -674,8 +674,22 @@ void Measurement::transferAxes(Plot *plot)
         if (xStop > 0.0) xStop = 0.0;
     }
 
-    // Determine a safe Y-axis upper bound from observed data with fallback to iaMax
-    double yStop = (maxIaObs > 0.0) ? (maxIaObs * 1.05) : ((iaMax > 0.0) ? iaMax : 0.01);
+    // Determine a safe Y-axis upper bound from observed data, but honour the
+    // configured iaMax so the plot can show most of the tube's operating
+    // range instead of shrinking to just the current sweep's Ia band.
+    double yStop = 0.0;
+    if (iaMax > 0.0) {
+        yStop = iaMax;
+    }
+    if (maxIaObs > 0.0) {
+        const double fromData = maxIaObs * 1.05;
+        if (fromData > yStop) {
+            yStop = fromData;
+        }
+    }
+    if (!(yStop > 0.0)) {
+        yStop = 0.01;
+    }
 
     double vg1Interval = interval(std::abs(xStop - xStart));
     double iaInterval = interval(yStop);

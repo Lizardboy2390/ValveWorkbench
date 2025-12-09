@@ -1,0 +1,104 @@
+{
+    "analyserDefaults": {
+        "anode": {
+            "start": 0,
+            "step": 6.666666666666667,
+            "stop": 300
+        },
+        "doubleTriode": true,
+        "grid": {
+            "start": 0,
+            "step": -0.5,
+            "stop": 5
+        },
+        "limits": {
+            "iaMax": 5,
+            "pMax": 1.25
+        },
+        "screen": {
+            "start": 940,
+            "step": 1e-323,
+            "stop": 1
+        },
+        "testType": 0,
+        "tests": {
+            "anode": {
+                "anode": {
+                    "start": 0,
+                    "step": 6.666666666666667,
+                    "stop": 300
+                },
+                "grid": {
+                    "start": 0,
+                    "step": -0.5,
+                    "stop": 5
+                },
+                "limits": {
+                    "iaMax": 5,
+                    "pMax": 1.25
+                },
+                "screen": {
+                    "start": 940,
+                    "step": 1e-323,
+                    "stop": 1
+                },
+                "testType": 0
+            }
+        }
+    },
+    "datasheet": {
+        "healthReference": {
+            "center": {
+                "gmRefA_mA_V": 1.8378937333853829,
+                "gmRefB_mA_V": 2.2054724800626677,
+                "iaRefA_mA": 2.428981901122664,
+                "iaRefB_mA": 2.85405373381913,
+                "va": 250,
+                "vg": -1.5
+            },
+            "corners": [
+                {
+                    "iaRefA_mA": 0.5465209277525993,
+                    "iaRefB_mA": 1.8419779416846864,
+                    "iaRef_mA": 0.5465209277525993,
+                    "va": 200,
+                    "vg": -2
+                },
+                {
+                    "iaRefA_mA": 2.3075328060665297,
+                    "iaRefB_mA": 1.8824609733700643,
+                    "iaRef_mA": 2.3075328060665297,
+                    "va": 200,
+                    "vg": -1
+                },
+                {
+                    "iaRefA_mA": 2.5504309961787963,
+                    "iaRefB_mA": 2.428981901122664,
+                    "iaRef_mA": 2.5504309961787963,
+                    "va": 300,
+                    "vg": -2
+                },
+                {
+                    "iaRefA_mA": 3.643472851683995,
+                    "iaRefB_mA": 3.8661295259535717,
+                    "iaRef_mA": 3.643472851683995,
+                    "va": 300,
+                    "vg": -1
+                }
+            ],
+            "version": 1
+        },
+        "refPoints": [
+            {
+                "gm": 2200,
+                "ia": 2.3,
+                "mu": 97,
+                "rp": 50000,
+                "va": 250,
+                "vg": -1.5
+            }
+        ]
+    },
+    "deviceType": "TRIODE",
+    "name": "6N2P-EB"
+}

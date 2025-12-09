@@ -49,6 +49,8 @@ public:
     QAction *actionClose_Project;
     QAction *actionOptions;
     QAction *actionExport_Model;
+    QAction *actionSave_as_Reference_Tube;
+    QAction *actionReset_Reference_Tube;
     QAction *actionExport_to_Spice;
     QAction *actionExport_SE_Output_to_Spice;
     QWidget *centralwidget;
@@ -203,6 +205,13 @@ public:
     QPushButton *quickHealthButton;
     QPushButton *fullHealthButton;
     QSpacerItem *horizontalSpacer_18;
+    QHBoxLayout *horizontalLayout_healthScores;
+    QSpacerItem *horizontalSpacer_healthScoresLeft;
+    QLabel *quickHealthDsLabel;
+    QLabel *quickHealthRefLabel;
+    QLabel *fullHealthDsLabel;
+    QLabel *fullHealthRefLabel;
+    QSpacerItem *horizontalSpacer_healthScoresRight;
     QSpacerItem *verticalSpacer_6;
     QProgressBar *progressBar;
     QSpacerItem *verticalSpacer_11;
@@ -221,6 +230,8 @@ public:
     QLineEdit *datasheetSection;
     QLabel *datasheetVaLabel;
     QLineEdit *datasheetVa;
+    QLabel *datasheetRefCountLabel;
+    QLabel *datasheetRefCountValue;
     QLabel *datasheetVgLabel;
     QLineEdit *datasheetVg;
     QLabel *datasheetIaLabel;
@@ -337,6 +348,10 @@ public:
         actionOptions->setObjectName("actionOptions");
         actionExport_Model = new QAction(ValveWorkbench);
         actionExport_Model->setObjectName("actionExport_Model");
+        actionSave_as_Reference_Tube = new QAction(ValveWorkbench);
+        actionSave_as_Reference_Tube->setObjectName("actionSave_as_Reference_Tube");
+        actionReset_Reference_Tube = new QAction(ValveWorkbench);
+        actionReset_Reference_Tube->setObjectName("actionReset_Reference_Tube");
         actionExport_to_Spice = new QAction(ValveWorkbench);
         actionExport_to_Spice->setObjectName("actionExport_to_Spice");
         actionExport_SE_Output_to_Spice = new QAction(ValveWorkbench);
@@ -1271,6 +1286,39 @@ public:
 
         verticalLayout_6->addLayout(horizontalLayout_35);
 
+        horizontalLayout_healthScores = new QHBoxLayout();
+        horizontalLayout_healthScores->setObjectName("horizontalLayout_healthScores");
+        horizontalSpacer_healthScoresLeft = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_healthScores->addItem(horizontalSpacer_healthScoresLeft);
+
+        quickHealthDsLabel = new QLabel(layoutWidget_2);
+        quickHealthDsLabel->setObjectName("quickHealthDsLabel");
+
+        horizontalLayout_healthScores->addWidget(quickHealthDsLabel);
+
+        quickHealthRefLabel = new QLabel(layoutWidget_2);
+        quickHealthRefLabel->setObjectName("quickHealthRefLabel");
+
+        horizontalLayout_healthScores->addWidget(quickHealthRefLabel);
+
+        fullHealthDsLabel = new QLabel(layoutWidget_2);
+        fullHealthDsLabel->setObjectName("fullHealthDsLabel");
+
+        horizontalLayout_healthScores->addWidget(fullHealthDsLabel);
+
+        fullHealthRefLabel = new QLabel(layoutWidget_2);
+        fullHealthRefLabel->setObjectName("fullHealthRefLabel");
+
+        horizontalLayout_healthScores->addWidget(fullHealthRefLabel);
+
+        horizontalSpacer_healthScoresRight = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_healthScores->addItem(horizontalSpacer_healthScoresRight);
+
+
+        verticalLayout_6->addLayout(horizontalLayout_healthScores);
+
         verticalSpacer_6 = new QSpacerItem(40, 10, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
 
         verticalLayout_6->addItem(verticalSpacer_6);
@@ -1364,6 +1412,16 @@ public:
         datasheetVa->setReadOnly(false);
 
         gridLayout_datasheet->addWidget(datasheetVa, 2, 1, 1, 1);
+
+        datasheetRefCountLabel = new QLabel(datasheetGroupBox);
+        datasheetRefCountLabel->setObjectName("datasheetRefCountLabel");
+
+        gridLayout_datasheet->addWidget(datasheetRefCountLabel, 2, 2, 1, 1);
+
+        datasheetRefCountValue = new QLabel(datasheetGroupBox);
+        datasheetRefCountValue->setObjectName("datasheetRefCountValue");
+
+        gridLayout_datasheet->addWidget(datasheetRefCountValue, 2, 3, 1, 1);
 
         datasheetVgLabel = new QLabel(datasheetGroupBox);
         datasheetVgLabel->setObjectName("datasheetVgLabel");
@@ -1596,14 +1654,14 @@ public:
 
         triodeA_rp_measured = new QLineEdit(Triode_A_Box);
         triodeA_rp_measured->setObjectName("triodeA_rp_measured");
-        triodeA_rp_measured->setMaxLength(4);
+        triodeA_rp_measured->setMaxLength(5);
         triodeA_rp_measured->setReadOnly(true);
 
         gridLayout_TriodeAHealth->addWidget(triodeA_rp_measured, 2, 1, 1, 1);
 
         triodeA_rp_ref = new QLineEdit(Triode_A_Box);
         triodeA_rp_ref->setObjectName("triodeA_rp_ref");
-        triodeA_rp_ref->setMaxLength(4);
+        triodeA_rp_ref->setMaxLength(5);
         triodeA_rp_ref->setReadOnly(true);
 
         gridLayout_TriodeAHealth->addWidget(triodeA_rp_ref, 2, 2, 1, 1);
@@ -1787,14 +1845,14 @@ public:
 
         triodeB_rp_measured = new QLineEdit(Triode_B_Box);
         triodeB_rp_measured->setObjectName("triodeB_rp_measured");
-        triodeB_rp_measured->setMaxLength(4);
+        triodeB_rp_measured->setMaxLength(5);
         triodeB_rp_measured->setReadOnly(true);
 
         gridLayout_TriodeBHealth->addWidget(triodeB_rp_measured, 2, 1, 1, 1);
 
         triodeB_rp_ref = new QLineEdit(Triode_B_Box);
         triodeB_rp_ref->setObjectName("triodeB_rp_ref");
-        triodeB_rp_ref->setMaxLength(4);
+        triodeB_rp_ref->setMaxLength(5);
         triodeB_rp_ref->setReadOnly(true);
 
         gridLayout_TriodeBHealth->addWidget(triodeB_rp_ref, 2, 2, 1, 1);
@@ -1919,6 +1977,8 @@ public:
         menuFile->addAction(actionExport_Model);
         menuFile->addAction(actionExport_SE_Output_to_Spice);
         menuFile->addAction(actionExport_to_Spice);
+        menuFile->addAction(actionSave_as_Reference_Tube);
+        menuFile->addAction(actionReset_Reference_Tube);
 
         retranslateUi(ValveWorkbench);
 
@@ -1961,6 +2021,8 @@ public:
 #if QT_CONFIG(shortcut)
         actionExport_Model->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+E", nullptr));
 #endif // QT_CONFIG(shortcut)
+        actionSave_as_Reference_Tube->setText(QCoreApplication::translate("ValveWorkbench", "Save as Reference Tube...", nullptr));
+        actionReset_Reference_Tube->setText(QCoreApplication::translate("ValveWorkbench", "Reset Reference Tube", nullptr));
         actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export Model to Spice...", nullptr));
         actionExport_SE_Output_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export SE Output to SPICE...", nullptr));
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
@@ -2014,12 +2076,18 @@ public:
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
         quickHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Quick Health", nullptr));
         fullHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Full Health", nullptr));
+        quickHealthDsLabel->setText(QCoreApplication::translate("ValveWorkbench", "DS:", nullptr));
+        quickHealthRefLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref:", nullptr));
+        fullHealthDsLabel->setText(QCoreApplication::translate("ValveWorkbench", "DS:", nullptr));
+        fullHealthRefLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref:", nullptr));
         btnImportFromDevice->setText(QCoreApplication::translate("ValveWorkbench", "Import from Device", nullptr));
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
         datasheetGroupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Datasheet / Reference", nullptr));
         datasheetNameLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref name:", nullptr));
         datasheetSectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Section:", nullptr));
         datasheetVaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Va (V):", nullptr));
+        datasheetRefCountLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
+        datasheetRefCountValue->setText(QString());
         datasheetVgLabel->setText(QCoreApplication::translate("ValveWorkbench", "Vg (V):", nullptr));
         datasheetIaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ia (mA):", nullptr));
         datasheetGmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (\302\265S):", nullptr));

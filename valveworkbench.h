@@ -188,6 +188,9 @@ private slots:
     void on_quickHealthButton_clicked();
     void on_fullHealthButton_clicked();
 
+    void on_actionSave_as_Reference_Tube_triggered();
+    void on_actionReset_Reference_Tube_triggered();
+
     void on_datasheetVa_editingFinished();
     void on_datasheetVg_editingFinished();
     void on_datasheetIa_editingFinished();
@@ -435,6 +438,8 @@ private:
     void configureTransferForHealthPoint(const HealthPoint &pt);
     bool computeIaGmAt(Measurement *measurement, const HealthPoint &pt, double &ia_mA, double &gm_mA_V, double &rp_ohms);
     void finalizeHealthRun();
+
+    bool captureHealthReferenceFromLastRun();
 
     void runHarmonicsScan();
     void runHarmonicsBiasSweep();
