@@ -343,6 +343,7 @@ private:
     QJsonObject config;
     QList<Template> templates;
     QJsonObject datasheetJson; // Opaque datasheet/ref-point block from templates/devices
+    QJsonObject analyserTestsDefaults; // Per-test analyser ranges/limits loaded from analyserDefaults.tests
 
     HealthMode healthMode = HEALTH_NONE;
     bool healthRunActive = false;

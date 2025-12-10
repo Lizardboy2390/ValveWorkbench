@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-07 (Quick/Full Health double-triode robustness + Triode B clone behaviour; Ia/gm drift notes)
+Last updated: 2025-12-09 (Quick/Full Health gm estimator window/binning + Triode B Full Health corner Ia-only scoring)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
