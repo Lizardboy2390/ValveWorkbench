@@ -3,10 +3,14 @@
 
 #include "cohenhelietriode.h"
 
-// SimpleManualPentode: backend-only, web-style pentode shell.
-// NOTE: Not yet wired to any UI or fitting path; anodeCurrent uses
-// a simplified epk-based formula and will be refined to match
-// pentodemodeller.js exactly in a later step.
+// SimpleManualPentode: manual, slider-driven pentode model used on the
+// Modeller tab when the user selects the "Simple Manual Pentode" mode.
+// It reuses the Cohen-Helie epk core but exposes a compact set of
+// Gardiner/Reefman-style shaping parameters (mu, kp, kg1, kg2, alpha,
+// beta, gamma, a, etc.) that can be adjusted directly in the UI.
+// Unlike the Ceres-based pentode models, this class does not add any
+// residuals to the solver; `anodeCurrent` is evaluated directly from
+// the parameters and measurement data is used only for seeding.
 
 class SimpleManualPentode : public CohenHelieTriode
 {

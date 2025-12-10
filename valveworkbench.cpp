@@ -970,10 +970,22 @@ void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
 }
 
 // Compute measured Ia, gm, and a local plate resistance rp around a desired
-// operating point (Va, Vg) from a Measurement. For Quick/Full Health we only
-// use the transfer measurement to derive Ia/gm; rp is obtained from any
-// available ANODE_CHARACTERISTICS dataset for the same device using a small
-// local LS fit around the nearest sample to (Va, Vg).
+// operating point (Va, Vg) from a Measurement.
+//
+// For Quick/Full Health we:
+//  - Use a TRANSFER_CHARACTERISTICS measurement to derive Ia and gm.
+//    - The nearest sample to (Va, Vg) in a weighted Va/Vg sense defines the
+//      operating point and its Ia.
+//    - gm is estimated from all valid samples in a small Vg-centred window
+//      around the target Vg using a linear LS fit of Ia vs Vg, after merging
+//      near-identical DAC codes into Vg bins and averaging Ia per bin to
+//      suppress staircase / see-saw artefacts on dense sweeps.
+//    - If the LS slope is not positive, a two-bin fallback uses the furthest-
+//      separated Vg bins as a simple dIa/dVg.
+//  - Use any ANODE_CHARACTERISTICS dataset for the same device to derive a
+//    local plate resistance rp from samples near (Va, Vg) via a small LS fit
+//    of Ia vs Va on the appropriate channels (Triode A: Va/Ia/Vg1, Triode B:
+//    Va2/Ia2/Vg3 when available).
 //
 // ia_mA and gm_mA_V are always written; rp_ohms is set to >0.0 on success or
 // 0.0 if no suitable anode data is available.
@@ -6085,7 +6097,10 @@ static bool pickOperatingPointFromAnode(Measurement *measurement,
 
 // Helper: compute gm from a TRANSFER_CHARACTERISTICS measurement at a desired
 // operating point (Va_op, Vg2_op, Vg1_op) using a local linear regression of
-// Ia vs Vg1. Returns gm in mA/V, or <= 0.0 on failure.
+// Ia vs Vg1 over a Vg-centred window with bin-averaged samples. This mirrors
+// the Health gm estimator so that dense, quantised transfer sweeps produce a
+// smooth, physically plausible gm for the Modeller small-signal LCDs.
+// Returns gm in mA/V, or <= 0.0 on failure.
 static double gmFromTransferAtOP(Measurement *transfer,
                                  double vaOp,
                                  double vg2Op,
@@ -9313,6 +9328,13 @@ void ValveWorkbench::queueTriodeModelRun(Model *modelToRun)
     thread->start();
 }
 
+// Modeller: entry point for pentode fitting from the UI.
+// - Records the current project node as the target for the fitted model.
+// - Disables both Fit Pentode/Triode buttons to avoid concurrent runs.
+// - Sets a flag so that, if a triode B fit finishes and wants to chain
+//   into a pentode fit, only a single pentode modelling pass is started.
+// - Delegates to modelPentode(), which selects the active pentode model
+//   type and kicks off the appropriate solve or manual path.
 void ValveWorkbench::on_fitPentodeButton_clicked()
 {
     modelProject = currentProject;
@@ -9324,6 +9346,31 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
 
 }
 
+// Modeller: orchestrate pentode modelling for the currently selected
+// device and measurement set.
+//
+// High-level flow:
+//  - Locate the primary PENTODE/ANODE_CHARACTERISTICS measurement; abort
+//    with a message box if none is present.
+//  - If the active pentode model type is SIMPLE_MANUAL_PENTODE:
+//      * Build an Estimate using Estimate::estimatePentode targeting
+//        GARDINER_PENTODE so the manual model shares the same heuristics
+//        as the Ceres-based path.
+//      * Optionally run a one-shot GardinerPentode Ceres solve to refine
+//        that seed before copying parameters into SimpleManualPentode.
+//      * Create a SimpleManualPentode instance, copy the fitted or
+//        estimated parameters into its sliders, overlay its curves over
+//        the current pentode measurement, and open the manual pentode
+//        dialog so the user can tweak parameters interactively.
+//  - Otherwise (Gardiner/Reefman pentode models):
+//      * Build an Estimate from, in order of preference, an explicit
+//        triode model in the project, an embedded triode seed on the
+//        current Device, or the Device's own pentode parameters, falling
+//        back to a legacy gradient-based estimate when no seed exists.
+//      * Create the requested Ceres-based pentode Model, attach all
+//        suitable pentode ANODE_CHARACTERISTICS measurements in the
+//        project tree, and run solveThreaded() in a background QThread,
+//        delivering results back via Model::modelReady/loadModel().
 void ValveWorkbench::modelPentode()
 {
     doPentodeModel = false; // We're doing it now so don't want to do it again!

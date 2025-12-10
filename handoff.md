@@ -84,8 +84,9 @@ while keeping the **rules** and current **technical state** clear.
       - This removes re-entrancy into `Analyser::startTest()` from within `Analyser::nextSample()` and fixes a crash that occurred when Quick/Full Health tried to start a new run while the previous `testFinished()` stack was still unwinding.
   - **Measurement and metrics:**
     - After each sweep, `computeIaGmAt` scans the resulting transfer measurement:
-      - Finds the sample nearest to the requested `(Va, Vg)` in a weighted Va/Vg sense.
-      - Reads `Ia` from that sample and estimates local `gm` from neighbouring samples via a small least-squares fit / ΔIa/ΔVg.
+      - Finds the sample nearest to the requested `(Va, Vg)` in a weighted Va/Vg sense and takes its Ia as the local operating current.
+      - Estimates local `gm` from all valid samples in a **Vg-centred window** around the target Vg using a linear LS fit of `Ia` vs `Vg1`, after first **binning near-identical Vg DAC codes** and averaging Ia within each bin to collapse staircase/see-saw artefacts on dense sweeps; when the LS slope is not positive, a two-bin dIa/dVg fallback between the furthest-separated Vg bins is used.
+      - Derives a local plate resistance `rp` from any available anode-characteristics measurement by performing a small LS fit of Ia vs Va around the nearest sample to `(Va, Vg)` (Triode A uses Va/Ia/Vg1; Triode B, when available, uses Va2/Ia2/Vg3).
     - `finalizeHealthRun` re-reads the datasheet reference point and, when available, builds an Ia/gm reference “surface” from any embedded `currentDevice->getMeasurement()` so each HealthPoint can be compared against a reference at the **same** Va/Vg.
     - A small helper (`robust3xCluster`) performs median-based outlier rejection and averaging over up to three nearby values (40% deviation gate) and is used for both DUT and reference clusters.
     - **Quick Health centre cluster (Triode A):**
@@ -95,9 +96,10 @@ while keeping the **rules** and current **technical state** clear.
       - For double triodes, `createTriodeBMeasurementClone` maps Triode B data into a primary-style measurement (`vg1 ← vg3`, `va ← va2`, `ia ← ia2`) and `computeIaGmAt` is applied at the same three centre-row HealthPoints.
       - The same `robust3xCluster` logic is used to derive robust Ia/gm for Triode B’s “measured” and “%” columns.
     - **Full Health corners:**
-      - Full Health % combines the centre Quick Health score with four Ia-only corner scores.
+      - Full Health % combines the centre Quick Health score with four **Ia-only** corner scores.
       - Each corner aggregates the three Ia values at that corner via `robust3xCluster` and compares them either to the datasheet point or, when present, to the reference Ia from the embedded measurement at the same Va/Vg corner.
       - Corner percentages shown in the 4 Cor Pct columns are Ia-only; gm is currently not used at the corners.
+      - For double triodes, Triode B corner scores are computed from the **secondary transfer measurement** using the same 3-point Health corner clusters; Triode B corners only appear when the reference tube has explicit B-corner IaRef data (from `iaRefSurfaceB`), and the scoring logic now keeps positive Ia even when the local gm fit fails so a healthy B section does not lose its corner due to a gm estimation issue.
   - **Double-triode behaviour and observed drift:**
     - The Triode B clone path is strictly a remapping of fields; no rescaling is applied, and `computeIaGmAt` uses the same geometry (HealthPoints and nearest-sample search) for both A and B.
     - Bench tests with a 12AT7 double triode around Va≈300 V and |Vg|≈1.1–1.3 V show:

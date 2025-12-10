@@ -30,6 +30,25 @@ enum eSamplingType {
     SMP_LOGARITHMIC
 };
 
+// Analyser: low-level measurement engine that drives the valve tester
+// hardware over the serial S*/M* protocol and builds Measurement
+// objects for the UI.
+//
+// Responsibilities:
+//  - Translate high-level test configuration (deviceType, testType,
+//    sweep ranges, and protection limits) into sequences of S* set
+//    commands and Mode(2) M* measurement commands.
+//  - Maintain the step/sweep state machines (stepValue/stepParameter,
+//    sweepParameter, stepIndex/sweepIndex) so that each grid/screen/
+//    anode family becomes its own Sweep in the resulting Measurement.
+//  - Parse Mode(2) responses into Sample instances (createSample) and
+//    enforce current/power limits for both primary and secondary
+//    channels.
+//  - Implement per-test and per-sweep hardware verification
+//    (isVerifyingHardware) so that stored samples are only taken once
+//    the anode/screen rails are at the configured start bias.
+//  - Report progress and completion/abort events back to the Client
+//    (ValveWorkbench) through the Client interface.
 class Analyser
 {
 public:
