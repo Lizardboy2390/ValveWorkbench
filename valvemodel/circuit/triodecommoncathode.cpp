@@ -1,4 +1,7 @@
 #include "triodecommoncathode.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 TriodeCommonCathode::TriodeCommonCathode()
 {
@@ -655,88 +658,272 @@ bool TriodeCommonCathode::simulateHarmonicsTimeDomain(double headroomVpk,
         return false;
     }
 
-    double Ia = 0.0;
-    double Ib = 0.0;
-    double Ic = 0.0;
-    double Id = 0.0;
-    double Ie = 0.0;
-    if (!computeHeadroomHarmonicCurrents(headroomVpk,
-                                         Ia,
-                                         Ib,
-                                         Ic,
-                                         Id,
-                                         Ie)) {
+    const double vb         = parameter[TRI_CC_VB]->getValue();
+    const double iaBias_mA  = parameter[TRI_CC_IA]->getValue();
+    const double ra         = parameter[TRI_CC_RA]->getValue();
+    const double rl         = parameter[TRI_CC_RL]->getValue();
+    const double rk         = parameter[TRI_CC_RK]->getValue();
+    const double vk         = parameter[TRI_CC_VK]->getValue();
+
+    if (!(vb > 0.0) || !(iaBias_mA > 0.0) || !(ra > 0.0)) {
         return false;
     }
 
-    // Arrange the five samples (in amps) as one period of a periodic waveform.
-    double samples[5];
-    samples[0] = Ia;
-    samples[1] = Ib;
-    samples[2] = Ic;
-    samples[3] = Id;
-    samples[4] = Ie;
+    // Effective AC anode load is the parallel of Ra and Rl when both are
+    // positive; otherwise fall back to whichever is available.
+    double r_ac = 0.0;
+    if (ra > 0.0 && rl > 0.0) {
+        r_ac = (ra * rl) / (ra + rl);
+    } else if (ra > 0.0) {
+        r_ac = ra;
+    } else if (rl > 0.0) {
+        r_ac = rl;
+    }
+    if (!(r_ac > 0.0) || !std::isfinite(r_ac)) {
+        return false;
+    }
 
-    const int sampleCount = 512;
-    const double twoPi = 6.28318530717958647692; // 2 * pi
+    // Clamp requested headroom to a sensible fraction of B+ and device Va
+    // limits so we do not drive the solver into unphysical regions.
+    const double maxHeadroom = 0.9 * std::max(1.0, std::min(vb, device1->getVaMax()));
+    double headroom = std::min(std::max(0.0, headroomVpk), maxHeadroom);
+    if (!(headroom > 0.0)) {
+        return false;
+    }
 
-    double a[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    double b[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
-    lastHeadroomWaveform.clear();
-    lastHeadroomWaveform.reserve(sampleCount);
-
-    for (int k = 0; k < sampleCount; ++k) {
-        const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
-        const double u = phase / twoPi; // normalised phase in [0, 1)
-
-        const double pos = u * 5.0; // 5 samples per period
-        const double indexF = std::floor(pos);
-        int i0 = static_cast<int>(indexF);
-        if (i0 < 0) {
-            i0 = 0;
+    // Prefer the Designer small-signal gain for the chosen gain mode. When
+    // unavailable, fall back to gm * r_ac with optional cathode feedback.
+    double Av = (sensitivityGainMode == 1)
+                    ? parameter[TRI_CC_GAIN_B]->getValue()
+                    : parameter[TRI_CC_GAIN]->getValue();
+    if (!std::isfinite(Av) || std::abs(Av) <= 1e-6) {
+        const double gm_mA_per_V = parameter[TRI_CC_GM]->getValue();
+        const double gm_A_per_V  = gm_mA_per_V / 1000.0;
+        if (std::isfinite(gm_A_per_V) && std::abs(gm_A_per_V) > 1e-9) {
+            Av = std::abs(gm_A_per_V * r_ac);
+            if (sensitivityGainMode == 0 && rk > 0.0) {
+                const double feedback = 1.0 + gm_A_per_V * rk;
+                if (feedback > 1.0 && std::isfinite(feedback)) {
+                    Av /= feedback;
+                }
+            }
         }
-        if (i0 >= 5) {
-            i0 = i0 % 5;
+    }
+    if (!std::isfinite(Av) || std::abs(Av) <= 1e-6) {
+        return false;
+    }
+
+    // Map requested anode headroom (Vpk) to an approximate grid drive (Vpp).
+    const double Vpp_out_target = 2.0 * headroom;          // desired anode Vpp
+    double       Vpp_in         = Vpp_out_target / std::abs(Av); // initial grid Vpp
+    if (!(Vpp_in > 0.0) || !std::isfinite(Vpp_in)) {
+        return false;
+    }
+
+    // Grid-to-cathode bias (self-bias, grid at 0 V, cathode at +Vk).
+    const double vgkBias = -vk;
+
+    // Helper: DC load-line current at a given Va for the effective AC load.
+    auto dcLoadCurrent = [&](double va) -> double {
+        if (!(r_ac > 0.0)) {
+            return 0.0;
         }
-        const int i1 = (i0 + 1) % 5;
-        const double frac = pos - indexF;
+        const double iaA = (vb - va) / r_ac; // amps
+        return std::isfinite(iaA) ? iaA : 0.0;
+    };
 
-        const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+    // Helper: for a given instantaneous grid-to-cathode bias vgk, find the
+    // anode voltage Va such that model current matches the AC load-line
+    // current. This mirrors the iterative search used in the SE output stage.
+    auto findVaFromVgk = [&](double vgk) -> double {
+        double va   = 0.0;
+        double incr = vb / 10.0;
 
-        lastHeadroomWaveform.push_back(ip);
+        for (;;) {
+            const double ilA = dcLoadCurrent(va);
+            if (!(ilA > 0.0) || !std::isfinite(ilA)) {
+                break;
+            }
 
-        const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
-                                                   static_cast<double>(sampleCount - 1)));
-        const double v = ip * window;
+            const double ia_mA = device1->anodeCurrent(va, vgk);
+            if (!std::isfinite(ia_mA)) {
+                break;
+            }
+            const double itA = ia_mA / 1000.0;
 
+            if (itA >= ilA && incr <= 1e-6) {
+                break;
+            } else if (itA >= ilA) {
+                va -= incr;
+                incr *= 0.1;
+            }
+
+            va += incr;
+
+            if (va < 0.0 || va > 2.0 * vb) {
+                break;
+            }
+        }
+
+        if (va < 0.0) {
+            va = 0.0;
+        } else if (va > 2.0 * vb) {
+            va = 2.0 * vb;
+        }
+        return va;
+    };
+
+    struct WaveformStats {
+        double vaMin;
+        double vaMax;
+        double A[6];
+    };
+
+    const int    sampleCount = 512;
+    const double twoPi       = 6.28318530717958647692; // 2 * pi
+
+    auto simulateForDrive = [&](double gridVpp,
+                                bool computeHarmonics,
+                                WaveformStats &stats) -> bool {
+        stats.vaMin = std::numeric_limits<double>::infinity();
+        stats.vaMax = -std::numeric_limits<double>::infinity();
+        for (int n = 0; n < 6; ++n) {
+            stats.A[n] = 0.0;
+        }
+
+        double a[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        double b[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+        if (computeHarmonics) {
+            lastHeadroomWaveform.clear();
+            lastHeadroomWaveform.reserve(sampleCount);
+        }
+
+        for (int k = 0; k < sampleCount; ++k) {
+            const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
+
+            // Grid drive: sine around the DC bias, clamped so that the grid
+            // never goes positive with respect to the cathode.
+            double vgk = vgkBias + 0.5 * gridVpp * std::sin(phase);
+            if (vgk > 0.0) {
+                vgk = 0.0;
+            }
+
+            double va = findVaFromVgk(vgk);
+            if (!std::isfinite(va)) {
+                continue;
+            }
+            va = std::clamp(va, 0.0, 2.0 * vb);
+
+            if (va < stats.vaMin) stats.vaMin = va;
+            if (va > stats.vaMax) stats.vaMax = va;
+
+            // Instantaneous anode current on the AC load line.
+            const double iaA = dcLoadCurrent(va);
+            if (!std::isfinite(iaA) || iaA < 0.0) {
+                continue;
+            }
+
+            if (!computeHarmonics) {
+                continue;
+            }
+
+            // For visualisation, store the anode voltage waveform Va(t) so the
+            // Headroom Waveshape viewer shows the output voltage shape and
+            // clipping behaviour. Harmonic analysis below still uses Ia(t).
+            lastHeadroomWaveform.push_back(va);
+
+            // Hann window across the full set of samples, applied to Ia(t).
+            const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
+                                                       static_cast<double>(sampleCount - 1)));
+            const double v = iaA * window;
+
+            // Accumulate the first five harmonics via a small manual DFT.
+            for (int n = 1; n <= 5; ++n) {
+                const double angle = static_cast<double>(n) * phase;
+                const double c = std::cos(angle);
+                const double s = std::sin(angle);
+                a[n] += v * c;
+                b[n] += v * s;
+            }
+        }
+
+        if (!(stats.vaMax > stats.vaMin) ||
+            !std::isfinite(stats.vaMax) || !std::isfinite(stats.vaMin)) {
+            return false;
+        }
+
+        if (!computeHarmonics) {
+            return true;
+        }
+
+        const double scale = 2.0 / static_cast<double>(sampleCount);
         for (int n = 1; n <= 5; ++n) {
-            const double angle = static_cast<double>(n) * phase;
-            const double c = std::cos(angle);
-            const double s = std::sin(angle);
-            a[n] += v * c;
-            b[n] += v * s;
+            a[n] *= scale;
+            b[n] *= scale;
+            stats.A[n] = std::sqrt(a[n] * a[n] + b[n] * b[n]);
+        }
+        return true;
+    };
+
+    // First, iteratively calibrate grid Vpp_in so that the achieved anode
+    // swing (Va p-p) is close to the requested 2*headroom. This mirrors the
+    // SE output behaviour and avoids relying purely on small-signal gain in
+    // strongly nonlinear regions.
+    WaveformStats stats;
+    if (!simulateForDrive(Vpp_in, false, stats)) {
+        return false;
+    }
+
+    const double Vpp_target = Vpp_out_target;
+    if (!(Vpp_target > 0.0) || !std::isfinite(Vpp_target)) {
+        return false;
+    }
+
+    const int maxIter = 5;
+    for (int iter = 0; iter < maxIter; ++iter) {
+        const double Vpp_wave = stats.vaMax - stats.vaMin;
+        if (!(Vpp_wave > 0.0) || !std::isfinite(Vpp_wave)) {
+            break;
+        }
+
+        const double ratio = Vpp_target / Vpp_wave;
+        if (!std::isfinite(ratio) || ratio <= 0.0) {
+            break;
+        }
+
+        const double error = std::abs(Vpp_wave - Vpp_target) / Vpp_target;
+        if (error < 0.10) {
+            break;
+        }
+
+        const double clampedRatio = std::clamp(ratio, 0.5, 2.0);
+        const double newVpp_in    = Vpp_in * clampedRatio;
+        if (!(newVpp_in > 0.0) || !std::isfinite(newVpp_in)) {
+            break;
+        }
+
+        Vpp_in = newVpp_in;
+        if (!simulateForDrive(Vpp_in, false, stats)) {
+            break;
         }
     }
 
-    const double scale = 2.0 / static_cast<double>(sampleCount);
-    double A[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    for (int n = 1; n <= 5; ++n) {
-        a[n] *= scale;
-        b[n] *= scale;
-        A[n] = std::sqrt(a[n] * a[n] + b[n] * b[n]);
+    // Final pass: compute harmonics for the calibrated grid drive.
+    if (!simulateForDrive(Vpp_in, true, stats)) {
+        return false;
     }
 
-    const double fundamental = A[1];
+    const double fundamental = stats.A[1];
     if (!(fundamental > 0.0) || !std::isfinite(fundamental)) {
         return false;
     }
 
     const double invFund = 100.0 / fundamental;
-    hd2 = A[2] * invFund;
-    hd3 = A[3] * invFund;
-    hd4 = A[4] * invFund;
-    hd5 = A[5] * invFund;
+    hd2 = stats.A[2] * invFund;
+    hd3 = stats.A[3] * invFund;
+    hd4 = stats.A[4] * invFund;
+    hd5 = stats.A[5] * invFund;
 
     if (!std::isfinite(hd2) || hd2 < 0.0) hd2 = 0.0;
     if (!std::isfinite(hd3) || hd3 < 0.0) hd3 = 0.0;

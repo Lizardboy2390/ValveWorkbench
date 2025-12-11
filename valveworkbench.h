@@ -16,6 +16,8 @@
 class QLabel;
 class QGraphicsView;
 class QGraphicsTextItem;
+class QGraphicsScene;
+class TriodeCommonCathode;
 
 #include "valvemodel/data/project.h"
 #include "valvemodel/model/estimate.h"
@@ -237,6 +239,8 @@ private:
 
     QGraphicsTextItem *cursorLabelItem = nullptr;
 
+    QGraphicsScene *headroomWaveformScene = nullptr;
+
     // Non-UI related member variables
     QList<Device *> devices;
     Device *currentDevice = nullptr;
@@ -452,4 +456,5 @@ private:
     void onHarmonicsRotationChanged(); // Handle 3D rotation slider changes
     void hideRotationControls(); // Hide rotation controls for non-3D plots
     void refreshHarmonicsPlots();
+    void updateHeadroomWaveformView(TriodeCommonCathode *tcc);
 };

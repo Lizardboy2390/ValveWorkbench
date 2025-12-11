@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-10 (Triode CC Designer headroom/THD-at-headroom wiring + Quick/Full Health gm estimator window/binning)
+Last updated: 2025-12-10 (Triode CC Designer headroom/THD-at-headroom sine-driven helper + Triode CC Headroom Waveshape viewer Va(t) + Quick/Full Health gm estimator window/binning)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -257,7 +257,8 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - Files: `valvemodel/circuit/triodecommoncathode.h/.cpp`, `valveworkbench.cpp`.
   - Designer panel exposes a **Headroom (Vpk)** parameter (cir13) plus input-sensitivity and HD2/HD3/HD4/HD5/THD-at-headroom metrics.
   - Effective headroom comes from either a manual Vpk override or SE-style symmetric/max swing helpers derived from the AC load line; colour cues (bright blue/manual, light blue/symmetric, brown/max) mirror the SE output stage.
-  - Time-domain harmonic percentages are computed via a local 5-point current-sampling helper and a small DFT, independent of the SE-specific sine-driven grid-excitation engine.
+  - Time-domain harmonic percentages are computed via a sine-driven helper that drives the triode model with a grid sine at the self-bias voltage (clamped at vgk≤0), solves Va(t) along the Ra‖Rl AC load line with Rk feedback reflected via the Designer small-signal gain, and applies a Hann-windowed manual DFT over Ia(t) to obtain HD2/HD3/HD4/HD5/THD at the requested headroom.
+  - The Designer **Headroom Waveshape** group shows a DC-removed, peak-normalised anode-voltage waveform Va(t) over one cycle at the effective headroom, taken from the same sine-driven simulation and updated whenever Triode CC headroom/THD is recomputed.
 
 - **Headroom scan slot:** `ValveWorkbench::runHarmonicsScan()`
   - Preconditions: `harmonicsText` and `harmonicsView` exist.

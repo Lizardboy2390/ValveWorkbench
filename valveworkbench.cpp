@@ -29,10 +29,12 @@
 #include <QBrush>
 #include <QTextEdit>
 #include <QGraphicsView>
+#include <QGraphicsScene>
 #include <QMouseEvent>
 #include <QStatusBar>
 #include <QGraphicsTextItem>
 #include <QLineEdit>
+#include <QPen>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -967,6 +969,86 @@ void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
     if (healthRunActive) {
         gridStep = 0.2;
     }
+}
+
+void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
+{
+    if (!ui || !ui->headroomWaveformView) {
+        return;
+    }
+
+    if (!tcc) {
+        if (headroomWaveformScene) {
+            headroomWaveformScene->clear();
+        }
+        return;
+    }
+
+    if (!headroomWaveformScene) {
+        headroomWaveformScene = new QGraphicsScene(this);
+        ui->headroomWaveformView->setScene(headroomWaveformScene);
+    }
+
+    headroomWaveformScene->clear();
+
+    const QVector<double> &wave = tcc->getLastHeadroomWaveform();
+    const int n = wave.size();
+    if (n < 2) {
+        return;
+    }
+
+    double sum = 0.0;
+    int count = 0;
+    for (int i = 0; i < n; ++i) {
+        const double v = wave[i];
+        if (std::isfinite(v)) {
+            sum += v;
+            ++count;
+        }
+    }
+    if (count == 0) {
+        return;
+    }
+
+    const double mean = sum / static_cast<double>(count);
+
+    double maxAbs = 0.0;
+    for (int i = 0; i < n; ++i) {
+        const double v = wave[i];
+        if (!std::isfinite(v)) {
+            continue;
+        }
+        const double ac = v - mean;
+        const double mag = std::abs(ac);
+        if (mag > maxAbs) {
+            maxAbs = mag;
+        }
+    }
+
+    if (!(maxAbs > 0.0) || !std::isfinite(maxAbs)) {
+        return;
+    }
+
+    headroomWaveformScene->setSceneRect(0.0, -1.0, 1.0, 2.0);
+
+    QPen pen(Qt::darkBlue);
+    pen.setWidthF(0.0);
+
+    const double invN = (n > 1) ? 1.0 / static_cast<double>(n - 1) : 1.0;
+    for (int i = 0; i < n - 1; ++i) {
+        const double v1 = wave[i];
+        const double v2 = wave[i + 1];
+        if (!std::isfinite(v1) || !std::isfinite(v2)) {
+            continue;
+        }
+        const double y1 = (v1 - mean) / maxAbs;
+        const double y2 = (v2 - mean) / maxAbs;
+        const double x1 = static_cast<double>(i) * invN;
+        const double x2 = static_cast<double>(i + 1) * invN;
+        headroomWaveformScene->addLine(x1, y1, x2, y2, pen);
+    }
+
+    ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
 }
 
 // Compute measured Ia, gm, and a local plate resistance rp around a desired
@@ -4361,6 +4443,14 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         ui->graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     }
 
+    if (ui->headroomWaveformView) {
+        if (!headroomWaveformScene) {
+            headroomWaveformScene = new QGraphicsScene(this);
+        }
+        ui->headroomWaveformView->setScene(headroomWaveformScene);
+        headroomWaveformScene->clear();
+    }
+
     connect(&serialPort, &QSerialPort::readyRead, this, &ValveWorkbench::handleReadyRead);
     connect(&serialPort, &QSerialPort::errorOccurred, this, &ValveWorkbench::handleError);
     connect(&timeoutTimer, &QTimer::timeout, this, &ValveWorkbench::handleTimeout);
@@ -5622,6 +5712,13 @@ void ValveWorkbench::selectCircuit(int circuitType)
         }
     }
 
+    if (headroomWaveformScene) {
+        headroomWaveformScene->clear();
+    }
+    if (ui->headroomWaveformGroupBox) {
+        ui->headroomWaveformGroupBox->setVisible(false);
+    }
+
     qInfo("=== SELECTING CIRCUIT ===");
     qInfo("Circuit type: %d", circuitType);
 
@@ -5717,6 +5814,11 @@ void ValveWorkbench::selectCircuit(int circuitType)
     }
     if (useBypassedGainCheck) {
         useBypassedGainCheck->setVisible(usesStageToggles);
+    }
+
+    if (ui->headroomWaveformGroupBox) {
+        bool showWave = (dynamic_cast<TriodeCommonCathode*>(circuit) != nullptr);
+        ui->headroomWaveformGroupBox->setVisible(showWave);
     }
 }
 
@@ -5828,6 +5930,7 @@ void ValveWorkbench::updateCircuitParameter(int index)
             circuit->updateUI(circuitLabels, circuitValues);
             circuit->plot(&plot);
             circuit->updateUI(circuitLabels, circuitValues);
+            updateHeadroomWaveformView(tcc);
 
             // In model mode (mes_mod_select checked), drive the small-signal LCDs
             // from the Designer's Triode Common Cathode circuit so the operating
@@ -10037,6 +10140,7 @@ void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
         t->setSymSwingEnabled(enabled);
         t->plot(&plot);
         t->updateUI(circuitLabels, circuitValues);
+        updateHeadroomWaveformView(t);
     } else if (auto *se = dynamic_cast<SingleEndedOutput*>(c)) {
         // Reset SE headroom manual override to 0 whenever the Max Sym Swing
         // checkbox is clicked, so that the helper-derived symmetric/max swing
@@ -10093,6 +10197,7 @@ void ValveWorkbench::on_useBypassedGainCheck_stateChanged(int arg1)
         t->plot(&plot);
         // Refresh Designer panel values (Input sensitivity depends on gain mode)
         t->updateUI(circuitLabels, circuitValues);
+        updateHeadroomWaveformView(t);
     } else if (auto *se = dynamic_cast<SingleEndedOutput*>(c)) {
         // Apply K-bypass choice to the SE output stage so that its
         // input sensitivity and THD reflect bypassed vs unbypassed cathode.
