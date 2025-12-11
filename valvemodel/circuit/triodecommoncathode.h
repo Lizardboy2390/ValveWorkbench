@@ -54,6 +54,8 @@ private:
     QVector<QPointF> anodeLoadLineData;
     QVector<QPointF> cathodeLoadLineData;
 
+    mutable QVector<double> lastHeadroomWaveform;
+
     // Annotations for maximum voltage swing (vertical line and labels)
     QGraphicsItemGroup *swingGroup = nullptr;
 
@@ -126,4 +128,6 @@ public:
         symSwingGroup = nullptr;
         sensitivityGroup = nullptr;
     }
+
+    const QVector<double> &getLastHeadroomWaveform() const { return lastHeadroomWaveform; }
 };

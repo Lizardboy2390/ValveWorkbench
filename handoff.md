@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-09 (Quick/Full Health gm estimator window/binning + Triode B Full Health corner Ia-only scoring)
+Last updated: 2025-12-10 (Triode CC Designer headroom/THD-at-headroom wiring + Quick/Full Health gm estimator window/binning)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -252,6 +252,12 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
     - Connects buttons to private slots:
       - `runHarmonicsScan()` (headroom scan)
       - `runHarmonicsBiasSweep()` (bias sweep)
+
+- **Triode Common Cathode Designer headroom/THD:**
+  - Files: `valvemodel/circuit/triodecommoncathode.h/.cpp`, `valveworkbench.cpp`.
+  - Designer panel exposes a **Headroom (Vpk)** parameter (cir13) plus input-sensitivity and HD2/HD3/HD4/HD5/THD-at-headroom metrics.
+  - Effective headroom comes from either a manual Vpk override or SE-style symmetric/max swing helpers derived from the AC load line; colour cues (bright blue/manual, light blue/symmetric, brown/max) mirror the SE output stage.
+  - Time-domain harmonic percentages are computed via a local 5-point current-sampling helper and a small DFT, independent of the SE-specific sine-driven grid-excitation engine.
 
 - **Headroom scan slot:** `ValveWorkbench::runHarmonicsScan()`
   - Preconditions: `harmonicsText` and `harmonicsView` exist.

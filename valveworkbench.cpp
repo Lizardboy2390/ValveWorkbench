@@ -3277,17 +3277,36 @@ void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
     if (tabRole == 1) {
         // Modeller tab: apply to the active project measurement and redraw the
         // measured plot (axes managed by Measurement itself).
-        if (currentMeasurement != nullptr) {
+        if (isDoubleTriode) {
+            const bool measurementVisible = ui->measureCheck && ui->measureCheck->isChecked();
+            if (triodeMeasurementSecondary) {
+                if (!measuredCurvesSecondary && show) {
+                    triodeMeasurementSecondary->setSmoothPlotting(preferencesDialog.smoothCurves());
+                    measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
+                    if (measuredCurvesSecondary) {
+                        plot.add(measuredCurvesSecondary);
+                    }
+                }
+                if (measuredCurvesSecondary) {
+                    measuredCurvesSecondary->setVisible(show && measurementVisible);
+                }
+            }
+        } else if (currentMeasurement != nullptr) {
             currentMeasurement->setShowScreen(show);
             currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
             if (measuredCurves != nullptr) {
                 plot.remove(measuredCurves);
                 measuredCurves = nullptr;
             }
+            if (measuredCurvesSecondary != nullptr) {
+                plot.remove(measuredCurvesSecondary);
+                measuredCurvesSecondary = nullptr;
+            }
+
             measuredCurves = currentMeasurement->updatePlot(&plot);
             if (measuredCurves) {
                 plot.add(measuredCurves);
-                measuredCurves->setVisible(ui->measureCheck->isChecked());
+                measuredCurves->setVisible(ui->measureCheck && ui->measureCheck->isChecked());
             }
         }
     } else if (tabRole == 0) {
@@ -3990,11 +4009,15 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
     }
 
     // Move the Designer swing-related checkboxes (Max Sym Swing, K bypass) into
-    // a dedicated row at the very bottom of the circuit parameter panel (i.e.
-    // visually below the last parameter row / label 16), instead of keeping
-    // them in the bottom toggle bar.
+    // a dedicated row directly beneath the headroom helper display in the
+    // left-hand Designer parameter column. Concretely, we insert a small
+    // horizontal layout immediately after the last circuit row
+    // (`horizontalLayout_23`, cir16), which Triode CC uses for the
+    // HD3/HD5-at-headroom line, so the toggles visually sit "under" the
+    // HD2/HD4 + HD3/HD5 metrics.
     if (ui->verticalLayout) {
-        // Remove from bottom toggle row if present
+        // Remove from the bottom toggle row if present so we don't keep them
+        // in two places.
         auto removeIfIn = [&](QCheckBox *w){
             if (!w) return;
             if (ui->horizontalLayout_9 && ui->horizontalLayout_9->indexOf(w) >= 0) {
@@ -4004,14 +4027,36 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         removeIfIn(symSwingCheck);
         removeIfIn(useBypassedGainCheck);
 
-        // Create a new row layout and append it to the parameter panel
+        // Determine insertion index: default to end, but prefer just after the
+        // cir16 row (horizontalLayout_23) when available.
+        int insertAt = ui->verticalLayout->count();
+        if (ui->horizontalLayout_23) {
+            int idx = ui->verticalLayout->indexOf(ui->horizontalLayout_23);
+            if (idx >= 0) {
+                insertAt = idx + 1;
+            }
+        }
+
         QHBoxLayout *designerTogglesRow = new QHBoxLayout();
         designerTogglesRow->addStretch();
-        if (symSwingCheck) designerTogglesRow->addWidget(symSwingCheck);
-        if (useBypassedGainCheck) designerTogglesRow->addWidget(useBypassedGainCheck);
+        if (symSwingCheck) {
+            designerTogglesRow->addWidget(symSwingCheck);
+        }
+        if (useBypassedGainCheck) {
+            designerTogglesRow->addWidget(useBypassedGainCheck);
+        }
         designerTogglesRow->addStretch();
 
-        ui->verticalLayout->addLayout(designerTogglesRow);
+        ui->verticalLayout->insertLayout(insertAt, designerTogglesRow);
+
+        // Start with these toggles hidden; selectCircuit will decide when to
+        // show them based on the active circuit type.
+        if (symSwingCheck) {
+            symSwingCheck->setVisible(false);
+        }
+        if (useBypassedGainCheck) {
+            useBypassedGainCheck->setVisible(false);
+        }
     }
 
     // Ensure Modeller tab has an Export to Devices button
@@ -5592,6 +5637,15 @@ void ValveWorkbench::selectCircuit(int circuitType)
 
         buildStdDeviceSelection(ui->stdDeviceSelection, -1);
         buildStdDeviceSelection(ui->stdDeviceSelection2, -1);
+
+        // No valid circuit: hide stage-level Designer toggles such as
+        // Max Sym Swing and K bypass.
+        if (symSwingCheck) {
+            symSwingCheck->setVisible(false);
+        }
+        if (useBypassedGainCheck) {
+            useBypassedGainCheck->setVisible(false);
+        }
         return;
     }
 
@@ -5644,6 +5698,25 @@ void ValveWorkbench::selectCircuit(int circuitType)
                 ppul->setInductiveLoad(inductive);
             }
         }
+    }
+
+    // Show the shared stage-level Designer toggles (Max Sym Swing, K bypass)
+    // only for circuits that support symmetric/max headroom helpers and
+    // cathode-bypass gain mode. This includes Triode CC, Pentode CC, and the
+    // main output-stage circuits (SE, SE-UL, PP, UL-PP).
+    bool usesStageToggles =
+        (dynamic_cast<TriodeCommonCathode*>(circuit)   != nullptr) ||
+        (dynamic_cast<PentodeCommonCathode*>(circuit)  != nullptr) ||
+        (dynamic_cast<SingleEndedOutput*>(circuit)     != nullptr) ||
+        (dynamic_cast<SingleEndedUlOutput*>(circuit)   != nullptr) ||
+        (dynamic_cast<PushPullOutput*>(circuit)        != nullptr) ||
+        (dynamic_cast<PushPullUlOutput*>(circuit)      != nullptr);
+
+    if (symSwingCheck) {
+        symSwingCheck->setVisible(usesStageToggles);
+    }
+    if (useBypassedGainCheck) {
+        useBypassedGainCheck->setVisible(usesStageToggles);
     }
 }
 
@@ -7691,6 +7764,14 @@ void ValveWorkbench::on_cir12Value_editingFinished()
     updateCircuitParameter(11);
 }
 
+
+void ValveWorkbench::on_cir13Value_editingFinished()
+{
+    // Row 13 (cir13Value) drives circuit parameter index 12. For
+    // Triode Common Cathode this is TRI_CC_HEADROOM (Headroom Vpk).
+    updateCircuitParameter(12);
+}
+
 void ValveWorkbench::on_actionExit_triggered()
 {
     QCoreApplication::quit();
@@ -8047,7 +8128,14 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
                 if (measuredCurvesSecondary != nullptr) {
                     plot.add(measuredCurvesSecondary);
-                    measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+                    bool triodeBVisible = ui->measureCheck && ui->measureCheck->isChecked();
+                    if (ui->tabWidget &&
+                        ui->tabWidget->currentWidget() == ui->tab_2 &&
+                        isDoubleTriode &&
+                        ui->screenCheck) {
+                        triodeBVisible = ui->measureCheck->isChecked() && ui->screenCheck->isChecked();
+                    }
+                    measuredCurvesSecondary->setVisible(triodeBVisible);
                 }
             }
             qInfo("Added measuredCurves to plot");
@@ -8152,7 +8240,14 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                         measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot, secondarySweep);
                         if (measuredCurvesSecondary != nullptr) {
                             plot.add(measuredCurvesSecondary);
-                            measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+                            bool triodeBVisible = ui->measureCheck && ui->measureCheck->isChecked();
+                            if (ui->tabWidget &&
+                                ui->tabWidget->currentWidget() == ui->tab_2 &&
+                                isDoubleTriode &&
+                                ui->screenCheck) {
+                                triodeBVisible = ui->measureCheck->isChecked() && ui->screenCheck->isChecked();
+                            }
+                            measuredCurvesSecondary->setVisible(triodeBVisible);
                         }
                     }
                 }
@@ -8519,6 +8614,17 @@ void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
 
     isDoubleTriode = (label == QLatin1String("Double Triode"));
     isTriodeConnectedPentode = (label == QLatin1String("Triode-Connected Pentode"));
+
+    // Retask the shared screen checkbox label when a Double Triode device
+    // is selected so that Modeller can present it as a Triode B overlay
+    // toggle while Pentode/other modes retain their screen-current meaning.
+    if (ui->screenCheck) {
+        if (isDoubleTriode) {
+            ui->screenCheck->setText(tr("Show Triode B"));
+        } else {
+            ui->screenCheck->setText(tr("Show Screen Current"));
+        }
+    }
 
     switch (logicalType) {
     case PENTODE:
@@ -9281,7 +9387,14 @@ void ValveWorkbench::loadModel()
         measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
         if (measuredCurvesSecondary != nullptr) {
             plot.add(measuredCurvesSecondary);
-            measuredCurvesSecondary->setVisible(ui->measureCheck->isChecked());
+            bool triodeBVisible = ui->measureCheck && ui->measureCheck->isChecked();
+            if (ui->tabWidget &&
+                ui->tabWidget->currentWidget() == ui->tab_2 &&
+                isDoubleTriode &&
+                ui->screenCheck) {
+                triodeBVisible = ui->measureCheck->isChecked() && ui->screenCheck->isChecked();
+            }
+            measuredCurvesSecondary->setVisible(triodeBVisible);
         }
     }
 
@@ -9762,8 +9875,8 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
     if (measuredCurves != nullptr) {
         measuredCurves->setVisible(wantVisible);
     }
-    if (measuredCurvesSecondary != nullptr) {
-        measuredCurvesSecondary->setVisible(wantVisible);
+    if (measuredCurvesSecondary != nullptr && !wantVisible) {
+        measuredCurvesSecondary->setVisible(false);
     }
 
     // When turning measurement visibility ON and there are no curves yet for
@@ -9815,7 +9928,9 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
     // Triode B clone for secondary overlays.
     if (tabRole == 1 && currentMeasurement) {
         qInfo("ValveWorkbench::on_measureCheck_stateChanged: rebuilding Modeller measurement curves");
-        currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+        if (currentMeasurement->getDeviceType() == PENTODE) {
+            currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+        }
         currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
         measuredCurves = currentMeasurement->updatePlot(&plot);
         if (measuredCurves) {
@@ -9828,7 +9943,9 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
             measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
             if (measuredCurvesSecondary) {
                 plot.add(measuredCurvesSecondary);
-                measuredCurvesSecondary->setVisible(true);
+                bool triodeBVisible = isDoubleTriode && ui->screenCheck && ui->screenCheck->isChecked()
+                                      && ui->measureCheck && ui->measureCheck->isChecked();
+                measuredCurvesSecondary->setVisible(triodeBVisible);
             }
         }
     }
@@ -9912,6 +10029,11 @@ void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
     }
 
     if (auto *t = dynamic_cast<TriodeCommonCathode*>(c)) {
+        // For Triode CC, reset manual Headroom (Vpk) whenever Max Sym Swing is
+        // toggled so that helper-derived symmetric/max swing becomes the
+        // effective headroom source again when headroom == 0, mirroring the
+        // SE output stage behaviour.
+        t->setParameter(TRI_CC_HEADROOM, 0.0);
         t->setSymSwingEnabled(enabled);
         t->plot(&plot);
         t->updateUI(circuitLabels, circuitValues);

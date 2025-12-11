@@ -166,6 +166,8 @@ private slots:
 
     void on_cir12Value_editingFinished();
 
+    void on_cir13Value_editingFinished();
+
     void on_actionExport_Model_triggered();
 
     void exportFittedModelToDevices();

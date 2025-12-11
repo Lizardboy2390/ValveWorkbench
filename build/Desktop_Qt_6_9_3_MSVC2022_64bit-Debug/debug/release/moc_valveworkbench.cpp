@@ -110,6 +110,7 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         "on_cir10Value_editingFinished",
         "on_cir11Value_editingFinished",
         "on_cir12Value_editingFinished",
+        "on_cir13Value_editingFinished",
         "on_actionExport_Model_triggered",
         "exportFittedModelToDevices",
         "on_actionExport_to_Spice_triggered",
@@ -285,42 +286,44 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         QtMocHelpers::SlotData<void()>(69, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_cir12Value_editingFinished'
         QtMocHelpers::SlotData<void()>(70, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionExport_Model_triggered'
+        // Slot 'on_cir13Value_editingFinished'
         QtMocHelpers::SlotData<void()>(71, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'exportFittedModelToDevices'
+        // Slot 'on_actionExport_Model_triggered'
         QtMocHelpers::SlotData<void()>(72, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionExport_to_Spice_triggered'
+        // Slot 'exportFittedModelToDevices'
         QtMocHelpers::SlotData<void()>(73, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionExport_SE_Output_to_Spice_triggered'
+        // Slot 'on_actionExport_to_Spice_triggered'
         QtMocHelpers::SlotData<void()>(74, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_actionExport_SE_Output_to_Spice_triggered'
+        QtMocHelpers::SlotData<void()>(75, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_mes_mod_select_stateChanged'
-        QtMocHelpers::SlotData<void(int)>(75, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::Int, 76 },
+        QtMocHelpers::SlotData<void(int)>(76, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 77 },
         }}),
         // Slot 'on_pushButton_3_clicked'
-        QtMocHelpers::SlotData<void()>(77, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_pushButton_4_clicked'
         QtMocHelpers::SlotData<void()>(78, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_quickHealthButton_clicked'
+        // Slot 'on_pushButton_4_clicked'
         QtMocHelpers::SlotData<void()>(79, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_fullHealthButton_clicked'
+        // Slot 'on_quickHealthButton_clicked'
         QtMocHelpers::SlotData<void()>(80, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionSave_as_Reference_Tube_triggered'
+        // Slot 'on_fullHealthButton_clicked'
         QtMocHelpers::SlotData<void()>(81, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionReset_Reference_Tube_triggered'
+        // Slot 'on_actionSave_as_Reference_Tube_triggered'
         QtMocHelpers::SlotData<void()>(82, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetVa_editingFinished'
+        // Slot 'on_actionReset_Reference_Tube_triggered'
         QtMocHelpers::SlotData<void()>(83, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetVg_editingFinished'
+        // Slot 'on_datasheetVa_editingFinished'
         QtMocHelpers::SlotData<void()>(84, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetIa_editingFinished'
+        // Slot 'on_datasheetVg_editingFinished'
         QtMocHelpers::SlotData<void()>(85, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetGm_editingFinished'
+        // Slot 'on_datasheetIa_editingFinished'
         QtMocHelpers::SlotData<void()>(86, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetMu_editingFinished'
+        // Slot 'on_datasheetGm_editingFinished'
         QtMocHelpers::SlotData<void()>(87, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetRp_editingFinished'
+        // Slot 'on_datasheetMu_editingFinished'
         QtMocHelpers::SlotData<void()>(88, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_datasheetRp_editingFinished'
+        QtMocHelpers::SlotData<void()>(89, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -404,23 +407,24 @@ void ValveWorkbench::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 57: _t->on_cir10Value_editingFinished(); break;
         case 58: _t->on_cir11Value_editingFinished(); break;
         case 59: _t->on_cir12Value_editingFinished(); break;
-        case 60: _t->on_actionExport_Model_triggered(); break;
-        case 61: _t->exportFittedModelToDevices(); break;
-        case 62: _t->on_actionExport_to_Spice_triggered(); break;
-        case 63: _t->on_actionExport_SE_Output_to_Spice_triggered(); break;
-        case 64: _t->on_mes_mod_select_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 65: _t->on_pushButton_3_clicked(); break;
-        case 66: _t->on_pushButton_4_clicked(); break;
-        case 67: _t->on_quickHealthButton_clicked(); break;
-        case 68: _t->on_fullHealthButton_clicked(); break;
-        case 69: _t->on_actionSave_as_Reference_Tube_triggered(); break;
-        case 70: _t->on_actionReset_Reference_Tube_triggered(); break;
-        case 71: _t->on_datasheetVa_editingFinished(); break;
-        case 72: _t->on_datasheetVg_editingFinished(); break;
-        case 73: _t->on_datasheetIa_editingFinished(); break;
-        case 74: _t->on_datasheetGm_editingFinished(); break;
-        case 75: _t->on_datasheetMu_editingFinished(); break;
-        case 76: _t->on_datasheetRp_editingFinished(); break;
+        case 60: _t->on_cir13Value_editingFinished(); break;
+        case 61: _t->on_actionExport_Model_triggered(); break;
+        case 62: _t->exportFittedModelToDevices(); break;
+        case 63: _t->on_actionExport_to_Spice_triggered(); break;
+        case 64: _t->on_actionExport_SE_Output_to_Spice_triggered(); break;
+        case 65: _t->on_mes_mod_select_stateChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 66: _t->on_pushButton_3_clicked(); break;
+        case 67: _t->on_pushButton_4_clicked(); break;
+        case 68: _t->on_quickHealthButton_clicked(); break;
+        case 69: _t->on_fullHealthButton_clicked(); break;
+        case 70: _t->on_actionSave_as_Reference_Tube_triggered(); break;
+        case 71: _t->on_actionReset_Reference_Tube_triggered(); break;
+        case 72: _t->on_datasheetVa_editingFinished(); break;
+        case 73: _t->on_datasheetVg_editingFinished(); break;
+        case 74: _t->on_datasheetIa_editingFinished(); break;
+        case 75: _t->on_datasheetGm_editingFinished(); break;
+        case 76: _t->on_datasheetMu_editingFinished(); break;
+        case 77: _t->on_datasheetRp_editingFinished(); break;
         default: ;
         }
     }
@@ -447,14 +451,14 @@ int ValveWorkbench::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 77)
+        if (_id < 78)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 77;
+        _id -= 78;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 77)
+        if (_id < 78)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 77;
+        _id -= 78;
     }
     return _id;
 }

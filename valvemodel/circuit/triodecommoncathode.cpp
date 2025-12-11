@@ -564,6 +564,35 @@ bool TriodeCommonCathode::computeHeadroomHarmonicCurrents(double headroomVpk,
         return false;
     }
 
+    // Map the requested anode headroom (Vpk) into an approximate grid-drive
+    // limit based on the self-bias cathode voltage Vk and the small-signal
+    // gain used for the Designer sensitivity readout. This prevents the
+    // helper from exploring headroom values that would require the grid to
+    // go significantly positive, where real-world blocking distortion would
+    // dominate.
+
+    double vpkLimited = headroomVpk;
+    {
+        const double vk = parameter[TRI_CC_VK] ? parameter[TRI_CC_VK]->getValue() : 0.0;
+        if (vk > 0.0) {
+            double gain = (sensitivityGainMode == 1)
+                              ? parameter[TRI_CC_GAIN_B]->getValue()
+                              : parameter[TRI_CC_GAIN]->getValue();
+            if (std::isfinite(gain) && std::abs(gain) > 1e-6) {
+                const double vppInConduction  = 2.0 * vk;                 // Vpp at grid to reach vg = 0 V
+                const double vppOutConduction = std::abs(gain) * vppInConduction;
+                const double headroomConductionVpk = 0.5 * vppOutConduction;
+                if (headroomConductionVpk > 0.0) {
+                    vpkLimited = std::min(vpkLimited, headroomConductionVpk);
+                }
+            }
+        }
+    }
+
+    if (vpkLimited <= 0.0) {
+        return false;
+    }
+
     const double vb = parameter[TRI_CC_VB]->getValue();
     const double vaOp = parameter[TRI_CC_VA]->getValue();
     const double iaOp_mA = parameter[TRI_CC_IA]->getValue();
@@ -576,7 +605,7 @@ bool TriodeCommonCathode::computeHeadroomHarmonicCurrents(double headroomVpk,
     // Clamp headroom to a sensible fraction of the available B+ range so the
     // swing does not exceed physical limits.
     const double maxHeadroom = 0.9 * std::max(1.0, std::min(vb, device1->getVaMax()));
-    const double vpk = std::min(std::max(0.0, headroomVpk), maxHeadroom);
+    const double vpk = std::min(std::max(0.0, vpkLimited), maxHeadroom);
     if (vpk <= 0.0) {
         return false;
     }
@@ -654,6 +683,9 @@ bool TriodeCommonCathode::simulateHarmonicsTimeDomain(double headroomVpk,
     double a[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     double b[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
+    lastHeadroomWaveform.clear();
+    lastHeadroomWaveform.reserve(sampleCount);
+
     for (int k = 0; k < sampleCount; ++k) {
         const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
         const double u = phase / twoPi; // normalised phase in [0, 1)
@@ -671,6 +703,8 @@ bool TriodeCommonCathode::simulateHarmonicsTimeDomain(double headroomVpk,
         const double frac = pos - indexF;
 
         const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+
+        lastHeadroomWaveform.push_back(ip);
 
         const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
                                                    static_cast<double>(sampleCount - 1)));
