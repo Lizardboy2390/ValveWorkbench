@@ -35,6 +35,7 @@
 #include <QGraphicsTextItem>
 #include <QLineEdit>
 #include <QPen>
+#include <QSizePolicy>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -1029,12 +1030,12 @@ void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
         return;
     }
 
-    headroomWaveformScene->setSceneRect(0.0, -1.0, 1.0, 2.0);
-
     QPen pen(Qt::darkBlue);
     pen.setWidthF(0.0);
 
     const double invN = (n > 1) ? 1.0 / static_cast<double>(n - 1) : 1.0;
+    double yMin = std::numeric_limits<double>::infinity();
+    double yMax = -std::numeric_limits<double>::infinity();
     for (int i = 0; i < n - 1; ++i) {
         const double v1 = wave[i];
         const double v2 = wave[i + 1];
@@ -1046,7 +1047,21 @@ void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
         const double x1 = static_cast<double>(i) * invN;
         const double x2 = static_cast<double>(i + 1) * invN;
         headroomWaveformScene->addLine(x1, y1, x2, y2, pen);
+
+        if (y1 < yMin) yMin = y1;
+        if (y1 > yMax) yMax = y1;
+        if (y2 < yMin) yMin = y2;
+        if (y2 > yMax) yMax = y2;
     }
+
+    if (!std::isfinite(yMin) || !std::isfinite(yMax) || yMin >= yMax) {
+        yMin = -1.0;
+        yMax = 1.0;
+    }
+
+    const double yRange = yMax - yMin;
+    const double pad = 0.1 * (yRange > 0.0 ? yRange : 1.0);
+    headroomWaveformScene->setSceneRect(0.0, yMin - pad, 1.0, yRange + 2.0 * pad);
 
     ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
 }
@@ -4449,6 +4464,21 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         }
         ui->headroomWaveformView->setScene(headroomWaveformScene);
         headroomWaveformScene->clear();
+
+        // Encourage the Headroom Waveshape viewer to use more of the
+        // available vertical space in its group box so the Va(t) waveform
+        // is easier to read at a glance, without forcing the group box to
+        // extend beyond the available column height.
+        ui->headroomWaveformView->setMinimumHeight(135);
+        ui->headroomWaveformView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+        // Nudge the grey QGraphicsView area up slightly inside the Headroom
+        // Waveshape group box so it is not visually clipped by the bottom
+        // frame. A small bottom layout margin (~4 px) keeps a clear gap
+        // without pushing the group box beyond the column.
+        if (ui->headroomWaveformGroupBox && ui->headroomWaveformGroupBox->layout()) {
+            ui->headroomWaveformGroupBox->layout()->setContentsMargins(0, 0, 0, 4);
+        }
     }
 
     connect(&serialPort, &QSerialPort::readyRead, this, &ValveWorkbench::handleReadyRead);

@@ -669,6 +669,8 @@ bool TriodeCommonCathode::simulateHarmonicsTimeDomain(double headroomVpk,
         return false;
     }
 
+    const double iaBias_A = iaBias_mA / 1000.0;
+
     // Effective AC anode load is the parallel of Ra and Rl when both are
     // positive; otherwise fall back to whichever is available.
     double r_ac = 0.0;
@@ -714,14 +716,20 @@ bool TriodeCommonCathode::simulateHarmonicsTimeDomain(double headroomVpk,
     }
 
     // Map requested anode headroom (Vpk) to an approximate grid drive (Vpp).
-    const double Vpp_out_target = 2.0 * headroom;          // desired anode Vpp
+    const double Vpp_out_target = 2.0 * headroom;               // desired anode Vpp
     double       Vpp_in         = Vpp_out_target / std::abs(Av); // initial grid Vpp
     if (!(Vpp_in > 0.0) || !std::isfinite(Vpp_in)) {
         return false;
     }
 
-    // Grid-to-cathode bias (self-bias, grid at 0 V, cathode at +Vk).
+    // Grid-to-cathode DC bias (self-bias, grid at 0 V, cathode at +Vk).
     const double vgkBias = -vk;
+
+    // Effective AC cathode impedance: when K-bypass is enabled we treat the
+    // cathode as AC-ground at the analysis frequency (bypassed), otherwise we
+    // include dynamic Rk in the instantaneous cathode voltage.
+    const bool   cathodeBypassed = (sensitivityGainMode == 1);
+    const double rk_ac           = (cathodeBypassed || rk <= 0.0) ? 0.0 : rk;
 
     // Helper: DC load-line current at a given Va for the effective AC load.
     auto dcLoadCurrent = [&](double va) -> double {
@@ -779,7 +787,7 @@ bool TriodeCommonCathode::simulateHarmonicsTimeDomain(double headroomVpk,
         double A[6];
     };
 
-    const int    sampleCount = 512;
+    const int    sampleCount = 1024;
     const double twoPi       = 6.28318530717958647692; // 2 * pi
 
     auto simulateForDrive = [&](double gridVpp,
@@ -802,27 +810,84 @@ bool TriodeCommonCathode::simulateHarmonicsTimeDomain(double headroomVpk,
         for (int k = 0; k < sampleCount; ++k) {
             const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
 
-            // Grid drive: sine around the DC bias, clamped so that the grid
-            // never goes positive with respect to the cathode.
-            double vgk = vgkBias + 0.5 * gridVpp * std::sin(phase);
-            if (vgk > 0.0) {
-                vgk = 0.0;
-            }
+            // Absolute grid drive (grid-to-ground) at this phase.
+            const double vg_abs = 0.5 * gridVpp * std::sin(phase);
 
-            double va = findVaFromVgk(vgk);
-            if (!std::isfinite(va)) {
-                continue;
+            double va  = 0.0;
+            double iaA = 0.0;
+
+            if (rk_ac > 0.0) {
+                // Unbypassed cathode: iterate vgk so that Vk follows Ia*Rk
+                // around the DC bias point. Start from the constant-Vk
+                // assumption used for the bypassed case.
+                double vgk = vgkBias + vg_abs;
+                if (vgk > 0.0) {
+                    vgk = 0.0;
+                }
+
+                for (int iter = 0; iter < 4; ++iter) {
+                    va = findVaFromVgk(vgk);
+                    if (!std::isfinite(va)) {
+                        break;
+                    }
+                    va = std::clamp(va, 0.0, 2.0 * vb);
+
+                    iaA = dcLoadCurrent(va);
+                    if (!std::isfinite(iaA) || iaA < 0.0) {
+                        break;
+                    }
+
+                    // Instantaneous cathode voltage follows Ia(t)*Rk around
+                    // the DC operating point. Preserve the DC vk value and
+                    // only add the incremental component from (Ia - Ia_bias).
+                    const double vk_inst = vk + (iaA - iaBias_A) * rk_ac;
+
+                    // Grid is driven around 0V, so derive vgk from absolute
+                    // grid and cathode voltages.
+                    double vgk_new = vg_abs - vk_inst;
+                    if (vgk_new > 0.0) {
+                        vgk_new = 0.0;
+                    }
+
+                    const double delta = std::abs(vgk_new - vgk);
+                    vgk = vgk_new;
+
+                    if (delta < 1e-3) {
+                        break;
+                    }
+                }
+
+                // Final evaluation with the converged vgk.
+                va = findVaFromVgk(vgk);
+                if (!std::isfinite(va)) {
+                    continue;
+                }
+                va = std::clamp(va, 0.0, 2.0 * vb);
+                iaA = dcLoadCurrent(va);
+                if (!std::isfinite(iaA) || iaA < 0.0) {
+                    continue;
+                }
+            } else {
+                // Bypassed cathode: AC-ground approximation, constant Vk.
+                double vgk = vgkBias + vg_abs;
+                if (vgk > 0.0) {
+                    vgk = 0.0;
+                }
+
+                va = findVaFromVgk(vgk);
+                if (!std::isfinite(va)) {
+                    continue;
+                }
+                va = std::clamp(va, 0.0, 2.0 * vb);
+
+                iaA = dcLoadCurrent(va);
+                if (!std::isfinite(iaA) || iaA < 0.0) {
+                    continue;
+                }
             }
-            va = std::clamp(va, 0.0, 2.0 * vb);
 
             if (va < stats.vaMin) stats.vaMin = va;
             if (va > stats.vaMax) stats.vaMax = va;
-
-            // Instantaneous anode current on the AC load line.
-            const double iaA = dcLoadCurrent(va);
-            if (!std::isfinite(iaA) || iaA < 0.0) {
-                continue;
-            }
 
             if (!computeHarmonics) {
                 continue;

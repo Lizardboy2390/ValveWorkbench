@@ -257,7 +257,8 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - Files: `valvemodel/circuit/triodecommoncathode.h/.cpp`, `valveworkbench.cpp`.
   - Designer panel exposes a **Headroom (Vpk)** parameter (cir13) plus input-sensitivity and HD2/HD3/HD4/HD5/THD-at-headroom metrics.
   - Effective headroom comes from either a manual Vpk override or SE-style symmetric/max swing helpers derived from the AC load line; colour cues (bright blue/manual, light blue/symmetric, brown/max) mirror the SE output stage.
-  - Time-domain harmonic percentages are computed via a sine-driven helper that drives the triode model with a grid sine at the self-bias voltage (clamped at vgk≤0), solves Va(t) along the Ra‖Rl AC load line with Rk feedback reflected via the Designer small-signal gain, and applies a Hann-windowed manual DFT over Ia(t) to obtain HD2/HD3/HD4/HD5/THD at the requested headroom.
+  - Time-domain harmonic percentages are computed via a sine-driven helper (nominally 400 Hz) that drives the triode model with a grid sine at the self-bias voltage (clamped at vgk≤0), solves Va(t) along the Ra‖Rl AC load line, and applies a Hann-windowed manual DFT over Ia(t) to obtain HD2/HD3/HD4/HD5/THD at the requested headroom.
+  - The helper now includes a **dynamic cathode** path that respects the Designer K-bypass mode: when K-bypass is **off** the instantaneous cathode voltage follows Ia(t)·Rk around the DC bias so local feedback is reflected directly in Va(t) and the harmonic spectrum; when K-bypass is **on** the cathode is treated as AC-ground so the higher-gain bypassed behaviour is simulated.
   - The Designer **Headroom Waveshape** group shows a DC-removed, peak-normalised anode-voltage waveform Va(t) over one cycle at the effective headroom, taken from the same sine-driven simulation and updated whenever Triode CC headroom/THD is recomputed.
 
 - **Headroom scan slot:** `ValveWorkbench::runHarmonicsScan()`
