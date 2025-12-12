@@ -1,6 +1,7 @@
 #pragma once
 
 #include "circuit.h"
+#include <QVector>
 
 // Parameters for the single-ended output stage. The first four are
 // user-editable inputs; the remaining entries are computed outputs.
@@ -70,6 +71,8 @@ public:
                                    QVector<double> &headroomPoints,
                                    QVector<QVector<QVector<double>>> &harmonicSurface) const;
 
+    const QVector<double> &getLastHeadroomWaveform() const { return lastHeadroomWaveform; }
+
 protected:
     void update(int index) override;
 
@@ -124,4 +127,5 @@ private:
     double effectiveHeadroomVpk = 0.0;
     int gainMode = 1;
     bool inductiveLoad = true;
+    mutable QVector<double> lastHeadroomWaveform;
 };

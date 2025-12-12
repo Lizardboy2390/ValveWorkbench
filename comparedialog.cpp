@@ -63,6 +63,13 @@ CompareDialog::CompareDialog(QWidget *parent) :
     pentodeReferenceLabels = {ui->refIaP, ui->refGmP, ui->refRaP};
     pentodeComparisonLabels = {ui->modIaP, ui->modGmP, ui->modRaP};
 
+    for (int i = 0; i < static_cast<int>(triodeDeltaLabels.size()); ++i) {
+        triodeDeltaLabels[i] = new QLabel(this);
+    }
+    for (int i = 0; i < static_cast<int>(pentodeDeltaLabels.size()); ++i) {
+        pentodeDeltaLabels[i] = new QLabel(this);
+    }
+
     ui->widget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     auto *triodeWrapper = new QVBoxLayout();
     triodeWrapper->setContentsMargins(12, 12, 12, 12);
@@ -155,10 +162,18 @@ CompareDialog::CompareDialog(QWidget *parent) :
         configureValueLabel(label);
     }
 
-    const std::array<QString, 3> columnTitles = {
+    for (QLabel *label : triodeDeltaLabels) {
+        configureValueLabel(label);
+    }
+    for (QLabel *label : pentodeDeltaLabels) {
+        configureValueLabel(label);
+    }
+
+    const std::array<QString, 4> columnTitles = {
         tr("Metric"),
         tr("Reference"),
-        tr("Comparison")
+        tr("Comparison"),
+        tr("\u0394")
     };
 
     const std::array<QLabel *, 4> triodeMetricLabels = {
@@ -172,7 +187,8 @@ CompareDialog::CompareDialog(QWidget *parent) :
     auto setupMetricsPanel = [&](const QString &title,
                                  const std::array<QLabel *, 4> &metricNames,
                                  const std::array<QLabel *, 4> &referenceValues,
-                                 const std::array<QLabel *, 4> &comparisonValues) {
+                                 const std::array<QLabel *, 4> &comparisonValues,
+                                 const std::array<QLabel *, 4> &deltaValues) {
         auto *panel = new QGroupBox(title, this);
         auto *layout = new QGridLayout(panel);
         layout->setContentsMargins(12, 12, 12, 12);
@@ -190,6 +206,7 @@ CompareDialog::CompareDialog(QWidget *parent) :
             QLabel *nameLabel = metricNames[row];
             QLabel *refValue = referenceValues[row];
             QLabel *cmpValue = comparisonValues[row];
+            QLabel *deltaValue = deltaValues[row];
 
             if (nameLabel) {
                 nameLabel->setParent(panel);
@@ -203,6 +220,10 @@ CompareDialog::CompareDialog(QWidget *parent) :
             if (cmpValue) {
                 cmpValue->setParent(panel);
                 layout->addWidget(cmpValue, row + 1, 2);
+            }
+            if (deltaValue) {
+                deltaValue->setParent(panel);
+                layout->addWidget(deltaValue, row + 1, 3);
             }
         }
 
@@ -212,7 +233,8 @@ CompareDialog::CompareDialog(QWidget *parent) :
     auto setupPentodePanel = [&](const QString &title,
                                  const std::array<QLabel *, 3> &metricNames,
                                  const std::array<QLabel *, 3> &referenceValues,
-                                 const std::array<QLabel *, 3> &comparisonValues) {
+                                 const std::array<QLabel *, 3> &comparisonValues,
+                                 const std::array<QLabel *, 3> &deltaValues) {
         auto *panel = new QGroupBox(title, this);
         auto *layout = new QGridLayout(panel);
         layout->setContentsMargins(12, 12, 12, 12);
@@ -230,6 +252,7 @@ CompareDialog::CompareDialog(QWidget *parent) :
             QLabel *nameLabel = metricNames[row];
             QLabel *refValue = referenceValues[row];
             QLabel *cmpValue = comparisonValues[row];
+            QLabel *deltaValue = deltaValues[row];
 
             if (nameLabel) {
                 nameLabel->setParent(panel);
@@ -244,16 +267,21 @@ CompareDialog::CompareDialog(QWidget *parent) :
                 cmpValue->setParent(panel);
                 layout->addWidget(cmpValue, row + 1, 2);
             }
+            if (deltaValue) {
+                deltaValue->setParent(panel);
+                layout->addWidget(deltaValue, row + 1, 3);
+            }
         }
 
         return panel;
     };
 
-    auto *triodePanel = setupMetricsPanel(tr("Triode metrics"), triodeMetricLabels, triodeReferenceLabels, triodeComparisonLabels);
-    auto *pentodePanel = setupPentodePanel(tr("Pentode metrics"), pentodeMetricLabels, pentodeReferenceLabels, pentodeComparisonLabels);
+    auto *triodePanel = setupMetricsPanel(tr("Triode metrics"), triodeMetricLabels, triodeReferenceLabels, triodeComparisonLabels, triodeDeltaLabels);
+    auto *pentodePanel = setupPentodePanel(tr("Pentode metrics"), pentodeMetricLabels, pentodeReferenceLabels, pentodeComparisonLabels, pentodeDeltaLabels);
 
     mainLayout->addWidget(triodePanel);
     mainLayout->addWidget(pentodePanel);
+    pentodeMetricsGroup = pentodePanel;
 
     if (ui->widget4) {
         ui->widget4->setParent(nullptr);
@@ -308,6 +336,19 @@ void CompareDialog::setComparisonModel(Model *model)
     pendingComparisonModel = model;
     selectModelInCombo(comparisonModelCombo, model);
     emitCurrentSelections();
+    updateMetrics();
+}
+
+void CompareDialog::setTriodeTestConditions(double anodeVoltage, double gridVoltage)
+{
+    if (ui->anode) {
+        ui->anode->setText(QString::number(anodeVoltage, 'f', 3));
+    }
+    if (ui->grid) {
+        // UI expects a positive magnitude for "-ve Grid Voltage"; store |Vg|
+        ui->grid->setText(QString::number(std::fabs(gridVoltage), 'f', 3));
+    }
+
     updateMetrics();
 }
 
@@ -438,6 +479,32 @@ void CompareDialog::updateMetrics()
 
     applyMetricsToLabels(referencePentode, nullptr, ui->refIaP, ui->refGmP, ui->refRaP);
     applyMetricsToLabels(comparisonPentode, nullptr, ui->modIaP, ui->modGmP, ui->modRaP);
+
+    // Update delta columns (Comparison - Reference) when both sides are valid
+    applyDeltaToLabels(referenceTriode,
+                       comparisonTriode,
+                       triodeDeltaLabels[0],
+                       triodeDeltaLabels[1],
+                       triodeDeltaLabels[2],
+                       triodeDeltaLabels[3]);
+
+    applyDeltaToLabels(referencePentode,
+                       comparisonPentode,
+                       nullptr, // no bc column in pentode panel
+                       pentodeDeltaLabels[0],
+                       pentodeDeltaLabels[1],
+                       pentodeDeltaLabels[2]);
+
+    const bool anyPentode =
+        (referenceModel && isPentodeModel(referenceModel)) ||
+        (comparisonModel && isPentodeModel(comparisonModel));
+
+    if (ui->groupBox_2) {
+        ui->groupBox_2->setVisible(anyPentode);
+    }
+    if (pentodeMetricsGroup) {
+        pentodeMetricsGroup->setVisible(anyPentode);
+    }
 }
 
 CompareDialog::ModelMetrics CompareDialog::computeTriodeMetrics(Model *model, double anodeVoltage, double gridVoltage)
@@ -447,26 +514,19 @@ CompareDialog::ModelMetrics CompareDialog::computeTriodeMetrics(Model *model, do
         return metrics;
     }
 
-    const double deltaGrid = 0.01; // V
-    const double deltaAnode = 1.0; // V
-
     const double iaBase = model->anodeCurrent(anodeVoltage, gridVoltage);
-    const double iaGrid = model->anodeCurrent(anodeVoltage, gridVoltage + deltaGrid);
-    const double iaAnode = model->anodeCurrent(anodeVoltage + deltaAnode, gridVoltage);
+    const SmallSignalResult ss =
+        model->computeSmallSignal(anodeVoltage, gridVoltage, 0.0, model->withSecondaryEmission());
 
-    const double gm = (iaGrid - iaBase) / deltaGrid; // mA per volt (if model returns mA)
-    const double deltaI = iaAnode - iaBase;
-
-    double rp = std::numeric_limits<double>::infinity();
-    if (std::abs(deltaI) > 1e-6) {
-        rp = deltaAnode / deltaI; // raw units consistent with model output
+    if (!ss.valid) {
+        return metrics;
     }
 
     metrics.valid = true;
     metrics.ia = iaBase;
-    metrics.gm = gm;
-    metrics.rp = rp;
-    metrics.mu = std::isfinite(rp) ? gm * rp : std::numeric_limits<double>::infinity();
+    metrics.gm = ss.gm;
+    metrics.rp = ss.ra;
+    metrics.mu = ss.mu;
 
     return metrics;
 }
@@ -478,26 +538,19 @@ CompareDialog::ModelMetrics CompareDialog::computePentodeMetrics(Model *model, d
         return metrics;
     }
 
-    const double deltaGrid = 0.01; // V
-    const double deltaAnode = 1.0; // V
-
     const double iaBase = model->anodeCurrent(anodeVoltage, gridVoltage, screenVoltage);
-    const double iaGrid = model->anodeCurrent(anodeVoltage, gridVoltage + deltaGrid, screenVoltage);
-    const double iaAnode = model->anodeCurrent(anodeVoltage + deltaAnode, gridVoltage, screenVoltage);
+    const SmallSignalResult ss =
+        model->computeSmallSignal(anodeVoltage, gridVoltage, screenVoltage, model->withSecondaryEmission());
 
-    const double gm = (iaGrid - iaBase) / deltaGrid;
-    const double deltaI = iaAnode - iaBase;
-
-    double rp = std::numeric_limits<double>::infinity();
-    if (std::abs(deltaI) > 1e-6) {
-        rp = deltaAnode / deltaI;
+    if (!ss.valid) {
+        return metrics;
     }
 
     metrics.valid = true;
     metrics.ia = iaBase;
-    metrics.gm = gm;
-    metrics.rp = rp;
-    metrics.mu = std::isfinite(rp) ? gm * rp : std::numeric_limits<double>::infinity();
+    metrics.gm = ss.gm;
+    metrics.rp = ss.ra;
+    metrics.mu = ss.mu;
 
     return metrics;
 }
@@ -517,6 +570,34 @@ void CompareDialog::applyMetricsToLabels(const ModelMetrics &metrics, QLabel *mu
     }
     if (rpLabel != nullptr) {
         rpLabel->setText(metrics.valid ? formatValue(metrics.rp, QString::fromUtf8("kΩ"), 2) : dash);
+    }
+}
+
+void CompareDialog::applyDeltaToLabels(const ModelMetrics &reference,
+                                       const ModelMetrics &comparison,
+                                       QLabel *muLabel,
+                                       QLabel *iaLabel,
+                                       QLabel *gmLabel,
+                                       QLabel *rpLabel)
+{
+    const QString dash = QString::fromUtf8("—");
+    const bool bothValid = reference.valid && comparison.valid;
+
+    if (muLabel != nullptr) {
+        const double deltaMu = comparison.mu - reference.mu;
+        muLabel->setText(bothValid ? formatValue(deltaMu, QString(), 2) : dash);
+    }
+    if (iaLabel != nullptr) {
+        const double deltaIa = comparison.ia - reference.ia;
+        iaLabel->setText(bothValid ? formatValue(deltaIa, tr("mA"), 2) : dash);
+    }
+    if (gmLabel != nullptr) {
+        const double deltaGm = comparison.gm - reference.gm;
+        gmLabel->setText(bothValid ? formatValue(deltaGm, tr("mA/V"), 3) : dash);
+    }
+    if (rpLabel != nullptr) {
+        const double deltaRp = comparison.rp - reference.rp;
+        rpLabel->setText(bothValid ? formatValue(deltaRp, QString::fromUtf8("kΩ"), 2) : dash);
     }
 }
 

@@ -457,4 +457,5 @@ private:
     void hideRotationControls(); // Hide rotation controls for non-3D plots
     void refreshHarmonicsPlots();
     void updateHeadroomWaveformView(TriodeCommonCathode *tcc);
+    void updateHeadroomWaveformView(class SingleEndedOutput *se);
 };

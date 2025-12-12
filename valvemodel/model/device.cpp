@@ -52,6 +52,24 @@ Device::Device(QJsonDocument modelDocument)
             paMax = deviceObject["paMax"].toDouble();
         }
 
+        // Top-level deviceType hint used for presets that do not carry an
+        // explicit fitted-model block. This allows JSON presets like a plain
+        // 6L6-GC to be correctly tagged as PENTODE even when no 'model'
+        // object is present, so Designer circuits such as SingleEndedOutput
+        // can filter devices by type.
+        if (deviceObject.contains("deviceType") && deviceObject["deviceType"].isString()) {
+            const QString typeStr = deviceObject["deviceType"].toString();
+            if (typeStr.compare("PENTODE", Qt::CaseInsensitive) == 0) {
+                deviceType = PENTODE;
+            } else if (typeStr.compare("TRIODE", Qt::CaseInsensitive) == 0) {
+                deviceType = TRIODE;
+            } else if (typeStr.compare("DOUBLE_TRIODE", Qt::CaseInsensitive) == 0) {
+                deviceType = DOUBLE_TRIODE;
+            } else if (typeStr.compare("DIODE", Qt::CaseInsensitive) == 0) {
+                deviceType = DIODE;
+            }
+        }
+
         if (deviceObject.contains("model") && deviceObject["model"].isObject()) {
             QJsonObject modelObject = deviceObject["model"].toObject();
             qInfo("Found model object");

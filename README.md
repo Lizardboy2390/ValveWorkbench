@@ -273,6 +273,106 @@ The **Preferences** dialog controls analyser and model behaviour:
    - Confirm overwrite if prompted.
    - On the next application start, the updated JSON parameters become the default for that device in Modeller/Designer and are used when computing load lines.
 
+### Appendix: ExtractModel-style pentode (DerkE) – conceptual picture
+
+The **ExtractModel** pentode (labelled `ExtractModel Pentode (DerkE exact)` in Modeller) is an experimental model that follows Derk Reefman’s published “ExtractModel” equations. It is conceptually different from Gardiner in that it:
+
+- Starts from a **Koren-like triode law expressed in terms of the screen voltage**,
+- Uses a small set of shaping parameters to partition that current between anode and screen, and
+- Optionally adds a **secondary-emission bump** around a cross-over voltage Vco(Vg2, Vg1).
+
+At a high level, for an anode voltage Va and grid/screen voltages Vg1/Vg2:
+
+1. **Core Ip law (Ip_Koren)**
+   - Treats the screen grid as the “effective anode” and computes a current Ip:
+     - `f      = sqrt(kvb + Vg2^2)`
+     - `y      = kp * (1/mu + Vg1/f)`
+     - `base   = Vg2/kp * ln(1 + exp(y))`
+     - `Ip     = base^x`
+   - Parameters: `mu, kp, kvb, x` control μ-like gain, knee position, curvature, and high-current behaviour.
+
+2. **Partitioning Ip between anode and screen**
+   - Two scaling factors Kg1/Kg2 and three shaping parameters A, alpha_s, beta describe how Ip is split between anode (Ia) and screen (Ig2):
+     - `alpha = 1 − Kg1/Kg2 * (1 + alpha_s)`
+     - `g(Va) = exp(−(beta * Va)^(3/2))` (a soft “turn-off” of the shaping term at high Va)
+     - `term  = alpha/Kg1 + alpha_s/Kg2`
+   - Without secondary emission, the model can be written as:
+     - `Ia(Va)  = Ip * (1/Kg1 − 1/Kg2 + A*Va/Kg1 − g * term)`
+     - `Ig2(Va) = Ip/Kg2 * (1 + alpha_s * g)`
+   - Intuition:
+     - Kg1/Kg2 and A mainly control **how much** of Ip goes to the plate vs screen and how this shifts with Va.
+     - alpha_s and beta control how Ig2 decays with Va and how sharply the knee bends.
+
+3. **Secondary emission bump Psec(Va)**
+   - Beam tetrodes and pentodes often show a **secondary-emission hump** around a certain Va (the “kink” region). ExtractModel encodes this via Psec(Va):
+     - `Vco  = Vg2 / lambda − nu * Vg1 − omega`
+     - `Psec = S * Va * (1 + tanh(−ap * (Va − Vco)))`
+   - Parameters:
+     - `omega` sets a base offset in Va.
+     - `lambda` scales how strongly the screen voltage shifts the cross-over.
+     - `nu` controls how Vg1 moves Vco.
+     - `S` is the amplitude of the bump; `ap` sets its sharpness.
+   - When secondary emission is enabled in Preferences, Psec is incorporated as:
+     - `Ia(Va)  = Ip * (1/Kg1 − 1/Kg2 + A*Va/Kg1 − Psec/Kg2 − g * term)`
+     - `Ig2(Va) = Ip/Kg2 * (1 + alpha_s * g + Psec)`
+
+4. **Fitting strategy**
+   - In ValveWorkbench, the ExtractModel pentode is implemented in `ExtractModelPentode` and used when you choose the **ExtractDerkE** type. Each measured (Va, Vg1, Vg2, Ia, Ig2) sample contributes up to two residuals to the Ceres solver:
+     - An **Ia residual** enforcing the DerkE anode law (with or without Psec).
+     - An **Ig2 residual** enforcing the DerkE screen-current law (again with or without Psec when Ig2 is available and finite).
+   - The parameter set is the same in both residuals, so anode and screen data jointly constrain μ, Kg1/Kg2, A, alpha_s, beta, and any secondary-emission geometry.
+   - Bounds in `ExtractModelPentode::setOptions()` keep these parameters in a realistic corridor (e.g. bounded omega/lambda/nu/S/ap) to avoid extreme Psec shapes that will never converge.
+
+5. **How this differs from Gardiner**
+   - Gardiner is the **reference production model** in ValveWorkbench: it has a larger parameter set and is tuned primarily by fitting anode characteristics, with optional screen support.
+   - ExtractModel / DerkE is a **more literal port of Derk Reefman’s equations** and is meant to be used experimentally, particularly when you want to compare ValveWorkbench’s fits against the standalone ExtractModel/uTracer tools.
+   - In practice, Gardiner will generally be more forgiving and robust across arbitrary datasets; ExtractModel is more brittle but gives you a closer “apples-to-apples” comparison to DerkE’s published curves when tuned carefully.
+
+
+## Triode / Double-Triode Health + Compare workflow
+
+This is a suggested end-to-end recipe for grading a triode or double-triode and comparing it to another model/device.
+
+1. **Load a template with datasheet ref points**
+   - On the Analyser tab, use **Load Template…** or open a device whose JSON has a `datasheet.refPoints[0]` block with at least `va`, `vg`, `ia`, `gm`.
+   - Confirm that the **datasheet / reference** Va/Vg/Ia/gm look sensible for the tube and that the Analyser’s Va/grid ranges cover that point.
+
+2. **Run Quick Health (and optionally Full Health)**
+   - Ensure **Device Type = Triode** (or Double Triode) in the Analyser combobox.
+   - Click **Quick Health** to run a 3×3 cluster of transfer sweeps around the datasheet point. Watch the transfer plot; you should see 9 short sweeps overlay.
+   - Optionally click **Full Health** to add four corner clusters; this takes longer (13 transfer sweeps total) but gives more coverage.
+   - When the run completes, note:
+     - The **Q %** and **F %** labels under the Quick/Full Health buttons.
+     - The **Triode A/B Health** boxes under the plot (Ia/gm/rp/μ measured vs ref, plus 4-corner % for Full Health).
+
+3. **Inspect Triode B (Double Triode only)**
+   - If the device is a **Double Triode**, tick **Show Triode B** (the shared screenCheck checkbox when it is relabelled for Double Triode):
+     - On Analyser: blue Triode B transfer/anode curves overlay the black Triode A sweeps.
+     - On Modeller: Triode B clones similarly overlay when a double-triode measurement is selected and Show Triode B is checked.
+   - Use the Triode B Health box to compare A vs B strengths (Ia and gm percentages) and corner behaviour.
+
+4. **Fit a triode model from the Health data (optional)**
+   - On the Modeller tab, select the Analyser measurement you just used for Health (typically a triode anode-characteristics run near the datasheet bias).
+   - Click **Fit Triode**. The project tree will gain a new triode model node (e.g. `Cohen Helie Triode`).
+   - Use the **mes/mod** toggle to compare measured μ/gm/ra vs the fitted model at the same OP.
+
+5. **Use Compare to contrast tubes / models**
+   - On the Modeller tab, press **Compare…**.
+   - In the Compare dialog:
+     - Set **Reference Model** and **Comparison Model** (for example a “good” reference model vs the tube you just measured), or pick two different device presets via Import-from-Device.
+     - For triodes, let Compare auto-fill the test Va/Vg from the template; or set them manually to match whatever bias you care about.
+   - Read across the μ/Ia/gm/rp tables:
+     - The first two columns show absolute values for each model.
+     - The **Δ column** tells you how far apart they are at that exact point (e.g. “this tube has ~15% lower gm and ~20% higher rp than the reference at 250 V, −1.5 V”).
+
+6. **Store the result as a tube-style preset (optional)**
+   - With the fitted triode (or double-triode) model selected in the project tree, click **Export to Devices**.
+   - Choose a suitable filename in `models/` (e.g. `6N2P-EV_Ref.json`, `6N2P-EV_Sample1.json`).
+   - The preset now carries:
+     - The fitted **model** used by Designer and future Compare operations.
+     - An optional embedded **measurement** you can visualise in Designer and re-import into Modeller.
+     - An optional **triodeModel** seed for later pentode work.
+
 ## Analyser serial protocol (S* and M* commands)
 
 The Analyser tab talks to the Valve Wizard Valve Analyzer over a simple ASCII command

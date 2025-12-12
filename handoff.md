@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-10 (Triode CC Designer headroom/THD-at-headroom sine-driven helper + Triode CC Headroom Waveshape viewer Va(t) + Quick/Full Health gm estimator window/binning)
+Last updated: 2025-12-11 (Compare dialog triode/pentode small-signal metrics and Δ column, datasheet-OP auto-fill for Compare, Export-to-Device triode grid-range normalisation and current-measurement snapshots, Analyser Triode B overlay toggles, light dashed minor gridlines, documentation updates)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -121,6 +121,20 @@ while keeping the **rules** and current **technical state** clear.
     ~70% along the curve and inside the visible axes. This path should be
     treated as the reference for any future label work on measurement plots.
 
+- **Export-to-Device presets (analyserDefaults vs measurement)**
+  - Exporting a fitted model from the Analyser/Modeller side writes a single JSON preset that combines:
+    - `analyserDefaults`: the ranges/limits the Analyser should restore when the preset is loaded.
+    - `model`: the fitted C++ model parameters (Cohen–Helie triode, Gardiner pentode, etc.).
+    - Optional `triodeModel`: an embedded Cohen–Helie triode seed for pentode fits.
+    - Optional `measurement`: the full analyser sweeps (Va/Vg1/Vg2/Ia/Ig2) used for fitting.
+    - Optional `spice`: a SPICE-ready .subckt block that mirrors the internal model law.
+  - **Triode grid ranges:**
+    - The Analyser UI uses a positive-magnitude convention for "-ve Grid Voltage" (e.g. 0→5 V for a 6N2P‑EV transfer), while the hardware and `Measurement` objects operate on true negative grid voltages (e.g. −5→0 V).
+    - To avoid "poisoning" templates with negative ranges, `exportFittedModelToDevices()` now behaves as follows for **triode + ANODE_CHARACTERISTICS** presets:
+      - `analyserDefaults.grid` and `analyserDefaults.tests["anode"].grid` are written from the analyser UI values and **normalised** to a 0→+V, positive-step range (clamping purely negative bounds to 0..|stop| and forcing `step>0`).
+      - The embedded `measurement` block still preserves the **true negative grid sweep** (`gridStart < 0`, `gridStop ≤ 0`, `gridStep < 0`) exactly as captured by the analyser.
+    - On load, the Analyser restores template defaults from `analyserDefaults`/`analyserDefaults.tests` only; the `measurement` metadata is used for plotting and refitting, not for re-populating the grid-start/stop/step UI, so presets can safely bundle both human-friendly defaults and raw hardware data.
+
 ## Analyser serial protocol (summary)
 
 For detailed command descriptions, see **"Analyser serial protocol (S* and
@@ -197,6 +211,56 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - `valvemodel/circuit/singleendedoutput.cpp` - Time-domain harmonic functions
   - `valvemodel/circuit/singleendedoutput.h` - Function declarations
   - External reference: `refrence code/ilovepdf_pages-to-jpg (1)` — eTracer PC software manual (quick-scan, corners tests, Imax/Pmax usage, tube grading ideas).
+
+### 2025-12-11 Summary (Compare / Export-to-Device / analyser overlays / grid helpers)
+
+- **Compare dialog metrics and Δ column**
+  - Compare now computes triode and pentode μ/gm/rp/Ia at the user-specified test conditions using the shared `Model::computeSmallSignal` helper instead of ad-hoc finite differences. This keeps Compare’s small-signal metrics consistent with Modeller and any other code that relies on the canonical small-signal path.
+  - For triodes, `computeSmallSignal` is called with Va/Vg from the Compare test boxes; for pentodes it uses Va/Vg1/Vg2 from the Compare pentode panel. The underlying model law `Ia(Va,Vg1,Vg2)` is the same as used by plotting and time-domain helpers.
+  - The triode and pentode metrics tables now include a fourth **Δ column** that shows `comparison − reference` differences for each metric:
+    - Triode: μ, Ia, gm, rp.
+    - Pentode: Ia, gm, rp (no μ row in the pentode block).
+  - When both reference and comparison models yield valid small-signal results at the chosen point, the Δ cells show signed differences with appropriate units (e.g. `+0.30 mA` for Ia, `−0.02 mA/V` for gm). If either side is invalid, the cell displays an em dash so the user is not misled by junk values.
+  - Compare also auto-fills triode test conditions (Va/Vg) from the active template’s `datasheet.refPoints[0]` when present, so Compare, Quick/Full Health, and datasheet-based health metrics all default to the same operating point.
+
+- **Export-to-Device presets and analyser defaults**
+  - `ValveWorkbench::exportFittedModelToDevices()` writes a single JSON preset that combines:
+    - `analyserDefaults`: analyser ranges and limits, including optional per-test snapshots under `analyserDefaults.tests`.
+    - `model`: fitted C++ model parameters (Cohen–Helie triode, Gardiner/Reefman pentode, etc.).
+    - Optional `triodeModel`: embedded Cohen–Helie triode seed for pentode presets.
+    - Optional `measurement`: full analyser sweeps (Va/Vg1/Vg2/Ia/Ig2) for refitting and diagnostics.
+    - Optional `spice`: a SPICE-ready `.subckt` block representing the same Ia(Va,Vg1,Vg2) law.
+  - The exporter now **prefers the currently selected measurement** (`currentMeasurement`) as the snapshot source when it matches the analyser device type and is `ANODE_CHARACTERISTICS`. Only when there is no suitable current measurement does it fall back to `findMeasurement(deviceType, ANODE_CHARACTERISTICS)`. This ensures that correcting analyser ranges/limits and re-running a test actually updates exported presets instead of perpetuating stale settings.
+  - For triode presets, Export-to-Device normalises the per-test grid defaults so templates remain intuitive:
+    - The Analyser UI uses positive magnitudes for “-ve Grid Voltage” (e.g. 0→5 V), while the hardware and `Measurement` objects operate on true negative grid voltages (e.g. −5→0 V).
+    - `analyserDefaults.grid` and `analyserDefaults.tests["anode"].grid` are now written from the analyser UI and normalised to a 0→+V, positive-step range (clamping purely negative ranges to 0..|stop| and forcing `step > 0`).
+    - The embedded `measurement` block still preserves the true negative grid sweep (`gridStart < 0`, `gridStop ≤ 0`, `gridStep < 0`). On load, analyser defaults come only from `analyserDefaults`/`tests`; the measurement metadata is used for plotting/refitting, not for repopulating the grid boxes.
+  - After export completes and the JSON is written, the helper clears any `Circuit`→`Device` pointers, deletes and reloads the `Device` list via `loadDevices()`, and repopulates Designer dropdowns so the new preset immediately appears as a selectable device.
+
+- **Analyser/Modeller overlays and “Show Triode B” semantics**
+  - The shared `measureCheck`, `modelCheck`, and `screenCheck` checkboxes now map to a per-tab overlay state (`overlayStates[3]`):
+    - **Designer (role 0):** `measureCheck` toggles embedded measurement overlays on the current `Device` without altering axes; `modelCheck` toggles red model curves; `screenCheck` shows/hides screen-current overlays for pentodes.
+    - **Modeller (role 1):** `measureCheck` toggles the active project measurement and any Triode B clones; `modelCheck` toggles fitted model overlays; `screenCheck` either shows screen current for pentodes or, in Double Triode mode, acts as a **Show Triode B** toggle.
+    - **Analyser (role 2):** `measureCheck` controls the latest analyser measurement; `modelCheck` is generally off by default; `screenCheck` again toggles screen current for pentodes and **Triode B overlays** when a secondary clone is present.
+  - For double triodes, Triode B overlays are implemented via clones built in `testFinished()` and a single visibility rule applied on both Modeller and Analyser tabs:
+    - A Triode B clone is created by remapping `va2/Ia2/Vg3` into a primary-style measurement (`Va/Ia/Vg1`) so existing plotting and gm/rp helpers can be reused.
+    - On Modeller and Analyser, the clone’s sweeps are drawn in blue without axes, and are visible if and only if `isDoubleTriode` is true and both `measureCheck` and `screenCheck` (labelled “Show Triode B” for Double Triode devices) are checked.
+  - `on_tabWidget_currentChanged` clears all overlay groups from the shared `Plot` scene, computes a logical tab role (0 = Designer, 1 = Modeller, 2 = Analyser), applies the saved `overlayStates[tabRole]` to the checkboxes, shows/hides the Health boxes on the Analyser tab, and, when `showMeasurement` is enabled for that role, calls `on_measureCheck_stateChanged` to lazily rebuild measurement groups. This prevents dangling `QGraphicsItemGroup` pointers while keeping overlay preferences stable across tab switches.
+
+- **Minor gridlines on all plots**
+  - The `Plot` class’s `setAxes(...)` method now draws light grey dashed **minor gridlines** between existing major gridlines on both axes:
+    - Major gridlines and tick labels are unchanged; they still use solid lines at integer multiples of `xMajorDivision`/`yMajorDivision`.
+    - Each major interval is subdivided into 5 equal segments by drawing 4 intermediate minor gridlines at 1/5, 2/5, 3/5, and 4/5 of the major step, using a thin `Qt::DashLine` pen in `QColor(200,200,200)`.
+  - This applies uniformly to Analyser plots (anode/transfer/screen), Modeller overlays, all Designer circuits, and the Harmonics tab. The denser grid makes it easier to visually gauge slopes (gm/ra), distances between curves, and relative headroom/THD trends without changing any underlying axis logic.
+
+- **Relationship between time-domain engines and static metrics**
+  - Two time-domain engines coexist with the static small-signal and Health metrics:
+    - The **Single-Ended Output THD** helper (`SingleEndedOutput::simulateHarmonicsTimeDomain`) and its scan wrappers (see 2025-11-21 summary) drive the model with a grid sine at the Designer bias point, solve Va(t) along the AC load line, derive Ia(t) via a DC load line, and perform a windowed DFT to obtain HD2/HD3/HD4/HD5/THD vs headroom or bias current.
+    - The **Triode Common Cathode headroom/THD and waveshape** helper (see 2025-12-10 description in `tasks.md`) does the same for the Triode CC circuit, including dynamic cathode behaviour when K-bypass is off and providing both a THD-at-headroom metric and a Va(t) “Headroom Waveshape” trace.
+  - The new Compare and Health paths tie into these surfaces rather than replacing them:
+    - Compare’s μ/gm/rp/Ia values are local finite-difference linearisations of the same `Ia(Va,Vg1,Vg2)` model that the time-domain helpers integrate over.
+    - Quick/Full Health use measured sweeps but reduce them to local Ia/gm/rp near each HealthPoint via `computeIaGmAt` and small LS fits of Ia vs Vg or Va; their scores then compare these static metrics against datasheet points or reference-tube surfaces built from embedded measurements.
+  - Together, Designer time-domain views answer “What does the waveform look like and how distorted is it at this headroom/bias?”, while Compare and Health answer “How does this tube’s local small-signal behaviour compare to datasheet or Model B?”, and Export-to-Device stitches the two worlds together in a portable JSON preset (model + measurement + analyserDefaults + optional SPICE).
 
 ### 2025-11-21 Summary (Harmonics Explorer / time-domain THD helpers)
 

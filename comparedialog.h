@@ -28,6 +28,7 @@ public:
     void setModel(Model *model);
     void setAvailableModels(const QList<Model *> &models);
     void setComparisonModel(Model *model);
+    void setTriodeTestConditions(double anodeVoltage, double gridVoltage);
 
 signals:
     void referenceModelChanged(Model *model);
@@ -37,6 +38,7 @@ private:
     // UI
     Ui::CompareDialog *ui;
     QGroupBox *modelSelectionGroup;
+    QGroupBox *pentodeMetricsGroup = nullptr;
     QComboBox *referenceModelCombo;
     QComboBox *comparisonModelCombo;
 
@@ -50,6 +52,8 @@ private:
     std::array<QLabel *, 4> triodeComparisonLabels{};
     std::array<QLabel *, 3> pentodeReferenceLabels{};
     std::array<QLabel *, 3> pentodeComparisonLabels{};
+    std::array<QLabel *, 4> triodeDeltaLabels{};
+    std::array<QLabel *, 3> pentodeDeltaLabels{};
 
     // Helpers
     void repopulateCombo(QComboBox *combo, Model *selectedModel);
@@ -71,6 +75,12 @@ private:
     ModelMetrics computeTriodeMetrics(Model *model, double anodeVoltage, double gridVoltage);
     ModelMetrics computePentodeMetrics(Model *model, double anodeVoltage, double gridVoltage, double screenVoltage);
     void applyMetricsToLabels(const ModelMetrics &metrics, QLabel *muLabel, QLabel *iaLabel, QLabel *gmLabel, QLabel *rpLabel);
+    void applyDeltaToLabels(const ModelMetrics &reference,
+                            const ModelMetrics &comparison,
+                            QLabel *muLabel,
+                            QLabel *iaLabel,
+                            QLabel *gmLabel,
+                            QLabel *rpLabel);
     double valueFromLineEdit(QLineEdit *edit) const;
     QString formatValue(double value, const QString &unit, int precision) const;
     bool isPentodeModel(Model *model) const;

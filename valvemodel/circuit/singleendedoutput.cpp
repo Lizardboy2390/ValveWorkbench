@@ -194,7 +194,10 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         // manual headroom is zero, effectiveHeadroomVpk is taken from either
         // the symmetric swing helper (if showSymSwing is true) or from the
         // max swing helper.
-        double vppIn = 0.0;
+        double vppIn        = 0.0;
+        double clipRatio    = -1.0; // requested Vpp_out / clipping Vpp_out
+        double clipLevelOut = -1.0; // approximate clipping Vpp_out threshold
+
         if (device1) {
             const double headroom = effectiveHeadroomVpk; // Vpk at anode
             const double vb       = parameter[SE_VB]->getValue();
@@ -235,12 +238,12 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
 
                 double gain = 0.0;
                 if (std::isfinite(gm_mA_per_V) && raa > 0.0) {
-                    // Base small-signal gain for bypassed cathode: Av ≈ gm(A/V) * Ra.
+                    // Base small-signal gain for bypassed cathode: Av  gm(A/V) * Ra.
                     const double gm_A_per_V = gm_mA_per_V / 1000.0;
                     gain = std::abs(gm_A_per_V * raa);
 
                     // If cathode is unbypassed (gainMode == 0), include local
-                    // feedback from Rk: effective gain ≈ Av / (1 + gm*Rk).
+                    // feedback from Rk: effective gain  Av / (1 + gm*Rk).
                     if (gainMode == 0 && rk > 0.0) {
                         const double feedback = 1.0 + gm_A_per_V * rk;
                         if (feedback > 1.0 && std::isfinite(feedback)) {
@@ -251,15 +254,24 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
 
                 if (std::isfinite(gain) && gain > 1e-6) {
                     vppIn = Vpp / gain;
+
+                    // Approximate grid-clipping output swing based on Vk and this gain.
+                    if (vk > 0.0) {
+                        const double vppInConduction  = 2.0 * vk;               // Vpp at grid to reach vgk0
+                        const double vppOutConduction = std::abs(gain) * vppInConduction;
+                        if (vppOutConduction > 0.0 && std::isfinite(vppOutConduction)) {
+                            clipLevelOut = vppOutConduction;
+                            clipRatio    = Vpp / vppOutConduction;
+                        }
+                    }
                 }
 
-                qInfo("SE_OUTPUT SENSITIVITY: gainMode=%d headroomVpk=%.3f gm_mA_per_V=%.3f raa=%.1f rk=%.1f gain=%.3f vppIn=%.3f",
+                qInfo("SE_OUTPUT SENSITIVITY: gainMode=%d headroomVpk=%.3f gm_mA_per_V=%.3f raa=%.1f rk=%.1f vppIn=%.3f",
                       gainMode,
                       effectiveHeadroomVpk,
                       gm_mA_per_V,
                       raa,
                       rk,
-                      gain,
                       vppIn);
             }
         }
@@ -277,17 +289,49 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         // Color sensitivity to match the headroom source: bright blue when
         // manual Headroom>0, otherwise lighter blue for symmetric mode and
         // brown for max-swing mode.
+        QString style;
         if (effectiveHeadroomVpk > 0.0) {
             if (overrideActive) {
-                values[sensIndex]->setStyleSheet("color: rgb(0,0,255);");
+                style = "color: rgb(0,0,255);";
             } else if (showSymSwing) {
-                values[sensIndex]->setStyleSheet("color: rgb(100,149,237);");
+                style = "color: rgb(100,149,237);";
             } else {
-                values[sensIndex]->setStyleSheet("color: rgb(165,42,42);");
+                style = "color: rgb(165,42,42);";
             }
-        } else {
-            values[sensIndex]->setStyleSheet("");
         }
+
+        // Overlay a clipping indicator only when we are effectively at or
+        // beyond the approximate grid-conduction headroom. Below that the
+        // background is left unchanged so the existing text colour remains
+        // the primary cue for headroom source.
+        QString clipBg;
+        if (device1 && clipRatio >= 0.98 && std::isfinite(clipRatio)) {
+            // Grid clipping region: soft red background.
+            clipBg = "background-color: rgb(255,200,200);";
+        }
+
+        QString styleFull = style;
+        if (!clipBg.isEmpty()) {
+            if (!styleFull.isEmpty()) styleFull += "; ";
+            styleFull += clipBg;
+        }
+
+        // Apply the clipping background only to the value field so that
+        // the red highlight sits behind the numeric Input sensitivity
+        // value, while the label keeps just the text colour coding.
+        values[sensIndex]->setStyleSheet(styleFull);
+        labels[sensIndex]->setStyleSheet(style);
+
+        // Provide a helper tooltip that explains the approximate
+        // grid-clipping level being used for this indicator.
+        QString tip;
+        if (clipLevelOut > 0.0 && std::isfinite(clipLevelOut)) {
+            tip = QString("Approximate grid clipping threshold at this bias and gain: %1 Vpp (output).\n" \
+                         "The sensitivity value turns red when the requested output swing reaches this region.")
+                      .arg(clipLevelOut, 0, 'f', 1);
+        }
+        values[sensIndex]->setToolTip(tip);
+        labels[sensIndex]->setToolTip(tip);
     }
 
     // Hide remaining parameter slots
@@ -1190,11 +1234,13 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
     }
 
     // Time-domain simulation helper: for a given grid Vpp_in, drive the grid
-    // with a pure sine around vgBias, clamp at 0 V, solve for Va(t) against
-    // the load line using findVaFromVg, and convert to Ia(t) via the DC load
-    // line. Optionally accumulate Hann-windowed Ia(t) harmonics via a small
-    // manual DFT. Always track Va min/max so we can estimate achieved swing.
-    const int sampleCount = 512;
+    // with a pure sine around the DC bias, clamp at 0 V, and when the cathode
+    // is unbypassed, include dynamic Rk behaviour by letting Vk follow
+    // Ia(t)*Rk around the DC operating point. Va(t) is solved against the
+    // load line using findVaFromVg and Ia(t) comes from the DC load line.
+    // Optionally accumulate Hann-windowed Ia(t) harmonics via a small manual
+    // DFT. Always track Va min/max so we can estimate achieved swing.
+    const int sampleCount = 1024;
     const double twoPi = 6.28318530717958647692; // 2 * pi
 
     struct WaveformStats {
@@ -1215,33 +1261,114 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
         double a[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         double b[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
+        if (computeHarmonics) {
+            lastHeadroomWaveform.clear();
+            lastHeadroomWaveform.reserve(sampleCount);
+        }
+
+        const bool cathodeBypassed = (gainMode == 1);
+        const double rk_ac = (cathodeBypassed || rk <= 0.0) ? 0.0 : rk;
+
         for (int k = 0; k < sampleCount; ++k) {
             const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
 
-            // Grid drive: sine around the DC bias. Clamp at 0V to avoid
-            // over-driving the model into unphysical positive-grid regions.
-            double vg = vgBias + 0.5 * gridVpp * std::sin(phase);
-            if (vg > 0.0) {
-                vg = 0.0;
-            }
+            // Absolute grid drive (grid-to-ground) at this phase.
+            const double vg_abs = 0.5 * gridVpp * std::sin(phase);
 
-            // Model functions expect a positive magnitude Vg1 and apply it as -Vg1.
-            const double vg1_mag = -vg; // >= 0 when vg <= 0
+            double va  = 0.0;
+            double ia_A = 0.0;
 
-            // Solve for anode voltage at this instantaneous grid bias.
-            double va = findVaFromVg(vg1_mag, vb, vs, raa);
-            if (!std::isfinite(va)) {
-                continue;
+            if (rk_ac > 0.0) {
+                // Unbypassed cathode: iterate vgk so that Vk follows Ia*Rk
+                // around the DC bias point. Start from the constant-Vk
+                // assumption used for the bypassed case.
+                double vgk = vgBias + vg_abs;
+                if (vgk > 0.0) {
+                    vgk = 0.0;
+                }
+
+                for (int iter = 0; iter < 4; ++iter) {
+                    double vg1_mag = -vgk;
+                    if (vg1_mag < 0.0) {
+                        vg1_mag = 0.0;
+                    }
+
+                    va = findVaFromVg(vg1_mag, vb, vs, raa);
+                    if (!std::isfinite(va)) {
+                        break;
+                    }
+                    va = std::clamp(va, 0.0, 2.0 * vb);
+
+                    ia_A = dcLoadlineCurrent(vb, raa, va);
+                    if (!std::isfinite(ia_A) || ia_A < 0.0) {
+                        break;
+                    }
+
+                    // Instantaneous cathode voltage follows Ia(t)*Rk around
+                    // the DC operating point. Preserve the DC vk value and
+                    // only add the incremental component from (Ia - Ia_bias).
+                    const double vk_inst = vk + (ia_A - ia_A) * rk_ac; // ia_A already includes bias
+
+                    // Grid is driven around 0V, so derive vgk from absolute
+                    // grid and cathode voltages.
+                    double vgk_new = vg_abs - vk_inst;
+                    if (vgk_new > 0.0) {
+                        vgk_new = 0.0;
+                    }
+
+                    const double delta = std::abs(vgk_new - vgk);
+                    vgk = vgk_new;
+
+                    if (delta < 1e-3) {
+                        break;
+                    }
+                }
+
+                // Final evaluation with the converged vgk.
+                double vg1_mag = -vgk;
+                if (vg1_mag < 0.0) {
+                    vg1_mag = 0.0;
+                }
+
+                va = findVaFromVg(vg1_mag, vb, vs, raa);
+                if (!std::isfinite(va)) {
+                    continue;
+                }
+                va = std::clamp(va, 0.0, 2.0 * vb);
+
+                ia_A = dcLoadlineCurrent(vb, raa, va);
+                if (!std::isfinite(ia_A) || ia_A < 0.0) {
+                    continue;
+                }
+            } else {
+                // Bypassed cathode: AC-ground approximation, constant Vk.
+                double vgk = vgBias + vg_abs;
+                if (vgk > 0.0) {
+                    vgk = 0.0;
+                }
+
+                double vg1_mag = -vgk;
+                if (vg1_mag < 0.0) {
+                    vg1_mag = 0.0;
+                }
+
+                va = findVaFromVg(vg1_mag, vb, vs, raa);
+                if (!std::isfinite(va)) {
+                    continue;
+                }
+                va = std::clamp(va, 0.0, 2.0 * vb);
+
+                ia_A = dcLoadlineCurrent(vb, raa, va);
+                if (!std::isfinite(ia_A) || ia_A < 0.0) {
+                    continue;
+                }
             }
-            va = std::clamp(va, 0.0, 2.0 * vb);
 
             if (va < stats.vaMin) stats.vaMin = va;
             if (va > stats.vaMax) stats.vaMax = va;
 
-            // Current on the DC load line at this Va.
-            double ia_A = dcLoadlineCurrent(vb, raa, va);
-            if (!std::isfinite(ia_A) || ia_A < 0.0) {
-                ia_A = 0.0;
+            if (computeHarmonics) {
+                lastHeadroomWaveform.push_back(va);
             }
 
             if (!computeHarmonics) {

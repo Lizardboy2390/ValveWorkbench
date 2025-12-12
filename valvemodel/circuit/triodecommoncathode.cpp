@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <QGraphicsPolygonItem>
 
 TriodeCommonCathode::TriodeCommonCathode()
 {
@@ -115,6 +116,7 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
                 style = "color: rgb(165,42,42);";   // brown for max-swing helper (future)
             }
         }
+
         labels[12]->setStyleSheet(style);
         values[12]->setStyleSheet(style);
         labels[12]->setVisible(true);
@@ -126,11 +128,13 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
     const int sensIndex = 13;
     if (labels[sensIndex] && values[sensIndex]) {
         labels[sensIndex]->setText("Input sensitivity (Vpp):");
-        double vpp_in = 0.0;
+        double vpp_in       = 0.0;
+        double clipRatio    = -1.0; // ratio of requested Vpp_out to conduction Vpp_out (grid clipping estimate)
+        double clipLevelOut = -1.0; // approximate grid-clipping Vpp_out threshold for this bias/gain
 
         if (device1 != nullptr) {
             const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
-            double vpp_out = 0.0;
+            double       vpp_out        = 0.0;
 
             // Manual headroom takes precedence when > 0
             if (headroomManual > 0.0) {
@@ -144,11 +148,69 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
             }
 
             if (vpp_out > 0.0) {
-                double gain = (sensitivityGainMode == 1)
-                                  ? parameter[TRI_CC_GAIN_B]->getValue()
-                                  : parameter[TRI_CC_GAIN]->getValue();
+                double gain = 0.0;
+
+                {
+                    const double vb    = parameter[TRI_CC_VB]->getValue();
+                    const double ra    = parameter[TRI_CC_RA]->getValue();
+                    const double rl    = parameter[TRI_CC_RL]->getValue();
+                    const double rk    = parameter[TRI_CC_RK]->getValue();
+                    const double vkVal = parameter[TRI_CC_VK] ? parameter[TRI_CC_VK]->getValue() : 0.0;
+                    const double vaBias = parameter[TRI_CC_VA]->getValue();
+
+                    double r_ac = 0.0;
+                    if (ra > 0.0 && rl > 0.0) {
+                        r_ac = (ra * rl) / (ra + rl);
+                    } else if (ra > 0.0) {
+                        r_ac = ra;
+                    } else if (rl > 0.0) {
+                        r_ac = rl;
+                    }
+
+                    if (device1 && r_ac > 0.0 && std::isfinite(r_ac)) {
+                        const double vgkBias = -vkVal;
+                        const double dVg = std::max(0.05, std::abs(vgkBias) * 0.02);
+
+                        double iaPlus  = device1->anodeCurrent(vaBias, vgkBias + dVg);
+                        double iaMinus = device1->anodeCurrent(vaBias, vgkBias - dVg);
+                        double gm_mA_per_V = 0.0;
+                        if (std::isfinite(iaPlus) && std::isfinite(iaMinus) && dVg > 0.0) {
+                            gm_mA_per_V = (iaPlus - iaMinus) / (2.0 * dVg);
+                        }
+
+                        if (std::isfinite(gm_mA_per_V)) {
+                            const double gm_A_per_V = gm_mA_per_V / 1000.0;
+                            if (std::isfinite(gm_A_per_V) && std::abs(gm_A_per_V) > 1e-9) {
+                                gain = std::abs(gm_A_per_V * r_ac);
+                                if (sensitivityGainMode == 0 && rk > 0.0) {
+                                    const double feedback = 1.0 + gm_A_per_V * rk;
+                                    if (feedback > 1.0 && std::isfinite(feedback)) {
+                                        gain /= feedback;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!std::isfinite(gain) || std::abs(gain) <= 1e-12) {
+                        gain = (sensitivityGainMode == 1)
+                                   ? parameter[TRI_CC_GAIN_B]->getValue()
+                                   : parameter[TRI_CC_GAIN]->getValue();
+                    }
+                }
+
                 if (std::isfinite(gain) && std::abs(gain) > 1e-12) {
                     vpp_in = vpp_out / std::abs(gain);
+
+                    const double vkVal = parameter[TRI_CC_VK] ? parameter[TRI_CC_VK]->getValue() : 0.0;
+                    if (vkVal > 0.0) {
+                        const double vppInConduction  = 2.0 * vkVal;
+                        const double vppOutConduction = std::abs(gain) * vppInConduction;
+                        if (vppOutConduction > 0.0 && std::isfinite(vppOutConduction)) {
+                            clipRatio    = vpp_out / vppOutConduction;
+                            clipLevelOut = vppOutConduction;
+                        }
+                    }
                 }
             }
         }
@@ -168,8 +230,39 @@ void TriodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
             } else if (!showSymSwing && lastMaxVpp > 0.0) {
                 style = "color: rgb(165,42,42);";
             }
-            values[sensIndex]->setStyleSheet(style);
+
+            // Overlay a clipping indicator only when we are effectively at or
+            // beyond the approximate grid-conduction headroom. Below that the
+            // background is left unchanged so the existing text colour remains
+            // the primary cue for headroom source.
+            QString clipBg;
+            if (device1 && clipRatio >= 0.98 && std::isfinite(clipRatio)) {
+                // Grid clipping region: soft red background.
+                clipBg = "background-color: rgb(255,200,200);";
+            }
+
+            QString styleFull = style;
+            if (!clipBg.isEmpty()) {
+                if (!styleFull.isEmpty()) styleFull += "; ";
+                styleFull += clipBg;
+            }
+
+            // Apply the clipping background only to the value field so that
+            // the red highlight sits behind the numeric Input sensitivity
+            // value, while the label keeps just the text colour coding.
+            values[sensIndex]->setStyleSheet(styleFull);
             labels[sensIndex]->setStyleSheet(style);
+
+            // Provide a helper tooltip that explains the approximate
+            // grid-clipping level being used for this indicator.
+            QString tip;
+            if (clipLevelOut > 0.0 && std::isfinite(clipLevelOut)) {
+                tip = QString("Approximate grid clipping threshold at this bias and gain: %1 Vpp (output).\n" \
+                             "The sensitivity value turns red when the requested output swing reaches this region.")
+                          .arg(clipLevelOut, 0, 'f', 1);
+            }
+            values[sensIndex]->setToolTip(tip);
+            labels[sensIndex]->setToolTip(tip);
 
             labels[sensIndex]->setVisible(true);
             values[sensIndex]->setVisible(true);
@@ -1123,6 +1216,20 @@ void TriodeCommonCathode::plot(Plot *plot)
         paLimitGroup = nullptr;
     }
 
+    if (headroomPolygonGroup != nullptr) {
+        if (headroomPolygonGroup->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(headroomPolygonGroup);
+        }
+        headroomPolygonGroup = nullptr;
+    }
+
+    if (headroomWaveformGroup != nullptr) {
+        if (headroomWaveformGroup->scene() == plot->getScene()) {
+            plot->getScene()->removeItem(headroomWaveformGroup);
+        }
+        headroomWaveformGroup = nullptr;
+    }
+
     // Check if we have a device selected
     if (device1 == nullptr) {
         // No device selected - can't plot load lines
@@ -1308,6 +1415,13 @@ void TriodeCommonCathode::plot(Plot *plot)
                 swingGroup = nullptr;
             }
 
+            // Remove previous headroom polygon, if any.
+            if (headroomPolygonGroup) {
+                plot->getScene()->removeItem(headroomPolygonGroup);
+                delete headroomPolygonGroup;
+                headroomPolygonGroup = nullptr;
+            }
+
             // Compute intersection with Vg=0 model curve (prefer left of OP): scan from OP.x() downwards
             double vaMax = xStop;
             double vaCut = -1.0;
@@ -1360,10 +1474,17 @@ void TriodeCommonCathode::plot(Plot *plot)
             double vaZero = op.x() - op.y() / slope;
             vaZero = std::clamp(vaZero, 0.0, xStop);
 
+            // Current manual Headroom (Vpk) value, used both for helpers
+            // and for the headroom wedge overlay below.
+            const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
+
             // Draw annotations if valid (vertical cutoff line + labels).
             // When symmetric swing helper is enabled, we suppress the
             // brown max-swing overlay so that only one helper row is shown.
-            if (!showSymSwing) {
+            // Additionally, when a manual Headroom is active, we suppress
+            // the brown max-swing helper entirely so the dark-blue
+            // headroom helpers can take over the helper row.
+            if (!showSymSwing && headroomManual <= 0.0) {
                 swingGroup = new QGraphicsItemGroup();
                 QPen swingPen(QColor::fromRgb(165, 42, 42)); // brown cutoff line
                 swingPen.setWidth(2);
@@ -1401,6 +1522,259 @@ void TriodeCommonCathode::plot(Plot *plot)
                     plot->getScene()->addItem(swingGroup);
                 } else {
                     delete swingGroup; swingGroup = nullptr;
+                }
+            }
+
+            // When a manual Headroom (Vpk) is specified, draw a blue headroom
+            // segment along the AC load line centred on the operating point,
+            // with a filled polygon down to Ia = 0, mirroring the SE output
+            // stage style.
+            if (headroomManual > 0.0) {
+                double vaCentre = op.x();
+                double vaMinH = vaCentre - headroomManual;
+                double vaMaxH = vaCentre + headroomManual;
+
+                // Clamp to the plotted Va range
+                vaMinH = std::max(0.0, vaMinH);
+                vaMaxH = std::min(xStop, vaMaxH);
+
+                if (vaMaxH > vaMinH) {
+                    const double dia = headroomManual * 1000.0 / rpar; // mA deviation along load line
+
+                    double iaHigh = op.y() + dia;
+                    double iaLow  = op.y() - dia;
+                    iaHigh = std::clamp(iaHigh, 0.0, yStop);
+                    iaLow  = std::clamp(iaLow, 0.0, yStop);
+
+                    headroomPolygonGroup = new QGraphicsItemGroup();
+
+                    QPen headPen(QColor::fromRgb(0, 0, 255));
+                    headPen.setWidth(2);
+
+                    if (QGraphicsItem *hSeg = plot->createSegment(vaMinH, iaHigh, vaMaxH, iaLow, headPen)) {
+                        headroomPolygonGroup->addToGroup(hSeg);
+                    }
+
+                    // Build a polygon in scene coordinates under the headroom line.
+                    const double xScale = PLOT_WIDTH  / (xStop - 0.0);
+                    const double yScale = PLOT_HEIGHT / (yStop - 0.0);
+
+                    const double sx1 = (vaMinH - 0.0) * xScale;
+                    const double sy1 = PLOT_HEIGHT - (iaHigh - 0.0) * yScale;
+                    const double sx2 = (vaMaxH - 0.0) * xScale;
+                    const double sy2 = PLOT_HEIGHT - (iaLow  - 0.0) * yScale;
+                    const double sx3 = sx2;
+                    const double sy3 = PLOT_HEIGHT; // Ia = 0
+                    const double sx4 = sx1;
+                    const double sy4 = sy3;
+
+                    QPolygonF poly;
+                    poly << QPointF(sx1, sy1)
+                         << QPointF(sx2, sy2)
+                         << QPointF(sx3, sy3)
+                         << QPointF(sx4, sy4);
+
+                    auto *polyItem = new QGraphicsPolygonItem(poly);
+                    QColor fillColor = QColor::fromRgb(0, 0, 255);
+                    // Make the wedge a bit lighter again: ~30% opacity so it
+                    // is clearly visible but does not dominate the grid.
+                    fillColor.setAlpha(75);
+                    polyItem->setBrush(fillColor);
+                    polyItem->setPen(Qt::NoPen);
+                    headroomPolygonGroup->addToGroup(polyItem);
+
+                    if (!headroomPolygonGroup->childItems().isEmpty()) {
+                        plot->getScene()->addItem(headroomPolygonGroup);
+                    } else {
+                        delete headroomPolygonGroup;
+                        headroomPolygonGroup = nullptr;
+                    }
+                }
+            }
+        }
+    }
+
+    if (device1) {
+        const double headroomManual = parameter[TRI_CC_HEADROOM]->getValue();
+        if (headroomManual > 0.0) {
+            const QVector<double> &wave = getLastHeadroomWaveform();
+            const int n = wave.size();
+            if (n > 1) {
+                double vmin = std::numeric_limits<double>::infinity();
+                double vmax = -std::numeric_limits<double>::infinity();
+                int count = 0;
+                for (int i = 0; i < n; ++i) {
+                    const double v = wave[i];
+                    if (!std::isfinite(v)) {
+                        continue;
+                    }
+                    if (v < vmin) vmin = v;
+                    if (v > vmax) vmax = v;
+                    ++count;
+                }
+
+                // Require at least two finite samples with some span in Va.
+                if (count > 1 && vmax > vmin && std::isfinite(vmin) && std::isfinite(vmax)) {
+                    headroomWaveformGroup = new QGraphicsItemGroup();
+                    QPen pen(QColor::fromRgb(0, 0, 255));
+                    pen.setWidthF(0.0);
+
+                    // Time runs from the X-axis (Ia = 0) upwards towards the
+                    // top of the graph, while the horizontal coordinate uses
+                    // the actual anode voltage Va(t) values from the
+                    // lastHeadroomWaveform buffer. This means that a
+                    // 100 Vpk headroom produces a waveform whose swing in Va
+                    // matches the plot's X scale and the blue wedge.
+                    const double yBottom = 0.0;          // Ia = 0 (X-axis)
+                    const double yTop = yStop * 0.9;     // near top of plot
+                    const double invN = (n > 1)
+                                            ? (1.0 / static_cast<double>(n - 1))
+                                            : 1.0;
+
+                    double prevX = 0.0;
+                    double prevY = 0.0;
+                    bool havePrev = false;
+
+                    int prevIndex = -1;
+                    for (int i = 0; i < n; ++i) {
+                        // Traverse the stored Va(t) buffer twice over the
+                        // same vertical span to show two cycles.
+                        const int srcIndex = (2 * i) % n;
+                        const double v = wave[srcIndex];
+                        if (!std::isfinite(v)) {
+                            havePrev = false;
+                            continue;
+                        }
+
+                        // Break the polyline when we wrap from the end of
+                        // the buffer back to the start so separate cycles do
+                        // not get joined by a long diagonal.
+                        if (prevIndex >= 0 && srcIndex < prevIndex) {
+                            havePrev = false;
+                        }
+
+                        double x = std::clamp(v, 0.0, xStop);
+                        const double t = static_cast<double>(i) * invN;
+                        const double y = yBottom + t * (yTop - yBottom);
+
+                        if (havePrev) {
+                            if (QGraphicsLineItem *seg = plot->createSegment(prevX, prevY, x, y, pen)) {
+                                headroomWaveformGroup->addToGroup(seg);
+                            }
+                        }
+
+                        prevX = x;
+                        prevY = y;
+                        prevIndex = srcIndex;
+                        havePrev = true;
+                    }
+
+                    if (!headroomWaveformGroup->childItems().isEmpty()) {
+                        plot->getScene()->addItem(headroomWaveformGroup);
+                    } else {
+                        delete headroomWaveformGroup;
+                        headroomWaveformGroup = nullptr;
+                    }
+
+                    // Additionally, tint the parts of the blue headroom
+                    // wedge that lie outside the "reality zone" of the
+                    // simulated anode swing (vmin..vmax) with a light red
+                    // overlay to indicate overdrive/compression where the
+                    // requested headroom exceeds what the tube can actually
+                    // reproduce at this bias.
+                    if (headroomPolygonGroup) {
+                        // Reconstruct the wedge geometry in Va/Ia space.
+                        const double ra = parameter[TRI_CC_RA]->getValue();
+                        const double rl = parameter[TRI_CC_RL]->getValue();
+                        double rpar = 0.0;
+                        if (ra > 0.0 && rl > 0.0) {
+                            rpar = (ra * rl) / (ra + rl);
+                        } else if (ra > 0.0) {
+                            rpar = ra;
+                        } else if (rl > 0.0) {
+                            rpar = rl;
+                        }
+
+                        if (rpar > 0.0 && std::isfinite(rpar)) {
+                            const double slope = -1000.0 / rpar; // mA/V
+                            const double vaCentre = op.x();
+
+                            double vaMinH = vaCentre - headroomManual;
+                            double vaMaxH = vaCentre + headroomManual;
+                            vaMinH = std::max(0.0, vaMinH);
+                            vaMaxH = std::min(xStop, vaMaxH);
+
+                            if (vaMaxH > vaMinH) {
+                                auto iaTopFromVa = [&](double va) -> double {
+                                    return op.y() + slope * (va - vaCentre);
+                                };
+
+                                // Clamp the waveform swing into the wedge and
+                                // visible axis range to define the "reality"
+                                // region in Va.
+                                const double vminClamped = std::clamp(vmin, 0.0, xStop);
+                                const double vmaxClamped = std::clamp(vmax, 0.0, xStop);
+
+                                const double vminW = std::clamp(vminClamped, vaMinH, vaMaxH);
+                                const double vmaxW = std::clamp(vmaxClamped, vaMinH, vaMaxH);
+
+                                const double xScale = PLOT_WIDTH  / (xStop - 0.0);
+                                const double yScale = PLOT_HEIGHT / (yStop - 0.0);
+
+                                auto toScene = [&](double va, double ia) -> QPointF {
+                                    const double sx = (va - 0.0) * xScale;
+                                    const double sy = PLOT_HEIGHT - (ia - 0.0) * yScale;
+                                    return QPointF(sx, sy);
+                                };
+
+                                const double eps = 1e-6;
+
+                                // Left overdrive region: wedge span from
+                                // [vaMinH .. vminW) when the waveform never
+                                // reaches the left tip of the requested
+                                // headroom.
+                                if (vminW > vaMinH + eps) {
+                                    double iaMinTop = std::clamp(iaTopFromVa(vaMinH), 0.0, yStop);
+                                    double iaLeftTop = std::clamp(iaTopFromVa(vminW), 0.0, yStop);
+
+                                    QPolygonF leftPoly;
+                                    leftPoly << toScene(vaMinH, iaMinTop)
+                                             << toScene(vminW, iaLeftTop)
+                                             << toScene(vminW, 0.0)
+                                             << toScene(vaMinH, 0.0);
+
+                                    auto *leftItem = new QGraphicsPolygonItem(leftPoly);
+                                    QColor leftColor = QColor::fromRgb(255, 160, 160);
+                                    leftColor.setAlpha(90);
+                                    leftItem->setBrush(leftColor);
+                                    leftItem->setPen(Qt::NoPen);
+                                    headroomPolygonGroup->addToGroup(leftItem);
+                                }
+
+                                // Right overdrive region: wedge span from
+                                // (vmaxW .. vaMaxH] when the waveform never
+                                // reaches the right tip of the requested
+                                // headroom.
+                                if (vmaxW < vaMaxH - eps) {
+                                    double iaRightTop = std::clamp(iaTopFromVa(vmaxW), 0.0, yStop);
+                                    double iaMaxTop   = std::clamp(iaTopFromVa(vaMaxH), 0.0, yStop);
+
+                                    QPolygonF rightPoly;
+                                    rightPoly << toScene(vmaxW, iaRightTop)
+                                              << toScene(vaMaxH, iaMaxTop)
+                                              << toScene(vaMaxH, 0.0)
+                                              << toScene(vmaxW, 0.0);
+
+                                    auto *rightItem = new QGraphicsPolygonItem(rightPoly);
+                                    QColor rightColor = QColor::fromRgb(255, 160, 160);
+                                    rightColor.setAlpha(90);
+                                    rightItem->setBrush(rightColor);
+                                    rightItem->setPen(Qt::NoPen);
+                                    headroomPolygonGroup->addToGroup(rightItem);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1510,8 +1884,13 @@ void TriodeCommonCathode::plot(Plot *plot)
             } else {
                 lastMaxVpp = 0.0;
             }
+            const double headroomManual2 = parameter[TRI_CC_HEADROOM]->getValue();
 
-            if (showSymSwing && vaCut >= 0.0 && vaRight > op.x() && vaCut < op.x()) {
+            // Only draw the light-blue symmetric swing helper when there is
+            // no manual Headroom override; when Headroom>0 the dark-blue
+            // headroom helpers take over this role.
+            if (showSymSwing && headroomManual2 <= 0.0 &&
+                vaCut >= 0.0 && vaRight > op.x() && vaCut < op.x()) {
                 const double vpk = std::min(op.x() - vaCut, vaRight - op.x());
                 const double leftX = op.x() - vpk;
                 const double rightX = op.x() + vpk;
@@ -1572,6 +1951,53 @@ void TriodeCommonCathode::plot(Plot *plot)
                     vpk = std::max(0.0, std::min(op.x(), vaRight - op.x()));
                 }
                 lastSymVpp = 2.0 * vpk;
+            }
+
+            // When a manual Headroom (Vpk) is active AND the headroom wedge
+            // exists, draw dark-blue helper labels (left/right Va and Vpp)
+            // on the same helper row used for the symmetric swing helper.
+            if (headroomPolygonGroup) {
+                const double headroomManual3 = parameter[TRI_CC_HEADROOM]->getValue();
+                if (headroomManual3 > 0.0) {
+                    const double vaCentre = op.x();
+                    double vaMinH = vaCentre - headroomManual3;
+                    double vaMaxH = vaCentre + headroomManual3;
+                    vaMinH = std::max(0.0, vaMinH);
+                    vaMaxH = std::min(xStop, vaMaxH);
+
+                    if (vaMaxH > vaMinH) {
+                        const double vpp = 2.0 * headroomManual3;
+                        const QColor helperColor = QColor::fromRgb(0, 0, 255);
+
+                        // Left label at Va_min
+                        if (vaMinH >= 0.0) {
+                            if (QGraphicsTextItem *lLbl = plot->createLabel(vaMinH, labelRowSym, vaMinH, helperColor)) {
+                                QPointF pl = lLbl->pos();
+                                double wl = lLbl->boundingRect().width();
+                                lLbl->setPos(pl.x() - 5.0 - wl / 2.0, pl.y());
+                                headroomPolygonGroup->addToGroup(lLbl);
+                            }
+                        }
+
+                        // Right label at Va_max
+                        if (vaMaxH <= xStop) {
+                            if (QGraphicsTextItem *rLbl = plot->createLabel(vaMaxH, labelRowSym, vaMaxH, helperColor)) {
+                                QPointF pr = rLbl->pos();
+                                double wr = rLbl->boundingRect().width();
+                                rLbl->setPos(pr.x() - 5.0 - wr / 2.0, pr.y());
+                                headroomPolygonGroup->addToGroup(rLbl);
+                            }
+                        }
+
+                        // Center Vpp label
+                        if (QGraphicsTextItem *vppLbl = plot->createLabel(vaCentre, labelRowSym, vpp, helperColor)) {
+                            QPointF p = vppLbl->pos();
+                            double w = vppLbl->boundingRect().width();
+                            vppLbl->setPos(p.x() - 5.0 - w / 2.0, p.y());
+                            headroomPolygonGroup->addToGroup(vppLbl);
+                        }
+                    }
+                }
             }
         }
     }

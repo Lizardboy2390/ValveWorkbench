@@ -6,6 +6,43 @@
 
 using ceres::AutoDiffCostFunction;
 
+// ---------------------------------------------------------------------------
+// ExtractModel / DerkE background (very short version)
+//
+// The ExtractModel pentode treats a beam tetrode / pentode as a Koren-style
+// triode whose control grid is Vg1 and whose "effective" anode is the screen
+// grid Vg2. The core current law Ip_Koren(Vg2, Vg1; mu, kp, kvb, x) is:
+//
+//   f      = sqrt(kvb + Vg2^2)
+//   y      = kp * (1/mu + Vg1/f)
+//   base   = Vg2/kp * ln(1 + exp(y))
+//   Ip     = base^x
+//
+// Ip is then partitioned between anode and screen using Kg1/Kg2, A, alpha_s,
+// beta and, optionally, a secondary-emission term Psec(Va):
+//
+//   alpha  = 1 − Kg1/Kg2 * (1 + alpha_s)
+//   g(Va)  = exp(−(beta * Va)^(3/2))
+//   term   = alpha/Kg1 + alpha_s/Kg2
+//   Ia(Va) = Ip * (1/Kg1 − 1/Kg2 + A*Va/Kg1 − g * term      [− Psec/Kg2])
+//   Ig2(Va)= Ip/Kg2 * (1 + alpha_s * g          [+ Psec])
+//
+// The optional Psec(Va) term models secondary emission as a tanh-shaped bump
+// centred around a cross-over voltage Vco(Vg2,Vg1):
+//
+//   Vco    = Vg2/lambda − nu * Vg1 − omega
+//   Psec   = S * Va * (1 + tanh(−ap * (Va − Vco)))
+//
+// In this file we implement Ip_Koren and both Ia/Ig2 branches in two forms:
+// - Plain Ia/Ig2 without Psec.
+// - Ia/Ig2 including Psec when preferences->useSecondaryEmission() is true.
+//
+// The Ceres residual structs (ExtractDerkEPentodeResidual, ...SEResidual,
+// ExtractDerkEPentodeIg2Residual, ExtractDerkEPentodeIg2SEResidual) encode
+// these equations directly for AutoDiff, while anodeCurrent()/screenCurrent()
+// provide the scalar C++ versions used at runtime (e.g. plotting, SPICE).
+// ---------------------------------------------------------------------------
+
 // Jet-friendly helpers (mirroring GardinerPentode) to avoid ceres::max/min,
 // which are not provided for AutoDiff types.
 template <typename T>
@@ -38,6 +75,8 @@ inline T psec_term(const T &va,
 }
 
 namespace {
+// Ia residual without secondary emission: implements the basic DerkE anode
+// current law (Eq. 41/44) using Ip_Koren plus Kg1/Kg2/A/alpha_s/beta.
 struct ExtractDerkEPentodeResidual {
     ExtractDerkEPentodeResidual(double va, double vg1, double ia, double vg2)
         : va_(va), vg1_(vg1), ia_(ia), vg2_(vg2) {}
@@ -238,6 +277,9 @@ private:
 
 ExtractModelPentode::ExtractModelPentode()
 {
+    // Parameter array is initialised by the base KorenTriode; this subclass
+    // simply reuses those slots and adds the extra pentode/secondary-emission
+    // parameters in setOptions()/fromJson().
 }
 
 double ExtractModelPentode::ipKoren(double vg2, double vg1,

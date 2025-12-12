@@ -998,54 +998,24 @@ void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
         return;
     }
 
-    double sum = 0.0;
-    int count = 0;
-    for (int i = 0; i < n; ++i) {
-        const double v = wave[i];
-        if (std::isfinite(v)) {
-            sum += v;
-            ++count;
-        }
-    }
-    if (count == 0) {
-        return;
-    }
-
-    const double mean = sum / static_cast<double>(count);
-
-    double maxAbs = 0.0;
-    for (int i = 0; i < n; ++i) {
-        const double v = wave[i];
-        if (!std::isfinite(v)) {
-            continue;
-        }
-        const double ac = v - mean;
-        const double mag = std::abs(ac);
-        if (mag > maxAbs) {
-            maxAbs = mag;
-        }
-    }
-
-    if (!(maxAbs > 0.0) || !std::isfinite(maxAbs)) {
-        return;
-    }
-
     QPen pen(Qt::darkBlue);
     pen.setWidthF(0.0);
 
-    const double invN = (n > 1) ? 1.0 / static_cast<double>(n - 1) : 1.0;
     double yMin = std::numeric_limits<double>::infinity();
     double yMax = -std::numeric_limits<double>::infinity();
+
     for (int i = 0; i < n - 1; ++i) {
         const double v1 = wave[i];
         const double v2 = wave[i + 1];
         if (!std::isfinite(v1) || !std::isfinite(v2)) {
             continue;
         }
-        const double y1 = (v1 - mean) / maxAbs;
-        const double y2 = (v2 - mean) / maxAbs;
-        const double x1 = static_cast<double>(i) * invN;
-        const double x2 = static_cast<double>(i + 1) * invN;
+
+        const double x1 = static_cast<double>(i);             // sample index (0..n-1)
+        const double x2 = static_cast<double>(i + 1);
+        const double y1 = v1;                                  // Va(t) in volts
+        const double y2 = v2;
+
         headroomWaveformScene->addLine(x1, y1, x2, y2, pen);
 
         if (y1 < yMin) yMin = y1;
@@ -1055,13 +1025,77 @@ void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
     }
 
     if (!std::isfinite(yMin) || !std::isfinite(yMax) || yMin >= yMax) {
-        yMin = -1.0;
-        yMax = 1.0;
+        return;
     }
 
     const double yRange = yMax - yMin;
     const double pad = 0.1 * (yRange > 0.0 ? yRange : 1.0);
-    headroomWaveformScene->setSceneRect(0.0, yMin - pad, 1.0, yRange + 2.0 * pad);
+    const double xMax = static_cast<double>(n - 1);
+    headroomWaveformScene->setSceneRect(0.0, yMin - pad, xMax, yRange + 2.0 * pad);
+
+    ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
+}
+
+void ValveWorkbench::updateHeadroomWaveformView(SingleEndedOutput *se)
+{
+    if (!ui || !ui->headroomWaveformView) {
+        return;
+    }
+
+    if (!se) {
+        if (headroomWaveformScene) {
+            headroomWaveformScene->clear();
+        }
+        return;
+    }
+
+    if (!headroomWaveformScene) {
+        headroomWaveformScene = new QGraphicsScene(this);
+        ui->headroomWaveformView->setScene(headroomWaveformScene);
+    }
+
+    headroomWaveformScene->clear();
+
+    const QVector<double> &wave = se->getLastHeadroomWaveform();
+    const int n = wave.size();
+    if (n < 2) {
+        return;
+    }
+
+    QPen pen(Qt::darkBlue);
+    pen.setWidthF(0.0);
+
+    double yMin = std::numeric_limits<double>::infinity();
+    double yMax = -std::numeric_limits<double>::infinity();
+
+    for (int i = 0; i < n - 1; ++i) {
+        const double v1 = wave[i];
+        const double v2 = wave[i + 1];
+        if (!std::isfinite(v1) || !std::isfinite(v2)) {
+            continue;
+        }
+
+        const double x1 = static_cast<double>(i);             // sample index (0..n-1)
+        const double x2 = static_cast<double>(i + 1);
+        const double y1 = v1;                                  // Va(t) in volts
+        const double y2 = v2;
+
+        headroomWaveformScene->addLine(x1, y1, x2, y2, pen);
+
+        if (y1 < yMin) yMin = y1;
+        if (y1 > yMax) yMax = y1;
+        if (y2 < yMin) yMin = y2;
+        if (y2 > yMax) yMax = y2;
+    }
+
+    if (!std::isfinite(yMin) || !std::isfinite(yMax) || yMin >= yMax) {
+        return;
+    }
+
+    const double yRange = yMax - yMin;
+    const double pad = 0.1 * (yRange > 0.0 ? yRange : 1.0);
+    const double xMax = static_cast<double>(n - 1);
+    headroomWaveformScene->setSceneRect(0.0, yMin - pad, xMax, yRange + 2.0 * pad);
 
     ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
 }
@@ -3371,7 +3405,7 @@ void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
         overlayStates[tabRole].showScreen = show;
     }
 
-    if (tabRole == 1) {
+    if (tabRole == 1 || tabRole == 2) {
         // Modeller tab: apply to the active project measurement and redraw the
         // measured plot (axes managed by Measurement itself).
         if (isDoubleTriode) {
@@ -4399,9 +4433,17 @@ ValveWorkbench::ValveWorkbench(QWidget *parent)
         iaMax = defaultDevice->getIaMax();
         pMax  = defaultDevice->getPaMax();
 
-        // Update basic UI selections to match the base model
+        // Update basic UI selections to match the base model. The analyser
+        // deviceName field represents the currently loaded template/preset,
+        // not the default Device chosen at startup, so avoid stamping a
+        // specific device label (e.g. "6N2P-EV") into it here. If no
+        // template has populated the field yet, leave the text empty and
+        // show an explicit placeholder instead.
         if (ui->deviceName) {
-            ui->deviceName->setText(defaultDevice->getName());
+            if (ui->deviceName->text().trimmed().isEmpty()) {
+                ui->deviceName->clear();
+                ui->deviceName->setPlaceholderText(tr("(no template loaded)"));
+            }
         }
 
         deviceType = defaultDevice->getDeviceType();
@@ -5847,7 +5889,9 @@ void ValveWorkbench::selectCircuit(int circuitType)
     }
 
     if (ui->headroomWaveformGroupBox) {
-        bool showWave = (dynamic_cast<TriodeCommonCathode*>(circuit) != nullptr);
+        bool showWave =
+            (dynamic_cast<TriodeCommonCathode*>(circuit) != nullptr) ||
+            (dynamic_cast<SingleEndedOutput*>(circuit)     != nullptr);
         ui->headroomWaveformGroupBox->setVisible(showWave);
     }
 }
@@ -6035,8 +6079,20 @@ void ValveWorkbench::updateCircuitParameter(int index)
         const bool isPpRaa   = (pp   && index == PP_RAA);
         const bool isPpUlRaa = (ppul && index == PPUL_RAA);
 
-        const bool affectsOutputStage =
-            (isSeVB || isSeUlVB || isPpVB || isPpUlVB || isPpRaa || isPpUlRaa);
+        // When Autoscale Y is enabled, treat any parameter change on the
+        // main output-stage circuits as affecting the stage so that axis
+        // limits are recomputed and the graph refits to the current data
+        // (headroom, bias, etc.). When Autoscale Y is disabled, fall back
+        // to the previous behaviour where only VB/RAA edits adjust axes.
+        bool affectsOutputStage = false;
+        if (se || seul || pp || ppul) {
+            if (ui && ui->autoscaleYCheck && ui->autoscaleYCheck->isChecked()) {
+                affectsOutputStage = true;
+            } else {
+                affectsOutputStage =
+                    (isSeVB || isSeUlVB || isPpVB || isPpUlVB || isPpRaa || isPpUlRaa);
+            }
+        }
 
         if (currentDevice && affectsOutputStage) {
             const double xScale = plot.getXScale();
@@ -6122,9 +6178,35 @@ void ValveWorkbench::updateCircuitParameter(int index)
                 // When Autoscale Y is disabled, lock the Y range to the
                 // current axis limits so Designer tweaks preserve a fixed
                 // vertical reference, mirroring the A1 tool's manual mode.
-                if (ui->autoscaleYCheck && !ui->autoscaleYCheck->isChecked()) {
-                    if (currentYStop > 0.0) {
-                        iaMaxNew = currentYStop;
+                if (ui->autoscaleYCheck) {
+                    if (!ui->autoscaleYCheck->isChecked()) {
+                        if (currentYStop > 0.0) {
+                            iaMaxNew = currentYStop;
+                        }
+                    } else if (se) {
+                        double iaBias_mA = se->getParameter(SE_IA);
+                        if (index == SE_IA) {
+                            iaBias_mA = value;
+                        }
+
+                        double headroomVpk = se->getParameter(SE_HEADROOM);
+                        if (index == SE_HEADROOM) {
+                            headroomVpk = value;
+                        }
+
+                        double raa_ohms = se->getParameter(SE_RA);
+                        if (raa_ohms > 0.0) {
+                            double iaSwing_mA = 0.0;
+                            if (headroomVpk > 0.0) {
+                                iaSwing_mA = (headroomVpk / raa_ohms) * 1000.0;
+                            }
+                            double approxPeak = iaBias_mA + iaSwing_mA;
+                            if (approxPeak > 0.0 && std::isfinite(approxPeak)) {
+                                iaMaxNew = approxPeak * 1.1;
+                            }
+                        } else if (iaBias_mA > 0.0) {
+                            iaMaxNew = iaBias_mA * 1.5;
+                        }
                     }
                 }
 
@@ -6147,6 +6229,10 @@ void ValveWorkbench::updateCircuitParameter(int index)
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
+
+    if (auto se = dynamic_cast<SingleEndedOutput*>(circuit)) {
+        updateHeadroomWaveformView(se);
+    }
 
     Device *device = currentDevice;
     if (device) {
@@ -9860,25 +9946,30 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
     // When switching between Designer/Modeller/Analyser, clear any existing
     // measurement/model overlays from the shared Plot so each tab can
     // reconstruct its own view without dangling QGraphicsItemGroup pointers.
-    if (measuredCurves != nullptr) {
-        plot.remove(measuredCurves);
-        measuredCurves = nullptr;
-    }
-    if (measuredCurvesSecondary != nullptr) {
-        plot.remove(measuredCurvesSecondary);
-        measuredCurvesSecondary = nullptr;
-    }
-    if (estimatedCurves != nullptr) {
-        plot.remove(estimatedCurves);
-        estimatedCurves = nullptr;
-    }
-    if (modelledCurves != nullptr) {
-        plot.remove(modelledCurves);
-        modelledCurves = nullptr;
-    }
-    if (modelledCurvesSecondary != nullptr) {
-        plot.remove(modelledCurvesSecondary);
-        modelledCurvesSecondary = nullptr;
+    // Skip this while a test is running (Run button checked) to avoid
+    // interfering with analyser callbacks and plot updates in progress.
+    const bool testRunning = (ui && ui->runButton && ui->runButton->isChecked());
+    if (!testRunning) {
+        if (measuredCurves != nullptr) {
+            plot.remove(measuredCurves);
+            measuredCurves = nullptr;
+        }
+        if (measuredCurvesSecondary != nullptr) {
+            plot.remove(measuredCurvesSecondary);
+            measuredCurvesSecondary = nullptr;
+        }
+        if (estimatedCurves != nullptr) {
+            plot.remove(estimatedCurves);
+            estimatedCurves = nullptr;
+        }
+        if (modelledCurves != nullptr) {
+            plot.remove(modelledCurves);
+            modelledCurves = nullptr;
+        }
+        if (modelledCurvesSecondary != nullptr) {
+            plot.remove(modelledCurvesSecondary);
+            modelledCurvesSecondary = nullptr;
+        }
     }
 
     // Map the concrete tab widget to a logical role:
@@ -10052,8 +10143,14 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
             measuredCurvesSecondary = triodeMeasurementSecondary->updatePlotWithoutAxes(&plot);
             if (measuredCurvesSecondary) {
                 plot.add(measuredCurvesSecondary);
-                measuredCurvesSecondary->setVisible(true);
             }
+        }
+        if (measuredCurvesSecondary) {
+            const bool triodeBVisible =
+                isDoubleTriode &&
+                ui->screenCheck && ui->screenCheck->isChecked() &&
+                ui->measureCheck && ui->measureCheck->isChecked();
+            measuredCurvesSecondary->setVisible(triodeBVisible);
         }
     }
 
@@ -10398,6 +10495,21 @@ void ValveWorkbench::on_compareButton_clicked()
     dialog.setAvailableModels(available);
     dialog.setModel(model); // reference selection defaults to the recently fitted model
 
+    // If a datasheet reference operating point is available for triodes,
+    // pre-fill the triode test conditions so Compare uses the same Va/Vg
+    // that Health and datasheet comparisons use.
+    if (project->getDeviceType() == TRIODE) {
+        double va0 = 0.0;
+        double vg0 = 0.0;
+        double ia0 = 0.0;
+        double gm0 = 0.0;
+        double mu0 = 0.0;
+        double rp0 = 0.0;
+        if (ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0)) {
+            dialog.setTriodeTestConditions(va0, vg0);
+        }
+    }
+
     // If there is more than one model, prefer "Model B" for comparison if present
     if (available.size() > 1) {
         Model *preferred = nullptr;
@@ -10447,8 +10559,18 @@ void ValveWorkbench::exportFittedModelToDevices()
     // If an analyser measurement is available, we prefer its recorded limits
     // (iaMax/paMax, sweep ranges) when building the exported device preset so
     // Designer and Modeller graph limits track the actual measurement rather
-    // than any stale analyser UI values.
-    Measurement *measForExport = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
+    // than any stale analyser UI values. Prefer the *currently selected*
+    // measurement when it matches the active analyser device type and uses
+    // ANODE_CHARACTERISTICS, and only fall back to the first matching
+    // measurement in the project otherwise.
+    Measurement *measForExport = nullptr;
+    if (currentMeasurement &&
+        currentMeasurement->getDeviceType() == deviceType &&
+        currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
+        measForExport = currentMeasurement;
+    } else {
+        measForExport = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
+    }
 
     // Resolve models directory to MATCH loadDevices() search, and use a
     // Windows-style save dialog first so the chosen filename drives the
@@ -10665,9 +10787,45 @@ void ValveWorkbench::exportFittedModelToDevices()
         snapshot.insert("anode",  makeRangeFromMeas(&Measurement::getAnodeStart,
                                                      &Measurement::getAnodeStop,
                                                      &Measurement::getAnodeStep));
-        snapshot.insert("grid",   makeRangeFromMeas(&Measurement::getGridStart,
-                                                     &Measurement::getGridStop,
-                                                     &Measurement::getGridStep));
+
+        // Grid range: for triode anode-characteristics presets, prefer the
+        // analyser UI's positive-magnitude grid range so templates keep
+        // 0..+V defaults instead of inheriting the negative measurement
+        // sweep. For all other cases, use the measurement snapshot.
+        if (deviceType == TRIODE && measType == ANODE_CHARACTERISTICS) {
+            QJsonObject gridObj;
+            double gridStartOut = gridStart;
+            double gridStopOut  = gridStop;
+            double gridStepOut  = gridStep;
+
+            // Most analyser templates use positive magnitudes for "-ve Grid Voltage".
+            // If both bounds are negative, clamp the domain to 0..|stop|.
+            if (gridStartOut < 0.0 && gridStopOut <= 0.0) {
+                gridStartOut = 0.0;
+                if (gridStopOut < 0.0) {
+                    gridStopOut = -gridStopOut;
+                }
+            }
+
+            if (gridStartOut > gridStopOut) {
+                std::swap(gridStartOut, gridStopOut);
+            }
+
+            gridStepOut = std::fabs(gridStepOut);
+            if (!(gridStepOut > 0.0)) {
+                gridStepOut = 0.5; // conservative fallback
+            }
+
+            gridObj.insert("start", gridStartOut);
+            gridObj.insert("step",  gridStepOut);
+            gridObj.insert("stop",  gridStopOut);
+            snapshot.insert("grid", gridObj);
+        } else {
+            snapshot.insert("grid",   makeRangeFromMeas(&Measurement::getGridStart,
+                                                         &Measurement::getGridStop,
+                                                         &Measurement::getGridStep));
+        }
+
         snapshot.insert("screen", makeRangeFromMeas(&Measurement::getScreenStart,
                                                      &Measurement::getScreenStop,
                                                      &Measurement::getScreenStep));

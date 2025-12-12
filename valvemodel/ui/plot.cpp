@@ -32,10 +32,28 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
             xMajorDivision = -xMajorDivision;
         }
     }
+
+    // Draw X-axis major and minor grid lines.
+    // Major grid lines use the existing solid style; minor grid lines are
+    // 5 light grey dashed subdivisions between each pair of majors.
+    QPen majorPen(Qt::black);
+    majorPen.setStyle(Qt::SolidLine);
+    majorPen.setWidthF(0.0);
+
+    QPen minorPen(QColor(200, 200, 200));
+    minorPen.setStyle(Qt::DashLine);
+    minorPen.setWidthF(0.0);
+
+    const int minorSubdivisions = 5;
+    const double xMinorDivision = (xMajorDivision != 0.0)
+        ? (xMajorDivision / static_cast<double>(minorSubdivisions))
+        : 0.0;
+
     double x = xStart;
     int i = 0;
     while (x <= xStop) {
-        scene->addLine((x - xStart) * xScale, 0, (x - xStart) * xScale, PLOT_HEIGHT);
+        const double xScene = (x - xStart) * xScale;
+        scene->addLine(xScene, 0, xScene, PLOT_HEIGHT, majorPen);
         rounding = (x > 0) ? 0.5 : -0.5;
         if (xLabelEvery == 0 || (i % xLabelEvery) == 0) {
             QGraphicsTextItem *text;
@@ -48,6 +66,19 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
             text = scene->addText(labelText);
             double offset = 6.0 * strlen(labelText);
             text->setPos((x - xStart) * xScale - offset, PLOT_HEIGHT + 10);
+        }
+
+        // Draw minor grid lines until the next major tick, but skip the
+        // first (at the major itself) and ensure we stay within bounds.
+        if (xMinorDivision != 0.0) {
+            for (int m = 1; m < minorSubdivisions; ++m) {
+                const double xMinor = x + xMinorDivision * static_cast<double>(m);
+                if (xMinor > xStop) {
+                    break;
+                }
+                const double xMinorScene = (xMinor - xStart) * xScale;
+                scene->addLine(xMinorScene, 0, xMinorScene, PLOT_HEIGHT, minorPen);
+            }
         }
 
         x += xMajorDivision;
@@ -63,10 +94,18 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
             yMajorDivision = -yMajorDivision;
         }
     }
+
+    // Draw Y-axis major and minor grid lines (5 dashed subdivisions between majors).
+    const int yMinorSubdivisions = 5;
+    const double yMinorDivision = (yMajorDivision != 0.0)
+        ? (yMajorDivision / static_cast<double>(yMinorSubdivisions))
+        : 0.0;
+
     double y = yStart;
     i = 0;
     while (y <= yStop) {
-        scene->addLine(0, PLOT_HEIGHT - (y - yStart) * yScale, PLOT_WIDTH, PLOT_HEIGHT - (y - yStart) * yScale);
+        const double yScene = PLOT_HEIGHT - (y - yStart) * yScale;
+        scene->addLine(0, yScene, PLOT_WIDTH, yScene, majorPen);
         rounding = (y > 0) ? 0.5 : -0.5;
         if (yLabelEvery == 0 || (i % yLabelEvery) == 0) {
             QGraphicsTextItem *text;
@@ -81,6 +120,18 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
             text->setPos(-10 - offset, PLOT_HEIGHT - (y - yStart) * yScale - 10);
             text->setFlag(QGraphicsItem::ItemIsSelectable, false);
             text->setFlag(QGraphicsItem::ItemIsMovable, false);
+        }
+
+        // Minor horizontal grid lines between majors.
+        if (yMinorDivision != 0.0) {
+            for (int m = 1; m < yMinorSubdivisions; ++m) {
+                const double yMinor = y + yMinorDivision * static_cast<double>(m);
+                if (yMinor > yStop) {
+                    break;
+                }
+                const double yMinorScene = PLOT_HEIGHT - (yMinor - yStart) * yScale;
+                scene->addLine(0, yMinorScene, PLOT_WIDTH, yMinorScene, minorPen);
+            }
         }
 
         y += yMajorDivision;

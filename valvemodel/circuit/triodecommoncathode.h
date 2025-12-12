@@ -66,6 +66,15 @@ private:
     QGraphicsItemGroup *symSwingGroup = nullptr;
     QGraphicsItemGroup *sensitivityGroup = nullptr;
 
+    // Filled headroom polygon under the AC load-line segment for manual
+    // Headroom (Vpk), drawn in a semi-transparent blue to mirror the SE
+    // output stage but slightly lighter.
+    QGraphicsItemGroup *headroomPolygonGroup = nullptr;
+
+    // Time-domain headroom waveform overlay drawn on the main Designer
+    // plot using the lastHeadroomWaveform buffer.
+    QGraphicsItemGroup *headroomWaveformGroup = nullptr;
+
     // Overlay toggles and gain mode: 0 = unbypassed, 1 = bypassed
     bool showSymSwing = true;
     bool showInputSensitivity = true;
@@ -115,6 +124,8 @@ public:
         if (paLimitGroup) paLimitGroup->setVisible(visible);
         if (symSwingGroup) symSwingGroup->setVisible(visible);
         if (sensitivityGroup) sensitivityGroup->setVisible(visible);
+        if (headroomPolygonGroup) headroomPolygonGroup->setVisible(visible);
+        if (headroomWaveformGroup) headroomWaveformGroup->setVisible(visible);
     }
 
     // Ensure all Designer overlay pointers are dropped when the shared
@@ -127,6 +138,8 @@ public:
         paLimitGroup = nullptr;
         symSwingGroup = nullptr;
         sensitivityGroup = nullptr;
+        headroomPolygonGroup = nullptr;
+        headroomWaveformGroup = nullptr;
     }
 
     const QVector<double> &getLastHeadroomWaveform() const { return lastHeadroomWaveform; }
