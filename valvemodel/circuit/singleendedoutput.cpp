@@ -1408,51 +1408,10 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
         return true;
     };
 
-    // First, iteratively calibrate grid Vpp_in so that the achieved anode
-    // swing (Va p-p) is close to the requested 2*headroomVpk. This avoids
-    // relying solely on small-signal gain when we are far into clipping.
+    // Single pass: simulate for the grid drive implied by the requested
+    // headroom and small-signal gain, then compute harmonics from the
+    // resulting waveform without further rescaling of Vpp_in.
     WaveformStats stats;
-    if (!simulateForDrive(Vpp_in, false, stats)) {
-        return false;
-    }
-
-    const double Vpp_target = Vpp_out_target;
-    if (!(Vpp_target > 0.0) || !std::isfinite(Vpp_target)) {
-        return false;
-    }
-
-    const int maxIter = 5;
-    for (int iter = 0; iter < maxIter; ++iter) {
-        const double Vpp_wave = stats.vaMax - stats.vaMin;
-        if (!(Vpp_wave > 0.0) || !std::isfinite(Vpp_wave)) {
-            break;
-        }
-
-        const double ratio = Vpp_target / Vpp_wave;
-        if (!std::isfinite(ratio) || ratio <= 0.0) {
-            break;
-        }
-
-        // If we're already within ~10% of the target swing, stop adjusting.
-        const double error = std::abs(Vpp_wave - Vpp_target) / Vpp_target;
-        if (error < 0.10) {
-            break;
-        }
-
-        // Limit step size so we don't oscillate wildly.
-        const double clampedRatio = std::clamp(ratio, 0.5, 2.0);
-        const double newVpp_in = Vpp_in * clampedRatio;
-        if (!(newVpp_in > 0.0) || !std::isfinite(newVpp_in)) {
-            break;
-        }
-
-        Vpp_in = newVpp_in;
-        if (!simulateForDrive(Vpp_in, false, stats)) {
-            break;
-        }
-    }
-
-    // Final pass: compute harmonics for the calibrated grid drive.
     if (!simulateForDrive(Vpp_in, true, stats)) {
         return false;
     }

@@ -54,6 +54,8 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 - [x] 2025-11-30: Designer Autoscale Y checkbox implemented for output-stage circuits (SE, SE-UL, PP, UL-PP). With Autoscale Y **enabled**, device select and VB/RAA edits recompute axes from the active device and circuit: X uses `max(currentXStop, max(device.vaMax, 2×VB))`, Y uses `device.iaMax` for SE/SE-UL and `max(device.iaMax, 4000·VB/RAA)` for PP/UL-PP. With Autoscale Y **disabled**, the current Y range is treated as locked while X can still auto-extend to at least `2×VB`.
 
+- [x] 2025-12-13: Designer time-domain headroom helpers aligned across **Triode Common Cathode**, **Single-Ended Output**, and **Push-Pull Output** so that effective headroom (manual or helper-derived) maps to a single grid-drive Vpp via small-signal gain (no iterative Vpp rescaling), letting the model/load-line physics shape clipping. Triode CC and SE Output continue to feed the shared Headroom Waveshape viewer via their Va(t) buffers, and Push-Pull Output now exposes an approximate Va(t) waveshape (derived from its 5-point VTADIY-style current helper and DC load line) to the same viewer and participates in the Harmonics tab Headroom Scan as a third circuit option.
+
 ## Change log (highlights)
 - 2025-11-14: Further experimental Reefman/pentode plotting changes caused regressions; all such changes were reverted via VCS and baseline behaviour restored, with Gardiner as reference.
 - 2025-11-13: Gardiner/Reefman pentode solver bounds/logging fix; curves now align with measurement families; docs scheduled for refresh.

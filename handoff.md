@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-11 (Compare dialog triode/pentode small-signal metrics and Δ column, datasheet-OP auto-fill for Compare, Export-to-Device triode grid-range normalisation and current-measurement snapshots, Analyser Triode B overlay toggles, light dashed minor gridlines, documentation updates)
+Last updated: 2025-12-13 (Triode CC / SE / Push-Pull time-domain headroom alignment, Push-Pull Headroom Waveshape output, Push-Pull inclusion in Harmonics tab headroom scan, plus prior Compare/Export/overlay updates)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -255,8 +255,8 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 
 - **Relationship between time-domain engines and static metrics**
   - Two time-domain engines coexist with the static small-signal and Health metrics:
-    - The **Single-Ended Output THD** helper (`SingleEndedOutput::simulateHarmonicsTimeDomain`) and its scan wrappers (see 2025-11-21 summary) drive the model with a grid sine at the Designer bias point, solve Va(t) along the AC load line, derive Ia(t) via a DC load line, and perform a windowed DFT to obtain HD2/HD3/HD4/HD5/THD vs headroom or bias current.
-    - The **Triode Common Cathode headroom/THD and waveshape** helper (see 2025-12-10 description in `tasks.md`) does the same for the Triode CC circuit, including dynamic cathode behaviour when K-bypass is off and providing both a THD-at-headroom metric and a Va(t) “Headroom Waveshape” trace.
+    - The **Single-Ended Output THD** helper (`SingleEndedOutput::simulateHarmonicsTimeDomain`) and its scan wrappers (see 2025-11-21 summary) drive the model with a grid sine at the Designer bias point, solve Va(t) along the AC load line, derive Ia(t) via a DC load line, and perform a windowed DFT to obtain HD2/HD3/HD4/HD5/THD vs headroom or bias current. Headroom now maps to a single grid-drive Vpp via small-signal gain (no iterative Vpp rescaling), and the same Va(t) buffer feeds the shared Headroom Waveshape viewer.
+    - The **Triode Common Cathode headroom/THD and waveshape** helper (see 2025-12-10 description in `tasks.md`) does the same for the Triode CC circuit, including dynamic cathode behaviour when K-bypass is off and providing both a THD-at-headroom metric and a Va(t) “Headroom Waveshape” trace, with headroom→Vpp mapping aligned to the SE path.
   - The new Compare and Health paths tie into these surfaces rather than replacing them:
     - Compare’s μ/gm/rp/Ia values are local finite-difference linearisations of the same `Ia(Va,Vg1,Vg2)` model that the time-domain helpers integrate over.
     - Quick/Full Health use measured sweeps but reduce them to local Ia/gm/rp near each HealthPoint via `computeIaGmAt` and small LS fits of Ia vs Vg or Va; their scores then compare these static metrics against datasheet points or reference-tube surfaces built from embedded measurements.
@@ -353,7 +353,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - Combined, these scans act as 1D slices through the conceptual "harmonic landscape" (bias, swing → harmonic content), without yet introducing a full 2D/3D heatmap.
 
 - **Limitations / next-steps (not yet implemented):**
-  - Harmonics tab currently only supports **SE Output**; Push-Pull time-domain analysis is implemented but not wired into the UI.
+  - Harmonics tab currently only supports **SE Output** and **Push-Pull Output**; other Designer circuits are not yet integrated.
   - The DFT currently computes harmonics up to the 4th; a future extension could generate HD2..HD8 and aggregate them into a **waterfall / heatmap** (X = headroom or IA, Y = harmonic index, colour = amplitude) for the "hotspot" view the user ultimately wants.
   - Frequency dependence (0–10 kHz) is not explicitly modelled; scans assume a quasi-static nonlinearity at a single base frequency f₀, so harmonic indices map to k·f₀ without including capacitive/AC dynamics.
 

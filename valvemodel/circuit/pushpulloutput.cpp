@@ -712,6 +712,66 @@ bool PushPullOutput::computeHeadroomHarmonicCurrents(double vb,
     return true;
 }
 
+void PushPullOutput::computeTimeDomainHarmonicScan(QVector<double> &headroomVals,
+                                                   QVector<double> &hd2Vals,
+                                                   QVector<double> &hd3Vals,
+                                                   QVector<double> &hd4Vals,
+                                                   QVector<double> &thdVals) const
+{
+    headroomVals.clear();
+    hd2Vals.clear();
+    hd3Vals.clear();
+    hd4Vals.clear();
+    thdVals.clear();
+
+    if (!device1) {
+        return;
+    }
+
+    const double vb  = parameter[PP_VB]->getValue();
+    const double vs  = parameter[PP_VS]->getValue();
+    const double ia  = parameter[PP_IA]->getValue();
+    const double raa = parameter[PP_RAA]->getValue();
+
+    if (!(vb > 0.0) || !(raa > 0.0) || !(ia > 0.0)) {
+        return;
+    }
+
+    const double maxHeadroom = 0.9 * vb;
+    const int    steps       = 32;
+
+    headroomVals.reserve(steps);
+    hd2Vals.reserve(steps);
+    hd3Vals.reserve(steps);
+    hd4Vals.reserve(steps);
+    thdVals.reserve(steps);
+
+    for (int i = 1; i <= steps; ++i) {
+        const double head = maxHeadroom * static_cast<double>(i) / static_cast<double>(steps);
+
+        double hd2 = 0.0;
+        double hd3 = 0.0;
+        double hd4 = 0.0;
+        double thd = 0.0;
+
+        if (simulateHarmonicsTimeDomain(vb,
+                                        ia,
+                                        raa,
+                                        head,
+                                        vs,
+                                        hd2,
+                                        hd3,
+                                        hd4,
+                                        thd)) {
+            headroomVals.push_back(head);
+            hd2Vals.push_back(hd2);
+            hd3Vals.push_back(hd3);
+            hd4Vals.push_back(hd4);
+            thdVals.push_back(thd);
+        }
+    }
+}
+
 void PushPullOutput::computeHarmonics(double Ia,
                                       double Ib,
                                       double Ic,
@@ -809,6 +869,9 @@ bool PushPullOutput::simulateHarmonicsTimeDomain(double vb,
     double a[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
     double b[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
 
+    lastHeadroomWaveform.clear();
+    lastHeadroomWaveform.reserve(sampleCount);
+
     for (int k = 0; k < sampleCount; ++k) {
         const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
         const double u = phase / twoPi; // normalised phase in [0, 1)
@@ -828,6 +891,15 @@ bool PushPullOutput::simulateHarmonicsTimeDomain(double vb,
         const double frac = pos - indexF;
 
         const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+
+        if (std::isfinite(ip)) {
+            double va = vb - ip * raa;
+            if (!std::isfinite(va)) {
+                va = vb;
+            }
+            va = std::clamp(va, 0.0, 2.0 * vb);
+            lastHeadroomWaveform.push_back(va);
+        }
 
         // Hann window across the full set of samples.
         const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /

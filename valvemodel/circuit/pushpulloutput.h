@@ -1,6 +1,7 @@
 #pragma once
 
 #include "circuit.h"
+#include <QVector>
 
 // Parameters for the push-pull output stage. The first four are
 // user-editable inputs; the remaining entries are computed outputs.
@@ -37,6 +38,18 @@ public:
     void setGainMode(int mode);
     void setSymSwingEnabled(bool enabled);
     void setInductiveLoad(bool enabled);
+
+    const QVector<double> &getLastHeadroomWaveform() const { return lastHeadroomWaveform; }
+
+    // Helper for the Harmonics tab: compute a time-domain THD scan over
+    // headroom and return sampled headroom values and harmonic contents so
+    // the caller can plot HD2/HD3/HD4/THD vs headroom for the push-pull
+    // output stage.
+    void computeTimeDomainHarmonicScan(QVector<double> &headroomVals,
+                                       QVector<double> &hd2Vals,
+                                       QVector<double> &hd3Vals,
+                                       QVector<double> &hd4Vals,
+                                       QVector<double> &thdVals) const;
 
 protected:
     void update(int index) override;
@@ -77,4 +90,5 @@ private:
     int gainMode = 1;
     bool showSymSwing = true;
     bool inductiveLoad = true;
+    mutable QVector<double> lastHeadroomWaveform;
 };

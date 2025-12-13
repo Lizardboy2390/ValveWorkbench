@@ -18,6 +18,7 @@ class QGraphicsView;
 class QGraphicsTextItem;
 class QGraphicsScene;
 class TriodeCommonCathode;
+class PushPullOutput;
 
 #include "valvemodel/data/project.h"
 #include "valvemodel/model/estimate.h"
@@ -458,4 +459,5 @@ private:
     void refreshHarmonicsPlots();
     void updateHeadroomWaveformView(TriodeCommonCathode *tcc);
     void updateHeadroomWaveformView(class SingleEndedOutput *se);
+    void updateHeadroomWaveformView(class PushPullOutput *pp);
 };

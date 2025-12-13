@@ -233,8 +233,6 @@ public:
     QLineEdit *datasheetSection;
     QLabel *datasheetVaLabel;
     QLineEdit *datasheetVa;
-    QLabel *datasheetRefCountLabel;
-    QLabel *datasheetRefCountValue;
     QLabel *datasheetVgLabel;
     QLineEdit *datasheetVg;
     QLabel *datasheetIaLabel;
@@ -245,6 +243,8 @@ public:
     QLineEdit *datasheetMu;
     QLabel *datasheetRpLabel;
     QLineEdit *datasheetRp;
+    QLabel *datasheetRefCountLabel;
+    QLabel *datasheetRefCountValue;
     QSpacerItem *horizontalSpacer_8;
     QSpacerItem *verticalSpacer_3;
     QSpacerItem *horizontalSpacer;
@@ -891,7 +891,7 @@ public:
         tab_3->setObjectName("tab_3");
         layoutWidget_2 = new QWidget(tab_3);
         layoutWidget_2->setObjectName("layoutWidget_2");
-        layoutWidget_2->setGeometry(QRect(20, 10, 332, 1026));
+        layoutWidget_2->setGeometry(QRect(20, 10, 332, 1066));
         verticalLayout_6 = new QVBoxLayout(layoutWidget_2);
         verticalLayout_6->setObjectName("verticalLayout_6");
         verticalLayout_6->setContentsMargins(0, 0, 0, 0);
@@ -1430,16 +1430,6 @@ public:
 
         gridLayout_datasheet->addWidget(datasheetVa, 2, 1, 1, 1);
 
-        datasheetRefCountLabel = new QLabel(datasheetGroupBox);
-        datasheetRefCountLabel->setObjectName("datasheetRefCountLabel");
-
-        gridLayout_datasheet->addWidget(datasheetRefCountLabel, 2, 2, 1, 1);
-
-        datasheetRefCountValue = new QLabel(datasheetGroupBox);
-        datasheetRefCountValue->setObjectName("datasheetRefCountValue");
-
-        gridLayout_datasheet->addWidget(datasheetRefCountValue, 2, 3, 1, 1);
-
         datasheetVgLabel = new QLabel(datasheetGroupBox);
         datasheetVgLabel->setObjectName("datasheetVgLabel");
 
@@ -1494,6 +1484,16 @@ public:
         datasheetRp->setReadOnly(false);
 
         gridLayout_datasheet->addWidget(datasheetRp, 7, 1, 1, 1);
+
+        datasheetRefCountLabel = new QLabel(datasheetGroupBox);
+        datasheetRefCountLabel->setObjectName("datasheetRefCountLabel");
+
+        gridLayout_datasheet->addWidget(datasheetRefCountLabel, 2, 2, 1, 1);
+
+        datasheetRefCountValue = new QLabel(datasheetGroupBox);
+        datasheetRefCountValue->setObjectName("datasheetRefCountValue");
+
+        gridLayout_datasheet->addWidget(datasheetRefCountValue, 2, 3, 1, 1);
 
 
         verticalLayout_6->addWidget(datasheetGroupBox);
@@ -1625,8 +1625,8 @@ public:
 
         triodeAHeaderFourCornerPct = new QLabel(Triode_A_Box);
         triodeAHeaderFourCornerPct->setObjectName("triodeAHeaderFourCornerPct");
-        triodeAHeaderFourCornerPct->setAlignment(Qt::AlignmentFlag::AlignCenter);
         triodeAHeaderFourCornerPct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-top: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-bottom: 0px;"));
+        triodeAHeaderFourCornerPct->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
         gridLayout_TriodeAHealth->addWidget(triodeAHeaderFourCornerPct, 0, 4, 1, 1);
 
@@ -1640,29 +1640,29 @@ public:
         triodeA_Ia_measured->setMaxLength(4);
         triodeA_Ia_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_measured, 1, 1, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_measured, 1, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_Ia_ref = new QLineEdit(Triode_A_Box);
         triodeA_Ia_ref->setObjectName("triodeA_Ia_ref");
         triodeA_Ia_ref->setMaxLength(4);
         triodeA_Ia_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_ref, 1, 2, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_ref, 1, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_Ia_pct = new QLineEdit(Triode_A_Box);
         triodeA_Ia_pct->setObjectName("triodeA_Ia_pct");
         triodeA_Ia_pct->setMaxLength(4);
         triodeA_Ia_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_pct, 1, 3, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_pct, 1, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_corner1_pct = new QLineEdit(Triode_A_Box);
         triodeA_corner1_pct->setObjectName("triodeA_corner1_pct");
+        triodeA_corner1_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
         triodeA_corner1_pct->setMaxLength(4);
         triodeA_corner1_pct->setReadOnly(true);
-        triodeA_corner1_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_corner1_pct, 1, 4, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_corner1_pct, 1, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_rp_label = new QLabel(Triode_A_Box);
         triodeA_rp_label->setObjectName("triodeA_rp_label");
@@ -1674,29 +1674,29 @@ public:
         triodeA_rp_measured->setMaxLength(5);
         triodeA_rp_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_rp_measured, 2, 1, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_measured, 2, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_rp_ref = new QLineEdit(Triode_A_Box);
         triodeA_rp_ref->setObjectName("triodeA_rp_ref");
         triodeA_rp_ref->setMaxLength(5);
         triodeA_rp_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_rp_ref, 2, 2, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_ref, 2, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_rp_pct = new QLineEdit(Triode_A_Box);
         triodeA_rp_pct->setObjectName("triodeA_rp_pct");
         triodeA_rp_pct->setMaxLength(4);
         triodeA_rp_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_rp_pct, 2, 3, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_pct, 2, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_corner2_pct = new QLineEdit(Triode_A_Box);
         triodeA_corner2_pct->setObjectName("triodeA_corner2_pct");
+        triodeA_corner2_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
         triodeA_corner2_pct->setMaxLength(4);
         triodeA_corner2_pct->setReadOnly(true);
-        triodeA_corner2_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_corner2_pct, 2, 4, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_corner2_pct, 2, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_gm_label = new QLabel(Triode_A_Box);
         triodeA_gm_label->setObjectName("triodeA_gm_label");
@@ -1708,29 +1708,29 @@ public:
         triodeA_gm_measured->setMaxLength(4);
         triodeA_gm_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_gm_measured, 3, 1, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_measured, 3, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_gm_ref = new QLineEdit(Triode_A_Box);
         triodeA_gm_ref->setObjectName("triodeA_gm_ref");
         triodeA_gm_ref->setMaxLength(4);
         triodeA_gm_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_gm_ref, 3, 2, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_ref, 3, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_gm_pct = new QLineEdit(Triode_A_Box);
         triodeA_gm_pct->setObjectName("triodeA_gm_pct");
         triodeA_gm_pct->setMaxLength(4);
         triodeA_gm_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_gm_pct, 3, 3, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_pct, 3, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_corner3_pct = new QLineEdit(Triode_A_Box);
         triodeA_corner3_pct->setObjectName("triodeA_corner3_pct");
+        triodeA_corner3_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
         triodeA_corner3_pct->setMaxLength(4);
         triodeA_corner3_pct->setReadOnly(true);
-        triodeA_corner3_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_corner3_pct, 3, 4, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_corner3_pct, 3, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_mu_label = new QLabel(Triode_A_Box);
         triodeA_mu_label->setObjectName("triodeA_mu_label");
@@ -1742,29 +1742,29 @@ public:
         triodeA_mu_measured->setMaxLength(4);
         triodeA_mu_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_mu_measured, 4, 1, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_measured, 4, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_mu_ref = new QLineEdit(Triode_A_Box);
         triodeA_mu_ref->setObjectName("triodeA_mu_ref");
         triodeA_mu_ref->setMaxLength(4);
         triodeA_mu_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_mu_ref, 4, 2, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_ref, 4, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_mu_pct = new QLineEdit(Triode_A_Box);
         triodeA_mu_pct->setObjectName("triodeA_mu_pct");
         triodeA_mu_pct->setMaxLength(4);
         triodeA_mu_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_mu_pct, 4, 3, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_pct, 4, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeA_corner4_pct = new QLineEdit(Triode_A_Box);
         triodeA_corner4_pct->setObjectName("triodeA_corner4_pct");
+        triodeA_corner4_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
         triodeA_corner4_pct->setMaxLength(4);
         triodeA_corner4_pct->setReadOnly(true);
-        triodeA_corner4_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_corner4_pct, 4, 4, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeAHealth->addWidget(triodeA_corner4_pct, 4, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
 
         verticalLayout_TriodeAHealth->addLayout(gridLayout_TriodeAHealth);
@@ -1806,8 +1806,8 @@ public:
 
         triodeBHeaderFourCornerPct = new QLabel(Triode_B_Box);
         triodeBHeaderFourCornerPct->setObjectName("triodeBHeaderFourCornerPct");
-        triodeBHeaderFourCornerPct->setAlignment(Qt::AlignmentFlag::AlignCenter);
         triodeBHeaderFourCornerPct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-top: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-bottom: 0px;"));
+        triodeBHeaderFourCornerPct->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
         gridLayout_TriodeBHealth->addWidget(triodeBHeaderFourCornerPct, 0, 4, 1, 1);
 
@@ -1821,29 +1821,29 @@ public:
         triodeB_Ia_measured->setMaxLength(4);
         triodeB_Ia_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_measured, 1, 1, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_measured, 1, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_Ia_ref = new QLineEdit(Triode_B_Box);
         triodeB_Ia_ref->setObjectName("triodeB_Ia_ref");
         triodeB_Ia_ref->setMaxLength(4);
         triodeB_Ia_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_ref, 1, 2, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_ref, 1, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_Ia_pct = new QLineEdit(Triode_B_Box);
         triodeB_Ia_pct->setObjectName("triodeB_Ia_pct");
         triodeB_Ia_pct->setMaxLength(4);
         triodeB_Ia_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_pct, 1, 3, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_pct, 1, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_corner1_pct = new QLineEdit(Triode_B_Box);
         triodeB_corner1_pct->setObjectName("triodeB_corner1_pct");
+        triodeB_corner1_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
         triodeB_corner1_pct->setMaxLength(4);
         triodeB_corner1_pct->setReadOnly(true);
-        triodeB_corner1_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_corner1_pct, 1, 4, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_corner1_pct, 1, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_rp_label = new QLabel(Triode_B_Box);
         triodeB_rp_label->setObjectName("triodeB_rp_label");
@@ -1855,29 +1855,29 @@ public:
         triodeB_rp_measured->setMaxLength(5);
         triodeB_rp_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_rp_measured, 2, 1, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_measured, 2, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_rp_ref = new QLineEdit(Triode_B_Box);
         triodeB_rp_ref->setObjectName("triodeB_rp_ref");
         triodeB_rp_ref->setMaxLength(5);
         triodeB_rp_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_rp_ref, 2, 2, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_ref, 2, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_rp_pct = new QLineEdit(Triode_B_Box);
         triodeB_rp_pct->setObjectName("triodeB_rp_pct");
         triodeB_rp_pct->setMaxLength(4);
         triodeB_rp_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_rp_pct, 2, 3, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_pct, 2, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_corner2_pct = new QLineEdit(Triode_B_Box);
         triodeB_corner2_pct->setObjectName("triodeB_corner2_pct");
+        triodeB_corner2_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
         triodeB_corner2_pct->setMaxLength(4);
         triodeB_corner2_pct->setReadOnly(true);
-        triodeB_corner2_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_corner2_pct, 2, 4, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_corner2_pct, 2, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_gm_label = new QLabel(Triode_B_Box);
         triodeB_gm_label->setObjectName("triodeB_gm_label");
@@ -1889,29 +1889,29 @@ public:
         triodeB_gm_measured->setMaxLength(4);
         triodeB_gm_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_gm_measured, 3, 1, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_measured, 3, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_gm_ref = new QLineEdit(Triode_B_Box);
         triodeB_gm_ref->setObjectName("triodeB_gm_ref");
         triodeB_gm_ref->setMaxLength(4);
         triodeB_gm_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_gm_ref, 3, 2, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_ref, 3, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_gm_pct = new QLineEdit(Triode_B_Box);
         triodeB_gm_pct->setObjectName("triodeB_gm_pct");
         triodeB_gm_pct->setMaxLength(4);
         triodeB_gm_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_gm_pct, 3, 3, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_pct, 3, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_corner3_pct = new QLineEdit(Triode_B_Box);
         triodeB_corner3_pct->setObjectName("triodeB_corner3_pct");
+        triodeB_corner3_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
         triodeB_corner3_pct->setMaxLength(4);
         triodeB_corner3_pct->setReadOnly(true);
-        triodeB_corner3_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_corner3_pct, 3, 4, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_corner3_pct, 3, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_mu_label = new QLabel(Triode_B_Box);
         triodeB_mu_label->setObjectName("triodeB_mu_label");
@@ -1923,29 +1923,29 @@ public:
         triodeB_mu_measured->setMaxLength(4);
         triodeB_mu_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_mu_measured, 4, 1, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_measured, 4, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_mu_ref = new QLineEdit(Triode_B_Box);
         triodeB_mu_ref->setObjectName("triodeB_mu_ref");
         triodeB_mu_ref->setMaxLength(4);
         triodeB_mu_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_mu_ref, 4, 2, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_ref, 4, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_mu_pct = new QLineEdit(Triode_B_Box);
         triodeB_mu_pct->setObjectName("triodeB_mu_pct");
         triodeB_mu_pct->setMaxLength(4);
         triodeB_mu_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_mu_pct, 4, 3, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_pct, 4, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
         triodeB_corner4_pct = new QLineEdit(Triode_B_Box);
         triodeB_corner4_pct->setObjectName("triodeB_corner4_pct");
+        triodeB_corner4_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-bottom: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px;"));
         triodeB_corner4_pct->setMaxLength(4);
         triodeB_corner4_pct->setReadOnly(true);
-        triodeB_corner4_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-bottom: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px;"));
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_corner4_pct, 4, 4, 1, 1, Qt::AlignHCenter);
+        gridLayout_TriodeBHealth->addWidget(triodeB_corner4_pct, 4, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
 
         verticalLayout_TriodeBHealth->addLayout(gridLayout_TriodeBHealth);
@@ -2104,13 +2104,13 @@ public:
         datasheetNameLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref name:", nullptr));
         datasheetSectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Section:", nullptr));
         datasheetVaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Va (V):", nullptr));
-        datasheetRefCountLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
-        datasheetRefCountValue->setText(QString());
         datasheetVgLabel->setText(QCoreApplication::translate("ValveWorkbench", "Vg (V):", nullptr));
         datasheetIaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ia (mA):", nullptr));
         datasheetGmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (\302\265S):", nullptr));
         datasheetMuLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274:", nullptr));
         datasheetRpLabel->setText(QCoreApplication::translate("ValveWorkbench", "rp (\316\251):", nullptr));
+        datasheetRefCountLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
+        datasheetRefCountValue->setText(QString());
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         plotTitle->setText(QString());
         measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));

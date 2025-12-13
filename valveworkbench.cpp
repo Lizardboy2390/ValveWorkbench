@@ -1036,6 +1036,70 @@ void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
     ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
 }
 
+void ValveWorkbench::updateHeadroomWaveformView(PushPullOutput *pp)
+{
+    if (!ui || !ui->headroomWaveformView) {
+        return;
+    }
+
+    if (!pp) {
+        if (headroomWaveformScene) {
+            headroomWaveformScene->clear();
+        }
+        return;
+    }
+
+    if (!headroomWaveformScene) {
+        headroomWaveformScene = new QGraphicsScene(this);
+        ui->headroomWaveformView->setScene(headroomWaveformScene);
+    }
+
+    headroomWaveformScene->clear();
+
+    const QVector<double> &wave = pp->getLastHeadroomWaveform();
+    const int n = wave.size();
+    if (n < 2) {
+        return;
+    }
+
+    QPen pen(Qt::darkBlue);
+    pen.setWidthF(0.0);
+
+    double yMin = std::numeric_limits<double>::infinity();
+    double yMax = -std::numeric_limits<double>::infinity();
+
+    for (int i = 0; i < n - 1; ++i) {
+        const double v1 = wave[i];
+        const double v2 = wave[i + 1];
+        if (!std::isfinite(v1) || !std::isfinite(v2)) {
+            continue;
+        }
+
+        const double x1 = static_cast<double>(i);
+        const double x2 = static_cast<double>(i + 1);
+        const double y1 = v1;
+        const double y2 = v2;
+
+        headroomWaveformScene->addLine(x1, y1, x2, y2, pen);
+
+        if (y1 < yMin) yMin = y1;
+        if (y1 > yMax) yMax = y1;
+        if (y2 < yMin) yMin = y2;
+        if (y2 > yMax) yMax = y2;
+    }
+
+    if (!std::isfinite(yMin) || !std::isfinite(yMax) || yMin >= yMax) {
+        return;
+    }
+
+    const double yRange = yMax - yMin;
+    const double pad    = 0.1 * (yRange > 0.0 ? yRange : 1.0);
+    const double xMax   = static_cast<double>(n - 1);
+    headroomWaveformScene->setSceneRect(0.0, yMin - pad, xMax, yRange + 2.0 * pad);
+
+    ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
+}
+
 void ValveWorkbench::updateHeadroomWaveformView(SingleEndedOutput *se)
 {
     if (!ui || !ui->headroomWaveformView) {
@@ -4598,8 +4662,11 @@ void ValveWorkbench::runHarmonicsScan()
     } else if (auto *tri = dynamic_cast<TriodeCommonCathode*>(c)) {
         harmonicsText->append(tr("Running Triode CC time-domain harmonic scan..."));
         tri->computeTimeDomainHarmonicScan(headroomVals, hd2Vals, hd3Vals, hd4Vals, thdVals);
+    } else if (auto *pp = dynamic_cast<PushPullOutput*>(c)) {
+        harmonicsText->append(tr("Running Push-Pull time-domain harmonic scan..."));
+        pp->computeTimeDomainHarmonicScan(headroomVals, hd2Vals, hd3Vals, hd4Vals, thdVals);
     } else {
-        harmonicsText->append(tr("Harmonic scan is currently implemented for the Single Ended Output and Triode Common Cathode circuits only.\nPlease select one of these circuits in the Designer tab and choose a device."));
+        harmonicsText->append(tr("Harmonic scan is currently implemented for the Single Ended Output, Triode Common Cathode, and Push-Pull Output circuits only.\nPlease select one of these circuits in the Designer tab and choose a device."));
         return;
     }
 
@@ -6232,6 +6299,8 @@ void ValveWorkbench::updateCircuitParameter(int index)
 
     if (auto se = dynamic_cast<SingleEndedOutput*>(circuit)) {
         updateHeadroomWaveformView(se);
+    } else if (auto pp = dynamic_cast<PushPullOutput*>(circuit)) {
+        updateHeadroomWaveformView(pp);
     }
 
     Device *device = currentDevice;
