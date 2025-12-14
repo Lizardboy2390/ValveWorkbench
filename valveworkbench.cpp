@@ -9549,15 +9549,8 @@ void ValveWorkbench::modelTriode()
         }
     }
 
-    int children = currentProject->childCount();
-    for (int i = 0; i < children; i++) {
-        QTreeWidgetItem *child = currentProject->child(i);
-        if (child->type() == TYP_MEASUREMENT) {
-            Measurement *measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
-            if (measurement->getDeviceType() == TRIODE) {
-                model->addMeasurement(measurement);
-            }
-        }
+    if (triodeMeasurementPrimary != nullptr) {
+        model->addMeasurement(triodeMeasurementPrimary);
     }
 
     thread = new QThread;

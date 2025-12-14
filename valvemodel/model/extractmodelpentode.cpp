@@ -339,6 +339,12 @@ void ExtractModelPentode::addSample(double va, double ia, double vg1, double vg2
             parameter[PAR_NU]->getPointer(),
             parameter[PAR_S]->getPointer(),
             parameter[PAR_AP]->getPointer());
+
+        if (preferences->fixSecondaryEmission()) {
+            anodeProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
+            anodeProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
+            anodeProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
+        }
     } else {
         anodeProblem.AddResidualBlock(
             new AutoDiffCostFunction<ExtractDerkEPentodeResidual, 1,
@@ -610,7 +616,11 @@ void ExtractModelPentode::setOptions()
     setLimits(parameter[PAR_OMEGA],  0.0, 600.0);  // Vco offset
     setLimits(parameter[PAR_LAMBDA], 5.0, 200.0);  // Vg2 / lambda scale
     setLimits(parameter[PAR_NU],     0.0, 80.0);   // nu * Vg1 weight
-    setLimits(parameter[PAR_S],      0.0, 0.5);    // Psec amplitude
+    if (preferences && preferences->useSecondaryEmission()) {
+        setLimits(parameter[PAR_S],  0.001, 0.5);
+    } else {
+        setLimits(parameter[PAR_S],  0.0, 0.5);
+    }
     setLimits(parameter[PAR_AP],     0.001, 0.05); // cross-over sharpness
 
     // Allow more iterations for the SE-enabled ExtractModel fit while

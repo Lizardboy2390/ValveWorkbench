@@ -495,7 +495,7 @@ void Estimate::estimateKp(Measurement *measurement)
 
             int sweeps = measurement->count();
             for (int sw = 0; sw < sweeps; sw++) {
-                Sweep *sweep = measurement->at(s);
+                Sweep *sweep = measurement->at(sw);
                 double vg1 = sweep->getVg1Nominal();
 
                 if (vg1 < -0.0001) {

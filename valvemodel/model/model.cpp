@@ -179,10 +179,39 @@ void Model::addMeasurement(Measurement *measurement)
         }
         Sample *last = sweep->at(sweep->count() - 1);
         const double minEndVa = 0.75 * measurement->getAnodeStop();
-        if (last == nullptr || last->getVa() < minEndVa) {
-            qInfo("MODEL INPUT: skipping sweep %d (end Va %.3f < 0.75*Va_stop %.3f)", s,
-                  last ? last->getVa() : -1.0, measurement->getAnodeStop());
+        if (last == nullptr) {
+            qInfo("MODEL INPUT: skipping sweep %d (missing last sample)", s);
             continue;
+        }
+
+        const double vaEnd = last->getVa();
+
+        // Some TRIODE-CONNECTED PENTODE sweeps can end early because the analyser/firmware hits
+        // current or power limits before reaching the configured Va_stop. Keep those sweeps for
+        // fitting in that specific mode, otherwise the most informative low-|Vg| curves can be
+        // discarded. Do not apply this relaxation to ordinary triode measurements.
+        const bool allowLimitHitShortSweep = (measurement->getDeviceType() == TRIODE && measurement->isTriodeConnectedPentode());
+        bool looksLikeLimitHit = false;
+        double iaEnd = last->getIa();
+        double pEnd = 0.0;
+        if (allowLimitHitShortSweep) {
+            pEnd = (std::isfinite(iaEnd) && std::isfinite(vaEnd)) ? (iaEnd * vaEnd / 1000.0) : 0.0;
+            const double iaMax = measurement->getIaMax();
+            const double pMax = measurement->getPMax();
+            looksLikeLimitHit =
+                (std::isfinite(iaEnd) && iaEnd >= 49.0) ||
+                (std::isfinite(iaEnd) && std::isfinite(iaMax) && iaMax > 0.0 && iaEnd >= 0.90 * iaMax) ||
+                (std::isfinite(pEnd) && std::isfinite(pMax) && pMax > 0.0 && pEnd >= 0.90 * pMax);
+        }
+
+        if (vaEnd < minEndVa && (!allowLimitHitShortSweep || !looksLikeLimitHit)) {
+            qInfo("MODEL INPUT: skipping sweep %d (end Va %.3f < 0.75*Va_stop %.3f)", s,
+                  vaEnd, measurement->getAnodeStop());
+            continue;
+        }
+        if (vaEnd < minEndVa && allowLimitHitShortSweep && looksLikeLimitHit) {
+            qInfo("MODEL INPUT: keeping sweep %d despite short end Va %.3f (< %.3f) due to likely limit-hit (Ia=%.3f mA, P=%.3f W)",
+                  s, vaEnd, minEndVa, iaEnd, pEnd);
         }
 
         // Determine if this sweep's grid values (Vg1) require a sign flip.
