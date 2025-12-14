@@ -473,10 +473,12 @@ void Estimate::estimateKg1X(Measurement *measurement)
                 Sample *sample = sweep->at(i);
 
                 if (sample->getIa() > iThresh) {
-                    constexpr double milliampToAmp = 1000.0;
-                    solver->addSample(
-                        log(sample->getVa() / mu + sample->getVg1()),
-                        log(sample->getIa() / milliampToAmp));
+                    double arg = sample->getVa() / mu + sample->getVg1();
+                    if (std::isfinite(arg) && arg > 0.0) {
+                        solver->addSample(
+                            log(arg),
+                            log(sample->getIa() / 1000.0));
+                    }
                 }
             }
         }
@@ -540,7 +542,25 @@ void Estimate::estimateKvbKvb1(Measurement *measurement)
                 Sample *sample = sweep->at(i);
 
                 if (sample->getIa() > 0.0 && sample->getIa() < iThresh) {
-                    double f = sample->getVg1() / (pow(sample->getIa() * kg1, 1 / x) / sample->getVa() - 1/ mu);
+                    double iaScaled = sample->getIa() * kg1;
+                    if (!std::isfinite(iaScaled) || iaScaled <= 0.0) {
+                        continue;
+                    }
+
+                    double num = pow(iaScaled, 1 / x);
+                    if (!std::isfinite(num) || sample->getVa() == 0.0) {
+                        continue;
+                    }
+
+                    double denom = num / sample->getVa() - 1 / mu;
+                    if (!std::isfinite(denom) || denom == 0.0) {
+                        continue;
+                    }
+
+                    double f = sample->getVg1() / denom;
+                    if (!std::isfinite(f)) {
+                        continue;
+                    }
 
                     solver->addSample(sample->getVa(), f * f);
                     hasSamples = true;
@@ -554,8 +574,18 @@ void Estimate::estimateKvbKvb1(Measurement *measurement)
         if (solver->isConverged()) {
             double a = solver->getA();
             Q_UNUSED(a);
-            kvb1 = solver->getB();
-            kvb = solver->getC();
+            const double kvb1Candidate = solver->getB();
+            const double kvbCandidate = solver->getC();
+
+            // Guard against ill-conditioned regressions returning absurd values
+            // (which can cause the subsequent Ceres solve to fail immediately).
+            // Keep these in the same broad envelope as the model-level bounds.
+            if (std::isfinite(kvbCandidate) && std::isfinite(kvb1Candidate)) {
+                const double kvbClamped = clampToRange(kvbCandidate, 50.0, 800.0);
+                const double kvb1Clamped = clampToRange(kvb1Candidate, 1.0, 80.0);
+                kvb = kvbClamped;
+                kvb1 = kvb1Clamped;
+            }
         }
     }
 
