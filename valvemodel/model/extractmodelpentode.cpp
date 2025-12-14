@@ -112,7 +112,8 @@ struct ExtractDerkEPentodeResidual {
 
         T iaModel = ip * (invKg1 - invKg2 + a[0] * T(va_) * invKg1 - g * term);
 
-        residual[0] = T(ia_) - iaModel;
+        const T denom = ceres::sqrt(T(std::fabs(ia_)) + T(10.0));
+        residual[0] = (T(ia_) - iaModel) / denom;
         return true;
     }
 
@@ -169,7 +170,8 @@ struct ExtractDerkEPentodeSEResidual {
         T iaModel = ip * (invKg1 - invKg2 + a[0] * T(va_) * invKg1
                           - psec * invKg2 - g * term);
 
-        residual[0] = T(ia_) - iaModel;
+        const T denom = ceres::sqrt(T(std::fabs(ia_)) + T(10.0));
+        residual[0] = (T(ia_) - iaModel) / denom;
         return true;
     }
 
@@ -212,7 +214,8 @@ struct ExtractDerkEPentodeIg2Residual {
         T g      = ceres::exp(-ceres::pow(beta[0] * T(va_), T(1.5)));
         T ig2Model = ip * invKg2 * (T(1.0) + alpha_s[0] * g);
 
-        residual[0] = T(ig2_) - ig2Model;
+        const T denom = ceres::sqrt(T(std::fabs(ig2_)) + T(0.5));
+        residual[0] = (T(ig2_) - ig2Model) / denom;
         return true;
     }
 
@@ -263,7 +266,8 @@ struct ExtractDerkEPentodeIg2SEResidual {
         // Eq. (45) with Psec: Ig2 = Ip / Kg2 * (1 + alpha_s * e^{-(beta Va)^{3/2}} + Psec)
         T ig2Model = ip * invKg2 * (T(1.0) + alpha_s[0] * g + psec);
 
-        residual[0] = T(ig2_) - ig2Model;
+        const T denom = ceres::sqrt(T(std::fabs(ig2_)) + T(0.5));
+        residual[0] = (T(ig2_) - ig2Model) / denom;
         return true;
     }
 
