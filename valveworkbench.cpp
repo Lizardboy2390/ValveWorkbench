@@ -9904,11 +9904,16 @@ void ValveWorkbench::modelPentode()
 
     Estimate estimate;
 
+    bool useSEForSeed =
+        (pentodeModelType == REEFMAN_DERK_PENTODE ||
+         pentodeModelType == REEFMAN_DERK_E_PENTODE) &&
+        preferencesDialog.useSecondaryEmission();
+
     if (triodeModel != nullptr) {
         // Normal path: use the project's triode model or the embedded
         // triodeModel seed as the base for pentode estimation so the
         // Gardiner/Reefman pentode starts from a consistent triode base.
-        estimate.estimatePentode(measurement, triodeModel, pentodeModelType, false);
+        estimate.estimatePentode(measurement, triodeModel, pentodeModelType, useSEForSeed);
     } else if (currentDevice && currentDevice->getDeviceType() == PENTODE) {
         // Secondary fallback: if we have no explicit triode seed but do have a
         // pentode device model, copy its parameters into the Estimate as a
@@ -9940,7 +9945,7 @@ void ValveWorkbench::modelPentode()
         // Last resort: fall back to the legacy gradient-based estimate that
         // derives all parameters directly from the measurement alone.
         qWarning("No triode model found in project and no suitable current device; proceeding with gradient-based seed for pentode fit");
-        estimate.estimatePentode(measurement, nullptr, pentodeModelType, false);
+        estimate.estimatePentode(measurement, nullptr, pentodeModelType, useSEForSeed);
     }
 
     model = ModelFactory::createModel(pentodeModelType);
