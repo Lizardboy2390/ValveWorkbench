@@ -198,6 +198,7 @@ private slots:
 
     void on_datasheetVa_editingFinished();
     void on_datasheetVg_editingFinished();
+    void on_datasheetVg2_editingFinished();
     void on_datasheetIa_editingFinished();
     void on_datasheetGm_editingFinished();
     void on_datasheetMu_editingFinished();
@@ -213,15 +214,18 @@ private:
     struct HealthPoint {
         double va;
         double vg;
+        double vg2;
     };
 
     struct HealthResult {
         bool valid;
         double va;
         double vg;
+        double vg2;
         double ia;
         double gm;
         double rp;   // Measured plate resistance (ohms); 0.0 if unavailable
+        double ig2;  // Screen current (mA); 0.0 if unavailable
     };
 
     Ui::ValveWorkbench *ui;
@@ -358,6 +362,9 @@ private:
     QList<HealthPoint> healthPoints;
     QList<HealthResult> healthResults;
 
+    bool healthOpFinderActive = false;
+    double healthOpTargetIa_mA = 0.0;
+
     bool healthStateSaved = false;
     int savedTestTypeForHealth = 0;
     double savedAnodeStartForHealth = 0.0;
@@ -442,9 +449,11 @@ private:
     void updateDatasheetDisplay();
     void syncDatasheetFromUi();
     bool ensureDatasheetRefPoint(double &va0, double &vg0, double &ia0, double &gm0, double &mu0, double &rp0);
+    bool ensureDatasheetRefPointPentode(double &va0, double &vg0, double &vg20, double &ia0, double &gm0);
     void startHealthRun(HealthMode mode);
     void configureTransferForHealthPoint(const HealthPoint &pt);
-    bool computeIaGmAt(Measurement *measurement, const HealthPoint &pt, double &ia_mA, double &gm_mA_V, double &rp_ohms);
+    bool findPentodeHealthOperatingPoint(Measurement *measurement, double targetIa_mA, HealthPoint &outPt, double &outIa_mA) const;
+    bool computeIaGmAt(Measurement *measurement, const HealthPoint &pt, double &ia_mA, double &gm_mA_V, double &rp_ohms, double *ig2_mA = nullptr);
     void finalizeHealthRun();
 
     bool captureHealthReferenceFromLastRun();

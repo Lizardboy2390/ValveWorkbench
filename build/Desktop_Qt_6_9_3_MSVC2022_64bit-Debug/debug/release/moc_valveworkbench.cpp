@@ -125,6 +125,7 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         "on_actionReset_Reference_Tube_triggered",
         "on_datasheetVa_editingFinished",
         "on_datasheetVg_editingFinished",
+        "on_datasheetVg2_editingFinished",
         "on_datasheetIa_editingFinished",
         "on_datasheetGm_editingFinished",
         "on_datasheetMu_editingFinished",
@@ -316,14 +317,16 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         QtMocHelpers::SlotData<void()>(84, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_datasheetVg_editingFinished'
         QtMocHelpers::SlotData<void()>(85, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetIa_editingFinished'
+        // Slot 'on_datasheetVg2_editingFinished'
         QtMocHelpers::SlotData<void()>(86, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetGm_editingFinished'
+        // Slot 'on_datasheetIa_editingFinished'
         QtMocHelpers::SlotData<void()>(87, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetMu_editingFinished'
+        // Slot 'on_datasheetGm_editingFinished'
         QtMocHelpers::SlotData<void()>(88, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetRp_editingFinished'
+        // Slot 'on_datasheetMu_editingFinished'
         QtMocHelpers::SlotData<void()>(89, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_datasheetRp_editingFinished'
+        QtMocHelpers::SlotData<void()>(90, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -421,10 +424,11 @@ void ValveWorkbench::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 71: _t->on_actionReset_Reference_Tube_triggered(); break;
         case 72: _t->on_datasheetVa_editingFinished(); break;
         case 73: _t->on_datasheetVg_editingFinished(); break;
-        case 74: _t->on_datasheetIa_editingFinished(); break;
-        case 75: _t->on_datasheetGm_editingFinished(); break;
-        case 76: _t->on_datasheetMu_editingFinished(); break;
-        case 77: _t->on_datasheetRp_editingFinished(); break;
+        case 74: _t->on_datasheetVg2_editingFinished(); break;
+        case 75: _t->on_datasheetIa_editingFinished(); break;
+        case 76: _t->on_datasheetGm_editingFinished(); break;
+        case 77: _t->on_datasheetMu_editingFinished(); break;
+        case 78: _t->on_datasheetRp_editingFinished(); break;
         default: ;
         }
     }
@@ -451,14 +455,14 @@ int ValveWorkbench::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 78)
+        if (_id < 79)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 78;
+        _id -= 79;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 78)
+        if (_id < 79)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 78;
+        _id -= 79;
     }
     return _id;
 }

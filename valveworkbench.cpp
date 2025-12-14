@@ -36,6 +36,7 @@
 #include <QLineEdit>
 #include <QPen>
 #include <QSizePolicy>
+#include <QPainterPath>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -589,6 +590,7 @@ void ValveWorkbench::updateDatasheetDisplay()
         // Datasheet panel
         setField(ui->datasheetVa, QString());
         setField(ui->datasheetVg, QString());
+        setField(ui->datasheetVg2, QString());
         setField(ui->datasheetIa, QString());
         setField(ui->datasheetGm, QString());
         setField(ui->datasheetMu, QString());
@@ -621,6 +623,7 @@ void ValveWorkbench::updateDatasheetDisplay()
     // Datasheet panel values
     const QString vaStr = numToString(rp.value("va"), 1);
     const QString vgStr = numToString(rp.value("vg"), 1);
+    const QString vg2Str = numToString(rp.value("vg2"), 1);
     const QString iaStr = numToString(rp.value("ia"), 3);
     const QString gmStr = numToString(rp.value("gm"), 1);
     const QString muStr = numToString(rp.value("mu"), 1);
@@ -628,6 +631,7 @@ void ValveWorkbench::updateDatasheetDisplay()
 
     setField(ui->datasheetVa, vaStr);
     setField(ui->datasheetVg, vgStr);
+    setField(ui->datasheetVg2, vg2Str);
     setField(ui->datasheetIa, iaStr);
     setField(ui->datasheetGm, gmStr);
     setField(ui->datasheetMu, muStr);
@@ -654,17 +658,31 @@ void ValveWorkbench::updateDatasheetDisplay()
     }
 
     // Mirror reference metrics into the Triode A/B Health Ref columns.
-    // Ia is in mA, gm in mA/V, mu dimensionless, rp in ohms (matching
-    // the units used by the health computation helpers).
+    // Ia is in mA, gm is shown in µS for UI consistency.
     setField(ui->triodeA_Ia_ref, iaStr);
     setField(ui->triodeA_gm_ref, gmStr);
     setField(ui->triodeA_mu_ref, muStr);
     setField(ui->triodeA_rp_ref, rpStr);
 
-    setField(ui->triodeB_Ia_ref, iaStr);
-    setField(ui->triodeB_gm_ref, gmStr);
-    setField(ui->triodeB_mu_ref, muStr);
-    setField(ui->triodeB_rp_ref, rpStr);
+    if (deviceType == PENTODE) {
+        double ig2Ref = 0.0;
+        if (!datasheetJson.isEmpty()) {
+            const QJsonObject centerObj = datasheetJson.value(QStringLiteral("healthReference")).toObject().value(QStringLiteral("center")).toObject();
+            ig2Ref = centerObj.value(QStringLiteral("ig2Ref_mA")).toDouble(0.0);
+        }
+        const double vg2Ref = rp.value(QStringLiteral("vg2")).toDouble(0.0);
+        const double pg2Ref_W = (vg2Ref > 0.0 && ig2Ref > 0.0) ? (vg2Ref * ig2Ref / 1000.0) : 0.0;
+
+        setField(ui->triodeB_Ia_ref, (ig2Ref > 0.0) ? QString::number(ig2Ref, 'f', 3) : QString());
+        setField(ui->triodeB_rp_ref, (pg2Ref_W > 0.0) ? QString::number(pg2Ref_W, 'f', 3) : QString());
+        setField(ui->triodeB_gm_ref, QString());
+        setField(ui->triodeB_mu_ref, QString());
+    } else {
+        setField(ui->triodeB_Ia_ref, iaStr);
+        setField(ui->triodeB_gm_ref, gmStr);
+        setField(ui->triodeB_mu_ref, muStr);
+        setField(ui->triodeB_rp_ref, rpStr);
+    }
 }
 
 void ValveWorkbench::syncDatasheetFromUi()
@@ -678,12 +696,13 @@ void ValveWorkbench::syncDatasheetFromUi()
     // than overwriting it with an empty refPoint.
     const QString vaText = ui->datasheetVa ? ui->datasheetVa->text().trimmed() : QString();
     const QString vgText = ui->datasheetVg ? ui->datasheetVg->text().trimmed() : QString();
+    const QString vg2Text = ui->datasheetVg2 ? ui->datasheetVg2->text().trimmed() : QString();
     const QString iaText = ui->datasheetIa ? ui->datasheetIa->text().trimmed() : QString();
     const QString gmText = ui->datasheetGm ? ui->datasheetGm->text().trimmed() : QString();
     const QString muText = ui->datasheetMu ? ui->datasheetMu->text().trimmed() : QString();
     const QString rpText = ui->datasheetRp ? ui->datasheetRp->text().trimmed() : QString();
 
-    const bool allEmpty = vaText.isEmpty() && vgText.isEmpty() && iaText.isEmpty() &&
+    const bool allEmpty = vaText.isEmpty() && vgText.isEmpty() && vg2Text.isEmpty() && iaText.isEmpty() &&
                           gmText.isEmpty() && muText.isEmpty() && rpText.isEmpty();
     if (allEmpty && !datasheetJson.isEmpty()) {
         return;
@@ -713,6 +732,7 @@ void ValveWorkbench::syncDatasheetFromUi()
 
     setFromField("va", ui->datasheetVa);
     setFromField("vg", ui->datasheetVg);
+    setFromField("vg2", ui->datasheetVg2);
     setFromField("ia", ui->datasheetIa);
     setFromField("gm", ui->datasheetGm);
     setFromField("mu", ui->datasheetMu);
@@ -766,36 +786,211 @@ bool ValveWorkbench::ensureDatasheetRefPoint(double &va0, double &vg0, double &i
     return true;
 }
 
-void ValveWorkbench::startHealthRun(HealthMode mode)
+ bool ValveWorkbench::ensureDatasheetRefPointPentode(double &va0, double &vg0, double &vg20, double &ia0, double &gm0)
+ {
+     if (datasheetJson.isEmpty()) {
+         return false;
+     }
+
+     const QJsonArray refPoints = datasheetJson.value("refPoints").toArray();
+     if (refPoints.isEmpty() || !refPoints.at(0).isObject()) {
+         return false;
+     }
+
+     const QJsonObject rp = refPoints.at(0).toObject();
+
+     auto read = [&](const char *key, double &out) -> bool {
+         const QJsonValue v = rp.value(QLatin1String(key));
+         if (!v.isDouble()) {
+             return false;
+         }
+         out = v.toDouble();
+         return true;
+     };
+
+     if (!read("va", va0)) return false;
+     if (!read("vg", vg0)) return false;
+     if (!read("vg2", vg20)) return false;
+     if (!read("ia", ia0)) return false;
+
+     // Datasheet gm is stored in micro-siemens (µS / "micromhos") for UI
+     // consistency. Convert to mA/V for internal use so it matches the units
+     // returned by computeIaGmAt(), which works in mA/V.
+     //
+     // For pentodes, allow gm to be omitted from the template so we can still
+     // compute Ia-based Health percentages.
+     double gm_uS = 0.0;
+     if (read("gm", gm_uS)) {
+         gm0 = gm_uS / 1000.0; // 1000 µS = 1 mA/V
+     } else {
+         gm0 = 0.0;
+     }
+
+     return true;
+ }
+
+ bool ValveWorkbench::findPentodeHealthOperatingPoint(Measurement *measurement, double targetIa_mA, HealthPoint &outPt, double &outIa_mA) const
+ {
+     outIa_mA = 0.0;
+     if (!measurement) {
+         return false;
+     }
+     if (!(targetIa_mA > 0.0)) {
+         return false;
+     }
+     if (measurement->count() <= 0) {
+         return false;
+     }
+
+     Sweep *sweep = measurement->at(0);
+     if (!sweep || sweep->count() < 2) {
+         return false;
+     }
+
+     double bestVg1 = 0.0;
+     double bestIa = 0.0;
+     double bestScore = std::numeric_limits<double>::infinity();
+     bool have = false;
+
+     for (int i = 1; i < sweep->count(); ++i) {
+         Sample *s0 = sweep->at(i - 1);
+         Sample *s1 = sweep->at(i);
+         if (!s0 || !s1) continue;
+
+         const double ia0 = s0->getIa();
+         const double ia1 = s1->getIa();
+         const double vg0 = s0->getVg1();
+         const double vg1 = s1->getVg1();
+
+         if (!std::isfinite(ia0) || !std::isfinite(ia1) || !std::isfinite(vg0) || !std::isfinite(vg1)) {
+             continue;
+         }
+         if (ia0 < 0.0 || ia1 < 0.0) {
+             continue;
+         }
+         if (std::fabs(vg1 - vg0) < 1e-9) {
+             continue;
+         }
+
+         const double lo = std::min(ia0, ia1);
+         const double hi = std::max(ia0, ia1);
+         if (targetIa_mA < lo || targetIa_mA > hi) {
+             continue;
+         }
+
+         const double slope = (ia1 - ia0) / (vg1 - vg0);
+         if (!(slope > 0.0)) {
+             continue;
+         }
+
+         const double t = (targetIa_mA - ia0) / (ia1 - ia0);
+         const double vgInterp = vg0 + t * (vg1 - vg0);
+         const double iaInterp = ia0 + t * (ia1 - ia0);
+         const double score = std::fabs(iaInterp - targetIa_mA);
+
+         if (score < bestScore) {
+             bestScore = score;
+             bestVg1 = vgInterp;
+             bestIa = iaInterp;
+             have = true;
+         }
+     }
+
+     if (!have) {
+         return false;
+     }
+
+     Sample *sAny = sweep->at(0);
+     if (!sAny) {
+         return false;
+     }
+
+     outPt.va = sAny->getVa();
+     outPt.vg2 = sAny->getVg2();
+     outPt.vg = bestVg1;
+     outIa_mA = bestIa;
+     return true;
+ }
+
+ void ValveWorkbench::startHealthRun(HealthMode mode)
 {
     double va0 = 0.0;
     double vg0 = 0.0;
+    double vg20 = 0.0;
     double ia0 = 0.0;
     double gm0 = 0.0;
     double mu0 = 0.0;
     double rp0 = 0.0;
 
-    if (!ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0)) {
-        QMessageBox::warning(this, tr("Health Test"), tr("No valid datasheet reference point is available. Load a template with datasheet.refPoints[0] first."));
-        return;
+    // Reset OP-finder state for each new Health run.
+    healthOpFinderActive = false;
+    healthOpTargetIa_mA = 0.0;
+
+    // Save current analyser UI state so it can be restored after Health.
+    // (Must happen before any Health-specific parameter overrides.)
+    if (!healthStateSaved) {
+        healthStateSaved = true;
+        savedTestTypeForHealth = testType;
+        savedAnodeStartForHealth = anodeStart;
+        savedAnodeStopForHealth = anodeStop;
+        savedAnodeStepForHealth = anodeStep;
+        savedGridStartForHealth = gridStart;
+        savedGridStopForHealth = gridStop;
+        savedGridStepForHealth = gridStep;
+        savedScreenStartForHealth = screenStart;
+        savedScreenStopForHealth = screenStop;
+        savedScreenStepForHealth = screenStep;
     }
 
-    if (deviceType != TRIODE) {
-        QMessageBox::warning(this, tr("Health Test"), tr("Quick/Full Health currently support triode devices only."));
+    if (deviceType == TRIODE) {
+        if (!ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0)) {
+            QMessageBox::warning(this, tr("Health Test"), tr("No valid datasheet reference point is available. Load a template with datasheet.refPoints[0] first."));
+            return;
+        }
+    } else if (deviceType == PENTODE) {
+        // For pentodes, avoid datasheet operating points (often exceed analyser limits).
+        // Instead, find a safe operating point at a conservative Va/Vg2 by running a short
+        // transfer sweep and selecting the Vg1 that yields a target Ia.
+        // Default target for 6L6-GC: 15 mA.
+        healthOpFinderActive = true;
+        double targetIa = 10.0;
+        if (currentDevice) {
+            const QString n = currentDevice->getName().toUpper();
+            if (n.contains(QLatin1String("6L6"))) {
+                targetIa = 15.0;
+            }
+        }
+        healthOpTargetIa_mA = targetIa;
+
+        // Conservative rails for OP finder.
+        testType = TRANSFER_CHARACTERISTICS;
+        anodeStart = 120.0;
+        anodeStop  = 120.0;
+        anodeStep  = 120.0;
+
+        screenStart = 120.0;
+        screenStop  = 120.0;
+        screenStep  = 120.0;
+
+        // Sweep Vg1 from very negative (large magnitude) towards less negative.
+        gridStart = 2.0;   // finish near -2V
+        gridStop  = 35.0;  // start near -35V
+        gridStep  = 1.0;
+
+        healthMode = mode;
+        healthRunActive = true;
+        healthRunIndex = 0;
+        on_runButton_clicked();
+        return;
+    } else {
+        QMessageBox::warning(this, tr("Health Test"), tr("Quick/Full Health currently support triode and pentode devices only."));
         return;
     }
 
     // Build health test points around the datasheet operating point.
-    // Quick Health: 3x3 grid (centre + 8 neighbours) to stabilise gm/Ia
-    // using multiple nearby sweeps.
-    // Full Health: centre + 4 wider corners for a larger operating box.
     healthPoints.clear();
     healthResults.clear();
 
-    // For double-triode Health runs, discard any existing Triode B clone so
-    // a fresh secondary measurement will be created from the Health
-    // TRANSFER_CHARACTERISTICS dataset rather than reusing an earlier anode
-    // run clone.
     if (isDoubleTriode && triodeMeasurementSecondary != nullptr) {
         deleteMeasurementClone(triodeMeasurementSecondary);
         triodeMeasurementSecondary = nullptr;
@@ -804,10 +999,10 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
     HealthPoint center;
     center.va = va0;
     center.vg = vg0;
+    center.vg2 = vg20;
     healthPoints.append(center);
 
     if (mode == HEALTH_QUICK) {
-        // 3x3 grid: smaller offsets around the centre for quick stability.
         const double dVaFracQuick = 0.10;
         double dVa = std::fabs(va0) * dVaFracQuick;
         if (dVa < 20.0) dVa = 20.0;
@@ -824,20 +1019,16 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
         const double vgHi   = vg0 + dVg;
 
         HealthPoint p;
+        p.va = va0;    p.vg = vgLo;   p.vg2 = vg20;  healthPoints.append(p);
+        p.va = va0;    p.vg = vgHi;   p.vg2 = vg20;  healthPoints.append(p);
 
-        // Middle row (same Va, varying Vg)
-        p.va = va0;    p.vg = vgLo;   healthPoints.append(p);
-        p.va = va0;    p.vg = vgHi;   healthPoints.append(p);
+        p.va = vaLow;  p.vg = vg0;    p.vg2 = vg20;  healthPoints.append(p);
+        p.va = vaLow;  p.vg = vgLo;   p.vg2 = vg20;  healthPoints.append(p);
+        p.va = vaLow;  p.vg = vgHi;   p.vg2 = vg20;  healthPoints.append(p);
 
-        // Lower row (Va low)
-        p.va = vaLow;  p.vg = vg0;    healthPoints.append(p);
-        p.va = vaLow;  p.vg = vgLo;   healthPoints.append(p);
-        p.va = vaLow;  p.vg = vgHi;   healthPoints.append(p);
-
-        // Upper row (Va high)
-        p.va = vaHigh; p.vg = vg0;    healthPoints.append(p);
-        p.va = vaHigh; p.vg = vgLo;   healthPoints.append(p);
-        p.va = vaHigh; p.vg = vgHi;   healthPoints.append(p);
+        p.va = vaHigh; p.vg = vg0;    p.vg2 = vg20;  healthPoints.append(p);
+        p.va = vaHigh; p.vg = vgLo;   p.vg2 = vg20;  healthPoints.append(p);
+        p.va = vaHigh; p.vg = vgHi;   p.vg2 = vg20;  healthPoints.append(p);
     } else if (mode == HEALTH_FULL) {
         const int clusterSize = 3;
         bool usedStoredCorners = false;
@@ -858,9 +1049,9 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
                         dVgCorner = 0.5;
                     }
 
-                    p.va = vaCorner; p.vg = vgCorner;              healthPoints.append(p);
-                    p.va = vaCorner; p.vg = vgCorner - dVgCorner;  healthPoints.append(p);
-                    p.va = vaCorner; p.vg = vgCorner + dVgCorner;  healthPoints.append(p);
+                    p.va = vaCorner; p.vg = vgCorner;              p.vg2 = vg20;  healthPoints.append(p);
+                    p.va = vaCorner; p.vg = vgCorner - dVgCorner;  p.vg2 = vg20;  healthPoints.append(p);
+                    p.va = vaCorner; p.vg = vgCorner + dVgCorner;  p.vg2 = vg20;  healthPoints.append(p);
                 }
 
                 if (healthPoints.size() >= 1 + 4 * clusterSize) {
@@ -900,9 +1091,9 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
                     dVgCorner = 0.5;
                 }
 
-                p.va = vaCorner; p.vg = vgCorner;              healthPoints.append(p);
-                p.va = vaCorner; p.vg = vgCorner - dVgCorner;  healthPoints.append(p);
-                p.va = vaCorner; p.vg = vgCorner + dVgCorner;  healthPoints.append(p);
+                p.va = vaCorner; p.vg = vgCorner;              p.vg2 = vg20;  healthPoints.append(p);
+                p.va = vaCorner; p.vg = vgCorner - dVgCorner;  p.vg2 = vg20;  healthPoints.append(p);
+                p.va = vaCorner; p.vg = vgCorner + dVgCorner;  p.vg2 = vg20;  healthPoints.append(p);
             }
         }
     }
@@ -912,22 +1103,11 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
         healthResults[i].valid = false;
         healthResults[i].va = 0.0;
         healthResults[i].vg = 0.0;
+        healthResults[i].vg2 = 0.0;
         healthResults[i].ia = 0.0;
         healthResults[i].gm = 0.0;
-    }
-
-    if (!healthStateSaved) {
-        healthStateSaved = true;
-        savedTestTypeForHealth = testType;
-        savedAnodeStartForHealth = anodeStart;
-        savedAnodeStopForHealth = anodeStop;
-        savedAnodeStepForHealth = anodeStep;
-        savedGridStartForHealth = gridStart;
-        savedGridStopForHealth = gridStop;
-        savedGridStepForHealth = gridStep;
-        savedScreenStartForHealth = screenStart;
-        savedScreenStopForHealth = screenStop;
-        savedScreenStepForHealth = screenStep;
+        healthResults[i].rp = 0.0;
+        healthResults[i].ig2 = 0.0;
     }
 
     healthMode = mode;
@@ -940,10 +1120,6 @@ void ValveWorkbench::startHealthRun(HealthMode mode)
 
 void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
 {
-    // Configure a triode (or double triode) transfer test around the requested operating point.
-    // Datasheet Vg values are negative physical biases (e.g. -2 V). The analyser, however,
-    // expects positive magnitudes for grid DAC commands (e.g. 2 V meaning -2 V actual), so
-    // map the requested operating point into a small window in magnitude space.
     testType = TRANSFER_CHARACTERISTICS;
 
     anodeStart = pt.va;
@@ -951,244 +1127,56 @@ void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
     anodeStep  = std::max(1.0, std::fabs(pt.va));
 
     const double vgMag = std::fabs(pt.vg);
-    // Use a tighter ±0.3 V window around the target bias during Health runs to
-    // stabilise gm by keeping the transfer fit more local to the datasheet
-    // operating point.
-    const double dMag  = 0.3;
 
-    double startMag = (vgMag > dMag) ? (vgMag - dMag) : 0.0;
-    double stopMag  = vgMag + dMag;
+    const double triodeHalfSpan = 0.3;
+    const double pentodeLoSpan  = 1.0;
+    const double pentodeHiSpan  = 8.0;
+
+    double startMag = 0.0;
+    double stopMag  = 0.0;
+    if (deviceType == PENTODE) {
+        startMag = (vgMag > pentodeLoSpan) ? (vgMag - pentodeLoSpan) : 0.0;
+        stopMag  = vgMag + pentodeHiSpan;
+    } else {
+        startMag = (vgMag > triodeHalfSpan) ? (vgMag - triodeHalfSpan) : 0.0;
+        stopMag  = vgMag + triodeHalfSpan;
+    }
+
+    if (stopMag <= startMag) {
+        stopMag = startMag + 0.5;
+    }
 
     gridStart = startMag;
     gridStop  = stopMag;
 
-    // During Quick/Full Health runs, override the grid step to 0.2 V so the
-    // transfer measurement around each HealthPoint has finer Vg resolution.
-    // The original gridStep is saved in startHealthRun() and restored in
-    // finalizeHealthRun(), so this does not affect the user's normal analyser
-    // settings outside of Health.
     if (healthRunActive) {
         gridStep = 0.2;
     }
+
+    if (deviceType == PENTODE) {
+        screenStart = pt.vg2;
+        screenStop  = pt.vg2;
+        screenStep  = std::max(1.0, std::fabs(pt.vg2));
+    } else {
+        screenStart = 0.0;
+        screenStop  = 0.0;
+        screenStep  = 0.0;
+    }
 }
 
-void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
-{
-    if (!ui || !ui->headroomWaveformView) {
-        return;
-    }
-
-    if (!tcc) {
-        if (headroomWaveformScene) {
-            headroomWaveformScene->clear();
-        }
-        return;
-    }
-
-    if (!headroomWaveformScene) {
-        headroomWaveformScene = new QGraphicsScene(this);
-        ui->headroomWaveformView->setScene(headroomWaveformScene);
-    }
-
-    headroomWaveformScene->clear();
-
-    const QVector<double> &wave = tcc->getLastHeadroomWaveform();
-    const int n = wave.size();
-    if (n < 2) {
-        return;
-    }
-
-    QPen pen(Qt::darkBlue);
-    pen.setWidthF(0.0);
-
-    double yMin = std::numeric_limits<double>::infinity();
-    double yMax = -std::numeric_limits<double>::infinity();
-
-    for (int i = 0; i < n - 1; ++i) {
-        const double v1 = wave[i];
-        const double v2 = wave[i + 1];
-        if (!std::isfinite(v1) || !std::isfinite(v2)) {
-            continue;
-        }
-
-        const double x1 = static_cast<double>(i);             // sample index (0..n-1)
-        const double x2 = static_cast<double>(i + 1);
-        const double y1 = v1;                                  // Va(t) in volts
-        const double y2 = v2;
-
-        headroomWaveformScene->addLine(x1, y1, x2, y2, pen);
-
-        if (y1 < yMin) yMin = y1;
-        if (y1 > yMax) yMax = y1;
-        if (y2 < yMin) yMin = y2;
-        if (y2 > yMax) yMax = y2;
-    }
-
-    if (!std::isfinite(yMin) || !std::isfinite(yMax) || yMin >= yMax) {
-        return;
-    }
-
-    const double yRange = yMax - yMin;
-    const double pad = 0.1 * (yRange > 0.0 ? yRange : 1.0);
-    const double xMax = static_cast<double>(n - 1);
-    headroomWaveformScene->setSceneRect(0.0, yMin - pad, xMax, yRange + 2.0 * pad);
-
-    ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
-}
-
-void ValveWorkbench::updateHeadroomWaveformView(PushPullOutput *pp)
-{
-    if (!ui || !ui->headroomWaveformView) {
-        return;
-    }
-
-    if (!pp) {
-        if (headroomWaveformScene) {
-            headroomWaveformScene->clear();
-        }
-        return;
-    }
-
-    if (!headroomWaveformScene) {
-        headroomWaveformScene = new QGraphicsScene(this);
-        ui->headroomWaveformView->setScene(headroomWaveformScene);
-    }
-
-    headroomWaveformScene->clear();
-
-    const QVector<double> &wave = pp->getLastHeadroomWaveform();
-    const int n = wave.size();
-    if (n < 2) {
-        return;
-    }
-
-    QPen pen(Qt::darkBlue);
-    pen.setWidthF(0.0);
-
-    double yMin = std::numeric_limits<double>::infinity();
-    double yMax = -std::numeric_limits<double>::infinity();
-
-    for (int i = 0; i < n - 1; ++i) {
-        const double v1 = wave[i];
-        const double v2 = wave[i + 1];
-        if (!std::isfinite(v1) || !std::isfinite(v2)) {
-            continue;
-        }
-
-        const double x1 = static_cast<double>(i);
-        const double x2 = static_cast<double>(i + 1);
-        const double y1 = v1;
-        const double y2 = v2;
-
-        headroomWaveformScene->addLine(x1, y1, x2, y2, pen);
-
-        if (y1 < yMin) yMin = y1;
-        if (y1 > yMax) yMax = y1;
-        if (y2 < yMin) yMin = y2;
-        if (y2 > yMax) yMax = y2;
-    }
-
-    if (!std::isfinite(yMin) || !std::isfinite(yMax) || yMin >= yMax) {
-        return;
-    }
-
-    const double yRange = yMax - yMin;
-    const double pad    = 0.1 * (yRange > 0.0 ? yRange : 1.0);
-    const double xMax   = static_cast<double>(n - 1);
-    headroomWaveformScene->setSceneRect(0.0, yMin - pad, xMax, yRange + 2.0 * pad);
-
-    ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
-}
-
-void ValveWorkbench::updateHeadroomWaveformView(SingleEndedOutput *se)
-{
-    if (!ui || !ui->headroomWaveformView) {
-        return;
-    }
-
-    if (!se) {
-        if (headroomWaveformScene) {
-            headroomWaveformScene->clear();
-        }
-        return;
-    }
-
-    if (!headroomWaveformScene) {
-        headroomWaveformScene = new QGraphicsScene(this);
-        ui->headroomWaveformView->setScene(headroomWaveformScene);
-    }
-
-    headroomWaveformScene->clear();
-
-    const QVector<double> &wave = se->getLastHeadroomWaveform();
-    const int n = wave.size();
-    if (n < 2) {
-        return;
-    }
-
-    QPen pen(Qt::darkBlue);
-    pen.setWidthF(0.0);
-
-    double yMin = std::numeric_limits<double>::infinity();
-    double yMax = -std::numeric_limits<double>::infinity();
-
-    for (int i = 0; i < n - 1; ++i) {
-        const double v1 = wave[i];
-        const double v2 = wave[i + 1];
-        if (!std::isfinite(v1) || !std::isfinite(v2)) {
-            continue;
-        }
-
-        const double x1 = static_cast<double>(i);             // sample index (0..n-1)
-        const double x2 = static_cast<double>(i + 1);
-        const double y1 = v1;                                  // Va(t) in volts
-        const double y2 = v2;
-
-        headroomWaveformScene->addLine(x1, y1, x2, y2, pen);
-
-        if (y1 < yMin) yMin = y1;
-        if (y1 > yMax) yMax = y1;
-        if (y2 < yMin) yMin = y2;
-        if (y2 > yMax) yMax = y2;
-    }
-
-    if (!std::isfinite(yMin) || !std::isfinite(yMax) || yMin >= yMax) {
-        return;
-    }
-
-    const double yRange = yMax - yMin;
-    const double pad = 0.1 * (yRange > 0.0 ? yRange : 1.0);
-    const double xMax = static_cast<double>(n - 1);
-    headroomWaveformScene->setSceneRect(0.0, yMin - pad, xMax, yRange + 2.0 * pad);
-
-    ui->headroomWaveformView->fitInView(headroomWaveformScene->sceneRect(), Qt::KeepAspectRatio);
-}
-
-// Compute measured Ia, gm, and a local plate resistance rp around a desired
-// operating point (Va, Vg) from a Measurement.
-//
-// For Quick/Full Health we:
-//  - Use a TRANSFER_CHARACTERISTICS measurement to derive Ia and gm.
-//    - The nearest sample to (Va, Vg) in a weighted Va/Vg sense defines the
-//      operating point and its Ia.
-//    - gm is estimated from all valid samples in a small Vg-centred window
-//      around the target Vg using a linear LS fit of Ia vs Vg, after merging
-//      near-identical DAC codes into Vg bins and averaging Ia per bin to
-//      suppress staircase / see-saw artefacts on dense sweeps.
-//    - If the LS slope is not positive, a two-bin fallback uses the furthest-
-//      separated Vg bins as a simple dIa/dVg.
-//  - Use any ANODE_CHARACTERISTICS dataset for the same device to derive a
-//    local plate resistance rp from samples near (Va, Vg) via a small LS fit
-//    of Ia vs Va on the appropriate channels (Triode A: Va/Ia/Vg1, Triode B:
-//    Va2/Ia2/Vg3 when available).
-//
-// ia_mA and gm_mA_V are always written; rp_ohms is set to >0.0 on success or
-// 0.0 if no suitable anode data is available.
-bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &pt, double &ia_mA, double &gm_mA_V, double &rp_ohms)
+bool ValveWorkbench::computeIaGmAt(Measurement *measurement,
+                                  const HealthPoint &pt,
+                                  double &ia_mA,
+                                  double &gm_mA_V,
+                                  double &rp_ohms,
+                                  double *ig2_mA)
 {
     ia_mA = 0.0;
     gm_mA_V = 0.0;
     rp_ohms = 0.0;
+    if (ig2_mA) {
+        *ig2_mA = 0.0;
+    }
 
     if (!measurement) {
         return false;
@@ -1203,6 +1191,7 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &
     int bestSweepIdx = -1;
     int bestSampleIdx = -1;
 
+    const bool isPentodeHealth = (deviceType == PENTODE);
     for (int sw = 0; sw < sweepCount; ++sw) {
         Sweep *sweep = measurement->at(sw);
         if (!sweep) {
@@ -1211,15 +1200,19 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &
         const int nSamples = sweep->count();
         for (int sa = 0; sa < nSamples; ++sa) {
             Sample *sample = sweep->at(sa);
-            if (!sample) continue;
+            if (!sample) {
+                continue;
+            }
 
             const double va = sample->getVa();
             const double vg = sample->getVg1();
+            const double vg2 = sample->getVg2();
 
             const double dVa = va - pt.va;
             const double dVg = vg - pt.vg;
+            const double dVg2 = isPentodeHealth ? (vg2 - pt.vg2) : 0.0;
 
-            const double score = dVg * dVg + 0.25 * dVa * dVa;
+            const double score = dVg * dVg + 0.25 * dVa * dVa + 0.25 * dVg2 * dVg2;
             if (score < bestScore) {
                 bestScore = score;
                 bestSweepIdx = sw;
@@ -1236,268 +1229,203 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement, const HealthPoint &
     if (!bestSweep) {
         return false;
     }
-
-    const int sampleCount = bestSweep->count();
-    if (sampleCount < 2 || bestSampleIdx >= sampleCount) {
+    Sample *bestSample = bestSweep->at(bestSampleIdx);
+    if (!bestSample) {
         return false;
     }
 
-    auto clampIndex = [](int idx, int max) {
-        if (idx < 0) return 0;
-        if (idx >= max) return max - 1;
-        return idx;
-    };
-
-    Sample *sampleMid = bestSweep->at(bestSampleIdx);
-    if (!sampleMid) {
+    ia_mA = bestSample->getIa();
+    if (!std::isfinite(ia_mA)) {
+        ia_mA = 0.0;
         return false;
     }
 
-    ia_mA = sampleMid->getIa();
-    const double vaMid = sampleMid->getVa();
-    const double vgMid = sampleMid->getVg1();
-
-    // --- Local gm estimation using a Vg-centred voltage window and
-    // bin-averaged samples to reduce staircase / see-saw artefacts.
-    // Start with a tight window around the requested Vg and expand
-    // slightly if we do not have enough distinct Vg bins.
-
-    struct LocalPoint {
-        double vg;
-        double ia;
-    };
-
-    const double targetVg   = pt.vg;
-    const double maxWindow  = 0.6;   // V, upper bound for local Vg window
-    const double vgBinEps   = 0.01;  // V, bin width for merging near-identical Vg codes
-    const int    minBinsReq = 3;     // require at least this many distinct Vg bins
-
-    double window = 0.3;             // initial half-width in Vg around target
-    QVector<LocalPoint> rawPoints;
-
-    auto collectPointsInWindow = [&](double halfWidth, QVector<LocalPoint> &out) {
-        out.clear();
-        for (int i = 0; i < sampleCount; ++i) {
-            Sample *s = bestSweep->at(i);
-            if (!s) continue;
-            const double ia = s->getIa();
-            const double vg = s->getVg1();
-            const double va = s->getVa();
-            if (!std::isfinite(ia) || !std::isfinite(vg) || !std::isfinite(va) || ia <= 0.0) {
-                continue;
-            }
-            const double dVg = vg - targetVg;
-            if (std::fabs(dVg) <= halfWidth) {
-                out.push_back({vg, ia});
-            }
-        }
-    };
-
-    while (true) {
-        collectPointsInWindow(window, rawPoints);
-        if (rawPoints.size() >= minBinsReq || window >= maxWindow) {
-            break;
-        }
-        // Gently expand the window to capture more distinct Vg codes.
-        window = std::min(maxWindow, window * 1.5 + 0.05);
-    }
-
-    if (rawPoints.size() < 2) {
-        return false;
-    }
-
-    // Sort by Vg so we can form bins of near-identical Vg values.
-    std::sort(rawPoints.begin(), rawPoints.end(), [](const LocalPoint &a, const LocalPoint &b) {
-        return a.vg < b.vg;
-    });
-
-    struct VgBin {
-        double vgSum;
-        double iaSum;
-        int    count;
-    };
-
-    QVector<VgBin> bins;
-    bins.reserve(rawPoints.size());
-
-    for (const LocalPoint &p : rawPoints) {
-        if (bins.isEmpty()) {
-            bins.push_back({p.vg, p.ia, 1});
-            continue;
-        }
-
-        VgBin &last = bins.last();
-        const double vgLastAvg = last.vgSum / static_cast<double>(last.count);
-        if (std::fabs(p.vg - vgLastAvg) <= vgBinEps) {
-            last.vgSum += p.vg;
-            last.iaSum += p.ia;
-            ++last.count;
-        } else {
-            bins.push_back({p.vg, p.ia, 1});
+    if (ig2_mA) {
+        const double ig2 = bestSample->getIg2();
+        if (std::isfinite(ig2) && ig2 >= 0.0) {
+            *ig2_mA = ig2;
         }
     }
 
-    if (bins.size() < 2) {
-        return false;
-    }
-
-    // Convert bins into averaged (Vg, Ia) points.
-    const int Nb = bins.size();
-    double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
-
-    for (int i = 0; i < Nb; ++i) {
-        const VgBin &b = bins.at(i);
-        const double vg = b.vgSum / static_cast<double>(b.count);
-        const double ia = b.iaSum / static_cast<double>(b.count);
-        Sx  += vg;
-        Sy  += ia;
-        Sxx += vg * vg;
-        Sxy += vg * ia;
-    }
-
-    const double den = static_cast<double>(Nb) * Sxx - Sx * Sx;
-    if (std::fabs(den) > 1e-12) {
-        gm_mA_V = (static_cast<double>(Nb) * Sxy - Sx * Sy) / den;
-    }
-
-    // If LS failed to produce a positive gm, fall back to a simple
-    // 2-point slope using the furthest-separated Vg bins.
-    if (!(gm_mA_V > 0.0)) {
-        const VgBin &b0 = bins.first();
-        const VgBin &b1 = bins.last();
-        const double vg0 = b0.vgSum / static_cast<double>(b0.count);
-        const double ia0 = b0.iaSum / static_cast<double>(b0.count);
-        const double vg1 = b1.vgSum / static_cast<double>(b1.count);
-        const double ia1 = b1.iaSum / static_cast<double>(b1.count);
+    auto slopeBetween = [](Sample *a, Sample *b, double &gmOut) -> bool {
+        if (!a || !b) return false;
+        const double ia0 = a->getIa();
+        const double ia1 = b->getIa();
+        const double vg0 = a->getVg1();
+        const double vg1 = b->getVg1();
         const double dVg = vg1 - vg0;
-        if (std::fabs(dVg) < 1e-6) {
+        if (!std::isfinite(ia0) || !std::isfinite(ia1) || !std::isfinite(dVg)) return false;
+        if (std::fabs(dVg) < 1e-9) return false;
+        gmOut = (ia1 - ia0) / dVg;
+        return std::isfinite(gmOut);
+    };
+
+    const int n = bestSweep->count();
+    double gmTmp = 0.0;
+    bool haveGm = false;
+    if (bestSampleIdx > 0 && bestSampleIdx + 1 < n) {
+        haveGm = slopeBetween(bestSweep->at(bestSampleIdx - 1), bestSweep->at(bestSampleIdx + 1), gmTmp);
+    }
+    if (!haveGm && bestSampleIdx > 0) {
+        haveGm = slopeBetween(bestSweep->at(bestSampleIdx - 1), bestSweep->at(bestSampleIdx), gmTmp);
+    }
+    if (!haveGm && bestSampleIdx + 1 < n) {
+        haveGm = slopeBetween(bestSweep->at(bestSampleIdx), bestSweep->at(bestSampleIdx + 1), gmTmp);
+    }
+
+    if (haveGm) {
+        gm_mA_V = gmTmp;
+        if (!std::isfinite(gm_mA_V) || gm_mA_V < 0.0) {
+            gm_mA_V = 0.0;
+        }
+    }
+
+    auto estimateRpFromAnode = [&](Measurement *anodeMeasurement, double &rpOut) -> bool {
+        if (!anodeMeasurement || anodeMeasurement->getTestType() != ANODE_CHARACTERISTICS) {
             return false;
         }
-        gm_mA_V = (ia1 - ia0) / dVg;
-    }
 
-    if (!std::isfinite(gm_mA_V) || gm_mA_V <= 0.0) {
-        return false;
-    }
+        const int sweepCount = anodeMeasurement->count();
+        if (sweepCount <= 0) {
+            return false;
+        }
 
-    qInfo("Health gm @ target (Va=%.3f, Vg=%.3f) -> sample (Va=%.3f, Vg=%.3f) Ia=%.6f mA, gm=%.6f mA/V",
-          pt.va,
-          pt.vg,
-          vaMid,
-          vgMid,
-          ia_mA,
-          gm_mA_V);
+        const bool isPentode = (deviceType == PENTODE);
+        double bestScore = std::numeric_limits<double>::infinity();
+        int bestSweep = -1;
+        for (int sw = 0; sw < sweepCount; ++sw) {
+            Sweep *sweep = anodeMeasurement->at(sw);
+            if (!sweep || sweep->count() <= 0) {
+                continue;
+            }
 
-    // --- Optional: derive a local plate resistance rp from ANODE_CHARACTERISTICS
-    // data that is closest to the same (Va, Vg) operating point. For double
-    // triodes, use Triode A anode data for Triode A and Triode B anode data
-    // (Va2/Ia2/Vg3) for Triode B so each triode gets its own rp.
-    Measurement *anodeMeasurement = findMeasurement(measurement->getDeviceType(), ANODE_CHARACTERISTICS);
-    if (anodeMeasurement && measurementHasValidSamples(anodeMeasurement)) {
-        const int anodeSweeps = anodeMeasurement->count();
-        if (anodeSweeps > 0) {
-            const bool usingTriodeB = (isDoubleTriode &&
-                                       triodeMeasurementSecondary &&
-                                       measurement == triodeMeasurementSecondary &&
-                                       measurementHasTriodeBData(anodeMeasurement));
+            double vgNom = sweep->getVg1Nominal();
+            if (!std::isfinite(vgNom)) {
+                Sample *s0 = sweep->at(0);
+                if (s0) {
+                    vgNom = s0->getVg1();
+                }
+            }
+            if (!std::isfinite(vgNom)) {
+                continue;
+            }
 
-            double bestScoreRa = std::numeric_limits<double>::infinity();
-            int bestSweepRa = -1;
-            int bestSampleRa = -1;
-
-            // Find the sample in anode data closest to the same (Va, Vg),
-            // using either the primary Ia/Va/Vg1 (Triode A) or the secondary
-            // Ia2/Va2/Vg3 (Triode B) channels depending on context.
-            for (int sw = 0; sw < anodeSweeps; ++sw) {
-                Sweep *sweep = anodeMeasurement->at(sw);
-                if (!sweep) continue;
-                const int nSamples = sweep->count();
-                for (int sa = 0; sa < nSamples; ++sa) {
-                    Sample *s = sweep->at(sa);
-                    if (!s) continue;
-
-                    const double va = usingTriodeB ? s->getVa2() : s->getVa();
-                    const double vg = usingTriodeB ? s->getVg3() : s->getVg1();
-                    const double ia = usingTriodeB ? s->getIa2() : s->getIa();
-                    if (!std::isfinite(va) || !std::isfinite(vg) || !std::isfinite(ia) || ia <= 0.0) {
-                        continue;
-                    }
-
-                    const double dVa = va - pt.va;
-                    const double dVg = vg - pt.vg;
-                    const double score = dVg * dVg + 0.25 * dVa * dVa;
-                    if (score < bestScoreRa) {
-                        bestScoreRa = score;
-                        bestSweepRa = sw;
-                        bestSampleRa = sa;
-                    }
+            double vg2Nom = 0.0;
+            if (isPentode) {
+                Sample *s0 = sweep->at(0);
+                if (s0) {
+                    vg2Nom = s0->getVg2();
                 }
             }
 
-            if (bestSweepRa >= 0 && bestSampleRa >= 0) {
-                Sweep *sweep = anodeMeasurement->at(bestSweepRa);
-                if (sweep && sweep->count() >= 3) {
-                    const int sampleCount = sweep->count();
+            const double dVg = vgNom - pt.vg;
+            const double dVg2 = isPentode ? (vg2Nom - pt.vg2) : 0.0;
+            const double score = dVg * dVg + 0.25 * dVg2 * dVg2;
+            if (score < bestScore) {
+                bestScore = score;
+                bestSweep = sw;
+            }
+        }
 
-                    auto clampIndex = [](int idx, int max) {
-                        if (idx < 0) return 0;
-                        if (idx >= max) return max - 1;
-                        return idx;
-                    };
+        if (bestSweep < 0) {
+            return false;
+        }
 
-                    const int sampleIdx = clampIndex(bestSampleRa, sampleCount);
-                    const int iPrev     = clampIndex(sampleIdx - 1, sampleCount);
-                    const int iNext     = clampIndex(sampleIdx + 1, sampleCount);
+        Sweep *sweep = anodeMeasurement->at(bestSweep);
+        if (!sweep || sweep->count() < 3) {
+            return false;
+        }
 
-                    Sample *samplePrev = sweep->at(iPrev);
-                    Sample *sampleNext = sweep->at(iNext);
-                    if (samplePrev && sampleNext) {
-                        int iStart = std::max(0, sampleIdx - 2);
-                        int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+        int bestIdx = -1;
+        double bestVaDiff = std::numeric_limits<double>::infinity();
+        const int n = sweep->count();
+        for (int i = 0; i < n; ++i) {
+            Sample *s = sweep->at(i);
+            if (!s) {
+                continue;
+            }
+            const double va = s->getVa();
+            if (!std::isfinite(va)) {
+                continue;
+            }
+            const double diff = std::fabs(va - pt.va);
+            if (diff < bestVaDiff) {
+                bestVaDiff = diff;
+                bestIdx = i;
+            }
+        }
 
-                        double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
-                        int N = 0;
+        if (bestIdx < 0) {
+            return false;
+        }
 
-                        for (int i = iStart; i <= iEnd; ++i) {
-                            Sample *s = sweep->at(i);
-                            if (!s) continue;
-                            const double ia = usingTriodeB ? s->getIa2() : s->getIa(); // mA
-                            const double va = usingTriodeB ? s->getVa2() : s->getVa(); // V
-                            if (!std::isfinite(ia) || !std::isfinite(va) || ia <= 0.0) {
-                                continue;
-                            }
-                            Sx  += va;
-                            Sy  += ia;
-                            Sxx += va * va;
-                            Sxy += va * ia;
-                            ++N;
-                        }
+        const int iStart = std::max(0, bestIdx - 2);
+        const int iEnd = std::min(n - 1, bestIdx + 2);
 
-                        const double den = static_cast<double>(N) * Sxx - Sx * Sx;
-                        if (N >= 3 && std::fabs(den) > 1e-12) {
-                            const double slope_dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
-                            if (std::fabs(slope_dIa_dVa) > 1e-12) {
-                                rp_ohms = 1000.0 / slope_dIa_dVa; // V/mA → Ohms
-                            }
-                        }
+        double Sx = 0.0;
+        double Sy = 0.0;
+        double Sxx = 0.0;
+        double Sxy = 0.0;
+        int N = 0;
 
-                        // Fallback: two-point estimate
-                        if (!(rp_ohms > 0.0)) {
-                            const double vaPrev = usingTriodeB ? samplePrev->getVa2() : samplePrev->getVa();
-                            const double iaPrev = usingTriodeB ? samplePrev->getIa2() : samplePrev->getIa();
-                            const double vaNext = usingTriodeB ? sampleNext->getVa2() : sampleNext->getVa();
-                            const double iaNext = usingTriodeB ? sampleNext->getIa2() : sampleNext->getIa();
+        for (int i = iStart; i <= iEnd; ++i) {
+            Sample *s = sweep->at(i);
+            if (!s) {
+                continue;
+            }
+            const double va = s->getVa();
+            const double ia = s->getIa();
+            if (!std::isfinite(va) || !std::isfinite(ia) || !(ia > 0.0)) {
+                continue;
+            }
+            Sx += va;
+            Sy += ia;
+            Sxx += va * va;
+            Sxy += va * ia;
+            ++N;
+        }
 
-                            const double dIa_mA = iaNext - iaPrev;
-                            const double dVa    = vaNext - vaPrev;
-                            if (std::fabs(dIa_mA) > 1e-9) {
-                                const double dVa_dIa_V_per_mA = dVa / dIa_mA;
-                                rp_ohms = dVa_dIa_V_per_mA * 1000.0;
-                            }
-                        }
-                    }
+        double slope_dIa_dVa = 0.0;
+        const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+        if (N >= 3 && std::fabs(den) > 1e-12) {
+            slope_dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+        }
+
+        if (!(slope_dIa_dVa > 0.0) || !std::isfinite(slope_dIa_dVa)) {
+            Sample *sPrev = sweep->at(std::max(0, bestIdx - 1));
+            Sample *sNext = sweep->at(std::min(n - 1, bestIdx + 1));
+            if (sPrev && sNext) {
+                const double vaPrev = sPrev->getVa();
+                const double iaPrev = sPrev->getIa();
+                const double vaNext = sNext->getVa();
+                const double iaNext = sNext->getIa();
+                const double dVa = vaNext - vaPrev;
+                const double dIa = iaNext - iaPrev;
+                if (std::fabs(dVa) > 1e-9 && std::isfinite(dIa)) {
+                    slope_dIa_dVa = dIa / dVa;
                 }
             }
+        }
+
+        if (!(slope_dIa_dVa > 0.0) || !std::isfinite(slope_dIa_dVa)) {
+            return false;
+        }
+
+        rpOut = 1000.0 / slope_dIa_dVa; // (V/mA)*1000 = ohms
+        return (std::isfinite(rpOut) && rpOut > 0.0);
+    };
+
+    if (rp_ohms <= 0.0) {
+        Measurement *anodeMeasurement = measurement;
+        if (measurement->getTestType() != ANODE_CHARACTERISTICS) {
+            Measurement *candidate = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
+            if (candidate && measurementHasValidSamples(candidate)) {
+                anodeMeasurement = candidate;
+            }
+        }
+        double rpTmp = 0.0;
+        if (estimateRpFromAnode(anodeMeasurement, rpTmp)) {
+            rp_ohms = rpTmp;
         }
     }
 
@@ -1508,12 +1436,36 @@ void ValveWorkbench::finalizeHealthRun()
 {
     double va0 = 0.0;
     double vg0 = 0.0;
+    double vg20 = 0.0;
     double ia0 = 0.0;
     double gm0 = 0.0;
     double mu0 = 0.0;
     double rp0 = 0.0;
 
-    const bool haveRef = ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0);
+    bool haveRef = false;
+    if (deviceType == PENTODE) {
+        haveRef = ensureDatasheetRefPointPentode(va0, vg0, vg20, ia0, gm0);
+
+        // For pentodes, allow optional mu/rp reference values to be provided
+        // in datasheet.refPoints[0] so the Health percent columns can be
+        // populated when templates include them.
+        if (haveRef && !datasheetJson.isEmpty()) {
+            const QJsonArray refPoints = datasheetJson.value("refPoints").toArray();
+            if (!refPoints.isEmpty() && refPoints.at(0).isObject()) {
+                const QJsonObject rpObj = refPoints.at(0).toObject();
+                const QJsonValue muVal = rpObj.value("mu");
+                const QJsonValue rpVal = rpObj.value("rp");
+                if (muVal.isDouble()) {
+                    mu0 = muVal.toDouble(0.0);
+                }
+                if (rpVal.isDouble()) {
+                    rp0 = rpVal.toDouble(0.0);
+                }
+            }
+        }
+    } else {
+        haveRef = ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0);
+    }
 
     // Health metric: treat the score as the complement of fractional
     // deviation from the reference. A tube at 120% of spec (ratio 1.2)
@@ -1541,11 +1493,8 @@ void ValveWorkbench::finalizeHealthRun()
     double quickPercentRef = 0.0;
     double fullPercentRef  = 0.0;
 
-    // Optional reference surface for Full Health: if the currently selected
-    // Designer Device has an embedded Measurement, use it as a "good tube"
-    // surface so each health point (centre + corners) is compared against
-    // Ia/gm at the same Va/Vg instead of always comparing to the central
-    // datasheet point.
+    // Optional reference surface for Full Health is currently triode-only.
+    // For pentodes we only score against the datasheet operating point.
     Measurement *refMeasurementForHealth = nullptr;
     if (currentDevice) {
         Measurement *m = currentDevice->getMeasurement();
@@ -1556,6 +1505,7 @@ void ValveWorkbench::finalizeHealthRun()
 
     QVector<double> iaRefSurface;
     QVector<double> gmRefSurface;
+    QVector<double> ig2RefSurface;
     QVector<double> iaRefSurfaceB; // per-triode reference for Triode B (B-specific only)
     bool haveHealthReference = false;
 
@@ -1563,10 +1513,12 @@ void ValveWorkbench::finalizeHealthRun()
         const int n = healthPoints.size();
         iaRefSurface.resize(n);
         gmRefSurface.resize(n);
+        ig2RefSurface.resize(n);
         iaRefSurfaceB.resize(n);
         for (int i = 0; i < n; ++i) {
             iaRefSurface[i]  = 0.0;
             gmRefSurface[i]  = 0.0;
+            ig2RefSurface[i] = 0.0;
             iaRefSurfaceB[i] = 0.0;
         }
     }
@@ -1577,13 +1529,16 @@ void ValveWorkbench::finalizeHealthRun()
             double iaRef = 0.0;
             double gmRef = 0.0;
             double rpRef = 0.0;
+            double ig2Ref = 0.0;
             if (computeIaGmAt(refMeasurementForHealth,
                               healthPoints.at(i),
                               iaRef,
                               gmRef,
-                              rpRef)) {
+                              rpRef,
+                              &ig2Ref)) {
                 iaRefSurface[i] = iaRef;
                 gmRefSurface[i] = gmRef;
+                ig2RefSurface[i] = ig2Ref;
             }
         }
     }
@@ -1602,6 +1557,8 @@ void ValveWorkbench::finalizeHealthRun()
                 // Optional per-triode reference currents.
                 const double iaRefAStored = cObj.value("iaRefA_mA").toDouble(0.0);
                 const double iaRefBStored = cObj.value("iaRefB_mA").toDouble(0.0);
+
+                const double ig2RefStored = cObj.value("ig2Ref_mA").toDouble(0.0);
 
                 // Triode A reference: prefer iaRefA_mA, fall back to legacy.
                 const double iaRefA = (iaRefAStored > 0.0) ? iaRefAStored : iaRefLegacy;
@@ -1623,6 +1580,9 @@ void ValveWorkbench::finalizeHealthRun()
                     }
                     if (iaRefA > 0.0) {
                         iaRefSurface[idx] = iaRefA;
+                    }
+                    if (ig2RefStored > 0.0 && idx < ig2RefSurface.size()) {
+                        ig2RefSurface[idx] = ig2RefStored;
                     }
                     if (iaRefB > 0.0 && idx < iaRefSurfaceB.size()) {
                         iaRefSurfaceB[idx] = iaRefB;
@@ -1746,20 +1706,30 @@ void ValveWorkbench::finalizeHealthRun()
             const double iaForQuick = haveIaQuickEffective ? iaQuickEffective : r0.ia;
             const double gmForQuick = haveGmQuickEffective ? gmQuickEffective : r0.gm;
             const double sIa = metricScore(iaForQuick, ia0);
-            const double sGm = metricScore(gmForQuick, gm0);
-            quickPercent = 100.0 * 0.5 * (sIa + sGm);
-            qInfo("Health Quick: Ia_meas=%.6f mA, Ia_ref=%.6f mA, sIa=%.3f, gm_meas=%.6f mA/V, gm_ref=%.6f mA/V, sGm=%.3f, quickPercent=%.1f%%",
-                  iaForQuick,
-                  ia0,
-                  sIa,
-                  gmForQuick,
-                  gm0,
-                  sGm,
-                  quickPercent);
+            if (gm0 > 0.0) {
+                const double sGm = metricScore(gmForQuick, gm0);
+                quickPercent = 100.0 * 0.5 * (sIa + sGm);
+                qInfo("Health Quick: Ia_meas=%.6f mA, Ia_ref=%.6f mA, sIa=%.3f, gm_meas=%.6f mA/V, gm_ref=%.6f mA/V, sGm=%.3f, quickPercent=%.1f%%",
+                      iaForQuick,
+                      ia0,
+                      sIa,
+                      gmForQuick,
+                      gm0,
+                      sGm,
+                      quickPercent);
+            } else {
+                // gm reference missing: score Quick Health on Ia only
+                quickPercent = 100.0 * sIa;
+                qInfo("Health Quick (Ia-only): Ia_meas=%.6f mA, Ia_ref=%.6f mA, sIa=%.3f, quickPercent=%.1f%%",
+                      iaForQuick,
+                      ia0,
+                      sIa,
+                      quickPercent);
+            }
         }
     }
 
-    if (healthMode == HEALTH_FULL && haveRef && !healthResults.isEmpty()) {
+    if (healthMode == HEALTH_FULL && !healthResults.isEmpty()) {
         // Full Health combines the centre Quick Health score (Ia+gm at the
         // datasheet operating point) with four Ia-only corner scores. Each
         // corner now uses a 3-sweep cluster (same Va, three nearby Vg
@@ -1768,10 +1738,24 @@ void ValveWorkbench::finalizeHealthRun()
         double sumScores = 0.0;
         int scoreCount = 0;
 
-        // Include centre Quick Health as one score in the aggregate.
-        if (quickPercent > 0.0) {
-            sumScores += quickPercent / 100.0; // normalised 0..1
-            ++scoreCount;
+        if (healthResults.size() > 0) {
+            const HealthResult &r0 = healthResults.at(0);
+            if (r0.valid) {
+                const double iaForQuick = haveIaQuickEffective ? iaQuickEffective : r0.ia;
+                const double gmForQuick = haveGmQuickEffective ? gmQuickEffective : r0.gm;
+
+                if (haveHealthSurface &&
+                    iaRefSurface.size() > 0 && iaRefSurface.at(0) > 0.0 &&
+                    gmRefSurface.size() > 0 && gmRefSurface.at(0) > 0.0) {
+                    const double sIa = metricScore(iaForQuick, iaRefSurface.at(0));
+                    const double sGm = metricScore(gmForQuick, gmRefSurface.at(0));
+                    sumScores += 0.5 * (sIa + sGm);
+                    ++scoreCount;
+                } else if (quickPercent > 0.0) {
+                    sumScores += quickPercent / 100.0; // normalised 0..1
+                    ++scoreCount;
+                }
+            }
         }
 
         // Corner layout for HEALTH_FULL: index 0 is centre; each of the four
@@ -2014,8 +1998,60 @@ void ValveWorkbench::finalizeHealthRun()
                 // (Centre-based scaling for corners is currently disabled;
                 //  keep iaScaleAForCorners at its default of 1.0.)
 
+                if (deviceType == PENTODE) {
+                    if (ui->Triode_B_Box) {
+                        ui->Triode_B_Box->setTitle(tr("Screen Health"));
+                    }
+                    if (ui->triodeB_Ia_label) {
+                        ui->triodeB_Ia_label->setText(tr("Ig2(mA)"));
+                    }
+                    if (ui->triodeB_rp_label) {
+                        ui->triodeB_rp_label->setText(tr("Pg2(W)"));
+                    }
+                    if (ui->triodeBHeaderFourCornerPct) ui->triodeBHeaderFourCornerPct->setVisible(false);
+                    if (ui->triodeB_corner1_pct) ui->triodeB_corner1_pct->setVisible(false);
+                    if (ui->triodeB_corner2_pct) ui->triodeB_corner2_pct->setVisible(false);
+                    if (ui->triodeB_corner3_pct) ui->triodeB_corner3_pct->setVisible(false);
+                    if (ui->triodeB_corner4_pct) ui->triodeB_corner4_pct->setVisible(false);
+                    if (ui->triodeB_gm_label) ui->triodeB_gm_label->setVisible(false);
+                    if (ui->triodeB_mu_label) ui->triodeB_mu_label->setVisible(false);
+                    if (ui->triodeB_gm_measured) ui->triodeB_gm_measured->setVisible(false);
+                    if (ui->triodeB_gm_ref) ui->triodeB_gm_ref->setVisible(false);
+                    if (ui->triodeB_gm_pct) ui->triodeB_gm_pct->setVisible(false);
+                    if (ui->triodeB_mu_measured) ui->triodeB_mu_measured->setVisible(false);
+                    if (ui->triodeB_mu_ref) ui->triodeB_mu_ref->setVisible(false);
+                    if (ui->triodeB_mu_pct) ui->triodeB_mu_pct->setVisible(false);
+
+                    const double ig2Meas = r0.ig2;
+                    const double pg2Meas_W = (r0.vg2 > 0.0 && ig2Meas > 0.0) ? (r0.vg2 * ig2Meas / 1000.0) : 0.0;
+
+                    double ig2RefCentre = 0.0;
+                    if (haveHealthSurface && ig2RefSurface.size() > 0 && ig2RefSurface.at(0) > 0.0) {
+                        ig2RefCentre = ig2RefSurface.at(0);
+                    } else if (!datasheetJson.isEmpty()) {
+                        const QJsonObject centerObj = datasheetJson.value("healthReference").toObject().value("center").toObject();
+                        ig2RefCentre = centerObj.value("ig2Ref_mA").toDouble(0.0);
+                    }
+                    const double pg2Ref_W = (r0.vg2 > 0.0 && ig2RefCentre > 0.0) ? (r0.vg2 * ig2RefCentre / 1000.0) : 0.0;
+
+                    setEdit(ui->triodeB_Ia_measured, formatValue(ig2Meas, 3));
+                    setEdit(ui->triodeB_Ia_ref, (ig2RefCentre > 0.0) ? formatValue(ig2RefCentre, 3) : QString());
+                    setEdit(ui->triodeB_Ia_pct, (ig2RefCentre > 0.0) ? formatPercent(ig2Meas, ig2RefCentre) : QString());
+
+                    setEdit(ui->triodeB_rp_measured, (pg2Meas_W > 0.0) ? formatValue(pg2Meas_W, 3) : QString());
+                    setEdit(ui->triodeB_rp_ref, (pg2Ref_W > 0.0) ? formatValue(pg2Ref_W, 3) : QString());
+                    setEdit(ui->triodeB_rp_pct, (pg2Ref_W > 0.0) ? formatPercent(pg2Meas_W, pg2Ref_W) : QString());
+
+                    // Clear unused fields
+                    setEdit(ui->triodeB_gm_measured, QString());
+                    setEdit(ui->triodeB_gm_ref, QString());
+                    setEdit(ui->triodeB_gm_pct, QString());
+                    setEdit(ui->triodeB_mu_measured, QString());
+                    setEdit(ui->triodeB_mu_ref, QString());
+                    setEdit(ui->triodeB_mu_pct, QString());
+                }
                 // Triode B measured values for double triodes with valid B data
-                if (isDoubleTriode && triodeMeasurementSecondary &&
+                else if (isDoubleTriode && triodeMeasurementSecondary &&
                     measurementHasValidSamples(triodeMeasurementSecondary)) {
                     qInfo("Health TriodeB: secondary present at finalizeHealthRun - sweeps=%d, testType=%d",
                           triodeMeasurementSecondary->count(),
@@ -2027,6 +2063,7 @@ void ValveWorkbench::finalizeHealthRun()
                     HealthPoint centerPoint;
                     centerPoint.va = va0;
                     centerPoint.vg = vg0;
+                    centerPoint.vg2 = vg20;
                     if (!healthPoints.isEmpty()) {
                         centerPoint = healthPoints.first();
                     }
@@ -2224,7 +2261,13 @@ void ValveWorkbench::finalizeHealthRun()
             // For double triodes, derive matching corner scores for Triode B
             // from the secondary measurement using the same 3-sweep corner
             // clusters.
-            if (isDoubleTriode && triodeMeasurementSecondary &&
+            if (deviceType == PENTODE) {
+                // Screen Health corner column is hidden for pentodes (informational view).
+                setEdit(ui->triodeB_corner1_pct, QString());
+                setEdit(ui->triodeB_corner2_pct, QString());
+                setEdit(ui->triodeB_corner3_pct, QString());
+                setEdit(ui->triodeB_corner4_pct, QString());
+            } else if (isDoubleTriode && triodeMeasurementSecondary &&
                 measurementHasValidSamples(triodeMeasurementSecondary)) {
 
                 auto formatCornerScoreB = [&](int cornerIdx) -> QString {
@@ -2344,13 +2387,15 @@ void ValveWorkbench::finalizeHealthRun()
     healthMode = HEALTH_NONE;
     healthRunIndex = 0;
 
+    const double fullDisplayValue = (fullPercentRef > 0.0) ? fullPercentRef : fullPercent;
+
     QString msg;
     if (healthResults.size() > 0) {
         if (quickPercent > 0.0) {
             msg += tr("Quick Health: %1% ").arg(QString::number(quickPercent, 'f', 0));
         }
-        if (healthResults.size() > 1 && fullPercent > 0.0) {
-            msg += tr("Full Health: %1% ").arg(QString::number(fullPercent, 'f', 0));
+        if (healthResults.size() > 1 && fullDisplayValue > 0.0) {
+            msg += tr("Full Health: %1% ").arg(QString::number(fullDisplayValue, 'f', 0));
         }
     }
 
@@ -2375,10 +2420,10 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
     const int clusterSize = 3;
     const int requiredPoints = 1 + 4 * clusterSize;
 
-    if (deviceType != TRIODE) {
+    if (deviceType != TRIODE && deviceType != PENTODE) {
         QMessageBox::warning(this,
                              tr("Save Reference Tube"),
-                             tr("Reference tubes are currently supported for triode devices only."));
+                             tr("Reference tubes are currently supported for triode and pentode devices only."));
         return false;
     }
     if (datasheetJson.isEmpty()) {
@@ -2453,6 +2498,7 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
 
     double iaCentreA = 0.0;
     double gmCentreA = 0.0;
+    double ig2Centre = 0.0;
     bool haveCentreA = false;
     if (!healthResults.isEmpty()) {
         const HealthResult &hr0 = healthResults.first();
@@ -2460,6 +2506,9 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
             iaCentreA = hr0.ia;
             gmCentreA = hr0.gm;
             haveCentreA = true;
+        }
+        if (deviceType == PENTODE && hr0.valid && hr0.ig2 > 0.0) {
+            ig2Centre = hr0.ig2;
         }
     }
 
@@ -2490,6 +2539,8 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
         // Triode A reference Ia cluster from HealthResult data.
         QVector<double> iaValuesA;
         iaValuesA.reserve(clusterSize);
+        QVector<double> ig2Values;
+        ig2Values.reserve(clusterSize);
         for (int k = 0; k < clusterSize; ++k) {
             const int idx = baseIdx + k;
             if (idx >= healthResults.size()) {
@@ -2499,6 +2550,9 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
             if (hr.valid && hr.ia > 0.0) {
                 iaValuesA.append(hr.ia);
             }
+            if (deviceType == PENTODE && hr.valid && hr.ig2 > 0.0) {
+                ig2Values.append(hr.ig2);
+            }
         }
         if (iaValuesA.isEmpty()) {
             continue;
@@ -2507,6 +2561,12 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
         double iaEffA = 0.0;
         if (!robust3xCluster(iaValuesA, outlierTol, iaEffA)) {
             continue;
+        }
+
+        double ig2Eff = 0.0;
+        bool haveIg2 = false;
+        if (deviceType == PENTODE && !ig2Values.isEmpty()) {
+            haveIg2 = robust3xCluster(ig2Values, outlierTol, ig2Eff);
         }
 
         // Optional Triode B reference Ia cluster using the secondary
@@ -2583,6 +2643,12 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
         QJsonObject cornerObj;
         cornerObj.insert(QStringLiteral("va"), hr0.va);
         cornerObj.insert(QStringLiteral("vg"), hr0.vg);
+        if (deviceType == PENTODE) {
+            cornerObj.insert(QStringLiteral("vg2"), hr0.vg2);
+        }
+        if (deviceType == PENTODE && haveIg2 && ig2Eff > 0.0) {
+            cornerObj.insert(QStringLiteral("ig2Ref_mA"), ig2Eff);
+        }
         // Legacy single reference current (Triode A).
         cornerObj.insert(QStringLiteral("iaRef_mA"), iaEffA);
         // Per-triode reference for Triode A.
@@ -2635,6 +2701,9 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
         QJsonObject centerMerged;
         centerMerged.insert(QStringLiteral("va"), centerPoint.va);
         centerMerged.insert(QStringLiteral("vg"), centerPoint.vg);
+        if (deviceType == PENTODE) {
+            centerMerged.insert(QStringLiteral("vg2"), centerPoint.vg2);
+        }
 
         if (haveCentreA || !existingCenter.isEmpty()) {
             const double oldIaA = existingCenter.value(QStringLiteral("iaRefA_mA")).toDouble(0.0);
@@ -2643,6 +2712,14 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
             const double gmA = accumulateScalar(oldGmA, gmCentreA);
             if (iaA > 0.0) centerMerged.insert(QStringLiteral("iaRefA_mA"), iaA);
             if (gmA > 0.0) centerMerged.insert(QStringLiteral("gmRefA_mA_V"), gmA);
+        }
+
+        if (deviceType == PENTODE) {
+            const double oldIg2 = existingCenter.value(QStringLiteral("ig2Ref_mA")).toDouble(0.0);
+            const double ig2 = accumulateScalar(oldIg2, ig2Centre);
+            if (ig2 > 0.0) {
+                centerMerged.insert(QStringLiteral("ig2Ref_mA"), ig2);
+            }
         }
 
         if (haveCentreB || !existingCenter.isEmpty()) {
@@ -3070,6 +3147,21 @@ void ValveWorkbench::on_pushButton_4_clicked()
         QJsonObject snapshot;
         snapshot.insert("testType", testType);
 
+        auto sanitiseRange = [](double &start, double &stop, double &step) {
+            if (!std::isfinite(start)) start = 0.0;
+            if (!std::isfinite(stop))  stop  = start;
+            if (!std::isfinite(step))  step  = 0.0;
+            // Treat near-zero/denormal steps as "unspecified".
+            if (std::fabs(step) < 1e-12) {
+                step = 0.0;
+            }
+            // If range is effectively fixed, store as start==stop with sentinel step=0.
+            if (std::fabs(stop - start) < 1e-9) {
+                stop = start;
+                step = 0.0;
+            }
+        };
+
         // For triode transfer characteristics, conceptually treat the anode
         // as fixed at a single Va. Persist that intent in the template by
         // recording a range where start == stop and a sentinel step of 0.0;
@@ -3083,9 +3175,29 @@ void ValveWorkbench::on_pushButton_4_clicked()
             snapAnodeStep = 0.0;
         }
 
+        double snapGridStart = gridStart;
+        double snapGridStop  = gridStop;
+        double snapGridStep  = gridStep;
+
+        double snapScreenStart = screenStart;
+        double snapScreenStop  = screenStop;
+        double snapScreenStep  = screenStep;
+
+        // Pentode anode/transfer tests use a fixed screen voltage. The UI disables
+        // some screen fields depending on test type, and stale/denormal values can
+        // otherwise leak into the saved template.
+        if (deviceType == PENTODE && testType != SCREEN_CHARACTERISTICS) {
+            snapScreenStop = snapScreenStart;
+            snapScreenStep = 0.0;
+        }
+
+        sanitiseRange(snapAnodeStart, snapAnodeStop, snapAnodeStep);
+        sanitiseRange(snapGridStart, snapGridStop, snapGridStep);
+        sanitiseRange(snapScreenStart, snapScreenStop, snapScreenStep);
+
         snapshot.insert("anode",  makeRange(snapAnodeStart, snapAnodeStop, snapAnodeStep));
-        snapshot.insert("grid",   makeRange(gridStart, gridStop, gridStep));
-        snapshot.insert("screen", makeRange(screenStart, screenStop, screenStep));
+        snapshot.insert("grid",   makeRange(snapGridStart, snapGridStop, snapGridStep));
+        snapshot.insert("screen", makeRange(snapScreenStart, snapScreenStop, snapScreenStep));
         QJsonObject testLim;
         testLim.insert("iaMax", iaMax);
         testLim.insert("pMax",  pMax);
@@ -6354,6 +6466,177 @@ void ValveWorkbench::updateCircuitParameter(int index)
     refreshHarmonicsPlots();
 }
 
+void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
+{
+    if (!ui || !ui->headroomWaveformView || !headroomWaveformScene) {
+        return;
+    }
+
+    headroomWaveformScene->clear();
+    if (!tcc) {
+        return;
+    }
+
+    const QVector<double> &wave = tcc->getLastHeadroomWaveform();
+    if (wave.isEmpty()) {
+        return;
+    }
+
+    double mean = 0.0;
+    for (double v : wave) {
+        mean += v;
+    }
+    mean /= static_cast<double>(wave.size());
+
+    double peak = 0.0;
+    for (double v : wave) {
+        const double y = v - mean;
+        peak = std::max(peak, std::fabs(y));
+    }
+    if (!(peak > 0.0) || !std::isfinite(peak)) {
+        peak = 1.0;
+    }
+
+    QPainterPath path;
+    const int n = wave.size();
+    for (int i = 0; i < n; ++i) {
+        const double x = static_cast<double>(i);
+        const double y = -(wave.at(i) - mean) / peak;
+        if (i == 0) {
+            path.moveTo(x, y);
+        } else {
+            path.lineTo(x, y);
+        }
+    }
+
+    QPen pen(QColor::fromRgb(0, 120, 255));
+    pen.setWidthF(1.4);
+    QGraphicsPathItem *item = headroomWaveformScene->addPath(path, pen);
+
+    QRectF r = item ? item->boundingRect() : QRectF();
+    if (r.isValid()) {
+        const double padX = std::max(5.0, r.width() * 0.05);
+        const double padY = std::max(5.0, r.height() * 0.20);
+        r.adjust(-padX, -padY, padX, padY);
+        headroomWaveformScene->setSceneRect(r);
+        ui->headroomWaveformView->fitInView(r, Qt::KeepAspectRatio);
+    }
+}
+
+void ValveWorkbench::updateHeadroomWaveformView(SingleEndedOutput *se)
+{
+    if (!ui || !ui->headroomWaveformView || !headroomWaveformScene) {
+        return;
+    }
+
+    headroomWaveformScene->clear();
+    if (!se) {
+        return;
+    }
+
+    const QVector<double> &wave = se->getLastHeadroomWaveform();
+    if (wave.isEmpty()) {
+        return;
+    }
+
+    double mean = 0.0;
+    for (double v : wave) {
+        mean += v;
+    }
+    mean /= static_cast<double>(wave.size());
+
+    double peak = 0.0;
+    for (double v : wave) {
+        const double y = v - mean;
+        peak = std::max(peak, std::fabs(y));
+    }
+    if (!(peak > 0.0) || !std::isfinite(peak)) {
+        peak = 1.0;
+    }
+
+    QPainterPath path;
+    const int n = wave.size();
+    for (int i = 0; i < n; ++i) {
+        const double x = static_cast<double>(i);
+        const double y = -(wave.at(i) - mean) / peak;
+        if (i == 0) {
+            path.moveTo(x, y);
+        } else {
+            path.lineTo(x, y);
+        }
+    }
+
+    QPen pen(QColor::fromRgb(0, 120, 255));
+    pen.setWidthF(1.4);
+    QGraphicsPathItem *item = headroomWaveformScene->addPath(path, pen);
+
+    QRectF r = item ? item->boundingRect() : QRectF();
+    if (r.isValid()) {
+        const double padX = std::max(5.0, r.width() * 0.05);
+        const double padY = std::max(5.0, r.height() * 0.20);
+        r.adjust(-padX, -padY, padX, padY);
+        headroomWaveformScene->setSceneRect(r);
+        ui->headroomWaveformView->fitInView(r, Qt::KeepAspectRatio);
+    }
+}
+
+void ValveWorkbench::updateHeadroomWaveformView(PushPullOutput *pp)
+{
+    if (!ui || !ui->headroomWaveformView || !headroomWaveformScene) {
+        return;
+    }
+
+    headroomWaveformScene->clear();
+    if (!pp) {
+        return;
+    }
+
+    const QVector<double> &wave = pp->getLastHeadroomWaveform();
+    if (wave.isEmpty()) {
+        return;
+    }
+
+    double mean = 0.0;
+    for (double v : wave) {
+        mean += v;
+    }
+    mean /= static_cast<double>(wave.size());
+
+    double peak = 0.0;
+    for (double v : wave) {
+        const double y = v - mean;
+        peak = std::max(peak, std::fabs(y));
+    }
+    if (!(peak > 0.0) || !std::isfinite(peak)) {
+        peak = 1.0;
+    }
+
+    QPainterPath path;
+    const int n = wave.size();
+    for (int i = 0; i < n; ++i) {
+        const double x = static_cast<double>(i);
+        const double y = -(wave.at(i) - mean) / peak;
+        if (i == 0) {
+            path.moveTo(x, y);
+        } else {
+            path.lineTo(x, y);
+        }
+    }
+
+    QPen pen(QColor::fromRgb(0, 120, 255));
+    pen.setWidthF(1.4);
+    QGraphicsPathItem *item = headroomWaveformScene->addPath(path, pen);
+
+    QRectF r = item ? item->boundingRect() : QRectF();
+    if (r.isValid()) {
+        const double padX = std::max(5.0, r.width() * 0.05);
+        const double padY = std::max(5.0, r.height() * 0.20);
+        r.adjust(-padX, -padY, padX, padY);
+        headroomWaveformScene->setSceneRect(r);
+        ui->headroomWaveformView->fitInView(r, Qt::KeepAspectRatio);
+    }
+}
+
 // Helper: pick an operating point (sweepIdx, sampleIdx) from an ANODE_CHARACTERISTICS
 // measurement near 50% of Ia_max. Returns false on failure.
 static bool pickOperatingPointFromAnode(Measurement *measurement,
@@ -7452,17 +7735,134 @@ void ValveWorkbench::testFinished()
     populateDataTableFromMeasurement(currentMeasurement);
 
     if (healthRunActive) {
+        // Pentode Health: first run is an OP-finder sweep.
+        if (healthOpFinderActive) {
+            HealthPoint op;
+            double iaAtOp = 0.0;
+            if (!findPentodeHealthOperatingPoint(currentMeasurement, healthOpTargetIa_mA, op, iaAtOp)) {
+                healthRunActive = false;
+                healthOpFinderActive = false;
+                healthMode = HEALTH_NONE;
+                QMessageBox::warning(this, tr("Health Test"),
+                                     tr("Could not find a safe pentode operating point near %1 mA. Try lowering Va/Vg2 or increasing the grid magnitude range.")
+                                         .arg(QString::number(healthOpTargetIa_mA, 'f', 0)));
+                return;
+            }
+
+            // Now build the normal Health point list around the found Vg1.
+            healthOpFinderActive = false;
+
+            // Use the found operating point as the centre.
+            const double va0 = op.va;
+            const double vg0 = op.vg;
+            const double vg20 = op.vg2;
+
+            healthPoints.clear();
+            healthResults.clear();
+
+            HealthPoint center;
+            center.va = va0;
+            center.vg = vg0;
+            center.vg2 = vg20;
+            healthPoints.append(center);
+
+            if (healthMode == HEALTH_QUICK) {
+                const double dVaFracQuick = 0.10;
+                double dVa = std::fabs(va0) * dVaFracQuick;
+                if (dVa < 10.0) dVa = 10.0;
+                if (dVa > 30.0) dVa = 30.0;
+
+                const double dVg = 0.5;
+
+                const double vaLow  = std::max(0.0, va0 - dVa);
+                const double vaHigh = va0 + dVa;
+                const double vgLo   = vg0 - dVg;
+                const double vgHi   = vg0 + dVg;
+
+                HealthPoint p;
+                p.va = va0;    p.vg = vgLo;   p.vg2 = vg20;  healthPoints.append(p);
+                p.va = va0;    p.vg = vgHi;   p.vg2 = vg20;  healthPoints.append(p);
+
+                p.va = vaLow;  p.vg = vg0;    p.vg2 = vg20;  healthPoints.append(p);
+                p.va = vaLow;  p.vg = vgLo;   p.vg2 = vg20;  healthPoints.append(p);
+                p.va = vaLow;  p.vg = vgHi;   p.vg2 = vg20;  healthPoints.append(p);
+
+                p.va = vaHigh; p.vg = vg0;    p.vg2 = vg20;  healthPoints.append(p);
+                p.va = vaHigh; p.vg = vgLo;   p.vg2 = vg20;  healthPoints.append(p);
+                p.va = vaHigh; p.vg = vgHi;   p.vg2 = vg20;  healthPoints.append(p);
+            } else if (healthMode == HEALTH_FULL) {
+                const double dVaFrac = 0.15;
+                double dVa = std::fabs(va0) * dVaFrac;
+                if (dVa < 20.0) dVa = 20.0;
+                if (dVa > 50.0) dVa = 50.0;
+
+                const double vaLow  = std::max(0.0, va0 - dVa);
+                const double vaHigh = va0 + dVa;
+                const double vgLo   = vg0 - 0.5;
+                const double vgHi   = vg0 + 0.5;
+
+                const double vaCorners[4] = { vaLow, vaLow, vaHigh, vaHigh };
+                const double vgCorners[4] = { vgLo,  vgHi,  vgLo,   vgHi  };
+
+                HealthPoint p;
+                for (int c = 0; c < 4; ++c) {
+                    const double vaCorner = vaCorners[c];
+                    const double vgCorner = vgCorners[c];
+
+                    double dVgCorner = 0.3;
+                    if (std::fabs(vgCorner) > 2.0) {
+                        dVgCorner = 0.5;
+                    }
+
+                    p.va = vaCorner; p.vg = vgCorner;              p.vg2 = vg20;  healthPoints.append(p);
+                    p.va = vaCorner; p.vg = vgCorner - dVgCorner;  p.vg2 = vg20;  healthPoints.append(p);
+                    p.va = vaCorner; p.vg = vgCorner + dVgCorner;  p.vg2 = vg20;  healthPoints.append(p);
+                }
+            }
+
+            healthResults.resize(healthPoints.size());
+            for (int i = 0; i < healthResults.size(); ++i) {
+                healthResults[i].valid = false;
+                healthResults[i].va = 0.0;
+                healthResults[i].vg = 0.0;
+                healthResults[i].vg2 = 0.0;
+                healthResults[i].ia = 0.0;
+                healthResults[i].gm = 0.0;
+                healthResults[i].rp = 0.0;
+                healthResults[i].ig2 = 0.0;
+            }
+
+            healthRunIndex = 0;
+
+            QMetaObject::invokeMethod(
+                this,
+                [this]() {
+                    if (!healthRunActive) {
+                        return;
+                    }
+                    if (!healthPoints.isEmpty()) {
+                        configureTransferForHealthPoint(healthPoints.at(0));
+                        on_runButton_clicked();
+                    }
+                },
+                Qt::QueuedConnection);
+            return;
+        }
+
         if (currentMeasurement && healthRunIndex >= 0 && healthRunIndex < healthPoints.size()) {
             double ia = 0.0;
             double gm = 0.0;
             double rp = 0.0;
+            double ig2 = 0.0;
             HealthResult result;
-            result.valid = computeIaGmAt(currentMeasurement, healthPoints.at(healthRunIndex), ia, gm, rp);
+            result.valid = computeIaGmAt(currentMeasurement, healthPoints.at(healthRunIndex), ia, gm, rp, &ig2);
             result.va = healthPoints.at(healthRunIndex).va;
             result.vg = healthPoints.at(healthRunIndex).vg;
+            result.vg2 = healthPoints.at(healthRunIndex).vg2;
             result.ia = ia;
             result.gm = gm;
             result.rp = rp;
+            result.ig2 = ig2;
             if (healthRunIndex < healthResults.size()) {
                 healthResults[healthRunIndex] = result;
             }
@@ -8407,7 +8807,24 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 plot.add(measuredCurves);
             }
 
-            if (isDoubleTriode && triodeMeasurementSecondary != nullptr && triodeMeasurementSecondary->count() > 0) {
+            // Keep Triode B clone/overlay in sync with the currently selected measurement.
+            if (triodeMeasurementSecondary != nullptr) {
+                deleteMeasurementClone(triodeMeasurementSecondary);
+                triodeMeasurementSecondary = nullptr;
+            }
+            if (currentMeasurement && measurementHasTriodeBData(currentMeasurement)) {
+                Measurement *clone = createTriodeBMeasurementClone(currentMeasurement);
+                if (clone != nullptr && measurementHasValidSamples(clone)) {
+                    triodeMeasurementSecondary = clone;
+                    triodeMeasurementSecondary->setSampleColor(QColor::fromRgb(0, 0, 255));
+                } else {
+                    if (clone != nullptr) {
+                        deleteMeasurementClone(clone);
+                    }
+                }
+            }
+
+            if (triodeMeasurementSecondary != nullptr && triodeMeasurementSecondary->count() > 0) {
                 if (measuredCurvesSecondary != nullptr) {
                     plot.remove(measuredCurvesSecondary);
                     measuredCurvesSecondary = nullptr;
@@ -8419,7 +8836,7 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                     bool triodeBVisible = ui->measureCheck && ui->measureCheck->isChecked();
                     if (ui->tabWidget &&
                         ui->tabWidget->currentWidget() == ui->tab_2 &&
-                        isDoubleTriode &&
+                        measurementHasTriodeBData(currentMeasurement) &&
                         ui->screenCheck) {
                         triodeBVisible = ui->measureCheck->isChecked() && ui->screenCheck->isChecked();
                     }
@@ -8914,6 +9331,14 @@ void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
         }
     }
 
+    if (ui->Triode_A_Box) {
+        if (logicalType == PENTODE) {
+            ui->Triode_A_Box->setTitle(tr("Pentode Health"));
+        } else {
+            ui->Triode_A_Box->setTitle(tr("Triode A Health"));
+        }
+    }
+
     switch (logicalType) {
     case PENTODE:
         pentodeMode();
@@ -9174,6 +9599,12 @@ void ValveWorkbench::on_datasheetVa_editingFinished()
 }
 
 void ValveWorkbench::on_datasheetVg_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
+}
+
+void ValveWorkbench::on_datasheetVg2_editingFinished()
 {
     syncDatasheetFromUi();
     updateDatasheetDisplay();
@@ -9493,12 +9924,19 @@ void ValveWorkbench::modelTriode()
     // the user is actually working with. Fall back to the first
     // matching triode/anode measurement in the current project if
     // nothing suitable is selected.
-    if (currentMeasurement && currentMeasurementItem &&
-        getProject(currentMeasurementItem) == currentProject &&
-        currentMeasurement->getDeviceType() == TRIODE &&
-        currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
-        measurement = currentMeasurement;
-    } else {
+    if (currentMeasurementItem && getProject(currentMeasurementItem) == currentProject) {
+        QTreeWidgetItem *mItem = currentMeasurementItem;
+        if (mItem->type() != TYP_MEASUREMENT) {
+            mItem = getParent(currentMeasurementItem, TYP_MEASUREMENT);
+        }
+        if (mItem && mItem->type() == TYP_MEASUREMENT) {
+            Measurement *selected = (Measurement *) mItem->data(0, Qt::UserRole).value<void *>();
+            if (selected && selected->getDeviceType() == TRIODE && selected->getTestType() == ANODE_CHARACTERISTICS) {
+                measurement = selected;
+            }
+        }
+    }
+    if (measurement == nullptr) {
         measurement = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
     }
 
@@ -9514,7 +9952,29 @@ void ValveWorkbench::modelTriode()
     }
 
     Estimate estimate;
-    estimate.estimateTriode(measurement);
+
+    Model *seedModel = nullptr;
+    if (currentDevice && currentDevice->getDeviceType() == TRIODE) {
+        Model *deviceModel = currentDevice->getModel();
+        if (deviceModel && deviceModel->getType() == COHEN_HELIE_TRIODE) {
+            seedModel = deviceModel;
+        }
+    }
+    if (seedModel == nullptr) {
+        seedModel = findModel(COHEN_HELIE_TRIODE);
+    }
+
+    if (seedModel) {
+        estimate.setMu(seedModel->getParameter(PAR_MU));
+        estimate.setKg1(seedModel->getParameter(PAR_KG1));
+        estimate.setX(seedModel->getParameter(PAR_X));
+        estimate.setKp(seedModel->getParameter(PAR_KP));
+        estimate.setKvb(seedModel->getParameter(PAR_KVB));
+        estimate.setKvb1(seedModel->getParameter(PAR_KVB1));
+        estimate.setVct(seedModel->getParameter(PAR_VCT));
+    } else {
+        estimate.estimateTriode(measurement);
+    }
 
     model = ModelFactory::createModel(COHEN_HELIE_TRIODE);
     model->setEstimate(&estimate);
@@ -9529,7 +9989,7 @@ void ValveWorkbench::modelTriode()
     cleanupTriodeBResources();
     triodeBFitPending = false;
 
-    if (isDoubleTriode && measurementHasTriodeBData(measurement)) {
+    if (measurementHasTriodeBData(measurement)) {
         Measurement *clone = createTriodeBMeasurementClone(measurement);
         if (clone != nullptr && measurementHasValidSamples(clone)) {
             qInfo("Triode B clone created: source sweeps=%d, clone sweeps=%d", measurement->count(), clone->count());
@@ -9567,6 +10027,9 @@ void ValveWorkbench::loadModel()
 {
     thread->quit();
     thread = nullptr;
+
+    Model *completedModel = model;
+    const bool completedWasTriodePrimary = (model == triodeModelPrimary);
 
     if (modelProject == nullptr) {
         ui->fitPentodeButton->setEnabled(true); // Allow modelling again
@@ -9615,7 +10078,32 @@ void ValveWorkbench::loadModel()
             triodeMeasurementSecondary = clone;
 
             Estimate secondaryEstimate;
-            secondaryEstimate.estimateTriode(clone);
+
+            Model *seedModel = nullptr;
+            if (completedWasTriodePrimary && completedModel && completedModel->getType() == COHEN_HELIE_TRIODE) {
+                seedModel = completedModel;
+            }
+            if (seedModel == nullptr && currentDevice && currentDevice->getDeviceType() == TRIODE) {
+                Model *deviceModel = currentDevice->getModel();
+                if (deviceModel && deviceModel->getType() == COHEN_HELIE_TRIODE) {
+                    seedModel = deviceModel;
+                }
+            }
+            if (seedModel == nullptr) {
+                seedModel = findModel(COHEN_HELIE_TRIODE);
+            }
+
+            if (seedModel) {
+                secondaryEstimate.setMu(seedModel->getParameter(PAR_MU));
+                secondaryEstimate.setKg1(seedModel->getParameter(PAR_KG1));
+                secondaryEstimate.setX(seedModel->getParameter(PAR_X));
+                secondaryEstimate.setKp(seedModel->getParameter(PAR_KP));
+                secondaryEstimate.setKvb(seedModel->getParameter(PAR_KVB));
+                secondaryEstimate.setKvb1(seedModel->getParameter(PAR_KVB1));
+                secondaryEstimate.setVct(seedModel->getParameter(PAR_VCT));
+            } else {
+                secondaryEstimate.estimateTriode(clone);
+            }
 
             triodeModelSecondary = ModelFactory::createModel(COHEN_HELIE_TRIODE);
             triodeModelSecondary->setEstimate(&secondaryEstimate);
@@ -9805,7 +10293,7 @@ void ValveWorkbench::modelPentode()
         Estimate estimate;
         // Use GARDINER_PENTODE as the estimation target so alpha/beta/gamma, etc.
         // follow the same heuristics as the main fitted model.
-        estimate.estimatePentode(measurement, triodeModel, GARDINER_PENTODE, false);
+        estimate.estimatePentode(measurement, triodeModel, GARDINER_PENTODE, preferencesDialog.useSecondaryEmission());
 
         // Run a single Ceres fit using a temporary GardinerPentode so we get the
         // same "estimate + one solve" behaviour as the main fitted pentode model.
@@ -9901,7 +10389,7 @@ void ValveWorkbench::modelPentode()
         // Normal path: use the project's triode model or the embedded
         // triodeModel seed as the base for pentode estimation so the
         // Gardiner/Reefman pentode starts from a consistent triode base.
-        estimate.estimatePentode(measurement, triodeModel, pentodeModelType, false);
+        estimate.estimatePentode(measurement, triodeModel, pentodeModelType, preferencesDialog.useSecondaryEmission());
     } else if (currentDevice && currentDevice->getDeviceType() == PENTODE) {
         // Secondary fallback: if we have no explicit triode seed but do have a
         // pentode device model, copy its parameters into the Estimate as a
@@ -9933,7 +10421,7 @@ void ValveWorkbench::modelPentode()
         // Last resort: fall back to the legacy gradient-based estimate that
         // derives all parameters directly from the measurement alone.
         qWarning("No triode model found in project and no suitable current device; proceeding with gradient-based seed for pentode fit");
-        estimate.estimatePentode(measurement, nullptr, pentodeModelType, false);
+        estimate.estimatePentode(measurement, nullptr, pentodeModelType, preferencesDialog.useSecondaryEmission());
     }
 
     model = ModelFactory::createModel(pentodeModelType);

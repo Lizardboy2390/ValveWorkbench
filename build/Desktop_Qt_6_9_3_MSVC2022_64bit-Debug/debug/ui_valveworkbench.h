@@ -235,6 +235,8 @@ public:
     QLineEdit *datasheetVa;
     QLabel *datasheetVgLabel;
     QLineEdit *datasheetVg;
+    QLabel *datasheetVg2Label;
+    QLineEdit *datasheetVg2;
     QLabel *datasheetIaLabel;
     QLineEdit *datasheetIa;
     QLabel *datasheetGmLabel;
@@ -1441,49 +1443,60 @@ public:
 
         gridLayout_datasheet->addWidget(datasheetVg, 3, 1, 1, 1);
 
+        datasheetVg2Label = new QLabel(datasheetGroupBox);
+        datasheetVg2Label->setObjectName("datasheetVg2Label");
+
+        gridLayout_datasheet->addWidget(datasheetVg2Label, 4, 0, 1, 1);
+
+        datasheetVg2 = new QLineEdit(datasheetGroupBox);
+        datasheetVg2->setObjectName("datasheetVg2");
+        datasheetVg2->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetVg2, 4, 1, 1, 1);
+
         datasheetIaLabel = new QLabel(datasheetGroupBox);
         datasheetIaLabel->setObjectName("datasheetIaLabel");
 
-        gridLayout_datasheet->addWidget(datasheetIaLabel, 4, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetIaLabel, 5, 0, 1, 1);
 
         datasheetIa = new QLineEdit(datasheetGroupBox);
         datasheetIa->setObjectName("datasheetIa");
         datasheetIa->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetIa, 4, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetIa, 5, 1, 1, 1);
 
         datasheetGmLabel = new QLabel(datasheetGroupBox);
         datasheetGmLabel->setObjectName("datasheetGmLabel");
 
-        gridLayout_datasheet->addWidget(datasheetGmLabel, 5, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetGmLabel, 6, 0, 1, 1);
 
         datasheetGm = new QLineEdit(datasheetGroupBox);
         datasheetGm->setObjectName("datasheetGm");
         datasheetGm->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetGm, 5, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetGm, 6, 1, 1, 1);
 
         datasheetMuLabel = new QLabel(datasheetGroupBox);
         datasheetMuLabel->setObjectName("datasheetMuLabel");
 
-        gridLayout_datasheet->addWidget(datasheetMuLabel, 6, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetMuLabel, 7, 0, 1, 1);
 
         datasheetMu = new QLineEdit(datasheetGroupBox);
         datasheetMu->setObjectName("datasheetMu");
         datasheetMu->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetMu, 6, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetMu, 7, 1, 1, 1);
 
         datasheetRpLabel = new QLabel(datasheetGroupBox);
         datasheetRpLabel->setObjectName("datasheetRpLabel");
 
-        gridLayout_datasheet->addWidget(datasheetRpLabel, 7, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetRpLabel, 8, 0, 1, 1);
 
         datasheetRp = new QLineEdit(datasheetGroupBox);
         datasheetRp->setObjectName("datasheetRp");
         datasheetRp->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetRp, 7, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetRp, 8, 1, 1, 1);
 
         datasheetRefCountLabel = new QLabel(datasheetGroupBox);
         datasheetRefCountLabel->setObjectName("datasheetRefCountLabel");
@@ -2105,6 +2118,7 @@ public:
         datasheetSectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Section:", nullptr));
         datasheetVaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Va (V):", nullptr));
         datasheetVgLabel->setText(QCoreApplication::translate("ValveWorkbench", "Vg (V):", nullptr));
+        datasheetVg2Label->setText(QCoreApplication::translate("ValveWorkbench", "Vg2 (V):", nullptr));
         datasheetIaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ia (mA):", nullptr));
         datasheetGmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (\302\265S):", nullptr));
         datasheetMuLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274:", nullptr));

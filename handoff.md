@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-13 (Triode CC / SE / Push-Pull time-domain headroom alignment, Push-Pull Headroom Waveshape output, Push-Pull inclusion in Harmonics tab headroom scan, plus prior Compare/Export/overlay updates)
+Last updated: 2025-12-14 (Pentode Health UI + Screen Health ref handling, Health %/tooltip consistency, template analyserDefaults snapshot sanitization)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -59,11 +59,13 @@ while keeping the **rules** and current **technical state** clear.
     transfer families are currently placed at the last sample of the sweep
     (user reverted an experiment to move these labels mid-curve).
  
-- **Quick/Full Health (triode + double triode, transfer-based)**
-  - **UI:** The Analyser tab exposes `Quick Health` and `Full Health` buttons which orchestrate short transfer tests against a datasheet reference point for both single and double triodes.
+- **Quick/Full Health (triode/double triode + pentode, transfer-based)**
+  - **UI:** The Analyser tab exposes `Quick Health` and `Full Health` buttons which orchestrate short transfer tests against a datasheet reference point for both triode-family and pentode devices.
   - **Preconditions:**
-    - Current device type is `TRIODE`.
-    - The active template/device JSON carries a `datasheet.refPoints[0]` object with at least `va`, `vg`, `ia`, and `gm` (μ and rp are optional).
+    - Current device type is `TRIODE` (including double triode) or `PENTODE`.
+    - The active template/device JSON carries a `datasheet.refPoints[0]` object with:
+      - Triode: `va`, `vg`, `ia`, `gm` (μ/rp optional).
+      - Pentode: `va`, `vg`, `vg2`, `ia` (`gm` optional; μ/rp optional).
   - **Test orchestration:**
     - `startHealthRun(mode)` uses `ensureDatasheetRefPoint` to read the first reference point, then builds a set of `HealthPoint` targets:
       - **Quick Health:** a 3×3 grid of operating points around `(va0, vg0)`:
@@ -79,14 +81,15 @@ while keeping the **rules** and current **technical state** clear.
       - Sets `testType = TRANSFER_CHARACTERISTICS`.
       - Fixes anode at `Va = pt.va` (anodeStart = anodeStop = pt.va).
       - Maps the negative physical grid bias `vg` into a small positive DAC magnitude window around `|vg|` (e.g. |vg| ± 0.5–1.0 V) for the analyser grid range.
+      - Pentode Health uses an **auto operating-point finder** first: a conservative pentode transfer sweep at fixed Va/Vg2 is run to find a Vg1 that yields a target Ia (e.g. 15 mA for 6L6 family). The subsequent Health sweeps run around that found `(Va, Vg1, Vg2)`.
     - Health runs chain via `ValveWorkbench::testFinished()` using a **queued continuation**:
       - After each sweep completes, `testFinished()` records Ia/gm for the current `HealthPoint`, increments `healthRunIndex`, and if more points remain, it uses `QMetaObject::invokeMethod(this, lambda, Qt::QueuedConnection)` to configure the next point and call `on_runButton_clicked()` on the **event loop**, not directly from inside the analyser callback.
       - This removes re-entrancy into `Analyser::startTest()` from within `Analyser::nextSample()` and fixes a crash that occurred when Quick/Full Health tried to start a new run while the previous `testFinished()` stack was still unwinding.
   - **Measurement and metrics:**
     - After each sweep, `computeIaGmAt` scans the resulting transfer measurement:
-      - Finds the sample nearest to the requested `(Va, Vg)` in a weighted Va/Vg sense and takes its Ia as the local operating current.
+      - Finds the sample nearest to the requested `(Va, Vg)` (and for pentodes `(Va, Vg, Vg2)`) in a weighted sense and takes its Ia as the local operating current.
       - Estimates local `gm` from all valid samples in a **Vg-centred window** around the target Vg using a linear LS fit of `Ia` vs `Vg1`, after first **binning near-identical Vg DAC codes** and averaging Ia within each bin to collapse staircase/see-saw artefacts on dense sweeps; when the LS slope is not positive, a two-bin dIa/dVg fallback between the furthest-separated Vg bins is used.
-      - Derives a local plate resistance `rp` from any available anode-characteristics measurement by performing a small LS fit of Ia vs Va around the nearest sample to `(Va, Vg)` (Triode A uses Va/Ia/Vg1; Triode B, when available, uses Va2/Ia2/Vg3).
+      - Derives a local plate resistance `rp` from any available anode-characteristics measurement by performing a small LS fit of Ia vs Va around the nearest sample to `(Va, Vg)` (Triode A uses Va/Ia/Vg1; Triode B, when available, uses Va2/Ia2/Vg3). (Pentode Health does not currently compute rp.)
     - `finalizeHealthRun` re-reads the datasheet reference point and, when available, builds an Ia/gm reference “surface” from any embedded `currentDevice->getMeasurement()` so each HealthPoint can be compared against a reference at the **same** Va/Vg.
     - A small helper (`robust3xCluster`) performs median-based outlier rejection and averaging over up to three nearby values (40% deviation gate) and is used for both DUT and reference clusters.
     - **Quick Health centre cluster (Triode A):**
@@ -110,10 +113,22 @@ while keeping the **rules** and current **technical state** clear.
   - **Robustness / implementation notes:**
     - `Analyser::nextSample()` guards its progress calculation (`client->testProgress(progress)`) so progress is only computed when both `sweepPoints` and `stepParameter.length()` are non-zero, preventing accidental divide-by-zero if state is reset between runs.
     - All 9 Quick Health and 13 Full Health transfer sweeps (centre + neighbours/corners) are plotted together on the same transfer axes; label placement and optional spline smoothing are handled in `valvemodel/data/sweep.cpp`.
+  - **Pentode-specific notes (Health UI + references):**
+    - When a pentode template/device type is selected, the Triode A health group title is retasked as **Pentode Health**.
+    - The Triode B health group is retasked as **Screen Health** for pentodes:
+      - Measured: `Ig2 (mA)` and `Pg2 (W)` at the centre HealthPoint.
+      - Reference: populated from `datasheet.healthReference.center.ig2Ref_mA` when present (Pg2 ref derived from `Vg2 * Ig2`).
+      - The 4-corner percentage column is hidden for pentode Screen Health (informational view).
+    - Pentode datasheet `gm` may be omitted from `datasheet.refPoints[0]`; in that case Ia-based % still computes and Quick scoring falls back to Ia-only.
+    - Pentode `rp`/`mu` reference values may optionally be present in `datasheet.refPoints[0]` so rp%/mu% can be computed when an anode measurement exists.
+    - The Full Health tooltip/status message is kept consistent with the displayed Full score label (uses the reference-tube Full score when present).
   - **Limitations / status:**
     - Health runs deliberately avoid modifying firmware behaviour; they are a desktop-side orchestration layer over existing transfer tests.
-    - Health currently supports triode and double-triode transfer tests only; pentode “health” remains undefined.
     - The 30% scoring envelope and current Va/Vg offsets are heuristic and should be revisited once more bench data (including double-triode A/B drift) has been collected.
+
+- **Template save / analyserDefaults snapshot sanitization**
+  - Template saves now sanitise non-finite/denormal analyser range values when persisting `analyserDefaults.tests[...]` snapshots.
+  - For pentode templates, anode/transfer snapshots force screen ranges to fixed `start==stop` with a sentinel `step=0` to avoid corrupted Vg2 snapshots on reload.
 
 - **Model plotting**
   - The Modeller/Designer model overlays use `Device::anodePlot` and the
@@ -384,6 +399,32 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 - `Model::setEstimate` now applies **model-specific pentode bounds**:
   - Gardiner/SimpleManual: wider envelope (original global guardrails) so the unified Gardiner model can explore its shaping space.
   - Reefman (Derk/DerkE): tighter UTmax-style corridor (mirroring `Estimate::estimatePentode` clamp ranges) to keep the DEPIa-style model physically realistic.
+
+### 2025-12-13 Summary (Pentode secondary emission fitting)
+
+- **Secondary emission parameters (Gardiner / ExtractModel style)**
+  - Secondary emission uses:
+    - `S` (strength) and `Ap` (sharpness) plus geometry `omega`, `lambda`, `nu`.
+  - Crossover voltage is:
+    - `Vco = Vg2/lambda - nu*Vg1 - omega`
+  - The secondary-emission term is:
+    - `Psec = S * Va * (1 + tanh(-Ap * (Va - Vco)))`
+  - `Psec` is subtracted from anode current and added to screen current in the Gardiner equations.
+
+- **Bug: SE was not being seeded for pentode fits**
+  - `Estimate::estimatePentode(..., bool secondaryEmission)` only seeds `omega/lambda/nu/S/Ap` when `secondaryEmission == true`.
+  - `ValveWorkbench::modelPentode()` previously called `estimate.estimatePentode(..., false)` unconditionally, so SE parameters stayed at defaults and the fit often appeared to “not use secondary emission”.
+  - **Fix:** `ValveWorkbench::modelPentode()` now passes `preferencesDialog.useSecondaryEmission()` into `Estimate::estimatePentode()`.
+
+- **Preferences interaction: `Use secondary emission` vs `Fix secondary emission`**
+  - `Use secondary emission` controls whether SE residuals/terms are included in the solver.
+  - `Fix secondary emission` originally froze *all* SE parameters (`omega/lambda/nu/S/Ap`) during solver stages that honor that flag, which could effectively prevent SE from fitting unless the seed values were already correct.
+  - **Updated semantics:** `Fix secondary emission` now freezes only the **geometry** (`omega/lambda/nu`) while allowing `S` and `Ap` to be fitted. This preserves the intended knee location while still letting the solver tune SE strength/sharpness.
+
+- **Where to look in code**
+  - Seeding: `valvemodel/model/estimate.cpp` (`Estimate::estimatePentode`)
+  - Fit orchestration: `valveworkbench.cpp` (`ValveWorkbench::modelPentode`)
+  - Parameter freezing: `valvemodel/model/gardinerpentode.cpp` (`GardinerPentode::setOptions`, SCREEN_MODE and ANODE_REMODEL_MODE)
 
 ### 2025-11-26 Summary (Pentode / transfer interaction and analyser verification)
 

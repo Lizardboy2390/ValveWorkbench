@@ -1,26 +1,26 @@
 {
     "analyserDefaults": {
         "anode": {
-            "start": 0,
-            "step": 6.666666666666667,
-            "stop": 500
+            "start": 120,
+            "step": 120,
+            "stop": 120
         },
         "doubleTriode": false,
         "grid": {
-            "start": 20,
-            "step": 2,
-            "stop": 60
+            "start": 2,
+            "step": 1,
+            "stop": 35
         },
         "limits": {
             "iaMax": 50,
             "pMax": 30
         },
         "screen": {
-            "start": 250,
-            "step": 1e-323,
-            "stop": 1
+            "start": 120,
+            "step": 120,
+            "stop": 120
         },
-        "testType": 0,
+        "testType": 2,
         "tests": {
             "anode": {
                 "anode": {
@@ -30,7 +30,7 @@
                 },
                 "grid": {
                     "start": 20,
-                    "step": 2,
+                    "step": 3,
                     "stop": 60
                 },
                 "limits": {
@@ -39,16 +39,83 @@
                 },
                 "screen": {
                     "start": 250,
-                    "step": 1e-323,
-                    "stop": 1
+                    "step": 0,
+                    "stop": 250
                 },
                 "testType": 0
+            },
+            "transfer": {
+                "anode": {
+                    "start": 120,
+                    "step": 0,
+                    "stop": 120
+                },
+                "grid": {
+                    "start": 2,
+                    "step": 1,
+                    "stop": 35
+                },
+                "limits": {
+                    "iaMax": 50,
+                    "pMax": 30
+                },
+                "screen": {
+                    "start": 120,
+                    "step": 0,
+                    "stop": 120
+                },
+                "testType": 2
             }
         }
     },
     "datasheet": {
+        "healthReference": {
+            "center": {
+                "gmRefA_mA_V": 2.203322896752017,
+                "iaRefA_mA": 10.019550342130985,
+                "ig2Ref_mA": 0.48579638022453264,
+                "va": 119.22062561094818,
+                "vg": -12.151685897435897,
+                "vg2": 119.82580645161288
+            },
+            "corners": [
+                {
+                    "iaRefA_mA": 8.555414029509826,
+                    "iaRef_mA": 8.555414029509826,
+                    "va": 99.22062561094818,
+                    "vg": -12.651685897435897
+                },
+                {
+                    "iaRefA_mA": 10.849452491681228,
+                    "iaRef_mA": 10.849452491681228,
+                    "va": 99.22062561094818,
+                    "vg": -11.651685897435897
+                },
+                {
+                    "iaRefA_mA": 8.892772626887973,
+                    "iaRef_mA": 8.892772626887973,
+                    "va": 139.22062561094816,
+                    "vg": -12.651685897435897
+                },
+                {
+                    "iaRefA_mA": 11.476939482804582,
+                    "iaRef_mA": 11.476939482804582,
+                    "va": 139.22062561094816,
+                    "vg": -11.651685897435897
+                }
+            ],
+            "sampleCount": 3,
+            "version": 1
+        },
         "refPoints": [
             {
+                "gm": 2200,
+                "ia": 10,
+                "mu": 26,
+                "rp": 1250,
+                "va": 120,
+                "vg": -19.5,
+                "vg2": 120
             }
         ]
     },

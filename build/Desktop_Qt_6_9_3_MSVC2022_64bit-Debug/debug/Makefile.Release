@@ -12779,6 +12779,7 @@ release\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QMouseEvent \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QPen \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSizePolicy \
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QPainterPath \
 		..\..\..\valvemodel\data\sample.h \
 		..\..\..\valvemodel\data\sweep.h \
 		..\..\..\valvemodel\circuit\triodecommoncathode.h \

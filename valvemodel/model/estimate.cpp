@@ -30,6 +30,11 @@ struct SweepStats {
     double ig2Last = 0.0;
 };
 
+double normVg(double vg)
+{
+    return -std::fabs(vg);
+}
+
 std::vector<SweepStats> collectSweepStats(Measurement *measurement)
 {
     std::vector<SweepStats> stats;
@@ -425,7 +430,7 @@ void Estimate::estimateMu(Measurement *measurement)
                 }
 
                 double vg1Nom = sweep->getVg1Nominal();
-                vg1Samples.append(vg1Nom);
+                vg1Samples.append(normVg(vg1Nom));
                 vaSamples.append(vaAtIMu);
             }
 
@@ -474,8 +479,19 @@ void Estimate::estimateKg1X(Measurement *measurement)
 
                 if (sample->getIa() > iThresh) {
                     constexpr double milliampToAmp = 1000.0;
+
+                    double vg = sample->getVg1();
+                    if (!std::isfinite(vg) || std::fabs(vg) < 1e-9) {
+                        vg = sweep->getVg1Nominal();
+                    }
+                    vg = normVg(vg);
+
+                    const double logArg = sample->getVa() / mu + vg;
+                    if (!(logArg > 1e-12)) {
+                        continue;
+                    }
                     solver->addSample(
-                        log(sample->getVa() / mu + sample->getVg1()),
+                        log(logArg),
                         log(sample->getIa() / milliampToAmp));
                 }
             }
@@ -496,7 +512,7 @@ void Estimate::estimateKp(Measurement *measurement)
             int sweeps = measurement->count();
             for (int sw = 0; sw < sweeps; sw++) {
                 Sweep *sweep = measurement->at(sw);
-                double vg1 = sweep->getVg1Nominal();
+                double vg1 = normVg(sweep->getVg1Nominal());
 
                 if (vg1 < -0.0001) {
                     double vt = -vg1 * mu;
@@ -534,13 +550,19 @@ void Estimate::estimateKvbKvb1(Measurement *measurement)
     for (int sw = 0; sw < sweeps; sw++) {
         Sweep *sweep = measurement->at(sw);
 
-        if (sweep->getVg1Nominal() < -0.0001) {
+        if (normVg(sweep->getVg1Nominal()) < -0.0001) {
             int samples = sweep->count();
             for (int i = 0; i < samples; i++) {
                 Sample *sample = sweep->at(i);
 
                 if (sample->getIa() > 0.0 && sample->getIa() < iThresh) {
-                    double f = sample->getVg1() / (pow(sample->getIa() * kg1, 1 / x) / sample->getVa() - 1/ mu);
+                    double vg = sample->getVg1();
+                    if (!std::isfinite(vg) || std::fabs(vg) < 1e-9) {
+                        vg = sweep->getVg1Nominal();
+                    }
+                    vg = normVg(vg);
+
+                    double f = vg / (pow(sample->getIa() * kg1, 1 / x) / sample->getVa() - 1/ mu);
 
                     solver->addSample(sample->getVa(), f * f);
                     hasSamples = true;

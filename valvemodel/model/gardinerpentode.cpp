@@ -625,8 +625,6 @@ void GardinerPentode::setOptions()
                 screenProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
                 screenProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
                 screenProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
-                screenProblem.SetParameterBlockConstant(parameter[PAR_S]->getPointer());
-                screenProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
             }
         }
 
@@ -646,11 +644,11 @@ void GardinerPentode::setOptions()
         anodeRemodelProblem.SetParameterLowerBound(parameter[PAR_OS]->getPointer(), 0, 0.0);
 
         if (preferences->useSecondaryEmission()) {
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_S]->getPointer());
-            anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
+            if (preferences->fixSecondaryEmission()) {
+                anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
+                anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
+                anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
+            }
         }
 
         //anodeRemodelProblem.SetParameterBlockConstant(parameter[PAR_KG2]->getPointer());

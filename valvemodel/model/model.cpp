@@ -374,7 +374,7 @@ void Model::setEstimate(Estimate *estimate)
         setBound(PAR_KVB1,  1.0,  80.0);
         setBound(PAR_VCT,   0.0,   5.0);
         setBound(PAR_X,     1.0,   2.0);
-        setBound(PAR_MU,    1.0,  50.0);
+        setBound(PAR_MU,    1.0, 300.0);
         setBound(PAR_KG2,   0.1,  25.0);
         setBound(PAR_A,     0.0,   0.1);
         setBound(PAR_ALPHA, 0.0,   0.6);
