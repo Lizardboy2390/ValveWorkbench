@@ -74,19 +74,30 @@ Device::Device(QJsonDocument modelDocument)
             QJsonObject modelObject = deviceObject["model"].toObject();
             qInfo("Found model object");
 
-            deviceType = TRIODE;  // Use main app constants
-
-            if (modelObject.contains("device") && modelObject["device"].isString()) {
-                QString deviceStr = modelObject["device"].toString();
-                qInfo("Device string: %s", deviceStr.toStdString().c_str());
-                if (deviceStr == "pentode") {
-                    deviceType = PENTODE;  // Use main app constants
-                }
-            }
+            // Do not clobber any top-level deviceType hint (root["deviceType"]).
+            // Some fitted-model exports do not include a model["device"] field,
+            // so forcing TRIODE here can misclassify exported pentodes.
 
             QString modelTypeStr = modelObject.value("type").toString();
             if (!modelTypeStr.isEmpty()) {
                 qInfo("Model type: %s", modelTypeStr.toStdString().c_str());
+            }
+
+            if (modelObject.contains("device") && modelObject["device"].isString()) {
+                QString deviceStr = modelObject["device"].toString();
+                qInfo("Device string: %s", deviceStr.toStdString().c_str());
+                if (deviceStr.compare("pentode", Qt::CaseInsensitive) == 0) {
+                    deviceType = PENTODE;
+                } else if (deviceStr.compare("triode", Qt::CaseInsensitive) == 0) {
+                    deviceType = TRIODE;
+                }
+            } else {
+                // Infer device type from model type when the JSON omits model.device.
+                if (modelTypeStr == "reefman" || modelTypeStr == "gardiner" || modelTypeStr == "extractDerkE") {
+                    deviceType = PENTODE;
+                } else if (modelTypeStr == "simple" || modelTypeStr == "koren" || modelTypeStr == "cohenHelie") {
+                    deviceType = TRIODE;
+                }
             }
 
             // Choose model class: prefer explicit type, otherwise infer from keys.

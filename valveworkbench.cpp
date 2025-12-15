@@ -12094,6 +12094,25 @@ void ValveWorkbench::exportFittedModelToDevices()
         return;
     }
 
+    int exportDeviceType = deviceType;
+    const int exportModelType = toExport->getType();
+    switch (exportModelType) {
+    case REEFMAN_DERK_PENTODE:
+    case REEFMAN_DERK_E_PENTODE:
+    case EXTRACT_DERK_E_PENTODE:
+    case GARDINER_PENTODE:
+    case SIMPLE_MANUAL_PENTODE:
+        exportDeviceType = PENTODE;
+        break;
+    case SIMPLE_TRIODE:
+    case KOREN_TRIODE:
+    case COHEN_HELIE_TRIODE:
+        exportDeviceType = TRIODE;
+        break;
+    default:
+        break;
+    }
+
     // If an analyser measurement is available, we prefer its recorded limits
     // (iaMax/paMax, sweep ranges) when building the exported device preset so
     // Designer and Modeller graph limits track the actual measurement rather
@@ -12103,11 +12122,11 @@ void ValveWorkbench::exportFittedModelToDevices()
     // measurement in the project otherwise.
     Measurement *measForExport = nullptr;
     if (currentMeasurement &&
-        currentMeasurement->getDeviceType() == deviceType &&
+        currentMeasurement->getDeviceType() == exportDeviceType &&
         currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
         measForExport = currentMeasurement;
     } else {
-        measForExport = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
+        measForExport = findMeasurement(exportDeviceType, ANODE_CHARACTERISTICS);
     }
 
     // Resolve models directory to MATCH loadDevices() search, and use a
@@ -12179,6 +12198,7 @@ void ValveWorkbench::exportFittedModelToDevices()
     // For pentodes, we still clamp Ia to the hardware 50 mA capability.
     double vaMaxOut = 300.0;
     double iaMaxOut = 5.0;
+    double iaMaxHardwareOut = 5.0;
     double paMaxOut = 1.125;
 
     if (std::isfinite(anodeStop) && anodeStop > 0.0) {
@@ -12187,6 +12207,7 @@ void ValveWorkbench::exportFittedModelToDevices()
     if (std::isfinite(iaMax) && iaMax > 0.0) {
         iaMaxOut = iaMax;
     }
+    iaMaxHardwareOut = iaMaxOut;
     if (std::isfinite(pMax) && pMax > 0.0) {
         paMaxOut = pMax;
     }
@@ -12199,12 +12220,13 @@ void ValveWorkbench::exportFittedModelToDevices()
         if (std::isfinite(measIaMax) && measIaMax > 0.0) {
             iaMaxOut = measIaMax;
         }
+        iaMaxHardwareOut = iaMaxOut;
         if (std::isfinite(measPMax) && measPMax > 0.0) {
             paMaxOut = measPMax;
         }
     }
 
-    if (deviceType == PENTODE) {
+    if (exportDeviceType == PENTODE) {
         // Give pentode Designer circuits enough voltage headroom.
         if (vaMaxOut < 500.0) {
             vaMaxOut = 500.0;
@@ -12213,10 +12235,14 @@ void ValveWorkbench::exportFittedModelToDevices()
         // Derive vg1Max from the analyser grid stop magnitude so that
         // Designer plots use a comparable grid-voltage family to the
         // measured curves (e.g. 0 .. -40 V for a 6L6GC).
-        double vg1MaxOut = gridStop;
-        if (vg1MaxOut < 0.0) {
-            vg1MaxOut = -vg1MaxOut;
+        double vg1MaxOut = 0.0;
+        double vgStartOut = gridStart;
+        double vgStopOut  = gridStop;
+        if (measForExport) {
+            vgStartOut = measForExport->getGridStart();
+            vgStopOut  = measForExport->getGridStop();
         }
+        vg1MaxOut = std::max(std::fabs(vgStartOut), std::fabs(vgStopOut));
         if (!(vg1MaxOut > 0.0)) {
             vg1MaxOut = 50.0; // fallback similar to legacy presets
         }
@@ -12237,28 +12263,29 @@ void ValveWorkbench::exportFittedModelToDevices()
 
         // For power pentodes, honour the analyser's Ia limit (from the
         // input boxes/template) but clamp it to the hardware maximum so
-        // Designer cannot exceed the 50 mA capability of the analyser.
+        // the analyser cannot exceed the 50 mA capability of the hardware.
         if (!(iaMaxOut > 0.0)) {
             iaMaxOut = 5.0; // conservative fallback if analyser Ia is unset
         }
-        if (iaMaxOut > 50.0) {
-            iaMaxOut = 50.0;
+        iaMaxHardwareOut = iaMaxOut;
+        if (iaMaxHardwareOut > 50.0) {
+            iaMaxHardwareOut = 50.0;
         }
     }
 
     root["vaMax"] = vaMaxOut;
-    if (deviceType == TRIODE) {
+    if (exportDeviceType == TRIODE) {
         root["vg1Max"] = 5.0;
     }
     root["iaMax"] = iaMaxOut;
     root["paMax"] = paMaxOut;
 
     // Device type string for presets
-    if (deviceType == TRIODE) {
+    if (exportDeviceType == TRIODE) {
         root["deviceType"] = "TRIODE";
-    } else if (deviceType == PENTODE) {
+    } else if (exportDeviceType == PENTODE) {
         root["deviceType"] = "PENTODE";
-    } else if (deviceType == DOUBLE_TRIODE) {
+    } else if (exportDeviceType == DOUBLE_TRIODE) {
         root["deviceType"] = "DOUBLE_TRIODE";
     } else {
         root["deviceType"] = "UNKNOWN";
@@ -12298,7 +12325,7 @@ void ValveWorkbench::exportFittedModelToDevices()
     // Limits
     {
         QJsonObject limitsObj;
-        limitsObj["iaMax"] = iaMaxOut;
+        limitsObj["iaMax"] = iaMaxHardwareOut;
         limitsObj["pMax"]  = paMaxOut;
         analyserDefaults["limits"] = limitsObj;
     }
@@ -12330,7 +12357,7 @@ void ValveWorkbench::exportFittedModelToDevices()
         // analyser UI's positive-magnitude grid range so templates keep
         // 0..+V defaults instead of inheriting the negative measurement
         // sweep. For all other cases, use the measurement snapshot.
-        if (deviceType == TRIODE && measType == ANODE_CHARACTERISTICS) {
+        if (exportDeviceType == TRIODE && measType == ANODE_CHARACTERISTICS) {
             QJsonObject gridObj;
             double gridStartOut = gridStart;
             double gridStopOut  = gridStop;
@@ -12369,7 +12396,11 @@ void ValveWorkbench::exportFittedModelToDevices()
                                                      &Measurement::getScreenStep));
 
         QJsonObject testLimits;
-        testLimits.insert("iaMax", measForExport->getIaMax());
+        double testIaMaxOut = measForExport->getIaMax();
+        if (exportDeviceType == PENTODE && testIaMaxOut > 50.0) {
+            testIaMaxOut = 50.0;
+        }
+        testLimits.insert("iaMax", testIaMaxOut);
         testLimits.insert("pMax",  measForExport->getPMax());
         snapshot.insert("limits", testLimits);
 
@@ -12447,7 +12478,7 @@ void ValveWorkbench::exportFittedModelToDevices()
     // Gardiner pentode) and encoded as a SPICE .subckt body with the same
     // Ia(Va,Vg1,Vg2) law as used in the C++ code.
     {
-        QJsonObject spiceObj = buildSpiceBlockForModel(toExport, deviceType, deviceName);
+        QJsonObject spiceObj = buildSpiceBlockForModel(toExport, exportDeviceType, deviceName);
         if (!spiceObj.isEmpty()) {
             root["spice"] = spiceObj;
         }
@@ -12456,7 +12487,7 @@ void ValveWorkbench::exportFittedModelToDevices()
     // If a Cohen-Helie triode model exists in the project, embed its
     // parameters as a 'triodeModel' block so future pentode fits can reuse
     // the same triode seed without re-running the triode fit.
-    if (deviceType == PENTODE && currentProject != nullptr) {
+    if (exportDeviceType == PENTODE && currentProject != nullptr) {
         if (Model *triodeSeed = findModel(COHEN_HELIE_TRIODE)) {
             QJsonObject triodeObj;
             triodeSeed->toJson(triodeObj);

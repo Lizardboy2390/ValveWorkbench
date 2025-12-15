@@ -20,6 +20,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Recently completed
 - [x] 2025-12-15: Analyser tab LCD semantics: top LCD now shows averaging window (`S0` samples-per-measurement), bottom LCD shows count of sweeps/points that exceeded verification retry limits.
+- [x] 2025-12-15: Export-to-Devices: classify exported fitted models by model type (pentode vs triode) so pentode exports (e.g. 6L6-GC) appear under pentode device lists in Designer circuits.
 - [x] 2025-12-15: Modeller pentode fitting (Process Modelling Tests): added extra transfer sweeps (2× at Vg2=150 V, 1× at Vg2=200 V) and binned/averaged transfer samples by Vg1, grouped by (Va, Vg2) so dense transfer data does not dominate fitting.
 - [x] 2025-12-15: Modeller pentode fitting: fixed async lifetime of binned transfer Measurement clones used by threaded solves by storing the clones in a ValveWorkbench member until the solve completes.
 - [x] 2025-12-15: Model input robustness: allow anode-characteristics sweeps that end early due to likely current/power limit hits to still contribute to fitting (prevents dropping informative mid-grid sweeps).

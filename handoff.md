@@ -17,6 +17,10 @@ while keeping the **rules** and current **technical state** clear.
   - `heaterVlcd` displays the current firmware averaging window (`S0` samples-per-measurement).
   - `heaterIlcd` displays the count of sweeps/points that exceeded verification retry limits.
 
+- **Exported Device plotting scale (Designer)**
+  - Pentode `Device` presets must carry a realistic `vg1Max` (derived from the full |grid| sweep magnitude, typically `max(|gridStart|, |gridStop|)`) so Designer’s “Show Fitted Model” families span the same Vg1 range as the analyser measurement.
+  - The top-level `Device.iaMax` is used for Designer axis scaling; analyser safety limits remain separately clamped via `analyserDefaults.limits.iaMax`.
+
 - **Per-sweep behaviour (pentode transfer)**
   - For pentode transfer-characteristics (Va fixed, Vg2 stepped, Vg1 swept):
     - Anode is fixed at `anodeStart` via `S3`.
