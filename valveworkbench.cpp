@@ -3179,8 +3179,11 @@ void ValveWorkbench::on_modellingTestsButton_clicked()
     }
 
     {
+        const double transferVg2 = (std::isfinite(savedScreenStartForModelling) && savedScreenStartForModelling > 0.0)
+                                      ? savedScreenStartForModelling
+                                      : 150.0;
         ModellingTestStep s;
-        s.label = tr("Pentode transfer (Va=200V, Vg2=150V)");
+        s.label = tr("Pentode transfer (Va=200V, Vg2=%1V)").arg(QString::number(transferVg2, 'f', 0));
         s.deviceType = PENTODE;
         s.testType = TRANSFER_CHARACTERISTICS;
         s.triodeConnectedPentode = false;
@@ -3190,15 +3193,18 @@ void ValveWorkbench::on_modellingTestsButton_clicked()
         s.gridStart = 2.0;
         s.gridStop = 35.0;
         s.gridStep = 1.0;
-        s.screenStart = 150.0;
-        s.screenStop = 150.0;
-        s.screenStep = 150.0;
+        s.screenStart = transferVg2;
+        s.screenStop = transferVg2;
+        s.screenStep = std::max(1.0, std::fabs(transferVg2));
         modellingSteps.append(s);
     }
 
     {
+        const double transferVg2 = (std::isfinite(savedScreenStartForModelling) && savedScreenStartForModelling > 0.0)
+                                      ? savedScreenStartForModelling
+                                      : 150.0;
         ModellingTestStep s;
-        s.label = tr("Pentode transfer 2 (Va=200V, Vg2=150V)");
+        s.label = tr("Pentode transfer 2 (Va=200V, Vg2=%1V)").arg(QString::number(transferVg2, 'f', 0));
         s.deviceType = PENTODE;
         s.testType = TRANSFER_CHARACTERISTICS;
         s.triodeConnectedPentode = false;
@@ -3208,15 +3214,18 @@ void ValveWorkbench::on_modellingTestsButton_clicked()
         s.gridStart = 2.0;
         s.gridStop = 35.0;
         s.gridStep = 1.0;
-        s.screenStart = 150.0;
-        s.screenStop = 150.0;
-        s.screenStep = 150.0;
+        s.screenStart = transferVg2;
+        s.screenStop = transferVg2;
+        s.screenStep = std::max(1.0, std::fabs(transferVg2));
         modellingSteps.append(s);
     }
 
     {
+        const double transferVg2 = (std::isfinite(savedScreenStartForModelling) && savedScreenStartForModelling > 0.0)
+                                      ? savedScreenStartForModelling
+                                      : 150.0;
         ModellingTestStep s;
-        s.label = tr("Pentode transfer (Va=200V, Vg2=200V)");
+        s.label = tr("Pentode transfer 3 (Va=200V, Vg2=%1V)").arg(QString::number(transferVg2, 'f', 0));
         s.deviceType = PENTODE;
         s.testType = TRANSFER_CHARACTERISTICS;
         s.triodeConnectedPentode = false;
@@ -3226,15 +3235,36 @@ void ValveWorkbench::on_modellingTestsButton_clicked()
         s.gridStart = 2.0;
         s.gridStop = 35.0;
         s.gridStep = 1.0;
-        s.screenStart = 200.0;
-        s.screenStop = 200.0;
-        s.screenStep = 200.0;
+        s.screenStart = transferVg2;
+        s.screenStop = transferVg2;
+        s.screenStep = std::max(1.0, std::fabs(transferVg2));
         modellingSteps.append(s);
     }
 
-    const double vg2List[3] = { 100.0, 150.0, 200.0 };
-    for (int i = 0; i < 3; ++i) {
-        const double vg2 = vg2List[i];
+    QList<double> vg2List;
+    {
+        auto addUnique = [&](double vg2) {
+            if (!(std::isfinite(vg2) && vg2 > 0.0)) {
+                return;
+            }
+            for (double existing : vg2List) {
+                if (std::fabs(existing - vg2) < 1e-6) {
+                    return;
+                }
+            }
+            vg2List.append(vg2);
+        };
+
+        // Ensure we always run at the user's current/default screen voltage
+        // (i.e. the value that was in the UI before starting Modelling Tests).
+        addUnique(savedScreenStartForModelling);
+
+        // Keep a couple of standard Vg2 points for coverage.
+        addUnique(150.0);
+        addUnique(200.0);
+    }
+
+    for (double vg2 : vg2List) {
         ModellingTestStep s;
         s.label = tr("Pentode anode (Vg2=%1V)").arg(QString::number(vg2, 'f', 0));
         s.deviceType = PENTODE;
@@ -6403,38 +6433,26 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         Measurement *embedded = device->getMeasurement();
         Model *deviceModel = device->getModel();
 
-        // For Designer power-output circuits (SE, SE-UL, PP, UL-PP), always
-        // use the fitted-model anodePlot so grid families and labels behave
-        // consistently across all of them, independent of the embedded
-        // measurement's grid coverage.
-        if (circuitType == SINGLE_ENDED_OUTPUT ||
-            circuitType == ULTRALINEAR_SINGLE_ENDED ||
-            circuitType == PUSH_PULL_OUTPUT ||
-            circuitType == ULTRALINEAR_PUSH_PULL) {
+        // Prefer a measurement-driven model overlay whenever an embedded
+        // analyser measurement is present for a pentode anode sweep. This
+        // keeps the red model curves aligned with the same Vg1/Vg2 families
+        // used by the black measurement curves.
+        if (embedded && deviceModel && embedded->getDeviceType() == PENTODE &&
+            embedded->getTestType() == ANODE_CHARACTERISTICS) {
+            QGraphicsItemGroup *plotted = deviceModel->plotModel(&plot, embedded, nullptr);
+            if (plotted) {
+                modelledCurves = plotted;
+                plot.add(modelledCurves);
+                modelledCurves->setVisible(ui->modelCheck->isChecked());
+            }
+        }
+
+        // Fallback: draw using the device's internal anodePlot, which uses
+        // vg1Max/vg2Max from the preset JSON.
+        if (!modelledCurves) {
             modelledCurves = device->anodePlot(&plot);
             if (modelledCurves) {
                 modelledCurves->setVisible(ui->modelCheck->isChecked());
-            }
-        } else {
-            // Existing behaviour for all other circuits: prefer the
-            // measurement-driven Model::plotModel helper when an embedded
-            // pentode Measurement is available so that grid/screen families
-            // exactly match the analyser sweeps.
-            if (embedded && deviceModel && embedded->getDeviceType() == PENTODE &&
-                embedded->getTestType() == ANODE_CHARACTERISTICS) {
-                QGraphicsItemGroup *plotted = deviceModel->plotModel(&plot, embedded, nullptr);
-                if (plotted) {
-                    modelledCurves = plotted;
-                    plot.add(modelledCurves);
-                    modelledCurves->setVisible(ui->modelCheck->isChecked());
-                }
-            } else {
-                // Fallback: draw using the device's internal anodePlot, which
-                // uses vg1Max/vg2Max from the preset JSON.
-                modelledCurves = device->anodePlot(&plot);
-                if (modelledCurves) {
-                    modelledCurves->setVisible(ui->modelCheck->isChecked());
-                }
             }
         }
     }
@@ -12155,20 +12173,115 @@ void ValveWorkbench::exportFittedModelToDevices()
         break;
     }
 
-    // If an analyser measurement is available, we prefer its recorded limits
-    // (iaMax/paMax, sweep ranges) when building the exported device preset so
-    // Designer and Modeller graph limits track the actual measurement rather
-    // than any stale analyser UI values. Prefer the *currently selected*
-    // measurement when it matches the active analyser device type and uses
-    // ANODE_CHARACTERISTICS, and only fall back to the first matching
-    // measurement in the project otherwise.
+    // Prefer an analyser measurement (if available) so exported presets carry
+    // real sweep ranges/limits and can overlay measured curves in Designer.
+    // For pentodes, pick the anode measurement whose screen voltage is
+    // closest to the current analyser screen setting (fallback: highest Vg2).
     Measurement *measForExport = nullptr;
-    if (currentMeasurement &&
-        currentMeasurement->getDeviceType() == exportDeviceType &&
-        currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
-        measForExport = currentMeasurement;
+    if (exportDeviceType == PENTODE && currentProject != nullptr) {
+        // Option 2: treat the intended screen voltage as the active Designer
+        // output-stage VS (when an output circuit is selected). Fall back to
+        // the Analyser screenStart otherwise.
+        double targetVg2 = screenStart;
+        {
+            int circuitType = -1;
+            if (ui && ui->circuitSelection) {
+                circuitType = ui->circuitSelection->currentData().toInt();
+            }
+            if (circuitType >= 0 && circuitType < circuits.size()) {
+                Circuit *c = circuits.at(circuitType);
+                if (c) {
+                    int vsIndex = -1;
+                    switch (circuitType) {
+                    case SINGLE_ENDED_OUTPUT:        vsIndex = SE_VS;   break;
+                    case ULTRALINEAR_SINGLE_ENDED:   vsIndex = SEUL_VB; break;
+                    case PUSH_PULL_OUTPUT:           vsIndex = PP_VS;   break;
+                    case ULTRALINEAR_PUSH_PULL:      vsIndex = PPUL_VB; break;
+                    default:                         vsIndex = -1;      break;
+                    }
+
+                    if (vsIndex >= 0) {
+                        const double designerVs = c->getParameter(vsIndex);
+                        if (std::isfinite(designerVs) && designerVs > 0.0) {
+                            targetVg2 = designerVs;
+                        }
+                    }
+                }
+            }
+        }
+
+        auto representativeVg2 = [](Measurement *m) -> double {
+            if (!m) return 0.0;
+            if (std::isfinite(m->getScreenStart()) && m->getScreenStart() > 0.0) {
+                return m->getScreenStart();
+            }
+            if (m->count() > 0) {
+                Sweep *s = m->at(0);
+                if (s && std::isfinite(s->getVg2Nominal()) && s->getVg2Nominal() > 0.0) {
+                    return s->getVg2Nominal();
+                }
+            }
+            return 0.0;
+        };
+
+        Measurement *best = nullptr;
+        double bestScore = std::numeric_limits<double>::infinity();
+        double bestVg2 = 0.0;
+
+        const int children = currentProject->childCount();
+        for (int i = 0; i < children; ++i) {
+            QTreeWidgetItem *child = currentProject->child(i);
+            if (!child || child->type() != TYP_MEASUREMENT) continue;
+            Measurement *m = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+            if (!m) continue;
+            if (m->getDeviceType() != PENTODE || m->getTestType() != ANODE_CHARACTERISTICS) continue;
+
+            const double vg2 = representativeVg2(m);
+            if (!(vg2 > 0.0)) continue;
+
+            if (std::isfinite(targetVg2) && targetVg2 > 0.0) {
+                const double score = std::fabs(vg2 - targetVg2);
+                if (!best || score < bestScore) {
+                    best = m;
+                    bestScore = score;
+                    bestVg2 = vg2;
+                }
+            } else {
+                if (!best || vg2 > bestVg2) {
+                    best = m;
+                    bestVg2 = vg2;
+                }
+            }
+        }
+
+        if (currentMeasurement &&
+            currentMeasurement->getDeviceType() == PENTODE &&
+            currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
+            const double currVg2 = representativeVg2(currentMeasurement);
+            if (best) {
+                if (std::isfinite(targetVg2) && targetVg2 > 0.0) {
+                    if (std::fabs(currVg2 - targetVg2) <= std::fabs(bestVg2 - targetVg2)) {
+                        best = currentMeasurement;
+                    }
+                } else {
+                    if (currVg2 >= bestVg2) {
+                        best = currentMeasurement;
+                    }
+                }
+            } else {
+                best = currentMeasurement;
+            }
+        }
+
+        measForExport = best;
     } else {
-        measForExport = findMeasurement(exportDeviceType, ANODE_CHARACTERISTICS);
+        if (currentMeasurement &&
+            currentMeasurement->getDeviceType() == exportDeviceType &&
+            currentMeasurement->getTestType() == ANODE_CHARACTERISTICS) {
+            measForExport = currentMeasurement;
+        } else {
+            measForExport = findMeasurement(exportDeviceType, ANODE_CHARACTERISTICS);
+        }
     }
 
     // Resolve models directory to MATCH loadDevices() search, and use a
