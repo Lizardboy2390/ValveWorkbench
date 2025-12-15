@@ -950,6 +950,27 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="processModellingTestsButton">
+              <property name="text">
+               <string>Process Modelling Tests</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="autoscaleModellerPlotButton">
+              <property name="text">
+               <string>Autoscale Plot</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="fullScale50mAButton">
+              <property name="text">
+               <string>Y Max 50mA</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="compareButton">
               <property name="text">
                <string>Compare Device</string>
@@ -1827,6 +1848,13 @@
              <widget class="QPushButton" name="fullHealthButton">
               <property name="text">
                <string>Full Health</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="modellingTestsButton">
+              <property name="text">
+               <string>Modelling Tests</string>
               </property>
              </widget>
             </item>

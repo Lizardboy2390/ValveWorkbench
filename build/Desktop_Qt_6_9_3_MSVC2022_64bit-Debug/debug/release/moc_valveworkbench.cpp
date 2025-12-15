@@ -121,6 +121,10 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         "on_pushButton_4_clicked",
         "on_quickHealthButton_clicked",
         "on_fullHealthButton_clicked",
+        "on_modellingTestsButton_clicked",
+        "on_processModellingTestsButton_clicked",
+        "on_autoscaleModellerPlotButton_clicked",
+        "on_fullScale50mAButton_clicked",
         "on_actionSave_as_Reference_Tube_triggered",
         "on_actionReset_Reference_Tube_triggered",
         "on_datasheetVa_editingFinished",
@@ -309,24 +313,32 @@ template <> constexpr inline auto ValveWorkbench::qt_create_metaobjectdata<qt_me
         QtMocHelpers::SlotData<void()>(80, 2, QMC::AccessPrivate, QMetaType::Void),
         // Slot 'on_fullHealthButton_clicked'
         QtMocHelpers::SlotData<void()>(81, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionSave_as_Reference_Tube_triggered'
+        // Slot 'on_modellingTestsButton_clicked'
         QtMocHelpers::SlotData<void()>(82, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_actionReset_Reference_Tube_triggered'
+        // Slot 'on_processModellingTestsButton_clicked'
         QtMocHelpers::SlotData<void()>(83, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetVa_editingFinished'
+        // Slot 'on_autoscaleModellerPlotButton_clicked'
         QtMocHelpers::SlotData<void()>(84, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetVg_editingFinished'
+        // Slot 'on_fullScale50mAButton_clicked'
         QtMocHelpers::SlotData<void()>(85, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetVg2_editingFinished'
+        // Slot 'on_actionSave_as_Reference_Tube_triggered'
         QtMocHelpers::SlotData<void()>(86, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetIa_editingFinished'
+        // Slot 'on_actionReset_Reference_Tube_triggered'
         QtMocHelpers::SlotData<void()>(87, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetGm_editingFinished'
+        // Slot 'on_datasheetVa_editingFinished'
         QtMocHelpers::SlotData<void()>(88, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetMu_editingFinished'
+        // Slot 'on_datasheetVg_editingFinished'
         QtMocHelpers::SlotData<void()>(89, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'on_datasheetRp_editingFinished'
+        // Slot 'on_datasheetVg2_editingFinished'
         QtMocHelpers::SlotData<void()>(90, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_datasheetIa_editingFinished'
+        QtMocHelpers::SlotData<void()>(91, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_datasheetGm_editingFinished'
+        QtMocHelpers::SlotData<void()>(92, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_datasheetMu_editingFinished'
+        QtMocHelpers::SlotData<void()>(93, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_datasheetRp_editingFinished'
+        QtMocHelpers::SlotData<void()>(94, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -420,15 +432,19 @@ void ValveWorkbench::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _
         case 67: _t->on_pushButton_4_clicked(); break;
         case 68: _t->on_quickHealthButton_clicked(); break;
         case 69: _t->on_fullHealthButton_clicked(); break;
-        case 70: _t->on_actionSave_as_Reference_Tube_triggered(); break;
-        case 71: _t->on_actionReset_Reference_Tube_triggered(); break;
-        case 72: _t->on_datasheetVa_editingFinished(); break;
-        case 73: _t->on_datasheetVg_editingFinished(); break;
-        case 74: _t->on_datasheetVg2_editingFinished(); break;
-        case 75: _t->on_datasheetIa_editingFinished(); break;
-        case 76: _t->on_datasheetGm_editingFinished(); break;
-        case 77: _t->on_datasheetMu_editingFinished(); break;
-        case 78: _t->on_datasheetRp_editingFinished(); break;
+        case 70: _t->on_modellingTestsButton_clicked(); break;
+        case 71: _t->on_processModellingTestsButton_clicked(); break;
+        case 72: _t->on_autoscaleModellerPlotButton_clicked(); break;
+        case 73: _t->on_fullScale50mAButton_clicked(); break;
+        case 74: _t->on_actionSave_as_Reference_Tube_triggered(); break;
+        case 75: _t->on_actionReset_Reference_Tube_triggered(); break;
+        case 76: _t->on_datasheetVa_editingFinished(); break;
+        case 77: _t->on_datasheetVg_editingFinished(); break;
+        case 78: _t->on_datasheetVg2_editingFinished(); break;
+        case 79: _t->on_datasheetIa_editingFinished(); break;
+        case 80: _t->on_datasheetGm_editingFinished(); break;
+        case 81: _t->on_datasheetMu_editingFinished(); break;
+        case 82: _t->on_datasheetRp_editingFinished(); break;
         default: ;
         }
     }
@@ -455,14 +471,14 @@ int ValveWorkbench::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 79)
+        if (_id < 83)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 79;
+        _id -= 83;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 79)
+        if (_id < 83)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 79;
+        _id -= 83;
     }
     return _id;
 }

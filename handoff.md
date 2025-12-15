@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-14 (Pentode Health UI + Screen Health ref handling, Health %/tooltip consistency, template analyserDefaults snapshot sanitization)
+Last updated: 2025-12-15 (Modeller pentode fit pipeline: transfer repeats + binning, threaded-fit lifetime fix; model input sweep acceptance; Analyser LCD semantics fix; UI triage notes)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -12,6 +12,10 @@ while keeping the **rules** and current **technical state** clear.
   - Device types: Triode, Pentode, Triode-Connected Pentode, Double Triode.
   - Test types: Anode Characteristics, Transfer Characteristics,
     Screen Characteristics.
+
+- **Analyser tab indicators (repurposed heater LCDs)**
+  - `heaterVlcd` displays the current firmware averaging window (`S0` samples-per-measurement).
+  - `heaterIlcd` displays the count of sweeps/points that exceeded verification retry limits.
 
 - **Per-sweep behaviour (pentode transfer)**
   - For pentode transfer-characteristics (Va fixed, Vg2 stepped, Vg1 swept):
@@ -136,6 +140,19 @@ while keeping the **rules** and current **technical state** clear.
     ~70% along the curve and inside the visible axes. This path should be
     treated as the reference for any future label work on measurement plots.
 
+- **Modeller pentode fitting (Process Modelling Tests) – 2025-12-15**
+  - Transfer-characteristics measurements are now treated as a **constraint** rather than raw dense data:
+    - Multiple transfer repeats are captured (including Vg2=200 V) to stabilise gm estimation.
+    - Transfer samples are **binned/averaged by Vg1** and grouped by the test condition `(Va, Vg2)` so families are not mixed.
+  - Threaded fit robustness:
+    - The dynamically created binned transfer `Measurement` clones are stored in a ValveWorkbench member so they outlive the async solve thread.
+  - Model input robustness:
+    - `Model::addMeasurement()` accepts anode-characteristics sweeps that end early if they look like a **current/power limit hit**, preventing informative mid-grid sweeps from being dropped.
+
+- **UI triage notes (next) – 2025-12-15**
+  - Modeller should make it clearer which measurement/family set the red model curves are being compared to (include pentode screen-voltage context).
+  - Re-check Modeller plot scaling behaviour after adding Autoscale/fixed-scale controls (especially when switching tabs/devices).
+
 - **Export-to-Device presets (analyserDefaults vs measurement)**
   - Exporting a fitted model from the Analyser/Modeller side writes a single JSON preset that combines:
     - `analyserDefaults`: the ranges/limits the Analyser should restore when the preset is loaded.
@@ -172,6 +189,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 - [x] Verify valveworkbench.cpp file integrity after manual revert — 2025-11-30: Verified manually after revert; content matches expected baseline.
 - [x] Test compilation to ensure no remaining corruption — 2025-11-30: Full project rebuild in Qt Creator; no errors.
 - [ ] Complete time-domain harmonic heatmap using proper methodology
+- [ ] UI follow-up after modelling work: clarify Modeller plot context (which measurement/Vg2), and review plot scaling defaults and tab-switch behaviour.
 - [x] Document any changes properly in handoff.md — 2025-11-30: Updated with Designer Autoscale Y semantics and output-stage axis behaviour.
 - [ ] Follow ALL Global Rules without exception
  - [ ] Validate Quick/Full Health triode metrics against real hardware (central and corner tests) and tune scoring thresholds; decide on double-triode support semantics once the triode path is stable, including double-triode A/B symmetry and run-to-run Ia/gm drift.

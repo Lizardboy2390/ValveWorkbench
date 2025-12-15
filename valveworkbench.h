@@ -12,6 +12,8 @@
 #include <QThread>
 #include <QCoreApplication>
 #include <QCheckBox>
+ #include <memory>
+ #include <vector>
 
 class QLabel;
 class QGraphicsView;
@@ -193,6 +195,12 @@ private slots:
     void on_quickHealthButton_clicked();
     void on_fullHealthButton_clicked();
 
+    void on_modellingTestsButton_clicked();
+    void on_processModellingTestsButton_clicked();
+
+    void on_autoscaleModellerPlotButton_clicked();
+    void on_fullScale50mAButton_clicked();
+
     void on_actionSave_as_Reference_Tube_triggered();
     void on_actionReset_Reference_Tube_triggered();
 
@@ -226,6 +234,25 @@ private:
         double gm;
         double rp;   // Measured plate resistance (ohms); 0.0 if unavailable
         double ig2;  // Screen current (mA); 0.0 if unavailable
+    };
+
+    struct ModellingTestStep {
+        QString label;
+        int deviceType;
+        int testType;
+        bool triodeConnectedPentode;
+
+        double anodeStart;
+        double anodeStop;
+        double anodeStep;
+
+        double gridStart;
+        double gridStop;
+        double gridStep;
+
+        double screenStart;
+        double screenStop;
+        double screenStep;
     };
 
     Ui::ValveWorkbench *ui;
@@ -334,6 +361,7 @@ private:
     Model *triodeModelSecondary = nullptr;
     Measurement *triodeMeasurementPrimary = nullptr;
     Measurement *triodeMeasurementSecondary = nullptr;
+    std::vector<std::unique_ptr<Measurement>> processModellingTestsBinnedTransfers;
     QList<Measurement *> triodeBClones;
     bool triodeBFitPending = false;
     bool runningTriodeBFit = false;
@@ -376,6 +404,26 @@ private:
     double savedScreenStartForHealth = 0.0;
     double savedScreenStopForHealth = 0.0;
     double savedScreenStepForHealth = 0.0;
+
+    bool modellingRunActive = false;
+    int modellingRunIndex = 0;
+    QList<ModellingTestStep> modellingSteps;
+
+    bool modellingStateSaved = false;
+    int savedDeviceTypeForModelling = 0;
+    bool savedIsTriodeConnectedForModelling = false;
+    int savedTestTypeForModelling = 0;
+    double savedAnodeStartForModelling = 0.0;
+    double savedAnodeStopForModelling = 0.0;
+    double savedAnodeStepForModelling = 0.0;
+    double savedGridStartForModelling = 0.0;
+    double savedGridStopForModelling = 0.0;
+    double savedGridStepForModelling = 0.0;
+    double savedScreenStartForModelling = 0.0;
+    double savedScreenStopForModelling = 0.0;
+    double savedScreenStepForModelling = 0.0;
+    double savedIaMaxForModelling = 0.0;
+    double savedPMaxForModelling = 0.0;
 
     PreferencesDialog preferencesDialog;
 
@@ -457,6 +505,11 @@ private:
     void finalizeHealthRun();
 
     bool captureHealthReferenceFromLastRun();
+
+    void applyModellingStep(const ModellingTestStep &step);
+    void restoreModellingState();
+
+    QList<Measurement *> collectModellingTestMeasurements(QTreeWidgetItem *projectItem) const;
 
     void runHarmonicsScan();
     void runHarmonicsBiasSweep();

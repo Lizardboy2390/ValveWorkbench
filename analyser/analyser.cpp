@@ -22,6 +22,16 @@ Analyser::~Analyser()
 {
 }
 
+int Analyser::getAveragingSamples() const
+{
+    return averagingSamples;
+}
+
+int Analyser::getRetryLimitExceededCount() const
+{
+    return retryLimitExceededCount;
+}
+
 void Analyser::setDeviceType(int newDeviceType)
 {
     deviceType = newDeviceType;
@@ -70,8 +80,8 @@ Sample *Analyser::createSample(QString response)
         qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
               match.captured(5).toInt(), match.captured(6).toInt(), ia);
     }
-    double vh = match.captured(1).toDouble();
-    double ih = match.captured(2).toDouble();
+    double vh = convertMeasuredVoltage(HEATER, match.captured(1).toInt());
+    double ih = convertMeasuredCurrent(HEATER, match.captured(2).toInt());
 
     // Debug raw ADC values
     int rawCurrent = match.captured(5).toInt();
@@ -329,6 +339,8 @@ void Analyser::startTest()
         }
     }
 
+    averagingSamples = avgSamples;
+    retryLimitExceededCount = 0;
     sendCommand(buildSetCommand("S0 ", avgSamples));
 
     measuredIaMax = 0.0;
@@ -1054,6 +1066,7 @@ void Analyser::checkResponse(QString response)
                     verificationAttempts++;
                     if (verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
                         qWarning("Verification failed after %d attempts - aborting sweep", MAX_VERIFICATION_ATTEMPTS);
+                        retryLimitExceededCount++;
                         isVerifyingHardware = false;
                         verificationAttempts = 0;
                         isEndSweep = true;

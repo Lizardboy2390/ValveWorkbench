@@ -11,6 +11,18 @@ Measurement::Measurement()
 void Measurement::reset()
 {
     sweeps.clear();
+    triodeConnectedPentode = false;
+    customLabel.clear();
+}
+
+void Measurement::setCustomLabel(const QString &label)
+{
+    customLabel = label;
+}
+
+const QString &Measurement::getCustomLabel() const
+{
+    return customLabel;
 }
 
 void Measurement::addSweep(Sweep *sweep)
@@ -47,6 +59,14 @@ void Measurement::fromJson(QJsonObject source)
         } else {
             deviceType = TRIODE;
         }
+    }
+
+    if (source.contains("triodeConnectedPentode") && source["triodeConnectedPentode"].isBool()) {
+        triodeConnectedPentode = source["triodeConnectedPentode"].toBool();
+    }
+
+    if (source.contains("customLabel") && source["customLabel"].isString()) {
+        customLabel = source["customLabel"].toString();
     }
 
     sweeps.clear();
@@ -138,6 +158,18 @@ void Measurement::toJson(QJsonObject &destination)
 
     if (testType == ANODE_CHARACTERISTICS) {
         destination["testType"] = "anodeCharacteristics";
+    } else if (testType == TRANSFER_CHARACTERISTICS) {
+        destination["testType"] = "transferCharacteristics";
+    } else if (testType == SCREEN_CHARACTERISTICS) {
+        destination["testType"] = "screenCharacteristics";
+    }
+
+    if (triodeConnectedPentode) {
+        destination["triodeConnectedPentode"] = true;
+    }
+
+    if (!customLabel.isEmpty()) {
+        destination["customLabel"] = customLabel;
     }
 
     destination["vh"] = heaterVoltage;
@@ -196,6 +228,9 @@ QTreeWidgetItem *Measurement::buildTree(QTreeWidgetItem *parent)
         sweeps.at(i)->buildTree(item);
     }
 
+    // Keep measurements collapsed by default so the tree does not explode into
+    // every sweep/sample unless the user explicitly expands a measurement.
+    item->setExpanded(false);
     parent->setExpanded(true);
     qDebug("Measurement::buildTree completed");
 
@@ -204,6 +239,9 @@ QTreeWidgetItem *Measurement::buildTree(QTreeWidgetItem *parent)
 
 QString Measurement::measurementName()
 {
+    if (!customLabel.isEmpty()) {
+        return customLabel;
+    }
     return deviceName() + " " + testName();
 }
 

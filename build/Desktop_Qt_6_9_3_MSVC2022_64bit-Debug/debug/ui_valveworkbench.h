@@ -142,6 +142,9 @@ public:
     QSpacerItem *horizontalSpacer_10;
     QPushButton *fitTriodeButton;
     QPushButton *fitPentodeButton;
+    QPushButton *processModellingTestsButton;
+    QPushButton *autoscaleModellerPlotButton;
+    QPushButton *fullScale50mAButton;
     QPushButton *compareButton;
     QSpacerItem *horizontalSpacer_12;
     QWidget *tab_3;
@@ -207,6 +210,7 @@ public:
     QPushButton *runButton;
     QPushButton *quickHealthButton;
     QPushButton *fullHealthButton;
+    QPushButton *modellingTestsButton;
     QSpacerItem *horizontalSpacer_18;
     QHBoxLayout *horizontalLayout_healthScores;
     QSpacerItem *horizontalSpacer_healthScoresLeft;
@@ -876,6 +880,21 @@ public:
 
         horizontalLayout_3->addWidget(fitPentodeButton);
 
+        processModellingTestsButton = new QPushButton(layoutWidget);
+        processModellingTestsButton->setObjectName("processModellingTestsButton");
+
+        horizontalLayout_3->addWidget(processModellingTestsButton);
+
+        autoscaleModellerPlotButton = new QPushButton(layoutWidget);
+        autoscaleModellerPlotButton->setObjectName("autoscaleModellerPlotButton");
+
+        horizontalLayout_3->addWidget(autoscaleModellerPlotButton);
+
+        fullScale50mAButton = new QPushButton(layoutWidget);
+        fullScale50mAButton->setObjectName("fullScale50mAButton");
+
+        horizontalLayout_3->addWidget(fullScale50mAButton);
+
         compareButton = new QPushButton(layoutWidget);
         compareButton->setObjectName("compareButton");
 
@@ -1297,6 +1316,11 @@ public:
         fullHealthButton->setObjectName("fullHealthButton");
 
         horizontalLayout_35->addWidget(fullHealthButton);
+
+        modellingTestsButton = new QPushButton(layoutWidget_2);
+        modellingTestsButton->setObjectName("modellingTestsButton");
+
+        horizontalLayout_35->addWidget(modellingTestsButton);
 
         horizontalSpacer_18 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
@@ -2087,6 +2111,9 @@ public:
         label->setText(QCoreApplication::translate("ValveWorkbench", "Properties", nullptr));
         fitTriodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Triode", nullptr));
         fitPentodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Pentode...", nullptr));
+        processModellingTestsButton->setText(QCoreApplication::translate("ValveWorkbench", "Process Modelling Tests", nullptr));
+        autoscaleModellerPlotButton->setText(QCoreApplication::translate("ValveWorkbench", "Autoscale Plot", nullptr));
+        fullScale50mAButton->setText(QCoreApplication::translate("ValveWorkbench", "Y Max 50mA", nullptr));
         compareButton->setText(QCoreApplication::translate("ValveWorkbench", "Compare Device", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("ValveWorkbench", "Modeller", nullptr));
         pushButton_3->setText(QCoreApplication::translate("ValveWorkbench", "Load Template...", nullptr));
@@ -2107,6 +2134,7 @@ public:
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
         quickHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Quick Health", nullptr));
         fullHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Full Health", nullptr));
+        modellingTestsButton->setText(QCoreApplication::translate("ValveWorkbench", "Modelling Tests", nullptr));
         quickHealthDsLabel->setText(QCoreApplication::translate("ValveWorkbench", "DS:", nullptr));
         quickHealthRefLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref:", nullptr));
         fullHealthDsLabel->setText(QCoreApplication::translate("ValveWorkbench", "DS:", nullptr));

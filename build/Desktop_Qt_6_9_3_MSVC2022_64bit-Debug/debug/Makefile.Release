@@ -1988,6 +1988,7 @@ release\moc_valveworkbench.cpp: ..\..\..\valveworkbench.h \
 		..\..\..\valvemodel\data\measurement.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -2016,7 +2017,6 @@ release\moc_valveworkbench.cpp: ..\..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlabel.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		..\..\..\valvemodel\ui\parameter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\korentriode.h \
 		..\..\..\valvemodel\model\simpletriode.h \
@@ -9104,6 +9104,7 @@ release\analyser.obj: ..\..\..\analyser\analyser.cpp ..\..\..\analyser\analyser.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qrubberband.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtreewidgetitemiterator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -9595,6 +9596,7 @@ release\main.obj: ..\..\..\main.cpp ..\..\..\valveworkbench.h \
 		..\..\..\valvemodel\data\measurement.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -9623,7 +9625,6 @@ release\main.obj: ..\..\..\main.cpp ..\..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlabel.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		..\..\..\valvemodel\ui\parameter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\korentriode.h \
 		..\..\..\valvemodel\model\simpletriode.h \
@@ -12339,6 +12340,7 @@ release\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.
 		..\..\..\valvemodel\data\measurement.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -12367,7 +12369,6 @@ release\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlabel.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		..\..\..\valvemodel\ui\parameter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\korentriode.h \
 		..\..\..\valvemodel\model\simpletriode.h \
@@ -19467,6 +19468,7 @@ release\measurement.obj: ..\..\..\valvemodel\data\measurement.cpp ..\..\..\valve
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qrubberband.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtreewidgetitemiterator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -19716,6 +19718,7 @@ release\project.obj: ..\..\..\valvemodel\data\project.cpp ..\..\..\valvemodel\da
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qrubberband.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtreewidgetitemiterator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -19752,7 +19755,6 @@ release\project.obj: ..\..\..\valvemodel\data\project.cpp ..\..\..\valvemodel\da
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlabel.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		..\..\..\valvemodel\ui\parameter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\..\valvemodel\model\korentriode.h \
 		..\..\..\valvemodel\model\simpletriode.h \
@@ -20597,6 +20599,7 @@ release\sweep.obj: ..\..\..\valvemodel\data\sweep.cpp ..\..\..\valvemodel\data\s
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\..\valvemodel\data\measurement.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QDebug
 
 release\cohenhelietriode.obj: ..\..\..\valvemodel\model\cohenhelietriode.cpp ..\..\..\valvemodel\model\cohenhelietriode.h \

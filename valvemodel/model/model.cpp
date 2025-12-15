@@ -186,11 +186,7 @@ void Model::addMeasurement(Measurement *measurement)
 
         const double vaEnd = last->getVa();
 
-        // Some TRIODE-CONNECTED PENTODE sweeps can end early because the analyser/firmware hits
-        // current or power limits before reaching the configured Va_stop. Keep those sweeps for
-        // fitting in that specific mode, otherwise the most informative low-|Vg| curves can be
-        // discarded. Do not apply this relaxation to ordinary triode measurements.
-        const bool allowLimitHitShortSweep = (measurement->getDeviceType() == TRIODE && measurement->isTriodeConnectedPentode());
+        const bool allowLimitHitShortSweep = (measurement->getTestType() == ANODE_CHARACTERISTICS);
         bool looksLikeLimitHit = false;
         double iaEnd = last->getIa();
         double pEnd = 0.0;

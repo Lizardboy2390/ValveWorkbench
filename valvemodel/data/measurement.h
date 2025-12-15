@@ -2,6 +2,7 @@
 
 #include <QTreeWidgetItem>
 #include <QColor>
+#include <QString>
 
 #include "../ui/plot.h"
 
@@ -32,6 +33,9 @@ public:
     QString measurementName();
     QString deviceName();
     QString testName();
+
+    void setCustomLabel(const QString &label);
+    const QString &getCustomLabel() const;
 
     virtual void updateProperties(QTableWidget *properties);
 
@@ -118,6 +122,8 @@ protected:
     // Hint flag: true when this pentode measurement was taken in
     // triode-connected pentode mode (anode and screen driven together).
     bool triodeConnectedPentode = false;
+
+    QString customLabel;
 
     void anodeAxes(Plot *plot);
     QList<QGraphicsItem *> *plotTriodeAnode(Plot *plot, Sweep *sweep = nullptr);

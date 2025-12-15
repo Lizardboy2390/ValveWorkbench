@@ -90,6 +90,10 @@ public:
 
     double getMeasuredIg2Max() const;
 
+    int getAveragingSamples() const;
+
+    int getRetryLimitExceededCount() const;
+
     Measurement *getResult();
 
     bool getIsDataSetValid() const;
@@ -107,6 +111,9 @@ public:
 private:
     double vRefMaster = 4.1;
     double vRefSlave = 4.1;
+
+    int averagingSamples = 0;
+    int retryLimitExceededCount = 0;
 
     double heaterVoltage;
     double aveHeaterVoltage = 6.3;

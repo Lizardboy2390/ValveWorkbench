@@ -40,6 +40,8 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <map>
+#include <vector>
 
 #include "analyser/analyser.h"
 #include "valvemodel/model/model.h"
@@ -683,6 +685,249 @@ void ValveWorkbench::updateDatasheetDisplay()
         setField(ui->triodeB_mu_ref, muStr);
         setField(ui->triodeB_rp_ref, rpStr);
     }
+}
+
+static double axisIntervalFor(double maxValue)
+{
+    double interval = 0.5;
+    if (maxValue > 5.0)   interval = 1.0;
+    if (maxValue > 10.0)  interval = 2.0;
+    if (maxValue > 20.0)  interval = 5.0;
+    if (maxValue > 50.0)  interval = 10.0;
+    if (maxValue > 100.0) interval = 20.0;
+    if (maxValue > 200.0) interval = 50.0;
+    if (maxValue > 500.0) interval = 100.0;
+    return interval;
+}
+
+void ValveWorkbench::on_autoscaleModellerPlotButton_clicked()
+{
+    if (!ui || !currentMeasurement) {
+        return;
+    }
+
+    const int testType = currentMeasurement->getTestType();
+
+    auto measureBounds = [this](double &vaMaxOut, double &iaMaxOut, double &vg1MinOut, double &vg1MaxOut) {
+        vaMaxOut = 0.0;
+        iaMaxOut = 0.0;
+        vg1MinOut = 0.0;
+        vg1MaxOut = 0.0;
+        bool haveVg = false;
+
+        const int sweepCount = currentMeasurement->count();
+        for (int si = 0; si < sweepCount; ++si) {
+            Sweep *sw = currentMeasurement->at(si);
+            if (!sw) continue;
+            const int sampleCount = sw->count();
+            for (int sj = 0; sj < sampleCount; ++sj) {
+                Sample *s = sw->at(sj);
+                if (!s) continue;
+
+                const double va = s->getVa();
+                const double ia = s->getIa();
+                const double vg1 = s->getVg1();
+
+                if (std::isfinite(va) && va > vaMaxOut) vaMaxOut = va;
+                if (std::isfinite(ia) && ia > iaMaxOut) iaMaxOut = ia;
+                if (std::isfinite(vg1)) {
+                    if (!haveVg) {
+                        vg1MinOut = vg1;
+                        vg1MaxOut = vg1;
+                        haveVg = true;
+                    } else {
+                        if (vg1 < vg1MinOut) vg1MinOut = vg1;
+                        if (vg1 > vg1MaxOut) vg1MaxOut = vg1;
+                    }
+                }
+            }
+        }
+
+        // If there were no samples, fall back to config-derived hints.
+        if (!(vaMaxOut > 0.0)) {
+            vaMaxOut = currentMeasurement->getAnodeStop();
+        }
+        if (!(iaMaxOut > 0.0)) {
+            iaMaxOut = currentMeasurement->getIaMax();
+        }
+        if (!haveVg) {
+            const double gridStop = currentMeasurement->getGridStop();
+            vg1MinOut = (gridStop > 0.0) ? -gridStop : -5.0;
+            vg1MaxOut = 0.0;
+        }
+    };
+
+    double vaMaxObs = 0.0;
+    double iaMaxObs = 0.0;
+    double vg1MinObs = 0.0;
+    double vg1MaxObs = 0.0;
+    measureBounds(vaMaxObs, iaMaxObs, vg1MinObs, vg1MaxObs);
+
+    double xStart = 0.0;
+    double xStop = 0.0;
+    if (testType == ANODE_CHARACTERISTICS) {
+        xStart = 0.0;
+        // Autorange X to observed Va (but never exceed the configured stop).
+        xStop = vaMaxObs;
+        const double configured = currentMeasurement->getAnodeStop();
+        if (configured > 0.0 && configured < xStop) {
+            xStop = configured;
+        }
+    } else {
+        // Transfer / screen plots: autorange grid voltage span (clamped to <= 0V on the right).
+        xStart = vg1MinObs;
+        xStop = vg1MaxObs;
+        if (xStop > 0.0) xStop = 0.0;
+        if (xStart > xStop) std::swap(xStart, xStop);
+    }
+    if (!(xStop > xStart)) {
+        xStart = 0.0;
+        xStop = 300.0;
+    }
+
+    double yStop = iaMaxObs;
+    if (std::isfinite(yStop) && yStop > 0.0) {
+        yStop *= 1.05;
+    }
+    if (!(yStop > 0.0)) yStop = 50.0;
+
+    plot.clear();
+    plot.setAxes(xStart, xStop, axisIntervalFor(std::fabs(xStop - xStart)),
+                 0.0, yStop, axisIntervalFor(yStop), 2, 1);
+
+    if (measuredCurves) {
+        plot.remove(measuredCurves);
+        measuredCurves = nullptr;
+    }
+    if (measuredCurvesSecondary) {
+        plot.remove(measuredCurvesSecondary);
+        measuredCurvesSecondary = nullptr;
+    }
+    if (modelledCurves) {
+        plot.remove(modelledCurves);
+        modelledCurves = nullptr;
+    }
+    if (modelledCurvesSecondary) {
+        plot.remove(modelledCurvesSecondary);
+        modelledCurvesSecondary = nullptr;
+    }
+
+    currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
+    if (currentMeasurement->getDeviceType() == PENTODE) {
+        currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+    }
+
+    if (ui->measureCheck && ui->measureCheck->isChecked()) {
+        measuredCurves = currentMeasurement->updatePlotWithoutAxes(&plot);
+        if (measuredCurves) {
+            plot.add(measuredCurves);
+            measuredCurves->setVisible(true);
+        }
+    }
+
+    if (ui->modelCheck && ui->modelCheck->isChecked()) {
+        plotCurrentModelOverMeasurement();
+    }
+}
+
+void ValveWorkbench::on_fullScale50mAButton_clicked()
+{
+    if (!ui || !currentMeasurement) {
+        return;
+    }
+
+    const double xScale = plot.getXScale();
+    const double yScale = plot.getYScale();
+    const double xStart = plot.getXStart();
+    double xStop = xStart;
+    if (xScale > 0.0 && yScale > 0.0) {
+        xStop = xStart + static_cast<double>(PLOT_WIDTH) / xScale;
+    } else {
+        // If the plot hasn't been initialized yet, fall back to autoscale.
+        on_autoscaleModellerPlotButton_clicked();
+        return;
+    }
+
+    plot.clear();
+    plot.setAxes(xStart, xStop, axisIntervalFor(std::fabs(xStop - xStart)),
+                 0.0, 50.0, axisIntervalFor(50.0), 2, 1);
+
+    if (measuredCurves) {
+        plot.remove(measuredCurves);
+        measuredCurves = nullptr;
+    }
+    if (measuredCurvesSecondary) {
+        plot.remove(measuredCurvesSecondary);
+        measuredCurvesSecondary = nullptr;
+    }
+    if (modelledCurves) {
+        plot.remove(modelledCurves);
+        modelledCurves = nullptr;
+    }
+    if (modelledCurvesSecondary) {
+        plot.remove(modelledCurvesSecondary);
+        modelledCurvesSecondary = nullptr;
+    }
+
+    currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
+    if (currentMeasurement->getDeviceType() == PENTODE) {
+        currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
+    }
+
+    if (ui->measureCheck && ui->measureCheck->isChecked()) {
+        measuredCurves = currentMeasurement->updatePlotWithoutAxes(&plot);
+        if (measuredCurves) {
+            plot.add(measuredCurves);
+            measuredCurves->setVisible(true);
+        }
+    }
+
+    if (ui->modelCheck && ui->modelCheck->isChecked()) {
+        plotCurrentModelOverMeasurement();
+    }
+}
+
+QList<Measurement *> ValveWorkbench::collectModellingTestMeasurements(QTreeWidgetItem *projectItem) const
+{
+    QList<Measurement *> result;
+    if (!projectItem) {
+        return result;
+    }
+
+    auto isModellingTestsLabel = [&](const QString &label) -> bool {
+        const QString t = label.trimmed();
+        if (t.isEmpty()) {
+            return false;
+        }
+        if (t.contains(QStringLiteral("Triode-connected"), Qt::CaseInsensitive)) {
+            return true;
+        }
+        if (t.contains(QStringLiteral("Pentode anode"), Qt::CaseInsensitive)) {
+            return true;
+        }
+        if (t.contains(QStringLiteral("Pentode transfer"), Qt::CaseInsensitive)) {
+            return true;
+        }
+        return false;
+    };
+
+    const int children = projectItem->childCount();
+    for (int i = 0; i < children; ++i) {
+        QTreeWidgetItem *child = projectItem->child(i);
+        if (!child || child->type() != TYP_MEASUREMENT) {
+            continue;
+        }
+        Measurement *m = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+        if (!m) {
+            continue;
+        }
+
+        if (m->isTriodeConnectedPentode() || isModellingTestsLabel(m->getCustomLabel())) {
+            result.append(m);
+        }
+    }
+
+    return result;
 }
 
 void ValveWorkbench::syncDatasheetFromUi()
@@ -2840,6 +3085,293 @@ void ValveWorkbench::on_fullHealthButton_clicked()
     }
 
     startHealthRun(HEALTH_FULL);
+}
+
+void ValveWorkbench::on_modellingTestsButton_clicked()
+{
+    if (!analyser) {
+        QMessageBox::warning(this, tr("Modelling Tests"), tr("Analyser is not initialised."));
+        return;
+    }
+
+    if (ui && ui->runButton && ui->runButton->isChecked()) {
+        QMessageBox::warning(this, tr("Modelling Tests"), tr("A test is already running. Please wait for it to finish."));
+        return;
+    }
+
+    // Prompt once for project details (create or update current project)
+    ProjectDialog dialog;
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    if (currentProject == nullptr) {
+        Project *project = new Project();
+        project->setName(dialog.getName());
+        project->setDeviceType(dialog.getDeviceType());
+
+        setSelectedTreeItem(currentProject, false);
+        currentProject = new QTreeWidgetItem(ui->projectTree, TYP_PROJECT);
+        currentProject->setText(0, dialog.getName());
+        currentProject->setIcon(0, QIcon(":/icons/valve32.png"));
+        currentProject->setFlags(Qt::ItemIsEditable | Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        currentProject->setData(0, Qt::UserRole, QVariant::fromValue((void *) project));
+
+        project->setTreeItem(currentProject);
+        setSelectedTreeItem(currentProject, true);
+    } else {
+        Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+        if (project != nullptr) {
+            project->setName(dialog.getName());
+            project->setDeviceType(dialog.getDeviceType());
+        }
+        currentProject->setText(0, dialog.getName());
+    }
+
+    Project *project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+    if (!project) {
+        QMessageBox::warning(this, tr("Modelling Tests"), tr("Invalid project node."));
+        return;
+    }
+
+    modellingStateSaved = true;
+    savedDeviceTypeForModelling = deviceType;
+    savedIsTriodeConnectedForModelling = isTriodeConnectedPentode;
+    savedTestTypeForModelling = testType;
+    savedAnodeStartForModelling = anodeStart;
+    savedAnodeStopForModelling = anodeStop;
+    savedAnodeStepForModelling = anodeStep;
+    savedGridStartForModelling = gridStart;
+    savedGridStopForModelling = gridStop;
+    savedGridStepForModelling = gridStep;
+    savedScreenStartForModelling = screenStart;
+    savedScreenStopForModelling = screenStop;
+    savedScreenStepForModelling = screenStep;
+    savedIaMaxForModelling = iaMax;
+    savedPMaxForModelling = pMax;
+
+    modellingSteps.clear();
+    modellingRunIndex = 0;
+    modellingRunActive = true;
+
+    {
+        ModellingTestStep s;
+        s.label = tr("Triode-connected anode");
+        s.deviceType = PENTODE;
+        s.testType = ANODE_CHARACTERISTICS;
+        s.triodeConnectedPentode = true;
+        s.anodeStart = 0.0;
+        s.anodeStop = 250.0;
+        s.anodeStep = 5.0;
+        s.gridStart = 35.0;
+        s.gridStop = 2.0;
+        s.gridStep = 1.0;
+        s.screenStart = 0.0;
+        s.screenStop = 0.0;
+        s.screenStep = 0.0;
+        modellingSteps.append(s);
+    }
+
+    {
+        ModellingTestStep s;
+        s.label = tr("Pentode transfer (Va=200V, Vg2=150V)");
+        s.deviceType = PENTODE;
+        s.testType = TRANSFER_CHARACTERISTICS;
+        s.triodeConnectedPentode = false;
+        s.anodeStart = 200.0;
+        s.anodeStop = 200.0;
+        s.anodeStep = 200.0;
+        s.gridStart = 2.0;
+        s.gridStop = 35.0;
+        s.gridStep = 1.0;
+        s.screenStart = 150.0;
+        s.screenStop = 150.0;
+        s.screenStep = 150.0;
+        modellingSteps.append(s);
+    }
+
+    {
+        ModellingTestStep s;
+        s.label = tr("Pentode transfer 2 (Va=200V, Vg2=150V)");
+        s.deviceType = PENTODE;
+        s.testType = TRANSFER_CHARACTERISTICS;
+        s.triodeConnectedPentode = false;
+        s.anodeStart = 200.0;
+        s.anodeStop = 200.0;
+        s.anodeStep = 200.0;
+        s.gridStart = 2.0;
+        s.gridStop = 35.0;
+        s.gridStep = 1.0;
+        s.screenStart = 150.0;
+        s.screenStop = 150.0;
+        s.screenStep = 150.0;
+        modellingSteps.append(s);
+    }
+
+    {
+        ModellingTestStep s;
+        s.label = tr("Pentode transfer (Va=200V, Vg2=200V)");
+        s.deviceType = PENTODE;
+        s.testType = TRANSFER_CHARACTERISTICS;
+        s.triodeConnectedPentode = false;
+        s.anodeStart = 200.0;
+        s.anodeStop = 200.0;
+        s.anodeStep = 200.0;
+        s.gridStart = 2.0;
+        s.gridStop = 35.0;
+        s.gridStep = 1.0;
+        s.screenStart = 200.0;
+        s.screenStop = 200.0;
+        s.screenStep = 200.0;
+        modellingSteps.append(s);
+    }
+
+    const double vg2List[3] = { 100.0, 150.0, 200.0 };
+    for (int i = 0; i < 3; ++i) {
+        const double vg2 = vg2List[i];
+        ModellingTestStep s;
+        s.label = tr("Pentode anode (Vg2=%1V)").arg(QString::number(vg2, 'f', 0));
+        s.deviceType = PENTODE;
+        s.testType = ANODE_CHARACTERISTICS;
+        s.triodeConnectedPentode = false;
+        s.anodeStart = 0.0;
+        s.anodeStop = 400.0;
+        s.anodeStep = 5.0;
+        s.gridStart = 35.0;
+        s.gridStop = 2.0;
+        s.gridStep = 1.0;
+        s.screenStart = vg2;
+        s.screenStop = vg2;
+        s.screenStep = vg2;
+        modellingSteps.append(s);
+    }
+
+    applyModellingStep(modellingSteps.at(0));
+    on_runButton_clicked();
+}
+
+void ValveWorkbench::applyModellingStep(const ModellingTestStep &s)
+{
+    int deviceIndex = -1;
+    for (int i = 0; i < ui->deviceType->count(); ++i) {
+        if (ui->deviceType->itemData(i).toInt() != s.deviceType) {
+            continue;
+        }
+        if (s.triodeConnectedPentode) {
+            if (ui->deviceType->itemText(i) == QLatin1String("Triode-Connected Pentode")) {
+                deviceIndex = i;
+                break;
+            }
+        } else {
+            if (s.deviceType == PENTODE && ui->deviceType->itemText(i) == QLatin1String("Pentode")) {
+                deviceIndex = i;
+                break;
+            }
+            if (s.deviceType == TRIODE && ui->deviceType->itemText(i) == QLatin1String("Triode")) {
+                deviceIndex = i;
+                break;
+            }
+            if (s.deviceType == DIODE && ui->deviceType->itemText(i) == QLatin1String("Diode")) {
+                deviceIndex = i;
+                break;
+            }
+        }
+    }
+    if (deviceIndex < 0) {
+        deviceIndex = 0;
+    }
+
+    ui->deviceType->setCurrentIndex(deviceIndex);
+    on_deviceType_currentIndexChanged(deviceIndex);
+
+    int testIndex = -1;
+    for (int i = 0; i < ui->testType->count(); ++i) {
+        if (ui->testType->itemData(i).toInt() == s.testType) {
+            testIndex = i;
+            break;
+        }
+    }
+    if (testIndex >= 0) {
+        ui->testType->setCurrentIndex(testIndex);
+        on_testType_currentIndexChanged(testIndex);
+    }
+
+    testType = s.testType;
+    anodeStart = s.anodeStart;
+    anodeStop  = s.anodeStop;
+    anodeStep  = s.anodeStep;
+    gridStart  = s.gridStart;
+    gridStop   = s.gridStop;
+    gridStep   = s.gridStep;
+    screenStart = s.screenStart;
+    screenStop  = s.screenStop;
+    screenStep  = s.screenStep;
+
+    iaMax = std::max(iaMax, 80.0);
+    pMax  = std::max(pMax, 20.0);
+
+    updateParameterDisplay();
+}
+
+void ValveWorkbench::restoreModellingState()
+{
+    if (!modellingStateSaved) {
+        return;
+    }
+
+    deviceType = savedDeviceTypeForModelling;
+    isTriodeConnectedPentode = savedIsTriodeConnectedForModelling;
+
+    int deviceIndex = -1;
+    for (int i = 0; i < ui->deviceType->count(); ++i) {
+        if (ui->deviceType->itemData(i).toInt() != deviceType) {
+            continue;
+        }
+        if (isTriodeConnectedPentode) {
+            if (ui->deviceType->itemText(i) == QLatin1String("Triode-Connected Pentode")) {
+                deviceIndex = i;
+                break;
+            }
+        } else {
+            deviceIndex = i;
+            if (deviceType == PENTODE && ui->deviceType->itemText(i) == QLatin1String("Pentode")) break;
+            if (deviceType == TRIODE && ui->deviceType->itemText(i) == QLatin1String("Triode")) break;
+            if (deviceType == DIODE && ui->deviceType->itemText(i) == QLatin1String("Diode")) break;
+        }
+    }
+    if (deviceIndex < 0) {
+        deviceIndex = 0;
+    }
+    ui->deviceType->setCurrentIndex(deviceIndex);
+    on_deviceType_currentIndexChanged(deviceIndex);
+
+    int testIndex = -1;
+    for (int i = 0; i < ui->testType->count(); ++i) {
+        if (ui->testType->itemData(i).toInt() == savedTestTypeForModelling) {
+            testIndex = i;
+            break;
+        }
+    }
+    if (testIndex >= 0) {
+        ui->testType->setCurrentIndex(testIndex);
+        on_testType_currentIndexChanged(testIndex);
+    }
+
+    testType = savedTestTypeForModelling;
+    anodeStart = savedAnodeStartForModelling;
+    anodeStop  = savedAnodeStopForModelling;
+    anodeStep  = savedAnodeStepForModelling;
+    gridStart  = savedGridStartForModelling;
+    gridStop   = savedGridStopForModelling;
+    gridStep   = savedGridStepForModelling;
+    screenStart = savedScreenStartForModelling;
+    screenStop  = savedScreenStopForModelling;
+    screenStep  = savedScreenStepForModelling;
+    iaMax = savedIaMaxForModelling;
+    pMax  = savedPMaxForModelling;
+
+    modellingStateSaved = false;
+    updateParameterDisplay();
 }
 
 
@@ -7596,17 +8128,19 @@ void ValveWorkbench::on_mes_mod_select_stateChanged(int state)
 void ValveWorkbench::updateHeater(double vh, double ih)
 {
     // Update the heater display
-    if (vh >= 0.0) {
-        QString vhValue = QString::number(static_cast<int>(vh));
-        ui->heaterVlcd->display(vhValue);
+    Q_UNUSED(vh);
+    Q_UNUSED(ih);
+
+    if (!analyser) {
+        return;
     }
 
-    if (ih >= 0.0) {
-        if (ih >= 4.0) {
-            badRetryCount++;
-        }
-        QString ihValue = QString::number(badRetryCount);
-        ui->heaterIlcd->display(ihValue);
+    if (ui->heaterVlcd) {
+        ui->heaterVlcd->display(QString::number(analyser->getAveragingSamples()));
+    }
+
+    if (ui->heaterIlcd) {
+        ui->heaterIlcd->display(QString::number(analyser->getRetryLimitExceededCount()));
     }
 }
 
@@ -7733,6 +8267,69 @@ void ValveWorkbench::testFinished()
     ui->measureCheck->setChecked(true);
 
     populateDataTableFromMeasurement(currentMeasurement);
+
+    if (modellingRunActive) {
+        Project *project = nullptr;
+        if (currentProject) {
+            project = (Project *) currentProject->data(0, Qt::UserRole).value<void *>();
+        }
+
+        if (!project) {
+            modellingRunActive = false;
+            modellingRunIndex = 0;
+            modellingSteps.clear();
+            restoreModellingState();
+            QMessageBox::warning(this, tr("Modelling Tests"), tr("No project is available to save measurements."));
+            return;
+        }
+
+        if (currentMeasurement && modellingRunIndex >= 0 && modellingRunIndex < modellingSteps.size()) {
+            const ModellingTestStep step = modellingSteps.at(modellingRunIndex);
+            currentMeasurement->setCustomLabel(step.label);
+
+            if (project->addMeasurement(currentMeasurement)) {
+                currentMeasurement->buildTree(currentProject);
+            }
+
+            currentMeasurementItem = nullptr;
+            if (currentProject) {
+                for (int i = 0; i < currentProject->childCount(); ++i) {
+                    QTreeWidgetItem *child = currentProject->child(i);
+                    if (!child) continue;
+                    if (child->type() != TYP_MEASUREMENT) continue;
+                    void *mData = child->data(0, Qt::UserRole).value<void *>();
+                    if (mData == static_cast<void *>(currentMeasurement)) {
+                        currentMeasurementItem = child;
+                        break;
+                    }
+                }
+            }
+
+            ui->btnAddToProject->setEnabled(false);
+        }
+
+        modellingRunIndex++;
+        if (modellingRunIndex >= 0 && modellingRunIndex < modellingSteps.size()) {
+            const ModellingTestStep next = modellingSteps.at(modellingRunIndex);
+            QMetaObject::invokeMethod(
+                this,
+                [this, next]() {
+                    applyModellingStep(next);
+                    on_runButton_clicked();
+                },
+                Qt::QueuedConnection);
+            return;
+        }
+
+        modellingRunActive = false;
+        modellingRunIndex = 0;
+        modellingSteps.clear();
+        restoreModellingState();
+        if (ui && ui->statusbar) {
+            ui->statusbar->showMessage(tr("Modelling Tests complete."), 8000);
+        }
+        return;
+    }
 
     if (healthRunActive) {
         // Pentode Health: first run is an OP-finder sweep.
@@ -7895,6 +8492,16 @@ void ValveWorkbench::testAborted()
     qInfo("Test aborted");
     ui->runButton->setChecked(false);
     ui->progressBar->setVisible(false);
+
+    if (modellingRunActive) {
+        modellingRunActive = false;
+        modellingRunIndex = 0;
+        modellingSteps.clear();
+        restoreModellingState();
+        if (ui && ui->statusbar) {
+            ui->statusbar->showMessage(tr("Modelling Tests aborted."), 8000);
+        }
+    }
 
     if (healthRunActive) {
         healthRunActive = false;
@@ -9669,6 +10276,14 @@ void ValveWorkbench::on_runButton_clicked()
 
     log("Starting test");
     analyser->startTest();
+
+    if (ui->heaterVlcd) {
+        ui->heaterVlcd->display(QString::number(analyser->getAveragingSamples()));
+    }
+
+    if (ui->heaterIlcd) {
+        ui->heaterIlcd->display(QString::number(analyser->getRetryLimitExceededCount()));
+    }
 }
 
 void ValveWorkbench::on_btnAddToProject_clicked()
@@ -10034,6 +10649,7 @@ void ValveWorkbench::loadModel()
     if (modelProject == nullptr) {
         ui->fitPentodeButton->setEnabled(true); // Allow modelling again
         ui->fitTriodeButton->setEnabled(true);
+        if (ui && ui->processModellingTestsButton) ui->processModellingTestsButton->setEnabled(true);
         return;
     }
 
@@ -10044,6 +10660,7 @@ void ValveWorkbench::loadModel()
 
         ui->fitPentodeButton->setEnabled(true); // Allow modelling again
         ui->fitTriodeButton->setEnabled(true);
+        if (ui && ui->processModellingTestsButton) ui->processModellingTestsButton->setEnabled(true);
 
         return;
     }
@@ -10131,6 +10748,7 @@ void ValveWorkbench::loadModel()
 
     ui->fitPentodeButton->setEnabled(true); // Allow modelling again
     ui->fitTriodeButton->setEnabled(true);
+    if (ui && ui->processModellingTestsButton) ui->processModellingTestsButton->setEnabled(true);
     modelProject = nullptr;
 
     if (triodeMeasurementPrimary != nullptr) {
@@ -10174,6 +10792,7 @@ void ValveWorkbench::loadModel()
     if (model && (model->getType() == GARDINER_PENTODE ||
                   model->getType() == REEFMAN_DERK_PENTODE ||
                   model->getType() == REEFMAN_DERK_E_PENTODE ||
+                  model->getType() == EXTRACT_DERK_E_PENTODE ||
                   model->getType() == SIMPLE_MANUAL_PENTODE)) {
 
         Measurement *pentodeMeasurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
@@ -10226,6 +10845,371 @@ void ValveWorkbench::on_fitPentodeButton_clicked()
 
     modelPentode();
 
+}
+
+void ValveWorkbench::on_processModellingTestsButton_clicked()
+{
+    QTreeWidgetItem *projectItem = currentProject;
+    if (projectItem && projectItem->type() != TYP_PROJECT) {
+        projectItem = getParent(projectItem, TYP_PROJECT);
+    }
+
+    if (!projectItem || projectItem->type() != TYP_PROJECT) {
+        QMessageBox::warning(this, tr("Process Modelling Tests"), tr("Please select a project in the project tree."));
+        return;
+    }
+
+    QList<Measurement *> measurements = collectModellingTestMeasurements(projectItem);
+    if (measurements.isEmpty()) {
+        QMessageBox::warning(this, tr("Process Modelling Tests"), tr("No Modelling Tests measurements were found in this project."));
+        return;
+    }
+
+    Measurement *triodeConnected = nullptr;
+    QList<Measurement *> pentodeAnodes;
+    QList<Measurement *> transfers;
+    for (Measurement *m : measurements) {
+        if (!m) {
+            continue;
+        }
+        if (m->isTriodeConnectedPentode()) {
+            triodeConnected = m;
+            continue;
+        }
+        if (m->getDeviceType() == PENTODE && m->getTestType() == ANODE_CHARACTERISTICS) {
+            pentodeAnodes.append(m);
+            continue;
+        }
+        if (m->getDeviceType() == PENTODE && m->getTestType() == TRANSFER_CHARACTERISTICS) {
+            transfers.append(m);
+            continue;
+        }
+    }
+
+    if (pentodeAnodes.isEmpty()) {
+        QMessageBox::warning(this, tr("Process Modelling Tests"), tr("No pentode anode-characteristics Modelling Tests measurements were found in this project."));
+        return;
+    }
+
+    auto parseVg2FromLabel = [](const QString &label, bool *okOut) -> double {
+        if (okOut) *okOut = false;
+        QRegularExpression re(QStringLiteral(R"(Vg2\s*=\s*(\d+(?:\.\d+)?)\s*V)"), QRegularExpression::CaseInsensitiveOption);
+        QRegularExpressionMatch m = re.match(label);
+        if (!m.hasMatch()) {
+            return 0.0;
+        }
+        bool ok = false;
+        const double vg2 = m.captured(1).toDouble(&ok);
+        if (okOut) *okOut = ok;
+        return ok ? vg2 : 0.0;
+    };
+
+    Measurement *seedMeasurement = nullptr;
+    for (Measurement *m : pentodeAnodes) {
+        if (!m) continue;
+        bool ok = false;
+        const double vg2 = parseVg2FromLabel(m->getCustomLabel(), &ok);
+        if (ok && std::fabs(vg2 - 150.0) < 0.5) {
+            seedMeasurement = m;
+            break;
+        }
+    }
+    if (seedMeasurement == nullptr) {
+        seedMeasurement = pentodeAnodes.first();
+    }
+
+    modelProject = projectItem;
+    if (ui && ui->fitPentodeButton) ui->fitPentodeButton->setEnabled(false);
+    if (ui && ui->fitTriodeButton) ui->fitTriodeButton->setEnabled(false);
+    if (ui && ui->processModellingTestsButton) ui->processModellingTestsButton->setEnabled(false);
+
+    CohenHelieTriode *triodeModel = (CohenHelieTriode *) findModel(COHEN_HELIE_TRIODE);
+    if (triodeModel == nullptr && currentDevice && currentDevice->getDeviceType() == PENTODE && currentDevice->getTriodeSeed() != nullptr) {
+        triodeModel = currentDevice->getTriodeSeed();
+    }
+
+    std::unique_ptr<CohenHelieTriode> triodeSeedFromMeasurement;
+    if (triodeModel == nullptr && triodeConnected != nullptr) {
+        Estimate triodeEstimate;
+        triodeEstimate.estimateTriode(triodeConnected);
+        triodeSeedFromMeasurement = std::make_unique<CohenHelieTriode>();
+        triodeSeedFromMeasurement->setEstimate(&triodeEstimate);
+        triodeModel = triodeSeedFromMeasurement.get();
+    }
+
+    Estimate estimate;
+    estimate.estimatePentode(seedMeasurement, triodeModel, EXTRACT_DERK_E_PENTODE, preferencesDialog.useSecondaryEmission());
+
+    model = ModelFactory::createModel(EXTRACT_DERK_E_PENTODE);
+    if (!model) {
+        if (ui && ui->fitPentodeButton) ui->fitPentodeButton->setEnabled(true);
+        if (ui && ui->fitTriodeButton) ui->fitTriodeButton->setEnabled(true);
+        if (ui && ui->processModellingTestsButton) ui->processModellingTestsButton->setEnabled(true);
+        QMessageBox::warning(this, tr("Process Modelling Tests"), tr("Failed to create ExtractModel pentode model."));
+        return;
+    }
+
+    model->setEstimate(&estimate);
+    model->setMode(NORMAL_MODE);
+    model->setPreferences(&preferencesDialog);
+    model->setPlotColor(QColor::fromRgb(255, 0, 0));
+
+    for (Measurement *m : pentodeAnodes) {
+        if (m) {
+            model->addMeasurement(m);
+        }
+    }
+
+    auto makeBinnedTransfer = [&](const QList<Measurement *> &src) -> std::unique_ptr<Measurement> {
+        if (src.isEmpty()) {
+            return nullptr;
+        }
+
+        double vaNominal = 0.0;
+        double vg2Nominal = 0.0;
+        bool foundNominal = false;
+        for (Measurement *m : src) {
+            if (!m) continue;
+            if (m->count() <= 0) continue;
+            Sweep *sw = m->at(0);
+            if (!sw) continue;
+            vaNominal = sw->getVaNominal();
+            vg2Nominal = sw->getVg2Nominal();
+            foundNominal = true;
+            break;
+        }
+
+        std::unique_ptr<Measurement> binned = std::make_unique<Measurement>();
+        binned->setDeviceType(PENTODE);
+        binned->setTestType(TRANSFER_CHARACTERISTICS);
+
+        // Mirror configuration values so Model::addMeasurement() filtering behaves consistently.
+        Measurement *ref = src.first();
+        if (ref) {
+            binned->setAnodeStart(ref->getAnodeStart());
+            binned->setAnodeStop(ref->getAnodeStop());
+            binned->setAnodeStep(ref->getAnodeStep());
+            binned->setGridStart(ref->getGridStart());
+            binned->setGridStop(ref->getGridStop());
+            binned->setGridStep(ref->getGridStep());
+            binned->setScreenStart(ref->getScreenStart());
+            binned->setScreenStop(ref->getScreenStop());
+            binned->setScreenStep(ref->getScreenStep());
+            binned->setIaMax(ref->getIaMax());
+            binned->setPMax(ref->getPMax());
+            binned->setHeaterVoltage(ref->getHeaterVoltage());
+        }
+
+        QString label = src.first() ? src.first()->measurementName() : QString();
+        if (!label.isEmpty()) {
+            binned->setCustomLabel(label + tr(" (binned)"));
+        }
+
+        if (!foundNominal) {
+            // Fall back to configured test values if sweep nominal metadata is absent.
+            if (ref) {
+                vaNominal = ref->getAnodeStart();
+                vg2Nominal = ref->getScreenStart();
+            }
+        }
+        binned->nextSweep(vg2Nominal, vaNominal);
+
+        // Bin width: use at least 0.25V, and never smaller than the configured gridStep.
+        double binWidth = 0.25;
+        if (ref) {
+            const double step = std::fabs(ref->getGridStep());
+            if (step > binWidth) {
+                binWidth = step;
+            }
+        }
+        if (!(binWidth > 0.0)) {
+            binWidth = 0.25;
+        }
+
+        struct Acc {
+            double sumVg1 = 0.0;
+            double sumVa = 0.0;
+            double sumIa = 0.0;
+            double sumVg2 = 0.0;
+            double sumIg2 = 0.0;
+            int n = 0;
+        };
+
+        std::map<long long, Acc> bins;
+
+        for (Measurement *m : src) {
+            if (!m) continue;
+            for (int si = 0; si < m->count(); ++si) {
+                Sweep *sw = m->at(si);
+                if (!sw) continue;
+                for (int sj = 0; sj < sw->count(); ++sj) {
+                    Sample *s = sw->at(sj);
+                    if (!s) continue;
+                    const double vg1 = s->getVg1();
+                    const double va = s->getVa();
+                    const double ia = s->getIa();
+                    const double vg2 = s->getVg2();
+                    const double ig2 = s->getIg2();
+                    if (!std::isfinite(vg1) || !std::isfinite(va) || !std::isfinite(ia)) {
+                        continue;
+                    }
+
+                    const long long key = static_cast<long long>(std::llround(vg1 / binWidth));
+                    Acc &a = bins[key];
+                    a.sumVg1 += vg1;
+                    a.sumVa += va;
+                    a.sumIa += ia;
+                    if (std::isfinite(vg2)) a.sumVg2 += vg2;
+                    if (std::isfinite(ig2)) a.sumIg2 += ig2;
+                    a.n += 1;
+                }
+            }
+        }
+
+        int outPoints = 0;
+        for (auto it = bins.begin(); it != bins.end(); ++it) {
+            const Acc &a = it->second;
+            if (a.n <= 0) {
+                continue;
+            }
+
+            const double vg1 = a.sumVg1 / static_cast<double>(a.n);
+            const double va = a.sumVa / static_cast<double>(a.n);
+            const double ia = a.sumIa / static_cast<double>(a.n);
+            const double vg2 = (a.sumVg2 != 0.0) ? (a.sumVg2 / static_cast<double>(a.n)) : vg2Nominal;
+            const double ig2 = (a.sumIg2 != 0.0) ? (a.sumIg2 / static_cast<double>(a.n)) : 0.0;
+
+            binned->addSample(new Sample(vg1, va, ia, vg2, ig2));
+            outPoints++;
+        }
+
+        // Update IaMax for plotting/axis if needed.
+        if (outPoints > 0) {
+            double maxIa = 0.0;
+            for (int si = 0; si < binned->count(); ++si) {
+                Sweep *sw = binned->at(si);
+                if (!sw) continue;
+                for (int sj = 0; sj < sw->count(); ++sj) {
+                    Sample *s = sw->at(sj);
+                    if (s && std::isfinite(s->getIa())) {
+                        maxIa = std::max(maxIa, s->getIa());
+                    }
+                }
+            }
+            if (maxIa > 0.0) {
+                binned->setIaMax(std::max(binned->getIaMax(), maxIa * 1.05));
+            }
+        }
+
+        return binned;
+    };
+
+    struct TransferCondition {
+        int vaKey = 0;   // rounded volts
+        int vg2Key = 0;  // rounded volts
+        bool operator<(const TransferCondition &other) const {
+            if (vaKey != other.vaKey) return vaKey < other.vaKey;
+            return vg2Key < other.vg2Key;
+        }
+    };
+
+    auto transferConditionOf = [](Measurement *m) -> TransferCondition {
+        TransferCondition c;
+        if (!m) return c;
+        // Prefer sweep nominal metadata (it captures pentode transfer's Va/Vg2 pairing).
+        if (m->count() > 0) {
+            Sweep *sw = m->at(0);
+            if (sw) {
+                const double va = sw->getVaNominal();
+                const double vg2 = sw->getVg2Nominal();
+                if (std::isfinite(va))  c.vaKey = static_cast<int>(std::lround(va));
+                if (std::isfinite(vg2)) c.vg2Key = static_cast<int>(std::lround(vg2));
+                return c;
+            }
+        }
+        // Fallback to measurement configuration.
+        c.vaKey = static_cast<int>(std::lround(m->getAnodeStart()));
+        c.vg2Key = static_cast<int>(std::lround(m->getScreenStart()));
+        return c;
+    };
+
+    std::map<TransferCondition, QList<Measurement *>> transferGroups;
+    for (Measurement *m : transfers) {
+        if (!m) continue;
+        transferGroups[transferConditionOf(m)].append(m);
+    }
+
+    processModellingTestsBinnedTransfers.clear();
+    processModellingTestsBinnedTransfers.reserve(static_cast<size_t>(transferGroups.size()));
+
+    struct TransferGroupReport {
+        int vaKey = 0;
+        int vg2Key = 0;
+        int measurements = 0;
+        int binnedPoints = 0;
+    };
+    QList<TransferGroupReport> transferReport;
+
+    int transferBinnedPoints = 0;
+    for (auto it = transferGroups.begin(); it != transferGroups.end(); ++it) {
+        const TransferCondition &cond = it->first;
+        const QList<Measurement *> &group = it->second;
+        std::unique_ptr<Measurement> binned = makeBinnedTransfer(group);
+        int points = 0;
+        if (binned) {
+            for (int si = 0; si < binned->count(); ++si) {
+                Sweep *sw = binned->at(si);
+                if (sw) points += sw->count();
+            }
+            transferBinnedPoints += points;
+            model->addMeasurement(binned.get());
+            processModellingTestsBinnedTransfers.emplace_back(std::move(binned));
+        }
+        TransferGroupReport r;
+        r.vaKey = cond.vaKey;
+        r.vg2Key = cond.vg2Key;
+        r.measurements = group.size();
+        r.binnedPoints = points;
+        transferReport.append(r);
+    }
+
+    QStringList used;
+    used << tr("Seed measurement: %1").arg(seedMeasurement ? seedMeasurement->measurementName() : tr("(none)"));
+    used << tr("Triode seed: %1").arg(triodeModel ? tr("available") : tr("none"));
+    used << tr("Included pentode anode measurements:");
+    for (Measurement *m : pentodeAnodes) {
+        used << tr("  - %1").arg(m ? m->measurementName() : tr("(null)"));
+    }
+    if (!transfers.isEmpty()) {
+        used << tr("Included transfer measurements: %1 (total binned points: %2)")
+                    .arg(transfers.size())
+                    .arg(transferBinnedPoints);
+        for (const TransferGroupReport &r : std::as_const(transferReport)) {
+            used << tr("  - Va=%1V, Vg2=%2V: %3 runs -> %4 points")
+                        .arg(r.vaKey)
+                        .arg(r.vg2Key)
+                        .arg(r.measurements)
+                        .arg(r.binnedPoints);
+        }
+        for (Measurement *m : transfers) {
+            if (m) {
+                used << tr("  - %1").arg(m->measurementName());
+            }
+        }
+    }
+    if (triodeConnected) {
+        used << tr("(Note) Triode-connected measurement was detected and used only for seeding: %1").arg(triodeConnected->measurementName());
+    }
+    qInfo().noquote() << used.join("\n");
+    QMessageBox::information(this, tr("Process Modelling Tests"), used.join("\n"));
+
+    thread = new QThread;
+    model->moveToThread(thread);
+    disconnect(model, nullptr, this, nullptr);
+    connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+    QMetaObject::invokeMethod(model, "solveThreaded");
 }
 
 // Modeller: orchestrate pentode modelling for the currently selected
@@ -10575,20 +11559,24 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
                 } else if (project->getDeviceType() == TRIODE) {
                     ui->fitTriodeButton->setVisible(true);
                     ui->fitPentodeButton->setVisible(false);
+                    if (ui->processModellingTestsButton) ui->processModellingTestsButton->setVisible(false);
                 } else if (project->getDeviceType() == PENTODE) {
                     ui->fitTriodeButton->setVisible(false);
                     ui->fitPentodeButton->setVisible(true);
+                    if (ui->processModellingTestsButton) ui->processModellingTestsButton->setVisible(true);
                     if (pentodeModelType == SIMPLE_MANUAL_PENTODE) {
                         ensureSimplePentodeDialog();
                     }
                 } else {
                     ui->fitTriodeButton->setVisible(false);
                     ui->fitPentodeButton->setVisible(false);
+                    if (ui->processModellingTestsButton) ui->processModellingTestsButton->setVisible(false);
                 }
             }
         } else {
             ui->fitTriodeButton->setVisible(false);
             ui->fitPentodeButton->setVisible(false);
+            if (ui->processModellingTestsButton) ui->processModellingTestsButton->setVisible(false);
         }
     } else if (tabRole == 0) {
         // Designer tab: keep the measurement/model/screen toggles visible so

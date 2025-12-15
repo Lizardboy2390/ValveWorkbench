@@ -7,6 +7,10 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 - [ ] Integrated SPICE export via Devices:
   - Extend **Export model to Device** so each device JSON optionally includes a SPICE representation of the fitted tube model (triode and pentode) suitable for `.inc`/`.subckt` use.
   - Implement **File → Export to Spice...** so it uses the active Device's SPICE block to export (a) tube model only (`.inc`/`.lib`), and (b) optional Designer circuit wrappers (Triode CC, SE Output, PP, etc.) that reference that model.
+- [ ] UI triage (post-modelling-work):
+  - Make it obvious in Modeller which measurement/family set the red model curves are being compared against (include screen voltage context for pentodes).
+  - Review Modeller plot controls and defaults after recent Autoscale / fixed-scale additions; ensure behaviour is consistent when switching tabs and devices.
+  - Review any remaining Modelling Tests UX rough edges (e.g., clarity of what measurements were collected and used for fitting).
 - [ ] Datasheet reference stats + tube health metric:
   - Add a Designer-side "Datasheet / Reference" group box to hold one or more datasheet operating points (Va, Vg, Ia, gm, μ, rp) for each tube/section, with values stored in templates.
   - Extend template JSON (Load/Save Template and Export-to-Devices) to persist a nested `datasheet.refPoints[]` block carrying these reference stats alongside analyserDefaults and measurement.
@@ -15,6 +19,10 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Use the eTracer PC software manual in `refrence code/ilovepdf_pages-to-jpg (1)` (quick scan, corners tests, Imax/Pmax usage) as the primary reference for feature design and defaults.
 
 ## Recently completed
+- [x] 2025-12-15: Analyser tab LCD semantics: top LCD now shows averaging window (`S0` samples-per-measurement), bottom LCD shows count of sweeps/points that exceeded verification retry limits.
+- [x] 2025-12-15: Modeller pentode fitting (Process Modelling Tests): added extra transfer sweeps (2× at Vg2=150 V, 1× at Vg2=200 V) and binned/averaged transfer samples by Vg1, grouped by (Va, Vg2) so dense transfer data does not dominate fitting.
+- [x] 2025-12-15: Modeller pentode fitting: fixed async lifetime of binned transfer Measurement clones used by threaded solves by storing the clones in a ValveWorkbench member until the solve completes.
+- [x] 2025-12-15: Model input robustness: allow anode-characteristics sweeps that end early due to likely current/power limit hits to still contribute to fitting (prevents dropping informative mid-grid sweeps).
 - [x] 2025-12-13: Pentode Health transfer sweeps: fixed one-sample sweeps caused by immediately hitting the 50 mA hard clamp by biasing the Health transfer `Vg1` window to start more negative for pentodes (so the sweep captures multiple points for gm estimation).
 - [x] 2025-12-13: Pentode Health (6L6-GC): re-enabled as **Quick-mode only** by adding an automatic operating-point finder sweep that selects a safe Vg1 for a target current (default 15 mA for 6L6 family) at conservative Va/Vg2, then runs the standard Health transfer sweeps around that found OP.
 - [x] 2025-12-14: Pentode Health UI: Triode A Health box title now switches to **Pentode Health** when a pentode template/device type is selected.
