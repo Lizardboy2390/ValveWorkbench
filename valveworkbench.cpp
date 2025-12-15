@@ -2281,11 +2281,17 @@ void ValveWorkbench::finalizeHealthRun()
 
                     setEdit(ui->triodeB_Ia_measured, formatValue(ig2Meas, 3));
                     setEdit(ui->triodeB_Ia_ref, (ig2RefCentre > 0.0) ? formatValue(ig2RefCentre, 3) : QString());
-                    setEdit(ui->triodeB_Ia_pct, (ig2RefCentre > 0.0) ? formatPercent(ig2Meas, ig2RefCentre) : QString());
+                    setEdit(ui->triodeB_Ia_pct,
+                            (ig2RefCentre > 0.0)
+                                ? QString::number(100.0 * metricScore(ig2Meas, ig2RefCentre), 'f', 0)
+                                : QString());
 
                     setEdit(ui->triodeB_rp_measured, (pg2Meas_W > 0.0) ? formatValue(pg2Meas_W, 3) : QString());
                     setEdit(ui->triodeB_rp_ref, (pg2Ref_W > 0.0) ? formatValue(pg2Ref_W, 3) : QString());
-                    setEdit(ui->triodeB_rp_pct, (pg2Ref_W > 0.0) ? formatPercent(pg2Meas_W, pg2Ref_W) : QString());
+                    setEdit(ui->triodeB_rp_pct,
+                            (pg2Ref_W > 0.0)
+                                ? QString::number(100.0 * metricScore(pg2Meas_W, pg2Ref_W), 'f', 0)
+                                : QString());
 
                     // Clear unused fields
                     setEdit(ui->triodeB_gm_measured, QString());
@@ -3790,6 +3796,44 @@ void ValveWorkbench::on_pushButton_4_clicked()
     QString suggested = baseDir + "/" + obj.value("name").toString("Device").replace(' ', '_') + ".json";
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save Template"), suggested, tr("JSON Files (*.json)"));
     if (fileName.isEmpty()) return;
+
+    {
+        QFile existing(fileName);
+        if (existing.exists() && existing.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            const QByteArray bytes = existing.readAll();
+            existing.close();
+            QJsonParseError err;
+            const QJsonDocument doc = QJsonDocument::fromJson(bytes, &err);
+            if (err.error == QJsonParseError::NoError && doc.isObject()) {
+                const QJsonObject prev = doc.object();
+                const QString prevDeviceType = prev.value(QStringLiteral("deviceType")).toString();
+                const bool looksLikeDevice = prev.contains(QStringLiteral("model")) ||
+                                             prev.contains(QStringLiteral("measurement")) ||
+                                             prev.contains(QStringLiteral("triodeModel")) ||
+                                             prev.contains(QStringLiteral("spice"));
+
+                if (looksLikeDevice && !prevDeviceType.isEmpty()) {
+                    static const QStringList preserveKeys = {
+                        QStringLiteral("vaMax"),
+                        QStringLiteral("vg1Max"),
+                        QStringLiteral("vg2Max"),
+                        QStringLiteral("iaMax"),
+                        QStringLiteral("paMax"),
+                        QStringLiteral("model"),
+                        QStringLiteral("measurement"),
+                        QStringLiteral("triodeModel"),
+                        QStringLiteral("spice")
+                    };
+
+                    for (const QString &k : preserveKeys) {
+                        if (prev.contains(k) && !obj.contains(k)) {
+                            obj.insert(k, prev.value(k));
+                        }
+                    }
+                }
+            }
+        }
+    }
     QFile f(fileName);
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         QMessageBox::warning(this, tr("Save Template"), tr("Could not write file."));
