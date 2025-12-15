@@ -3767,8 +3767,6 @@ void ValveWorkbench::on_pushButton_4_clicked()
         obj.insert("datasheet", datasheetJson);
     }
 
-    QJsonDocument out(obj);
-
     // Default template directory to models folder near the application
     QString baseDir;
     {
@@ -3839,7 +3837,7 @@ void ValveWorkbench::on_pushButton_4_clicked()
         QMessageBox::warning(this, tr("Save Template"), tr("Could not write file."));
         return;
     }
-    f.write(out.toJson(QJsonDocument::Indented));
+    f.write(QJsonDocument(obj).toJson(QJsonDocument::Indented));
     f.close();
 }
 

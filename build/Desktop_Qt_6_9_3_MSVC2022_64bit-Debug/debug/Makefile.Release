@@ -17143,7 +17143,8 @@ release\pushpulloutput.obj: ..\..\..\valvemodel\circuit\pushpulloutput.cpp ..\..
 		..\..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\..\valvemodel\circuit\sharedspice.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsPolygonItem
 
 release\pushpulluloutput.obj: ..\..\..\valvemodel\circuit\pushpulluloutput.cpp ..\..\..\valvemodel\circuit\pushpulluloutput.h \
 		..\..\..\valvemodel\circuit\circuit.h \

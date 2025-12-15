@@ -5,6 +5,8 @@
 #include <QPointF>
 #include <QVector>
 
+#include <QGraphicsPolygonItem>
+
 #include <algorithm>
 #include <cmath>
 
@@ -664,9 +666,19 @@ bool PushPullOutput::computeHeadroomHarmonicCurrents(double vb,
 {
     const double biasCurrent_A = ia_mA / 1000.0;
 
-    const double qA = vb / raa;
-    const double mA = -qA / vb;
-    const double vOperating = (biasCurrent_A - qA) / mA;
+    const double rPerValve = raa / 2.0;
+    if (!(rPerValve > 0.0)) {
+        return false;
+    }
+
+    double vOperating = vb;
+    if (!inductiveLoad) {
+        vOperating = vb - biasCurrent_A * rPerValve;
+    }
+    if (!std::isfinite(vOperating)) {
+        vOperating = vb;
+    }
+    vOperating = std::clamp(vOperating, 0.0, 2.0 * vb);
 
     double vMin = vOperating - headroom;
     double vMax = vOperating + headroom;
@@ -676,26 +688,26 @@ bool PushPullOutput::computeHeadroomHarmonicCurrents(double vb,
     vMin = std::max(vMin, kMinVa);
     vMax = std::clamp(vMax, vMin + 1e-6, kMaxVa);
 
-    const double I_max = dcLoadlineCurrent(vb, raa, vMin);
-    const double I_min = dcLoadlineCurrent(vb, raa, vMax);
+    const double I_max = dcLoadlineCurrent(vb, rPerValve, vMin);
+    const double I_min = dcLoadlineCurrent(vb, rPerValve, vMax);
     if (!std::isfinite(I_max) || !std::isfinite(I_min)) {
         return false;
     }
 
-    const double Vg_bias = findGridBiasForCurrent(biasCurrent_A, vb, vs, raa);
-    const double Vg_max  = findGridBiasForCurrent(I_max,          vb, vs, raa);
+    const double Vg_bias = findGridBiasForCurrent(biasCurrent_A, vb, vs, rPerValve);
+    const double Vg_max  = findGridBiasForCurrent(I_max,          vb, vs, rPerValve);
 
     const double Vg_max_mid = Vg_bias + (Vg_max - Vg_bias) / 2.0;
     const double Vg_min_mid = Vg_bias - (Vg_max - Vg_bias) / 2.0;
     const double Vg_min     = Vg_bias - (Vg_max - Vg_bias);
 
-    const double V_min_mid_distorted = findVaFromVg(Vg_max_mid, vb, vs, raa);
-    const double V_max_mid_distorted = findVaFromVg(Vg_min_mid, vb, vs, raa);
-    const double V_max_distorted     = findVaFromVg(Vg_min,     vb, vs, raa);
+    const double V_min_mid_distorted = findVaFromVg(Vg_max_mid, vb, vs, rPerValve);
+    const double V_max_mid_distorted = findVaFromVg(Vg_min_mid, vb, vs, rPerValve);
+    const double V_max_distorted     = findVaFromVg(Vg_min,     vb, vs, rPerValve);
 
-    const double I_max_mid_distorted = dcLoadlineCurrent(vb, raa, V_min_mid_distorted);
-    const double I_min_mid_distorted = dcLoadlineCurrent(vb, raa, V_max_mid_distorted);
-    const double I_min_distorted     = dcLoadlineCurrent(vb, raa, V_max_distorted);
+    const double I_max_mid_distorted = dcLoadlineCurrent(vb, rPerValve, V_min_mid_distorted);
+    const double I_min_mid_distorted = dcLoadlineCurrent(vb, rPerValve, V_max_mid_distorted);
+    const double I_min_distorted     = dcLoadlineCurrent(vb, rPerValve, V_max_distorted);
 
     if (!std::isfinite(I_max_mid_distorted) ||
         !std::isfinite(I_min_mid_distorted) ||
@@ -728,10 +740,11 @@ void PushPullOutput::computeTimeDomainHarmonicScan(QVector<double> &headroomVals
         return;
     }
 
-    const double vb  = parameter[PP_VB]->getValue();
-    const double vs  = parameter[PP_VS]->getValue();
-    const double ia  = parameter[PP_IA]->getValue();
-    const double raa = parameter[PP_RAA]->getValue();
+    const double vb       = parameter[PP_VB]->getValue();
+    const double vs       = parameter[PP_VS]->getValue();
+    const double ia       = parameter[PP_IA]->getValue();
+    const double raa      = parameter[PP_RAA]->getValue();
+    const double headroom = parameter[PP_HEADROOM]->getValue();
 
     if (!(vb > 0.0) || !(raa > 0.0) || !(ia > 0.0)) {
         return;
@@ -893,7 +906,7 @@ bool PushPullOutput::simulateHarmonicsTimeDomain(double vb,
         const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
 
         if (std::isfinite(ip)) {
-            double va = vb - ip * raa;
+            double va = vb - 0.5 * ip * raa;
             if (!std::isfinite(va)) {
                 va = vb;
             }
@@ -979,10 +992,11 @@ void PushPullOutput::plot(Plot *plot)
     const double vaMax = device1->getVaMax();
     double iaMax = device1->getIaMax();
 
-    const double vb  = parameter[PP_VB]->getValue();
-    const double vs  = parameter[PP_VS]->getValue();
-    const double ia  = parameter[PP_IA]->getValue();
-    const double raa = parameter[PP_RAA]->getValue();
+    const double vb       = parameter[PP_VB]->getValue();
+    const double vs       = parameter[PP_VS]->getValue();
+    const double ia       = parameter[PP_IA]->getValue();
+    const double raa      = parameter[PP_RAA]->getValue();
+    const double headroom = parameter[PP_HEADROOM]->getValue();
 
     if (vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
         return;
@@ -1190,6 +1204,80 @@ void PushPullOutput::plot(Plot *plot)
         } else {
             delete opMarker;
             opMarker = nullptr;
+        }
+    }
+
+    // Draw a simple headroom segment around the operating point along the AC
+    // load line, with a filled polygon down to Ia = 0.
+    if (headroom > 0.0) {
+        const double vaCentre = inductiveLoad ? vb : vaBias;
+        double vaMin = vaCentre - headroom;
+        double vaMax2 = vaCentre + headroom;
+
+        vaMin  = std::max(0.0, vaMin);
+        vaMax2 = std::min(axisVaMax, vaMax2);
+
+        if (vaMax2 > vaMin) {
+            QGraphicsItemGroup *headroomGroup = new QGraphicsItemGroup();
+            QPen pen;
+            pen.setColor(QColor::fromRgb(0, 0, 255));
+            pen.setWidth(2);
+
+            auto ia_line_mA = [&](double va) {
+                return ia + gradient * (va - vaCentre);
+            };
+
+            double iaHigh = ia_line_mA(vaMin);
+            double iaLow  = ia_line_mA(vaMax2);
+
+            if (std::isfinite(iaHigh) && std::isfinite(iaLow)) {
+                iaHigh = std::clamp(iaHigh, 0.0, iaMax);
+                iaLow  = std::clamp(iaLow,  0.0, iaMax);
+
+                if (auto *seg = plot->createSegment(vaMin, iaHigh, vaMax2, iaLow, pen)) {
+                    headroomGroup->addToGroup(seg);
+                }
+
+                const double xScale = plot->getXScale();
+                const double yScale = plot->getYScale();
+                const double xStart = plot->getXStart();
+                const double yStart = plot->getYStart();
+                if (xScale > 0.0 && yScale > 0.0) {
+                    const double sx1 = (vaMin  - xStart) * xScale;
+                    const double sy1 = PLOT_HEIGHT - (iaHigh - yStart) * yScale;
+                    const double sx2 = (vaMax2 - xStart) * xScale;
+                    const double sy2 = PLOT_HEIGHT - (iaLow  - yStart) * yScale;
+                    const double sx3 = sx2;
+                    const double sy3 = PLOT_HEIGHT - (0.0 - yStart) * yScale;
+                    const double sx4 = sx1;
+                    const double sy4 = sy3;
+
+                    QPolygonF poly;
+                    poly << QPointF(sx1, sy1)
+                         << QPointF(sx2, sy2)
+                         << QPointF(sx3, sy3)
+                         << QPointF(sx4, sy4);
+
+                    auto *polyItem = new QGraphicsPolygonItem(poly);
+                    QColor fillColor = QColor::fromRgb(0, 0, 255);
+                    fillColor.setAlpha(40);
+                    polyItem->setBrush(fillColor);
+                    polyItem->setPen(Qt::NoPen);
+                    headroomGroup->addToGroup(polyItem);
+                }
+            }
+
+            if (!headroomGroup->childItems().isEmpty()) {
+                // Attach to the existing AC overlay group so it is cleared on
+                // subsequent replots.
+                if (!acSignalLine) {
+                    acSignalLine = new QGraphicsItemGroup();
+                    plot->getScene()->addItem(acSignalLine);
+                }
+                acSignalLine->addToGroup(headroomGroup);
+            } else {
+                delete headroomGroup;
+            }
         }
     }
 
