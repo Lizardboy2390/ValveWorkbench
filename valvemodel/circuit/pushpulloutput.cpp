@@ -590,9 +590,9 @@ double PushPullOutput::dcLoadlineCurrent(double vb, double raa, double va) const
 }
 
 double PushPullOutput::findGridBiasForCurrent(double targetIa_A,
-                                               double vb,
-                                               double vs,
-                                               double raa) const
+                                              double vb,
+                                              double vs,
+                                              double raa) const
 {
     const double va = vb - targetIa_A * raa;
     if (va <= 0.0 || !std::isfinite(va)) {
@@ -606,11 +606,12 @@ double PushPullOutput::findGridBiasForCurrent(double targetIa_A,
 
     for (int i = 0; i <= vgSteps; ++i) {
         const double vg1 = vg1Max * static_cast<double>(i) / vgSteps;
-        const double iaTest = device1->anodeCurrent(va, -vg1, vs);
-        if (!std::isfinite(iaTest) || iaTest < 0.0) {
+        const double iaTest_mA = device1->anodeCurrent(va, -vg1, vs);
+        if (!std::isfinite(iaTest_mA) || iaTest_mA < 0.0) {
             continue;
         }
-        const double err = std::abs(targetIa_A - iaTest);
+        const double iaTest_A = iaTest_mA / 1000.0;
+        const double err = std::abs(targetIa_A - iaTest_A);
         if (err < minErr) {
             minErr = err;
             bestVg1 = vg1;
@@ -629,16 +630,18 @@ double PushPullOutput::findVaFromVg(double vg1,
     double incr = vb / 10.0;
 
     for (;;) {
-        const double it = device1->anodeCurrent(va, -vg1, vs);
-        const double il = dcLoadlineCurrent(vb, raa, va);
+        const double it_mA = device1->anodeCurrent(va, -vg1, vs);
+        const double il_A  = dcLoadlineCurrent(vb, raa, va);
 
-        if (!std::isfinite(it) || !std::isfinite(il)) {
+        if (!std::isfinite(it_mA) || !std::isfinite(il_A)) {
             break;
         }
 
-        if (it >= il && incr <= 1e-6) {
+        const double it_A = it_mA / 1000.0;
+
+        if (it_A >= il_A && incr <= 1e-6) {
             break;
-        } else if (it >= il) {
+        } else if (it_A >= il_A) {
             va -= incr;
             incr *= 0.1;
         }
@@ -817,7 +820,6 @@ bool PushPullOutput::simulateHarmonicsTimeDomain(double vb,
                                                  double &hd4,
                                                  double &thd) const
 {
-    // Initialise outputs to a safe default.
     hd2 = 0.0;
     hd3 = 0.0;
     hd4 = 0.0;
@@ -827,57 +829,74 @@ bool PushPullOutput::simulateHarmonicsTimeDomain(double vb,
         return false;
     }
 
-    // Basic sanity checks: require a valid operating point and positive headroom.
     if (vb <= 0.0 || raa <= 0.0 || iaBias_mA <= 0.0 || headroomVpk <= 0.0) {
         return false;
     }
 
-    // Reuse the existing VTADIY-style 5-point helper to obtain the base current
-    // samples along the AC load line for a single valve. These are expressed as
-    // currents on the DC load line at five effective swing positions.
-    double Ia_base = 0.0;  // I_max
-    double Ib_base = 0.0;  // I_max_mid_distorted
-    double Ic_base = 0.0;  // I_bias
-    double Id_base = 0.0;  // I_min_mid_distorted
-    double Ie_base = 0.0;  // I_min_distorted
-    if (!computeHeadroomHarmonicCurrents(vb,
-                                         iaBias_mA,
-                                         raa,
-                                         headroomVpk,
-                                         vs,
-                                         Ia_base,
-                                         Ib_base,
-                                         Ic_base,
-                                         Id_base,
-                                         Ie_base)) {
+    const double rPerValve = raa / 2.0;
+    if (!(rPerValve > 0.0) || !std::isfinite(rPerValve)) {
         return false;
     }
 
-    // Map the single-ended 5-point currents into a push-pull primary current
-    // waveform using the same PP mapping as in update(): treat the signal as
-    // the difference between the top and bottom halves so that even harmonics
-    // cancel correctly for symmetric operation.
-    const double Ia_pp = Ia_base - Ie_base;
-    const double Ib_pp = Ib_base - Id_base;
-    const double Ic_pp = 0.0;                 // symmetric bias around zero
-    const double Id_pp = Id_base - Ib_base;
-    const double Ie_pp = Ie_base - Ia_base;
+    // Headroom parameter is specified per-anode (Vpk). The primary (anode-to-anode)
+    // output swing is approximately 2x that (Vpk) for ideal symmetric operation.
+    const double vprimaryVppTarget = 4.0 * headroomVpk;
+    if (!(vprimaryVppTarget > 0.0) || !std::isfinite(vprimaryVppTarget)) {
+        return false;
+    }
 
-    // Arrange the five samples as one period of a periodic waveform. The
-    // samples are treated as equally spaced over the cycle and interpolated
-    // linearly for higher-resolution time-domain sampling.
-    double samples[5];
-    samples[0] = Ia_pp;
-    samples[1] = Ib_pp;
-    samples[2] = Ic_pp;
-    samples[3] = Id_pp;
-    samples[4] = Ie_pp;
+    // Bias and cathode state. Vk is stored as a positive magnitude.
+    const double iaBias_A = iaBias_mA / 1000.0;
+    const double vk       = parameter[PP_VK] ? parameter[PP_VK]->getValue() : 0.0;
+    const double rk        = parameter[PP_RK] ? parameter[PP_RK]->getValue() : 0.0;
+    const double vgBias    = -vk;
 
-    // Use a modest number of samples to keep this helper inexpensive while
-    // providing a smooth waveform for the DFT. A Hann window is applied to
-    // reduce spectral leakage, following the style of Cavern QuickEQ.
-    const int sampleCount = 512;
-    const double twoPi = 6.28318530717958647692; // 2 * pi
+    const bool   cathodeBypassed = (gainMode == 1);
+    const double rk_ac           = (cathodeBypassed || rk <= 0.0) ? 0.0 : rk;
+
+    // Estimate differential small-signal gain (primary Vaa per grid V) so we can
+    // map requested headroom to an approximate grid-drive Vpp.
+    double vaBias = vb;
+    if (!inductiveLoad) {
+        vaBias = vb - iaBias_A * rPerValve;
+    }
+    vaBias = std::clamp(vaBias, 0.0, 2.0 * vb);
+
+    const double dVg = std::max(0.05, std::abs(vgBias) * 0.02);
+    double iaPlus_mA  = device1->anodeCurrent(vaBias, vgBias + dVg, vs);
+    double iaMinus_mA = device1->anodeCurrent(vaBias, vgBias - dVg, vs);
+    double gm_mA_per_V = 0.0;
+    if (std::isfinite(iaPlus_mA) && std::isfinite(iaMinus_mA) && dVg > 0.0) {
+        gm_mA_per_V = (iaPlus_mA - iaMinus_mA) / (2.0 * dVg);
+    }
+    if (!std::isfinite(gm_mA_per_V) || std::abs(gm_mA_per_V) < 1e-6) {
+        return false;
+    }
+    const double gm_A_per_V = gm_mA_per_V / 1000.0;
+
+    double gainPrimary = 2.0 * std::abs(gm_A_per_V * rPerValve); // Vaa/Vg
+    if (gainPrimary <= 1e-6 || !std::isfinite(gainPrimary)) {
+        return false;
+    }
+
+    if (rk_ac > 0.0) {
+        const double feedback = 1.0 + std::abs(gm_A_per_V) * rk_ac;
+        if (feedback > 1.0 && std::isfinite(feedback)) {
+            gainPrimary /= feedback;
+        }
+    }
+
+    if (gainPrimary <= 1e-6 || !std::isfinite(gainPrimary)) {
+        return false;
+    }
+
+    const double gridVpp = vprimaryVppTarget / gainPrimary;
+    if (!(gridVpp > 0.0) || !std::isfinite(gridVpp)) {
+        return false;
+    }
+
+    const int sampleCount = 1024;
+    const double twoPi = 6.28318530717958647692;
 
     double a[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
     double b[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
@@ -887,45 +906,93 @@ bool PushPullOutput::simulateHarmonicsTimeDomain(double vb,
 
     for (int k = 0; k < sampleCount; ++k) {
         const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
-        const double u = phase / twoPi; // normalised phase in [0, 1)
+        const double drive = 0.5 * gridVpp * std::sin(phase);
 
-        // Map the normalised phase to the five base samples, then linearly
-        // interpolate between neighbouring samples to obtain a dense waveform.
-        const double pos = u * 5.0; // 5 samples per period
-        const double indexF = std::floor(pos);
-        int i0 = static_cast<int>(indexF);
-        if (i0 < 0) {
-            i0 = 0;
-        }
-        if (i0 >= 5) {
-            i0 = i0 % 5;
-        }
-        const int i1 = (i0 + 1) % 5;
-        const double frac = pos - indexF;
+        // Equal-and-opposite grid drive around 0V (grid-to-ground).
+        const double vgTop_abs = drive;
+        const double vgBot_abs = -drive;
 
-        const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+        double vk_inst = vk;
 
-        if (std::isfinite(ip)) {
-            double va = vb - 0.5 * ip * raa;
-            if (!std::isfinite(va)) {
-                va = vb;
+        // If the cathode is unbypassed, iterate a few times so Vk follows the
+        // instantaneous shared cathode current.
+        if (rk_ac > 0.0) {
+            for (int iter = 0; iter < 4; ++iter) {
+                const double vk_eff = vk_inst;
+
+                double vgkTop = vgTop_abs - vk_eff;
+                double vgkBot = vgBot_abs - vk_eff;
+                if (vgkTop > 0.0) vgkTop = 0.0;
+                if (vgkBot > 0.0) vgkBot = 0.0;
+
+                double vg1Top = -vgkTop;
+                double vg1Bot = -vgkBot;
+                if (vg1Top < 0.0) vg1Top = 0.0;
+                if (vg1Bot < 0.0) vg1Bot = 0.0;
+
+                double vaTop = findVaFromVg(vg1Top, vb, vs, rPerValve);
+                double vaBot = findVaFromVg(vg1Bot, vb, vs, rPerValve);
+                if (!std::isfinite(vaTop) || !std::isfinite(vaBot)) {
+                    break;
+                }
+                vaTop = std::clamp(vaTop, 0.0, 2.0 * vb);
+                vaBot = std::clamp(vaBot, 0.0, 2.0 * vb);
+
+                const double iaTop_A = dcLoadlineCurrent(vb, rPerValve, vaTop);
+                const double iaBot_A = dcLoadlineCurrent(vb, rPerValve, vaBot);
+                if (!std::isfinite(iaTop_A) || !std::isfinite(iaBot_A) || iaTop_A < 0.0 || iaBot_A < 0.0) {
+                    break;
+                }
+
+                double vk_new = vk + ((iaTop_A + iaBot_A) - 2.0 * iaBias_A) * rk_ac;
+                if (!std::isfinite(vk_new)) {
+                    vk_new = vk;
+                }
+                if (vk_new < 0.0) {
+                    vk_new = 0.0;
+                }
+
+                const double delta = std::abs(vk_new - vk_inst);
+                vk_inst = vk_new;
+                if (delta < 1e-3) {
+                    break;
+                }
             }
-            va = std::clamp(va, 0.0, 2.0 * vb);
-            lastHeadroomWaveform.push_back(va);
         }
 
-        // Hann window across the full set of samples.
+        const double vk_eff = (rk_ac > 0.0) ? vk_inst : vk;
+
+        double vgkTop = vgTop_abs - vk_eff;
+        double vgkBot = vgBot_abs - vk_eff;
+        if (vgkTop > 0.0) vgkTop = 0.0;
+        if (vgkBot > 0.0) vgkBot = 0.0;
+
+        double vg1Top = -vgkTop;
+        double vg1Bot = -vgkBot;
+        if (vg1Top < 0.0) vg1Top = 0.0;
+        if (vg1Bot < 0.0) vg1Bot = 0.0;
+
+        double vaTop = findVaFromVg(vg1Top, vb, vs, rPerValve);
+        double vaBot = findVaFromVg(vg1Bot, vb, vs, rPerValve);
+        if (!std::isfinite(vaTop) || !std::isfinite(vaBot)) {
+            continue;
+        }
+        vaTop = std::clamp(vaTop, 0.0, 2.0 * vb);
+        vaBot = std::clamp(vaBot, 0.0, 2.0 * vb);
+
+        const double vPrimary = vaTop - vaBot;
+        if (std::isfinite(vPrimary)) {
+            lastHeadroomWaveform.push_back(vPrimary);
+        }
+
         const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
                                                    static_cast<double>(sampleCount - 1)));
-        const double v = ip * window;
+        const double v = vPrimary * window;
 
-        // Accumulate the first four harmonic components via a small manual DFT.
         for (int n = 1; n <= 4; ++n) {
             const double angle = static_cast<double>(n) * phase;
-            const double c = std::cos(angle);
-            const double s = std::sin(angle);
-            a[n] += v * c;
-            b[n] += v * s;
+            a[n] += v * std::cos(angle);
+            b[n] += v * std::sin(angle);
         }
     }
 
@@ -942,8 +1009,6 @@ bool PushPullOutput::simulateHarmonicsTimeDomain(double vb,
         return false;
     }
 
-    // Express harmonic levels as percentages relative to the fundamental,
-    // mirroring the interpretation used by the existing 5-point helper.
     const double invFund = 100.0 / fundamental;
     hd2 = A[2] * invFund;
     hd3 = A[3] * invFund;

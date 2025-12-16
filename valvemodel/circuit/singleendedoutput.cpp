@@ -961,11 +961,12 @@ double SingleEndedOutput::findGridBiasForCurrent(double targetIa_A,
 
     for (int i = 0; i <= vgSteps; ++i) {
         const double vg1 = vg1Max * static_cast<double>(i) / vgSteps;
-        const double iaTest = device1->anodeCurrent(va, -vg1, vs);
-        if (!std::isfinite(iaTest) || iaTest < 0.0) {
+        const double iaTest_mA = device1->anodeCurrent(va, -vg1, vs);
+        if (!std::isfinite(iaTest_mA) || iaTest_mA < 0.0) {
             continue;
         }
-        const double err = std::abs(targetIa_A - iaTest);
+        const double iaTest_A = iaTest_mA / 1000.0;
+        const double err = std::abs(targetIa_A - iaTest_A);
         if (err < minErr) {
             minErr = err;
             bestVg1 = vg1;
@@ -984,16 +985,18 @@ double SingleEndedOutput::findVaFromVg(double vg1,
     double incr = vb / 10.0;
 
     for (;;) {
-        const double it = device1->anodeCurrent(va, -vg1, vs);
-        const double il = dcLoadlineCurrent(vb, raa, va);
+        const double it_mA = device1->anodeCurrent(va, -vg1, vs);
+        const double il_A  = dcLoadlineCurrent(vb, raa, va);
 
-        if (!std::isfinite(it) || !std::isfinite(il)) {
+        if (!std::isfinite(it_mA) || !std::isfinite(il_A)) {
             break;
         }
 
-        if (it >= il && incr <= 1e-6) {
+        const double it_A = it_mA / 1000.0;
+
+        if (it_A >= il_A && incr <= 1e-6) {
             break;
-        } else if (it >= il) {
+        } else if (it_A >= il_A) {
             va -= incr;
             incr *= 0.1;
         }
@@ -1175,7 +1178,7 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
     // infer a grid drive amplitude from the requested anode headroom. This is
     // the same gm-based approach used for the Designer sensitivity readout,
     // but evaluated at the actual DC anode voltage implied by Ia and Ra.
-    const double ia_A   = iaBias_mA / 1000.0;
+    const double iaBias_A = iaBias_mA / 1000.0;
     const double vk     = parameter[SE_VK]->getValue();
     const double rk     = parameter[SE_RK]->getValue();
     const double vgBias = -vk;                  // grid-to-cathode bias (V)
@@ -1185,11 +1188,11 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
     // treat the primary as having no DC drop so the valve sees approximately
     // the full supply voltage.
     double vaBias = vb;
-    if (raa > 0.0 && ia_A > 0.0) {
+    if (raa > 0.0 && iaBias_A > 0.0) {
         if (inductiveLoad) {
             vaBias = vb;
         } else {
-            vaBias = vb - ia_A * raa;
+            vaBias = vb - iaBias_A * raa;
         }
         if (!std::isfinite(vaBias)) {
             vaBias = vb;
@@ -1307,7 +1310,7 @@ bool SingleEndedOutput::simulateHarmonicsTimeDomain(double vb,
                     // Instantaneous cathode voltage follows Ia(t)*Rk around
                     // the DC operating point. Preserve the DC vk value and
                     // only add the incremental component from (Ia - Ia_bias).
-                    const double vk_inst = vk + (ia_A - ia_A) * rk_ac; // ia_A already includes bias
+                    const double vk_inst = vk + (ia_A - iaBias_A) * rk_ac;
 
                     // Grid is driven around 0V, so derive vgk from absolute
                     // grid and cathode voltages.

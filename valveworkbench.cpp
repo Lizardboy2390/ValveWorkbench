@@ -6415,6 +6415,14 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
     }
     circuit->updateUI(circuitLabels, circuitValues);
 
+    if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
+        updateHeadroomWaveformView(tcc);
+    } else if (auto se = dynamic_cast<SingleEndedOutput*>(circuit)) {
+        updateHeadroomWaveformView(se);
+    } else if (auto pp = dynamic_cast<PushPullOutput*>(circuit)) {
+        updateHeadroomWaveformView(pp);
+    }
+
     // Auto-plot device model curves in Designer. When an embedded analyser
     // Measurement is present (from a tube-style preset JSON), prefer the
     // measurement-driven Model::plotModel helper so that the fitted model
@@ -6662,7 +6670,8 @@ void ValveWorkbench::selectCircuit(int circuitType)
     if (ui->headroomWaveformGroupBox) {
         bool showWave =
             (dynamic_cast<TriodeCommonCathode*>(circuit) != nullptr) ||
-            (dynamic_cast<SingleEndedOutput*>(circuit)     != nullptr);
+            (dynamic_cast<SingleEndedOutput*>(circuit)     != nullptr) ||
+            (dynamic_cast<PushPullOutput*>(circuit)        != nullptr);
         ui->headroomWaveformGroupBox->setVisible(showWave);
     }
 }
@@ -7001,7 +7010,9 @@ void ValveWorkbench::updateCircuitParameter(int index)
     circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
 
-    if (auto se = dynamic_cast<SingleEndedOutput*>(circuit)) {
+    if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
+        updateHeadroomWaveformView(tcc);
+    } else if (auto se = dynamic_cast<SingleEndedOutput*>(circuit)) {
         updateHeadroomWaveformView(se);
     } else if (auto pp = dynamic_cast<PushPullOutput*>(circuit)) {
         updateHeadroomWaveformView(pp);
@@ -7086,13 +7097,13 @@ void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
         peak = std::max(peak, std::fabs(y));
     }
     if (!(peak > 0.0) || !std::isfinite(peak)) {
-        peak = 1.0;
+        return;
     }
 
     QPainterPath path;
     const int n = wave.size();
     for (int i = 0; i < n; ++i) {
-        const double x = static_cast<double>(i);
+        const double x = (n > 1) ? (static_cast<double>(i) / static_cast<double>(n - 1)) : 0.0;
         const double y = -(wave.at(i) - mean) / peak;
         if (i == 0) {
             path.moveTo(x, y);
@@ -7102,13 +7113,14 @@ void ValveWorkbench::updateHeadroomWaveformView(TriodeCommonCathode *tcc)
     }
 
     QPen pen(QColor::fromRgb(0, 120, 255));
-    pen.setWidthF(1.4);
+    pen.setWidthF(0.0);
+    pen.setCosmetic(true);
     QGraphicsPathItem *item = headroomWaveformScene->addPath(path, pen);
 
     QRectF r = item ? item->boundingRect() : QRectF();
     if (r.isValid()) {
-        const double padX = std::max(5.0, r.width() * 0.05);
-        const double padY = std::max(5.0, r.height() * 0.20);
+        const double padX = r.width() * 0.05;
+        const double padY = r.height() * 0.20;
         r.adjust(-padX, -padY, padX, padY);
         headroomWaveformScene->setSceneRect(r);
         ui->headroomWaveformView->fitInView(r, Qt::KeepAspectRatio);
@@ -7143,13 +7155,13 @@ void ValveWorkbench::updateHeadroomWaveformView(SingleEndedOutput *se)
         peak = std::max(peak, std::fabs(y));
     }
     if (!(peak > 0.0) || !std::isfinite(peak)) {
-        peak = 1.0;
+        return;
     }
 
     QPainterPath path;
     const int n = wave.size();
     for (int i = 0; i < n; ++i) {
-        const double x = static_cast<double>(i);
+        const double x = (n > 1) ? (static_cast<double>(i) / static_cast<double>(n - 1)) : 0.0;
         const double y = -(wave.at(i) - mean) / peak;
         if (i == 0) {
             path.moveTo(x, y);
@@ -7159,13 +7171,14 @@ void ValveWorkbench::updateHeadroomWaveformView(SingleEndedOutput *se)
     }
 
     QPen pen(QColor::fromRgb(0, 120, 255));
-    pen.setWidthF(1.4);
+    pen.setWidthF(0.0);
+    pen.setCosmetic(true);
     QGraphicsPathItem *item = headroomWaveformScene->addPath(path, pen);
 
     QRectF r = item ? item->boundingRect() : QRectF();
     if (r.isValid()) {
-        const double padX = std::max(5.0, r.width() * 0.05);
-        const double padY = std::max(5.0, r.height() * 0.20);
+        const double padX = r.width() * 0.05;
+        const double padY = r.height() * 0.20;
         r.adjust(-padX, -padY, padX, padY);
         headroomWaveformScene->setSceneRect(r);
         ui->headroomWaveformView->fitInView(r, Qt::KeepAspectRatio);
@@ -7200,13 +7213,13 @@ void ValveWorkbench::updateHeadroomWaveformView(PushPullOutput *pp)
         peak = std::max(peak, std::fabs(y));
     }
     if (!(peak > 0.0) || !std::isfinite(peak)) {
-        peak = 1.0;
+        return;
     }
 
     QPainterPath path;
     const int n = wave.size();
     for (int i = 0; i < n; ++i) {
-        const double x = static_cast<double>(i);
+        const double x = (n > 1) ? (static_cast<double>(i) / static_cast<double>(n - 1)) : 0.0;
         const double y = -(wave.at(i) - mean) / peak;
         if (i == 0) {
             path.moveTo(x, y);
@@ -7216,13 +7229,14 @@ void ValveWorkbench::updateHeadroomWaveformView(PushPullOutput *pp)
     }
 
     QPen pen(QColor::fromRgb(0, 120, 255));
-    pen.setWidthF(1.4);
+    pen.setWidthF(0.0);
+    pen.setCosmetic(true);
     QGraphicsPathItem *item = headroomWaveformScene->addPath(path, pen);
 
     QRectF r = item ? item->boundingRect() : QRectF();
     if (r.isValid()) {
-        const double padX = std::max(5.0, r.width() * 0.05);
-        const double padY = std::max(5.0, r.height() * 0.20);
+        const double padX = r.width() * 0.05;
+        const double padY = r.height() * 0.20;
         r.adjust(-padX, -padY, padX, padY);
         headroomWaveformScene->setSceneRect(r);
         ui->headroomWaveformView->fitInView(r, Qt::KeepAspectRatio);
