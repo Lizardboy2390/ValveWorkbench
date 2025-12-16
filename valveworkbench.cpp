@@ -33,6 +33,12 @@
 #include <QMouseEvent>
 #include <QStatusBar>
 #include <QGraphicsTextItem>
+#include <QGraphicsPolygonItem>
+#include <QPolygonF>
+#include <QLabel>
+#include <QLineF>
+#include <QGraphicsEllipseItem>
+#include <functional>
 #include <QLineEdit>
 #include <QPen>
 #include <QSizePolicy>
@@ -5350,6 +5356,21 @@ void ValveWorkbench::runHarmonicsScan()
         return;
     }
 
+    auto fitHarmonicsViewToContents = [this]() {
+        if (!harmonicsView || !harmonicsView->scene()) {
+            return;
+        }
+        QRectF r = harmonicsView->scene()->itemsBoundingRect();
+        if (!r.isValid() || r.isEmpty()) {
+            return;
+        }
+        const double padX = std::max(10.0, r.width() * 0.05);
+        const double padY = std::max(10.0, r.height() * 0.05);
+        r.adjust(-padX, -padY, padX, padY);
+        harmonicsView->setSceneRect(r);
+        harmonicsView->fitInView(r, Qt::KeepAspectRatio);
+    };
+
     harmonicsText->clear();
     harmonicsText->append(tr("Running SE time-domain harmonic scan..."));
 
@@ -5405,14 +5426,112 @@ void ValveWorkbench::runHarmonicsScan()
     updateYMax(thdVals);
     if (yMax <= 0.0) yMax = 1.0;
 
-    const double xStart = 0.0;
-    const double xStop  = headroomVals.last();
-    const double xMajor = std::max(5.0, xStop / 10.0);
+    // If a few clipping points explode THD, the plot becomes unusable.
+    // Cap the plotted Y range to keep the low-distortion region readable,
+    // but still report the true max in the text output.
+    double yMaxPlot = yMax;
+    bool yCapped = false;
+    if (yMaxPlot > 20.0) {
+        yMaxPlot = 20.0;
+        yCapped = true;
+    }
+
+    auto niceStep = [](double rawStep) -> double {
+        if (!(rawStep > 0.0) || !std::isfinite(rawStep)) {
+            return 1.0;
+        }
+        const double exp10 = std::pow(10.0, std::floor(std::log10(rawStep)));
+        const double f = rawStep / exp10;
+        double nf = 1.0;
+        if (f <= 1.0) nf = 1.0;
+        else if (f <= 2.0) nf = 2.0;
+        else if (f <= 5.0) nf = 5.0;
+        else nf = 10.0;
+        return nf * exp10;
+    };
+
+    // Ensure monotonic axis mapping even if the simulation returns points in descending order.
+    //
+    // IMPORTANT: We must ignore NaN/inf samples when computing axis bounds.
+    // std::minmax_element does not handle NaNs in a useful way (comparisons return false),
+    // which can leave xStart/xStop as NaN and cause xScale to blow up. The primary symptom
+    // is markers/labels appearing far off to the left of the plot.
+    double xStart = 0.0;
+    double xStop = 1.0;
+    bool haveX = false;
+    for (double x : headroomVals) {
+        if (!std::isfinite(x)) {
+            continue;
+        }
+        if (!haveX) {
+            xStart = x;
+            xStop = x;
+            haveX = true;
+        } else {
+            xStart = std::min(xStart, x);
+            xStop = std::max(xStop, x);
+        }
+    }
+    if (!haveX || !(xStop > xStart)) {
+        xStart = 0.0;
+        xStop = xStart + 1.0;
+    }
+    const double xMajor = niceStep((xStop - xStart) / 6.0);
     const double yStart = 0.0;
-    const double yMajor = std::max(1.0, yMax / 10.0);
+    const double yStop  = yMaxPlot * 1.05;
+    const double yMajor = niceStep((yStop - yStart) / 6.0);
 
     harmonicsPlot.clear();
-    harmonicsPlot.setAxes(xStart, xStop, xMajor, yStart, yMax, yMajor);
+    harmonicsPlot.setAxes(xStart, xStop, xMajor, yStart, yStop, yMajor);
+
+    // Axis titles are not part of Plot::setAxes(); add them here so the plot can be understood
+    // without having to infer what the axes represent.
+    //
+    // These titles ignore view scaling so they remain readable after fitInView().
+    auto addAxisTitles = [&](const QString &xTitle, const QString &yTitle) {
+        if (!harmonicsView || !harmonicsView->scene()) {
+            return;
+        }
+
+        QGraphicsScene *scene = harmonicsView->scene();
+
+        auto *xText = scene->addText(xTitle);
+        xText->setDefaultTextColor(Qt::black);
+        xText->setZValue(900.0);
+        xText->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        xText->setPos(PLOT_WIDTH * 0.5 - xText->boundingRect().width() * 0.5, PLOT_HEIGHT + 36.0);
+
+        auto *yText = scene->addText(yTitle);
+        yText->setDefaultTextColor(Qt::black);
+        yText->setZValue(900.0);
+        yText->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        yText->setRotation(-90.0);
+        yText->setPos(-70.0, PLOT_HEIGHT * 0.5 + yText->boundingRect().width() * 0.5);
+    };
+
+    addAxisTitles(QStringLiteral("Headroom (Vpk)"), QStringLiteral("Distortion (%)"));
+
+    // Helper: if the X array contains NaN/inf at a particular index (can happen when the simulator
+    // discards a sample), pick the nearest finite X so markers stay on-plot.
+    auto nearestFiniteX = [](const QVector<double> &xs, int idx) -> double {
+        if (idx < 0 || idx >= xs.size()) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        if (std::isfinite(xs[idx])) {
+            return xs[idx];
+        }
+        for (int d = 1; d < xs.size(); ++d) {
+            const int lo = idx - d;
+            const int hi = idx + d;
+            if (lo >= 0 && std::isfinite(xs[lo])) {
+                return xs[lo];
+            }
+            if (hi < xs.size() && std::isfinite(xs[hi])) {
+                return xs[hi];
+            }
+        }
+        return std::numeric_limits<double>::quiet_NaN();
+    };
 
     auto drawCurve = [&](const QVector<double> &vals, const QColor &color) {
         if (vals.size() != count) return;
@@ -5427,12 +5546,226 @@ void ValveWorkbench::runHarmonicsScan()
         }
     };
 
+    // Harmonics headroom scan visualization
+    //
+    // We plot a *family* of distortion curves vs headroom (Vpk):
+    // - HD2 (even) in blue
+    // - HD3 (odd)  in green
+    // - HD4 (even) in brown
+    // - THD        in red
+    //
+    // The goal is not only to show distortion rising with headroom, but to make it easier to pick
+    // an operating point where:
+    // - even harmonics are strong (for "warmth" / richness)
+    // - odd harmonics are suppressed (to avoid "harshness")
+    //
+    // Markers used on this plot:
+    // - Min THD (circle ○): lowest total distortion.
+    // - Max Even (square □): maximizes (HD2+HD4).
+    // - Min Odd  (triangle ▽): minimizes HD3.
+    // - Max Even/Odd (diamond ◇): maximizes (HD2+HD4)/HD3.
+    //
+    // Notes on Y-axis capping:
+    // We may cap the displayed Y range for readability when a few extreme clipping points dominate.
+    // When capped, we still report the *true* values in the text output, but we clamp marker Y
+    // positions into the visible range so the markers remain visible.
+
     drawCurve(hd2Vals, QColor::fromRgb(0, 0, 255));      // HD2 blue
     drawCurve(hd3Vals, QColor::fromRgb(0, 128, 0));      // HD3 green
     drawCurve(hd4Vals, QColor::fromRgb(165, 42, 42));    // HD4 brown
     drawCurve(thdVals, QColor::fromRgb(255, 0, 0));      // THD red
 
+    auto addLegend = [this]() {
+        if (!harmonicsView || !harmonicsView->scene()) {
+            return;
+        }
+
+        QGraphicsScene *scene = harmonicsView->scene();
+        const double legendW = 270.0;
+        const double legendRowH = 26.0;
+        const double legendPad = 8.0;
+        const int rows = 8;
+        const double legendH = legendPad * 2.0 + rows * legendRowH;
+
+        const double x0 = PLOT_WIDTH - legendW - 10.0;
+        const double y0 = 10.0;
+
+        auto *box = scene->addRect(x0, y0, legendW, legendH, QPen(Qt::black), QBrush(QColor(255, 255, 255, 220)));
+        box->setZValue(1000.0);
+        box->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+
+        struct Entry { QString label; QColor color; };
+        const Entry entries[] = {
+            { QStringLiteral("HD2"), QColor::fromRgb(0, 0, 255) },
+            { QStringLiteral("HD3"), QColor::fromRgb(0, 128, 0) },
+            { QStringLiteral("HD4"), QColor::fromRgb(165, 42, 42) },
+            { QStringLiteral("THD"), QColor::fromRgb(255, 0, 0) },
+            { QStringLiteral("Min THD (\u25CB)"), QColor::fromRgb(255, 140, 0) },
+            { QStringLiteral("Max Even (\u25A1)"), QColor::fromRgb(0, 0, 255) },
+            { QStringLiteral("Min Odd (\u25BD)"), QColor::fromRgb(0, 128, 0) },
+            { QStringLiteral("Max Even/Odd (\u25C7)"), QColor::fromRgb(128, 0, 128) },
+        };
+
+        for (int i = 0; i < rows; ++i) {
+            const double y = y0 + legendPad + i * legendRowH + 4.0;
+            QPen pen(entries[i].color);
+            pen.setWidth(2);
+            auto *swatch = scene->addLine(x0 + legendPad, y, x0 + legendPad + 26.0, y, pen);
+            swatch->setZValue(1001.0);
+            swatch->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+
+            auto *text = scene->addText(entries[i].label);
+            text->setDefaultTextColor(entries[i].color);
+            text->setPos(x0 + legendPad + 32.0, y - 10.0);
+            text->setZValue(1001.0);
+            text->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            text->setFlag(QGraphicsItem::ItemIsSelectable, false);
+            text->setFlag(QGraphicsItem::ItemIsMovable, false);
+        }
+    };
+
+    auto findMin = [](const QVector<double> &vals, int &idx, double &vmin) {
+        idx = -1;
+        vmin = std::numeric_limits<double>::infinity();
+        for (int i = 0; i < vals.size(); ++i) {
+            const double v = vals[i];
+            if (std::isfinite(v) && v >= 0.0 && v < vmin) {
+                vmin = v;
+                idx = i;
+            }
+        }
+    };
+
+    auto findMaxRatio = [&](const QVector<double> &num, const QVector<double> &den, int &idx, double &best) {
+        idx = -1;
+        best = 0.0;
+        const int n = std::min(num.size(), den.size());
+        for (int i = 0; i < n; ++i) {
+            const double a = num[i];
+            const double b = den[i];
+            if (!std::isfinite(a) || !std::isfinite(b) || a < 0.0 || b <= 0.0) {
+                continue;
+            }
+            const double r = a / b;
+            if (std::isfinite(r) && r > best) {
+                best = r;
+                idx = i;
+            }
+        }
+    };
+
+    int idxMinThd = -1;
+    double minThd = 0.0;
+    findMin(thdVals, idxMinThd, minThd);
+
+    if (idxMinThd >= 0) {
+        const double x = nearestFiniteX(headroomVals, idxMinThd);
+        const double y = thdVals[idxMinThd];
+        if (std::isfinite(x) && std::isfinite(y)) {
+            auto *marker = harmonicsPlot.createLabel(x, y, 0.0, QColor::fromRgb(255, 140, 0));
+            marker->setPlainText(QStringLiteral("\u25CB"));
+            marker->setDefaultTextColor(QColor::fromRgb(255, 140, 0));
+        }
+        harmonicsText->append(tr("Min THD: %1% at Headroom=%2 Vpk")
+                                  .arg(minThd, 0, 'f', 3)
+                                  .arg(x, 0, 'f', 1));
+    }
+
+    int idxMaxRatio = -1;
+    double bestRatio = 0.0;
+    QVector<double> evenVals;
+    QVector<double> oddVals;
+    evenVals.reserve(hd2Vals.size());
+    oddVals.reserve(hd2Vals.size());
+    for (int i = 0; i < hd2Vals.size(); ++i) {
+        const double hd2 = hd2Vals[i];
+        const double hd3 = (i < hd3Vals.size()) ? hd3Vals[i] : 0.0;
+        const double hd4 = (i < hd4Vals.size()) ? hd4Vals[i] : 0.0;
+        // "Even" = sum of selected even harmonics present in this plot.
+        // For headroom scan we choose HD2 and HD4.
+        const double even = (std::isfinite(hd2) ? hd2 : 0.0) + (std::isfinite(hd4) ? hd4 : 0.0);
+        // "Odd" = selected odd harmonic(s). For headroom scan we use HD3.
+        const double odd = (std::isfinite(hd3) ? hd3 : 0.0);
+        evenVals.append(even);
+        oddVals.append(odd);
+    }
+    findMaxRatio(evenVals, oddVals, idxMaxRatio, bestRatio);
+
+    int idxMaxEven = -1;
+    double bestEven = 0.0;
+    for (int i = 0; i < evenVals.size(); ++i) {
+        const double v = evenVals[i];
+        if (std::isfinite(v) && v >= 0.0 && (idxMaxEven < 0 || v > bestEven)) {
+            bestEven = v;
+            idxMaxEven = i;
+        }
+    }
+
+    int idxMinOdd = -1;
+    double bestOdd = std::numeric_limits<double>::infinity();
+    for (int i = 0; i < oddVals.size(); ++i) {
+        const double v = oddVals[i];
+        if (std::isfinite(v) && v >= 0.0 && v < bestOdd) {
+            bestOdd = v;
+            idxMinOdd = i;
+        }
+    }
+
+    if (idxMaxEven >= 0) {
+        const double x = nearestFiniteX(headroomVals, idxMaxEven);
+        const double yTrue = evenVals[idxMaxEven];
+        // Clamp marker position into view if the plot Y axis is capped.
+        // We still report the true value in the text output.
+        const double yPlot = std::min(yTrue, yMaxPlot * 0.98);
+        if (std::isfinite(x) && std::isfinite(yPlot)) {
+            auto *marker = harmonicsPlot.createLabel(x, yPlot, 0.0, QColor::fromRgb(0, 0, 255));
+            marker->setPlainText(QStringLiteral("\u25A1"));
+            marker->setDefaultTextColor(QColor::fromRgb(0, 0, 255));
+        }
+        harmonicsText->append(tr("Max Even (HD2+HD4): %1% at Headroom=%2 Vpk")
+                                  .arg(bestEven, 0, 'f', 3)
+                                  .arg(x, 0, 'f', 1));
+    }
+
+    if (idxMinOdd >= 0) {
+        const double x = nearestFiniteX(headroomVals, idxMinOdd);
+        const double y = oddVals[idxMinOdd];
+        if (std::isfinite(x) && std::isfinite(y)) {
+            auto *marker = harmonicsPlot.createLabel(x, y, 0.0, QColor::fromRgb(0, 128, 0));
+            marker->setPlainText(QStringLiteral("\u25BD"));
+            marker->setDefaultTextColor(QColor::fromRgb(0, 128, 0));
+        }
+        harmonicsText->append(tr("Min Odd (HD3): %1% at Headroom=%2 Vpk")
+                                  .arg(bestOdd, 0, 'f', 3)
+                                  .arg(x, 0, 'f', 1));
+    }
+    if (idxMaxRatio >= 0) {
+        const double x = nearestFiniteX(headroomVals, idxMaxRatio);
+        const double y = hd2Vals[idxMaxRatio];
+        if (std::isfinite(x) && std::isfinite(y)) {
+            auto *marker = harmonicsPlot.createLabel(x, y, 0.0, QColor::fromRgb(128, 0, 128));
+            marker->setPlainText(QStringLiteral("\u25C7"));
+            marker->setDefaultTextColor(QColor::fromRgb(128, 0, 128));
+        }
+        const double even = (idxMaxRatio < evenVals.size()) ? evenVals[idxMaxRatio] : 0.0;
+        const double odd = (idxMaxRatio < oddVals.size()) ? oddVals[idxMaxRatio] : 0.0;
+        harmonicsText->append(tr("Max Even/Odd ratio: %1 at Headroom=%2 Vpk (Even=%3%, Odd=%4%)")
+                                  .arg(bestRatio, 0, 'f', 3)
+                                  .arg(x, 0, 'f', 1)
+                                  .arg(even, 0, 'f', 3)
+                                  .arg(odd, 0, 'f', 3));
+    }
+
     harmonicsText->append(tr("Plotted HD2 (blue), HD3 (green), HD4 (brown), and THD (red) vs headroom (Vpk)."));
+    if (yCapped) {
+        harmonicsText->append(tr("Note: Y-axis display capped at %1% for readability (true max was %2%).")
+                                  .arg(yMaxPlot, 0, 'f', 1)
+                                  .arg(yMax, 0, 'f', 1));
+    }
+
+    addLegend();
+
+    fitHarmonicsViewToContents();
 }
 
 void ValveWorkbench::runHarmonicsBiasSweep()
@@ -5440,6 +5773,21 @@ void ValveWorkbench::runHarmonicsBiasSweep()
     if (!harmonicsText || !harmonicsView) {
         return;
     }
+
+    auto fitHarmonicsViewToContents = [this]() {
+        if (!harmonicsView || !harmonicsView->scene()) {
+            return;
+        }
+        QRectF r = harmonicsView->scene()->itemsBoundingRect();
+        if (!r.isValid() || r.isEmpty()) {
+            return;
+        }
+        const double padX = std::max(10.0, r.width() * 0.05);
+        const double padY = std::max(10.0, r.height() * 0.05);
+        r.adjust(-padX, -padY, padX, padY);
+        harmonicsView->setSceneRect(r);
+        harmonicsView->fitInView(r, Qt::KeepAspectRatio);
+    };
 
     harmonicsText->clear();
     harmonicsText->append(tr("Running SE bias sweep harmonic scan..."));
@@ -5486,17 +5834,111 @@ void ValveWorkbench::runHarmonicsBiasSweep()
     updateYMax(hd2Vals);
     updateYMax(hd3Vals);
     updateYMax(hd4Vals);
+    updateYMax(hd5Vals);
     updateYMax(thdVals);
     if (yMax <= 0.0) yMax = 1.0;
 
-    const double xStart = iaVals.first();
-    const double xStop  = iaVals.last();
-    const double xMajor = std::max(1.0, (xStop - xStart) / 10.0);
+    // If a few clipping points explode THD, the plot becomes unusable.
+    // Cap the plotted Y range to keep the low-distortion region readable,
+    // but still report the true max in the text output.
+    double yMaxPlot = yMax;
+    bool yCapped = false;
+    if (yMaxPlot > 20.0) {
+        yMaxPlot = 20.0;
+        yCapped = true;
+    }
+
+    auto niceStep = [](double rawStep) -> double {
+        if (!(rawStep > 0.0) || !std::isfinite(rawStep)) {
+            return 1.0;
+        }
+        const double exp10 = std::pow(10.0, std::floor(std::log10(rawStep)));
+        const double f = rawStep / exp10;
+        double nf = 1.0;
+        if (f <= 1.0) nf = 1.0;
+        else if (f <= 2.0) nf = 2.0;
+        else if (f <= 5.0) nf = 5.0;
+        else nf = 10.0;
+        return nf * exp10;
+    };
+
+    // Ensure monotonic axis mapping even if the sweep produces points in descending order.
+    // See runHarmonicsScan() for rationale (ignore NaN/inf samples to avoid a broken xScale).
+    double xStart = 0.0;
+    double xStop = 1.0;
+    bool haveX = false;
+    for (double x : iaVals) {
+        if (!std::isfinite(x)) {
+            continue;
+        }
+        if (!haveX) {
+            xStart = x;
+            xStop = x;
+            haveX = true;
+        } else {
+            xStart = std::min(xStart, x);
+            xStop = std::max(xStop, x);
+        }
+    }
+    if (!haveX || !(xStop > xStart)) {
+        xStart = 0.0;
+        xStop = xStart + 1.0;
+    }
+    const double xMajor = niceStep((xStop - xStart) / 6.0);
     const double yStart = 0.0;
-    const double yMajor = std::max(1.0, yMax / 10.0);
+    const double yStop  = yMaxPlot * 1.05;
+    const double yMajor = niceStep((yStop - yStart) / 6.0);
 
     harmonicsPlot.clear();
-    harmonicsPlot.setAxes(xStart, xStop, xMajor, yStart, yMax, yMajor);
+    harmonicsPlot.setAxes(xStart, xStop, xMajor, yStart, yStop, yMajor);
+
+    // Axis titles are not part of Plot::setAxes(); add them here so the plot can be understood
+    // without having to infer what the axes represent.
+    // These titles ignore view scaling so they remain readable after fitInView().
+    auto addAxisTitles = [&](const QString &xTitle, const QString &yTitle) {
+        if (!harmonicsView || !harmonicsView->scene()) {
+            return;
+        }
+
+        QGraphicsScene *scene = harmonicsView->scene();
+
+        auto *xText = scene->addText(xTitle);
+        xText->setDefaultTextColor(Qt::black);
+        xText->setZValue(900.0);
+        xText->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        xText->setPos(PLOT_WIDTH * 0.5 - xText->boundingRect().width() * 0.5, PLOT_HEIGHT + 36.0);
+
+        auto *yText = scene->addText(yTitle);
+        yText->setDefaultTextColor(Qt::black);
+        yText->setZValue(900.0);
+        yText->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        yText->setRotation(-90.0);
+        yText->setPos(-70.0, PLOT_HEIGHT * 0.5 + yText->boundingRect().width() * 0.5);
+    };
+
+    addAxisTitles(QStringLiteral("Bias current IA (mA)"), QStringLiteral("Distortion (%)"));
+
+    // Helper: if the X array contains NaN/inf at a particular index (can happen when the sweep
+    // discards a sample), pick the nearest finite X so markers stay on-plot.
+    auto nearestFiniteX = [](const QVector<double> &xs, int idx) -> double {
+        if (idx < 0 || idx >= xs.size()) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        if (std::isfinite(xs[idx])) {
+            return xs[idx];
+        }
+        for (int d = 1; d < xs.size(); ++d) {
+            const int lo = idx - d;
+            const int hi = idx + d;
+            if (lo >= 0 && std::isfinite(xs[lo])) {
+                return xs[lo];
+            }
+            if (hi < xs.size() && std::isfinite(xs[hi])) {
+                return xs[hi];
+            }
+        }
+        return std::numeric_limits<double>::quiet_NaN();
+    };
 
     auto drawCurve = [&](const QVector<double> &vals, const QColor &color) {
         if (vals.size() != count) return;
@@ -5511,7 +5953,22 @@ void ValveWorkbench::runHarmonicsBiasSweep()
         }
     };
 
-    // Enhanced harmonic vs operating point lines plot
+    // Harmonics bias sweep visualization
+    //
+    // X axis: bias current IA (mA)
+    // Y axis: harmonic distortion magnitude (%)
+    //
+    // This view is intended to help pick a bias point with:
+    // - higher even content (HD2+HD4)
+    // - lower odd content (HD3+HD5)
+    // plus basic sanity targets like low THD.
+    //
+    // Markers used on this plot:
+    // - Peaks (●): per-curve maxima (for quick reference)
+    // - Min THD (○): lowest THD across the sweep
+    // - Max Even (□): max (HD2+HD4)
+    // - Min Odd  (▽): min (HD3+HD5)
+    // - Max Even/Odd (◇): max (HD2+HD4)/(HD3+HD5)
     harmonicsText->append(tr("Harmonic vs Operating Point Analysis:"));
     harmonicsText->append(tr("Individual harmonic curves vs bias current"));
     harmonicsText->append(tr("Blue=HD2, Green=HD3, Brown=HD4, Red=THD"));
@@ -5522,6 +5979,57 @@ void ValveWorkbench::runHarmonicsBiasSweep()
     drawCurve(hd4Vals, QColor::fromRgb(165, 42, 42));    // HD4 brown
     drawCurve(hd5Vals, QColor::fromRgb(128, 0, 128));    // HD5 purple
     drawCurve(thdVals, QColor::fromRgb(255, 0, 0));      // THD red
+
+    auto addLegend = [this]() {
+        if (!harmonicsView || !harmonicsView->scene()) {
+            return;
+        }
+
+        QGraphicsScene *scene = harmonicsView->scene();
+        const double legendW = 270.0;
+        const double legendRowH = 26.0;
+        const double legendPad = 8.0;
+        const int rows = 10;
+        const double legendH = legendPad * 2.0 + rows * legendRowH;
+
+        const double x0 = PLOT_WIDTH - legendW - 10.0;
+        const double y0 = 10.0;
+
+        auto *box = scene->addRect(x0, y0, legendW, legendH, QPen(Qt::black), QBrush(QColor(255, 255, 255, 220)));
+        box->setZValue(1000.0);
+        box->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+
+        struct Entry { QString label; QColor color; };
+        const Entry entries[] = {
+            { QStringLiteral("HD2"), QColor::fromRgb(0, 0, 255) },
+            { QStringLiteral("HD3"), QColor::fromRgb(0, 128, 0) },
+            { QStringLiteral("HD4"), QColor::fromRgb(165, 42, 42) },
+            { QStringLiteral("HD5"), QColor::fromRgb(128, 0, 128) },
+            { QStringLiteral("THD"), QColor::fromRgb(255, 0, 0) },
+            { QStringLiteral("Peaks (\u25CF)"), QColor::fromRgb(255, 165, 0) },
+            { QStringLiteral("Min THD (\u25CB)"), QColor::fromRgb(255, 140, 0) },
+            { QStringLiteral("Max Even (\u25A1)"), QColor::fromRgb(0, 0, 255) },
+            { QStringLiteral("Min Odd (\u25BD)"), QColor::fromRgb(0, 128, 0) },
+            { QStringLiteral("Max Even/Odd (\u25C7)"), QColor::fromRgb(128, 0, 128) },
+        };
+
+        for (int i = 0; i < rows; ++i) {
+            const double y = y0 + legendPad + i * legendRowH + 4.0;
+            QPen pen(entries[i].color);
+            pen.setWidth(2);
+            auto *swatch = scene->addLine(x0 + legendPad, y, x0 + legendPad + 26.0, y, pen);
+            swatch->setZValue(1001.0);
+            swatch->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+
+            auto *text = scene->addText(entries[i].label);
+            text->setDefaultTextColor(entries[i].color);
+            text->setPos(x0 + legendPad + 32.0, y - 10.0);
+            text->setZValue(1001.0);
+            text->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            text->setFlag(QGraphicsItem::ItemIsSelectable, false);
+            text->setFlag(QGraphicsItem::ItemIsMovable, false);
+        }
+    };
     
     // Find and mark harmonic peaks
     auto findPeak = [&](const QVector<double> &vals, const QString &name) {
@@ -5534,10 +6042,11 @@ void ValveWorkbench::runHarmonicsBiasSweep()
                 peakIdx = i;
             }
         }
-        harmonicsText->append(tr("%1 peak: %2% at IA=%3mA").arg(name).arg(peakVal, 0, 'f', 2).arg(iaVals[peakIdx], 0, 'f', 1));
+        const double x = nearestFiniteX(iaVals, peakIdx);
+        harmonicsText->append(tr("%1 peak: %2% at IA=%3mA").arg(name).arg(peakVal, 0, 'f', 2).arg(x, 0, 'f', 1));
         
         // Mark peak on plot with circle
-        harmonicsPlot.createLabel(iaVals[peakIdx], peakVal, peakVal, QColor::fromRgb(255, 165, 0))->setPlainText("●");
+        harmonicsPlot.createLabel(x, peakVal, peakVal, QColor::fromRgb(255, 165, 0))->setPlainText("●");
     };
     
     findPeak(hd2Vals, "HD2");
@@ -5546,7 +6055,125 @@ void ValveWorkbench::runHarmonicsBiasSweep()
     findPeak(hd5Vals, "HD5");
     findPeak(thdVals, "THD");
 
+    // Also report/mark the minimum THD operating point as a recommended bias.
+    int idxMinThd = -1;
+    double minThd = std::numeric_limits<double>::infinity();
+    for (int i = 0; i < thdVals.size(); ++i) {
+        const double v = thdVals[i];
+        if (std::isfinite(v) && v >= 0.0 && v < minThd) {
+            minThd = v;
+            idxMinThd = i;
+        }
+    }
+    if (idxMinThd >= 0) {
+        const double x = nearestFiniteX(iaVals, idxMinThd);
+        const double y = thdVals[idxMinThd];
+        if (std::isfinite(x) && std::isfinite(y)) {
+            auto *marker = harmonicsPlot.createLabel(x, y, 0.0, QColor::fromRgb(255, 140, 0));
+            marker->setPlainText(QStringLiteral("\u25CB"));
+            marker->setDefaultTextColor(QColor::fromRgb(255, 140, 0));
+        }
+        harmonicsText->append(tr("Recommended bias (min THD): IA=%1 mA, THD=%2%")
+                                  .arg(x, 0, 'f', 2)
+                                  .arg(minThd, 0, 'f', 3));
+    }
+
+    // Also report a harmonic-balance bias point: maximize even harmonics while minimizing odd harmonics.
+    int idxMaxEvenOdd = -1;
+    double bestEvenOdd = 0.0;
+    for (int i = 0; i < iaVals.size(); ++i) {
+        const double hd2 = (i < hd2Vals.size()) ? hd2Vals[i] : 0.0;
+        const double hd3 = (i < hd3Vals.size()) ? hd3Vals[i] : 0.0;
+        const double hd4 = (i < hd4Vals.size()) ? hd4Vals[i] : 0.0;
+        const double hd5 = (i < hd5Vals.size()) ? hd5Vals[i] : 0.0;
+        const double even = (std::isfinite(hd2) ? hd2 : 0.0) + (std::isfinite(hd4) ? hd4 : 0.0);
+        const double odd = (std::isfinite(hd3) ? hd3 : 0.0) + (std::isfinite(hd5) ? hd5 : 0.0);
+        if (!std::isfinite(even) || !std::isfinite(odd) || even < 0.0 || odd < 0.0) {
+            continue;
+        }
+        const double ratio = even / (odd + 1e-12);
+        if (std::isfinite(ratio) && ratio > bestEvenOdd) {
+            bestEvenOdd = ratio;
+            idxMaxEvenOdd = i;
+        }
+    }
+    if (idxMaxEvenOdd >= 0) {
+        const double x = nearestFiniteX(iaVals, idxMaxEvenOdd);
+        const double y = (idxMaxEvenOdd < hd2Vals.size()) ? hd2Vals[idxMaxEvenOdd] : 0.0;
+        if (std::isfinite(x) && std::isfinite(y)) {
+            auto *marker = harmonicsPlot.createLabel(x, y, 0.0, QColor::fromRgb(128, 0, 128));
+            marker->setPlainText(QStringLiteral("\u25C7"));
+            marker->setDefaultTextColor(QColor::fromRgb(128, 0, 128));
+        }
+        const double hd2 = (idxMaxEvenOdd < hd2Vals.size()) ? hd2Vals[idxMaxEvenOdd] : 0.0;
+        const double hd3 = (idxMaxEvenOdd < hd3Vals.size()) ? hd3Vals[idxMaxEvenOdd] : 0.0;
+        const double hd4 = (idxMaxEvenOdd < hd4Vals.size()) ? hd4Vals[idxMaxEvenOdd] : 0.0;
+        const double hd5 = (idxMaxEvenOdd < hd5Vals.size()) ? hd5Vals[idxMaxEvenOdd] : 0.0;
+        const double even = (std::isfinite(hd2) ? hd2 : 0.0) + (std::isfinite(hd4) ? hd4 : 0.0);
+        const double odd = (std::isfinite(hd3) ? hd3 : 0.0) + (std::isfinite(hd5) ? hd5 : 0.0);
+        harmonicsText->append(tr("Recommended bias (harmonic balance): IA=%1 mA, Even=%2%, Odd=%3%, Even/Odd=%4")
+                                  .arg(x, 0, 'f', 2)
+                                  .arg(even, 0, 'f', 3)
+                                  .arg(odd, 0, 'f', 3)
+                                  .arg(bestEvenOdd, 0, 'f', 3));
+    }
+
+    int idxMaxEven = -1;
+    double bestEven = 0.0;
+    int idxMinOdd = -1;
+    double bestOdd = std::numeric_limits<double>::infinity();
+    for (int i = 0; i < iaVals.size(); ++i) {
+        const double hd2 = (i < hd2Vals.size()) ? hd2Vals[i] : 0.0;
+        const double hd3 = (i < hd3Vals.size()) ? hd3Vals[i] : 0.0;
+        const double hd4 = (i < hd4Vals.size()) ? hd4Vals[i] : 0.0;
+        const double hd5 = (i < hd5Vals.size()) ? hd5Vals[i] : 0.0;
+        const double even = (std::isfinite(hd2) ? hd2 : 0.0) + (std::isfinite(hd4) ? hd4 : 0.0);
+        const double odd = (std::isfinite(hd3) ? hd3 : 0.0) + (std::isfinite(hd5) ? hd5 : 0.0);
+        if (std::isfinite(even) && even >= 0.0 && (idxMaxEven < 0 || even > bestEven)) {
+            bestEven = even;
+            idxMaxEven = i;
+        }
+        if (std::isfinite(odd) && odd >= 0.0 && odd < bestOdd) {
+            bestOdd = odd;
+            idxMinOdd = i;
+        }
+    }
+
+    if (idxMaxEven >= 0) {
+        const double x = nearestFiniteX(iaVals, idxMaxEven);
+        const double yPlot = std::min(bestEven, yMaxPlot * 0.98);
+        if (std::isfinite(x) && std::isfinite(yPlot)) {
+            auto *marker = harmonicsPlot.createLabel(x, yPlot, 0.0, QColor::fromRgb(0, 0, 255));
+            marker->setPlainText(QStringLiteral("\u25A1"));
+            marker->setDefaultTextColor(QColor::fromRgb(0, 0, 255));
+        }
+        harmonicsText->append(tr("Max Even (HD2+HD4): IA=%1 mA, Even=%2%")
+                                  .arg(x, 0, 'f', 2)
+                                  .arg(bestEven, 0, 'f', 3));
+    }
+
+    if (idxMinOdd >= 0) {
+        const double x = nearestFiniteX(iaVals, idxMinOdd);
+        if (std::isfinite(x) && std::isfinite(bestOdd)) {
+            auto *marker = harmonicsPlot.createLabel(x, bestOdd, 0.0, QColor::fromRgb(0, 128, 0));
+            marker->setPlainText(QStringLiteral("\u25BD"));
+            marker->setDefaultTextColor(QColor::fromRgb(0, 128, 0));
+        }
+        harmonicsText->append(tr("Min Odd (HD3+HD5): IA=%1 mA, Odd=%2%")
+                                  .arg(x, 0, 'f', 2)
+                                  .arg(bestOdd, 0, 'f', 3));
+    }
+
     harmonicsText->append(tr("Plotted individual harmonics vs bias current with peak markers."));
+    if (yCapped) {
+        harmonicsText->append(tr("Note: Y-axis display capped at %1% for readability (true max was %2%).")
+                                  .arg(yMaxPlot, 0, 'f', 1)
+                                  .arg(yMax, 0, 'f', 1));
+    }
+
+    addLegend();
+
+    fitHarmonicsViewToContents();
 }
 
 void ValveWorkbench::runHarmonicsHeatmap()
@@ -5751,6 +6378,17 @@ void ValveWorkbench::runHarmonicsHeatmap()
     for (int h = 0; h < numHarmonics; ++h) {
         harmonicsPlot.createLabel(operatingPoints.first() - (operatingPoints.last() - operatingPoints.first()) * 0.1, h + 1, 0, QColor::fromRgb(0, 0, 0))->setPlainText(QString("HD%1").arg(h + 2));
     }
+
+    if (harmonicsView && harmonicsView->scene()) {
+        QRectF r = harmonicsView->scene()->itemsBoundingRect();
+        if (r.isValid() && !r.isEmpty()) {
+            const double padX = std::max(10.0, r.width() * 0.05);
+            const double padY = std::max(10.0, r.height() * 0.05);
+            r.adjust(-padX, -padY, padX, padY);
+            harmonicsView->setSceneRect(r);
+            harmonicsView->fitInView(r, Qt::KeepAspectRatio);
+        }
+    }
 }
 
 void ValveWorkbench::hideRotationControls()
@@ -5773,11 +6411,759 @@ void ValveWorkbench::hideRotationControls()
 
 void ValveWorkbench::runHarmonicsWaterfall()
 {
-    // 3D Waterfall functionality removed - AI failed to follow instructions and made unusable changes
+    // 3D Harmonic Waterfall ("mountain" surface)
+    //
+    // User intent:
+    // - Render a 3D surface over a 2D operating region (bias vs headroom).
+    // - Surface height encodes overall THD (bigger THD => higher peak).
+    // - Surface color encodes even-vs-odd harmonic balance:
+    //     Blue  = even-dominant
+    //     Red   = odd-dominant
+    //     Purple= balanced
+    // - Provide an electrical way to identify "sweet spots" reminiscent of empirical biasing
+    //   and push-pull balancing by ear.
+    //
+    // Implementation overview:
+    // - Use existing SingleEndedOutput::computeHarmonicSurfaceData() which returns a bias×headroom grid
+    //   of HD2..HD5 magnitudes.
+    // - Compute THD = sqrt(HD2^2 + HD3^2 + HD4^2 + HD5^2) per grid point to define height.
+    // - Compute even/odd balance ratio per point to drive red/blue color.
+    // - Project 3D (bias, headroom, THD) to 2D using a lightweight oblique projection controlled
+    //   by the rotation sliders already present on the Harmonics tab.
+    if (!harmonicsText || !harmonicsView) {
+        return;
+    }
+
     harmonicsText->clear();
-    harmonicsText->append(tr("3D Waterfall functionality removed due to AI modification failure."));
-    harmonicsText->append(tr("Original working version was overwritten with unusable changes."));
-    harmonicsText->append(tr("This demonstrates AI inability to follow simple instructions without over-engineering."));
+    harmonicsText->append(tr("Generating 3D Harmonic Waterfall (dual mountain: Even vs Odd)..."));
+
+    // Determine the currently selected Designer circuit.
+    const int currentCircuitType = ui->circuitSelection->currentData().toInt();
+    if (currentCircuitType < 0 || currentCircuitType >= circuits.size() || !circuits.at(currentCircuitType)) {
+        harmonicsText->append(tr("No valid Designer circuit selected. Please select 'Single Ended Output' on the Designer tab."));
+        return;
+    }
+
+    Circuit *circuit = circuits.at(currentCircuitType);
+    auto *se = dynamic_cast<SingleEndedOutput*>(circuit);
+    if (!se) {
+        harmonicsText->append(tr("3D Waterfall is currently implemented for the Single Ended Output circuit only."));
+        harmonicsText->append(tr("Please select 'Single Ended Output' in the Designer tab and choose a device."));
+        return;
+    }
+
+    // Show rotation controls for the 3D plot.
+    if (harmonicsRotationXSlider) {
+        harmonicsRotationXSlider->show();
+    }
+    if (harmonicsRotationYSlider) {
+        harmonicsRotationYSlider->show();
+    }
+    if (harmonicsTab) {
+        if (auto rotationLabel = harmonicsTab->findChild<QLabel*>("rotationLabel")) {
+            rotationLabel->show();
+        }
+        if (auto rotationXLabel = harmonicsTab->findChild<QLabel*>("rotationXLabel")) {
+            rotationXLabel->show();
+        }
+        if (auto rotationYLabel = harmonicsTab->findChild<QLabel*>("rotationYLabel")) {
+            rotationYLabel->show();
+        }
+    }
+
+    // Gather harmonic surface data over a bias×headroom grid.
+    QVector<double> biasPoints;
+    QVector<double> headroomPoints;
+    QVector<QVector<QVector<double>>> harmonicSurface;
+    se->computeHarmonicSurfaceData(biasPoints, headroomPoints, harmonicSurface);
+
+    // Expect 4 layers: HD2, HD3, HD4, HD5.
+    if (biasPoints.isEmpty() || headroomPoints.isEmpty() || harmonicSurface.size() < 4) {
+        harmonicsText->append(tr("No valid harmonic surface data generated (ensure device selected + reasonable parameters)."));
+        return;
+    }
+
+    // Clear any previous plot.
+    harmonicsPlot.clear();
+    if (harmonicsView && harmonicsView->scene()) {
+        harmonicsView->scene()->clear();
+    }
+    harmonicsView->setScene(harmonicsPlot.getScene());
+
+    const int biasSteps = biasPoints.size();
+    const int headSteps = headroomPoints.size();
+
+    // Compute THD and even/odd components at each grid point.
+    // even = HD2 + HD4
+    // odd  = HD3 + HD5
+    // balance = (even - odd) / (even + odd + eps) in [-1..1]
+    QVector<QVector<double>> thdGrid(headSteps);
+    QVector<QVector<double>> evenGrid(headSteps);
+    QVector<QVector<double>> oddGrid(headSteps);
+    QVector<QVector<double>> balanceGrid(headSteps);
+    double thdMax = 0.0;
+    double evenMax = 0.0;
+    double oddMax = 0.0;
+    for (int h = 0; h < headSteps; ++h) {
+        thdGrid[h].resize(biasSteps);
+        evenGrid[h].resize(biasSteps);
+        oddGrid[h].resize(biasSteps);
+        balanceGrid[h].resize(biasSteps);
+        for (int b = 0; b < biasSteps; ++b) {
+            const double hd2 = harmonicSurface[0][h][b];
+            const double hd3 = harmonicSurface[1][h][b];
+            const double hd4 = harmonicSurface[2][h][b];
+            const double hd5 = harmonicSurface[3][h][b];
+            const double thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4 + hd5 * hd5);
+            thdGrid[h][b] = thd;
+
+            const double even = std::max(0.0, hd2) + std::max(0.0, hd4);
+            const double odd = std::max(0.0, hd3) + std::max(0.0, hd5);
+            evenGrid[h][b] = even;
+            oddGrid[h][b] = odd;
+            const double denom = even + odd + 1e-9;
+            balanceGrid[h][b] = (even - odd) / denom;
+
+            if (std::isfinite(thd)) {
+                thdMax = std::max(thdMax, thd);
+            }
+            if (std::isfinite(even)) {
+                evenMax = std::max(evenMax, even);
+            }
+            if (std::isfinite(odd)) {
+                oddMax = std::max(oddMax, odd);
+            }
+        }
+    }
+    if (!(thdMax > 0.0) || !std::isfinite(thdMax)) {
+        thdMax = 1.0;
+    }
+
+    // For the dual-surface rendering, Z is not THD; Z is the harmonic magnitude (Even or Odd).
+    // We scale the projection by the maximum of the two so both surfaces share the same height scale.
+    double zMax = std::max(evenMax, oddMax);
+    if (!(zMax > 0.0) || !std::isfinite(zMax)) {
+        zMax = 1.0;
+    }
+
+    // Projection parameters.
+    // The existing sliders were originally treated as fractional parameters (default 0.6 and 0.3).
+    // We keep that model: slider value in [-100..100] maps to [-1..1] for an oblique projection.
+    const double depthX = harmonicsRotationXSlider ? (static_cast<double>(harmonicsRotationXSlider->value()) / 100.0) : 0.6;
+    const double depthY = harmonicsRotationYSlider ? (static_cast<double>(harmonicsRotationYSlider->value()) / 100.0) : 0.3;
+
+    // World scales in scene coordinates.
+    // These are chosen to fit within the existing plot scene size while leaving room for labels.
+    const double worldW = PLOT_WIDTH * 0.85;
+    const double worldD = PLOT_HEIGHT * 0.60;
+    const double worldH = PLOT_HEIGHT * 0.60;
+
+    const double biasMin = biasPoints.first();
+    const double biasMax = biasPoints.last();
+    const double biasSpan = std::max(1e-9, biasMax - biasMin);
+
+    // The surface is simulated over a bias×headroom grid, but the user wants the *axis* to be
+    // anode voltage rather than headroom.
+    //
+    // We therefore map each sample to an anode-voltage coordinate that captures “how close to
+    // clipping we are” as drive increases:
+    //   Va(min) = Va_bias - headroomVpk
+    //
+    // This makes “more drive” move the surface toward lower Va(min), which is intuitive for
+    // viewing distortion onset.
+    QVector<QVector<double>> vaMinGrid(headSteps);
+    double vaMinAxisMin = std::numeric_limits<double>::infinity();
+    double vaMinAxisMax = -std::numeric_limits<double>::infinity();
+    const double vb = se->getParameter(SE_VB);
+    for (int h = 0; h < headSteps; ++h) {
+        vaMinGrid[h].resize(biasSteps);
+        const double head = headroomPoints[h];
+        for (int b = 0; b < biasSteps; ++b) {
+            const double bias = biasPoints[b];
+            const double vaBias = se->estimateAnodeVoltageAtBias(bias);
+            double vaMin = vaBias - head;
+            if (!std::isfinite(vaMin)) {
+                vaMin = 0.0;
+            }
+            vaMin = std::max(0.0, vaMin);
+            if (vb > 0.0 && std::isfinite(vb)) {
+                vaMin = std::min(vaMin, vb);
+            }
+            vaMinGrid[h][b] = vaMin;
+            vaMinAxisMin = std::min(vaMinAxisMin, vaMin);
+            vaMinAxisMax = std::max(vaMinAxisMax, vaMin);
+        }
+    }
+    if (!std::isfinite(vaMinAxisMin) || !std::isfinite(vaMinAxisMax) || !(vaMinAxisMax > vaMinAxisMin)) {
+        vaMinAxisMin = 0.0;
+        vaMinAxisMax = std::max(1.0, vb);
+    }
+    const double vaSpan = std::max(1e-9, vaMinAxisMax - vaMinAxisMin);
+
+    // Project 3D point (bias, Va(min), Z) into scene coordinates.
+    // In this "dual mountain" mode:
+    // - Z is the harmonic magnitude (%) for the surface being drawn (Even or Odd)
+    //
+    // Coordinate meaning:
+    // - X = bias current (mA)
+    // - Y = anode voltage Va(min) during the swing (V)
+    // - Z = harmonic magnitude (%)
+    //
+    // Visual meaning:
+    // - Lower Va(min) (more drive / deeper into clipping region) should move "into" the scene (depth).
+    // - Higher THD should go "up" (smaller scene Y).
+    const double marginL = 60.0;
+    const double marginT = 40.0;
+    const double baseY = marginT + worldH + std::abs(depthY) * worldD;
+
+    auto project = [&](double bias_mA, double vaMin_V, double z_pct) -> QPointF {
+        const double xn = (bias_mA - biasMin) / biasSpan;
+        const double yn = (vaMin_V - vaMinAxisMin) / vaSpan;
+        const double zn = std::clamp(z_pct / zMax, 0.0, 1.0);
+
+        const double X = xn * worldW;
+        const double Y = yn * worldD;
+        const double Z = zn * worldH;
+
+        const double sx = marginL + X + Y * depthX;
+        const double sy = baseY - Z - Y * depthY;
+        return QPointF(sx, sy);
+    };
+
+    // Map a surface height to a saturated color (keeps hue, scales intensity toward black).
+    auto heightToColor = [&](const QColor &base, double zPct) -> QColor {
+        const double zn = std::clamp(zPct / zMax, 0.0, 1.0);
+        const double intensity = 0.25 + 0.75 * std::sqrt(zn); // 0.25..1.0
+        int r = static_cast<int>(std::clamp(base.red() * intensity, 0.0, 255.0));
+        int g = static_cast<int>(std::clamp(base.green() * intensity, 0.0, 255.0));
+        int b = static_cast<int>(std::clamp(base.blue() * intensity, 0.0, 255.0));
+        QColor c(r, g, b, 150);
+        return c;
+    };
+
+    // Draw 3D surfaces as two meshes of quads.
+    // Draw order matters: we draw from far-to-near in the depth axis so nearer polygons overpaint.
+    QGraphicsScene *scene = harmonicsPlot.getScene();
+    if (!scene) {
+        harmonicsText->append(tr("Internal error: plot scene is null."));
+        return;
+    }
+
+    QPen wirePen(QColor(0, 0, 0, 40));
+    wirePen.setWidthF(0.0);
+
+    const QColor evenBase = QColor::fromRgb(0, 0, 255);
+    const QColor oddBase = QColor::fromRgb(255, 0, 0);
+
+    for (int h = headSteps - 2; h >= 0; --h) {
+        for (int b = 0; b < biasSteps - 1; ++b) {
+            const double bias0 = biasPoints[b];
+            const double bias1 = biasPoints[b + 1];
+
+            const double ze00 = evenGrid[h][b];
+            const double ze10 = evenGrid[h][b + 1];
+            const double ze01 = evenGrid[h + 1][b];
+            const double ze11 = evenGrid[h + 1][b + 1];
+
+            const double zo00 = oddGrid[h][b];
+            const double zo10 = oddGrid[h][b + 1];
+            const double zo01 = oddGrid[h + 1][b];
+            const double zo11 = oddGrid[h + 1][b + 1];
+
+            const double va00 = vaMinGrid[h][b];
+            const double va10 = vaMinGrid[h][b + 1];
+            const double va01 = vaMinGrid[h + 1][b];
+            const double va11 = vaMinGrid[h + 1][b + 1];
+
+            // Odd surface (red)
+            {
+                const double zAvg = 0.25 * (zo00 + zo10 + zo01 + zo11);
+                const QColor fill = heightToColor(oddBase, zAvg);
+                QPolygonF poly;
+                poly << project(bias0, va00, zo00)
+                     << project(bias1, va10, zo10)
+                     << project(bias1, va11, zo11)
+                     << project(bias0, va01, zo01);
+                auto *cell = scene->addPolygon(poly, wirePen, QBrush(fill));
+                (void)cell;
+            }
+
+            // Even surface (blue)
+            {
+                const double zAvg = 0.25 * (ze00 + ze10 + ze01 + ze11);
+                const QColor fill = heightToColor(evenBase, zAvg);
+                QPolygonF poly;
+                poly << project(bias0, va00, ze00)
+                     << project(bias1, va10, ze10)
+                     << project(bias1, va11, ze11)
+                     << project(bias0, va01, ze01);
+                auto *cell = scene->addPolygon(poly, wirePen, QBrush(fill));
+                (void)cell;
+            }
+        }
+    }
+
+    // Operating-point bias sweep slice.
+    //
+    // The 3D surface is a 2D grid (bias × headroom). The user's goal is to bias the stage
+    // at the *current* operating point (i.e., at the current headroom setting) to obtain
+    // a preferred even/odd harmonic balance.
+    //
+    // Since the surface is discrete, we choose the nearest simulated headroom row to the
+    // circuit's current SE_HEADROOM value and then sweep bias along that row.
+    //
+    // Selection rule (for this 1D slice): favor a point that is
+    // - even-dominant (more blue than red) and
+    // - higher THD (taller peak) at that headroom.
+    //
+    // This is intentionally aligned with the "Dumble sweet spot" idea: audible richness
+    // often correlates with a strong even structure at moderate/high distortion.
+    int headIdxOp = 0;
+    {
+        const double headTarget = se->getParameter(SE_HEADROOM);
+        double bestDist = std::numeric_limits<double>::infinity();
+        for (int h = 0; h < headroomPoints.size(); ++h) {
+            const double d = std::abs(headroomPoints[h] - headTarget);
+            if (std::isfinite(d) && d < bestDist) {
+                bestDist = d;
+                headIdxOp = h;
+            }
+        }
+    }
+
+    int bestBiasIdxOp = -1;
+    double bestScoreOp = -std::numeric_limits<double>::infinity();
+    for (int b = 0; b < biasSteps; ++b) {
+        const double thd = thdGrid[headIdxOp][b];
+        const double bal = balanceGrid[headIdxOp][b];
+        if (!std::isfinite(thd) || thd <= 0.0 || !std::isfinite(bal)) {
+            continue;
+        }
+
+        // Weight in [0..1] that prefers even dominance. bal in [-1..1].
+        const double evenWeight = std::clamp(0.5 + 0.5 * bal, 0.0, 1.0);
+        const double score = thd * evenWeight;
+        if (score > bestScoreOp) {
+            bestScoreOp = score;
+            bestBiasIdxOp = b;
+        }
+    }
+
+    if (bestBiasIdxOp >= 0) {
+        const double bias = biasPoints[bestBiasIdxOp];
+        const double head = headroomPoints[headIdxOp];
+        const double vaBias = se->estimateAnodeVoltageAtBias(bias);
+        const double vaMin = std::max(0.0, vaBias - head);
+
+        const double hd2 = harmonicSurface[0][headIdxOp][bestBiasIdxOp];
+        const double hd3 = harmonicSurface[1][headIdxOp][bestBiasIdxOp];
+        const double hd4 = harmonicSurface[2][headIdxOp][bestBiasIdxOp];
+        const double hd5 = harmonicSurface[3][headIdxOp][bestBiasIdxOp];
+        const double even = (std::isfinite(hd2) ? std::max(0.0, hd2) : 0.0) + (std::isfinite(hd4) ? std::max(0.0, hd4) : 0.0);
+        const double odd = (std::isfinite(hd3) ? std::max(0.0, hd3) : 0.0) + (std::isfinite(hd5) ? std::max(0.0, hd5) : 0.0);
+        const double ratio = even / (odd + 1e-12);
+        const double thd = thdGrid[headIdxOp][bestBiasIdxOp];
+        const double bal = balanceGrid[headIdxOp][bestBiasIdxOp];
+
+        // Place the marker on top of the two-surface mountain at this point.
+        const double zMarker = std::max(even, odd);
+
+        const QPointF p = project(bias, vaMin, zMarker);
+        auto *marker = scene->addText(QStringLiteral("✚"));
+        marker->setDefaultTextColor(Qt::black);
+        marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        marker->setZValue(3500.0);
+        marker->setPos(p.x() - 10.0, p.y() - 12.0);
+
+        harmonicsText->append(tr(""));
+        harmonicsText->append(tr("Operating-point bias sweep (fixed Headroom):"));
+        harmonicsText->append(tr("  Target headroom=%1 Vpk (nearest simulated=%2 Vpk)")
+                                  .arg(se->getParameter(SE_HEADROOM), 0, 'f', 2)
+                                  .arg(head, 0, 'f', 2));
+        harmonicsText->append(tr("  Recommended bias: IA=%1 mA, Va(bias)=%2 V, Va(min)=%3 V, Headroom=%4 Vpk, THD=%5%, Even=%6%, Odd=%7%, Even/Odd=%8, balance=%9")
+                                  .arg(bias, 0, 'f', 2)
+                                  .arg(vaBias, 0, 'f', 1)
+                                  .arg(vaMin, 0, 'f', 1)
+                                  .arg(head, 0, 'f', 2)
+                                  .arg(thd, 0, 'f', 2)
+                                  .arg(even, 0, 'f', 2)
+                                  .arg(odd, 0, 'f', 2)
+                                  .arg(ratio, 0, 'f', 2)
+                                  .arg(bal, 0, 'f', 2));
+    }
+
+    // Also compute additional "bias sweep at operating headroom" landmarks.
+    // These are the same categories used in the 2D plots, but shown as markers on the 3D surface.
+    //
+    // - Min THD (○)
+    // - Max Even (□): max (HD2+HD4)
+    // - Min Odd (▽): min (HD3+HD5)
+    // - Max Even/Odd (◇): max (HD2+HD4)/(HD3+HD5)
+    {
+        auto addSurfaceMarker = [&](const QString &symbol, const QColor &color, double bias, double vaMin, double thd) {
+            // Markers are placed at the max(Even,Odd) height so they sit on the dual mountain.
+            const QPointF p = project(bias, vaMin, thd);
+            auto *t = scene->addText(symbol);
+            t->setDefaultTextColor(color);
+            t->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            t->setZValue(3600.0);
+            t->setPos(p.x() - 8.0, p.y() - 12.0);
+        };
+
+        int idxMinThd = -1;
+        double minThd = std::numeric_limits<double>::infinity();
+
+        int idxMaxEven = -1;
+        double bestEven = 0.0;
+
+        int idxMinOdd = -1;
+        double bestOdd = std::numeric_limits<double>::infinity();
+
+        int idxMaxRatio = -1;
+        double bestRatio = -std::numeric_limits<double>::infinity();
+
+        for (int b = 0; b < biasSteps; ++b) {
+            const double thd = thdGrid[headIdxOp][b];
+            if (!std::isfinite(thd) || thd < 0.0) {
+                continue;
+            }
+
+            const double hd2 = harmonicSurface[0][headIdxOp][b];
+            const double hd3 = harmonicSurface[1][headIdxOp][b];
+            const double hd4 = harmonicSurface[2][headIdxOp][b];
+            const double hd5 = harmonicSurface[3][headIdxOp][b];
+
+            const double even = (std::isfinite(hd2) ? std::max(0.0, hd2) : 0.0) + (std::isfinite(hd4) ? std::max(0.0, hd4) : 0.0);
+            const double odd = (std::isfinite(hd3) ? std::max(0.0, hd3) : 0.0) + (std::isfinite(hd5) ? std::max(0.0, hd5) : 0.0);
+
+            if (thd < minThd) {
+                minThd = thd;
+                idxMinThd = b;
+            }
+            if (even > bestEven) {
+                bestEven = even;
+                idxMaxEven = b;
+            }
+            if (odd < bestOdd) {
+                bestOdd = odd;
+                idxMinOdd = b;
+            }
+
+            const double ratio = even / (odd + 1e-12);
+            if (std::isfinite(ratio) && ratio > bestRatio) {
+                bestRatio = ratio;
+                idxMaxRatio = b;
+            }
+        }
+
+        const double head = headroomPoints[headIdxOp];
+        harmonicsText->append(tr(""));
+        harmonicsText->append(tr("Operating-point slice landmarks (same headroom row):"));
+
+        if (idxMinThd >= 0) {
+            const double bias = biasPoints[idxMinThd];
+            const double va = se->estimateAnodeVoltageAtBias(bias);
+            const double thd = thdGrid[headIdxOp][idxMinThd];
+            const double vaMin = std::max(0.0, va - head);
+            const double hd2 = harmonicSurface[0][headIdxOp][idxMinThd];
+            const double hd3 = harmonicSurface[1][headIdxOp][idxMinThd];
+            const double hd4 = harmonicSurface[2][headIdxOp][idxMinThd];
+            const double hd5 = harmonicSurface[3][headIdxOp][idxMinThd];
+            const double even = std::max(0.0, hd2) + std::max(0.0, hd4);
+            const double odd = std::max(0.0, hd3) + std::max(0.0, hd5);
+            const double zMarker = std::max(even, odd);
+            addSurfaceMarker(QStringLiteral("\u25CB"), QColor::fromRgb(255, 140, 0), bias, vaMin, zMarker);
+            harmonicsText->append(tr("  Min THD (\u25CB): IA=%1 mA, Va(bias)=%2 V, Va(min)=%3 V, THD=%4%")
+                                      .arg(bias, 0, 'f', 2)
+                                      .arg(va, 0, 'f', 1)
+                                      .arg(vaMin, 0, 'f', 1)
+                                      .arg(thd, 0, 'f', 2));
+        }
+
+        if (idxMaxEven >= 0) {
+            const double bias = biasPoints[idxMaxEven];
+            const double va = se->estimateAnodeVoltageAtBias(bias);
+            const double thd = thdGrid[headIdxOp][idxMaxEven];
+            const double vaMin = std::max(0.0, va - head);
+            const double hd2 = harmonicSurface[0][headIdxOp][idxMaxEven];
+            const double hd3 = harmonicSurface[1][headIdxOp][idxMaxEven];
+            const double hd4 = harmonicSurface[2][headIdxOp][idxMaxEven];
+            const double hd5 = harmonicSurface[3][headIdxOp][idxMaxEven];
+            const double even = std::max(0.0, hd2) + std::max(0.0, hd4);
+            const double odd = std::max(0.0, hd3) + std::max(0.0, hd5);
+            const double zMarker = std::max(even, odd);
+            addSurfaceMarker(QStringLiteral("\u25A1"), QColor::fromRgb(0, 0, 255), bias, vaMin, zMarker);
+            harmonicsText->append(tr("  Max Even (\u25A1): IA=%1 mA, Va(bias)=%2 V, Va(min)=%3 V, Even=%4%")
+                                      .arg(bias, 0, 'f', 2)
+                                      .arg(va, 0, 'f', 1)
+                                      .arg(vaMin, 0, 'f', 1)
+                                      .arg(bestEven, 0, 'f', 2));
+        }
+
+        if (idxMinOdd >= 0) {
+            const double bias = biasPoints[idxMinOdd];
+            const double va = se->estimateAnodeVoltageAtBias(bias);
+            const double thd = thdGrid[headIdxOp][idxMinOdd];
+            const double vaMin = std::max(0.0, va - head);
+            const double hd2 = harmonicSurface[0][headIdxOp][idxMinOdd];
+            const double hd3 = harmonicSurface[1][headIdxOp][idxMinOdd];
+            const double hd4 = harmonicSurface[2][headIdxOp][idxMinOdd];
+            const double hd5 = harmonicSurface[3][headIdxOp][idxMinOdd];
+            const double even = std::max(0.0, hd2) + std::max(0.0, hd4);
+            const double odd = std::max(0.0, hd3) + std::max(0.0, hd5);
+            const double zMarker = std::max(even, odd);
+            addSurfaceMarker(QStringLiteral("\u25BD"), QColor::fromRgb(0, 128, 0), bias, vaMin, zMarker);
+            harmonicsText->append(tr("  Min Odd (\u25BD): IA=%1 mA, Va(bias)=%2 V, Va(min)=%3 V, Odd=%4%")
+                                      .arg(bias, 0, 'f', 2)
+                                      .arg(va, 0, 'f', 1)
+                                      .arg(vaMin, 0, 'f', 1)
+                                      .arg(bestOdd, 0, 'f', 2));
+        }
+
+        if (idxMaxRatio >= 0) {
+            const double bias = biasPoints[idxMaxRatio];
+            const double va = se->estimateAnodeVoltageAtBias(bias);
+            const double thd = thdGrid[headIdxOp][idxMaxRatio];
+            const double vaMin = std::max(0.0, va - head);
+            const double hd2 = harmonicSurface[0][headIdxOp][idxMaxRatio];
+            const double hd3 = harmonicSurface[1][headIdxOp][idxMaxRatio];
+            const double hd4 = harmonicSurface[2][headIdxOp][idxMaxRatio];
+            const double hd5 = harmonicSurface[3][headIdxOp][idxMaxRatio];
+            const double even = std::max(0.0, hd2) + std::max(0.0, hd4);
+            const double odd = std::max(0.0, hd3) + std::max(0.0, hd5);
+            const double zMarker = std::max(even, odd);
+            addSurfaceMarker(QStringLiteral("\u25C7"), QColor::fromRgb(128, 0, 128), bias, vaMin, zMarker);
+            harmonicsText->append(tr("  Max Even/Odd (\u25C7): IA=%1 mA, Va(bias)=%2 V, Va(min)=%3 V, Even/Odd=%4")
+                                      .arg(bias, 0, 'f', 2)
+                                      .arg(va, 0, 'f', 1)
+                                      .arg(vaMin, 0, 'f', 1)
+                                      .arg(bestRatio, 0, 'f', 2));
+        }
+    }
+
+    // Draw axes (projected) and labels.
+    {
+        const double x0 = biasMin;
+        const double x1 = biasMax;
+        const double y0 = vaMinAxisMin;
+        const double y1 = vaMinAxisMax;
+        const double z0 = 0.0;
+        const double z1 = zMax;
+
+        QPen axisPen(Qt::black);
+        axisPen.setWidthF(2.0);
+
+        const QPointF o = project(x0, y0, z0);
+        const QPointF xb = project(x1, y0, z0);
+        const QPointF yh = project(x0, y1, z0);
+        const QPointF zt = project(x0, y0, z1);
+
+        scene->addLine(QLineF(o, xb), axisPen);
+        scene->addLine(QLineF(o, yh), axisPen);
+        scene->addLine(QLineF(o, zt), axisPen);
+
+        auto addLabelAt = [&](const QPointF &p, const QString &text) {
+            auto *t = scene->addText(text);
+            t->setDefaultTextColor(Qt::black);
+            t->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            t->setZValue(2000.0);
+            t->setPos(p.x() - t->boundingRect().width() * 0.5, p.y() - 18.0);
+        };
+
+        addLabelAt(QPointF((o.x() + xb.x()) * 0.5, (o.y() + xb.y()) * 0.5 + 30.0), QStringLiteral("Bias current IA (mA)"));
+        addLabelAt(QPointF((o.x() + yh.x()) * 0.5 - 40.0, (o.y() + yh.y()) * 0.5), QStringLiteral("Anode Va(min) (V)"));
+        addLabelAt(QPointF(zt.x() - 40.0, zt.y() - 10.0), QStringLiteral("Harmonic magnitude (%)"));
+
+        // Numeric tick labels so the 3D plot communicates actual values.
+        // We keep this intentionally lightweight: just a few major ticks per axis.
+        auto addTicks = [&](double a0, double a1,
+                            const std::function<QPointF(double)> &pos,
+                            int ticks,
+                            int decimals) {
+            ticks = std::max(2, ticks);
+            for (int i = 0; i < ticks; ++i) {
+                const double u = static_cast<double>(i) / static_cast<double>(ticks - 1);
+                const double v = a0 + (a1 - a0) * u;
+                const QPointF p = pos(v);
+
+                auto *dot = scene->addEllipse(p.x() - 2.0, p.y() - 2.0, 4.0, 4.0, Qt::NoPen, QBrush(Qt::black));
+                dot->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+                dot->setZValue(2100.0);
+
+                auto *t = scene->addText(QString::number(v, 'f', decimals));
+                t->setDefaultTextColor(Qt::black);
+                t->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+                t->setZValue(2100.0);
+                t->setPos(p.x() - t->boundingRect().width() * 0.5, p.y() + 6.0);
+            }
+        };
+
+        addTicks(biasMin, biasMax,
+                 [&](double bias) { return project(bias, vaMinAxisMin, 0.0); },
+                 5,
+                 0);
+
+        addTicks(vaMinAxisMin, vaMinAxisMax,
+                 [&](double va) { return project(biasMin, va, 0.0); },
+                 5,
+                 0);
+
+        addTicks(0.0, zMax,
+                 [&](double thd) { return project(biasMin, vaMinAxisMin, thd); },
+                 5,
+                 1);
+    }
+
+    // Add a small legend for the surfaces and markers.
+    {
+        const double x0 = PLOT_WIDTH - 260.0;
+        const double y0 = 10.0;
+        const double w = 250.0;
+        const double h = 150.0;
+        auto *box = scene->addRect(x0, y0, w, h, QPen(Qt::black), QBrush(QColor(255, 255, 255, 220)));
+        box->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        box->setZValue(2000.0);
+
+        auto *t1 = scene->addText(QStringLiteral("Surfaces:"));
+        t1->setDefaultTextColor(Qt::black);
+        t1->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        t1->setZValue(2001.0);
+        t1->setPos(x0 + 8.0, y0 + 4.0);
+
+        auto *tEven = scene->addText(QStringLiteral("Blue: Even = HD2 + HD4"));
+        tEven->setDefaultTextColor(QColor::fromRgb(0, 0, 255));
+        tEven->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        tEven->setZValue(2001.0);
+        tEven->setPos(x0 + 8.0, y0 + 28.0);
+
+        auto *tOdd = scene->addText(QStringLiteral("Red: Odd = HD3 + HD5"));
+        tOdd->setDefaultTextColor(QColor::fromRgb(255, 0, 0));
+        tOdd->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        tOdd->setZValue(2001.0);
+        tOdd->setPos(x0 + 8.0, y0 + 46.0);
+
+        // Marker key (kept short, but enough to understand what the symbols mean).
+        const double my = y0 + 70.0;
+        auto addKey = [&](double y, const QString &sym, const QColor &c, const QString &label) {
+            auto *tt = scene->addText(sym + QStringLiteral("  ") + label);
+            tt->setDefaultTextColor(c);
+            tt->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            tt->setZValue(2001.0);
+            tt->setPos(x0 + 8.0, y);
+        };
+
+        addKey(my + 0.0,  QStringLiteral("✚"), QColor::fromRgb(0, 0, 0), QStringLiteral("Op bias rec (current headroom)"));
+        addKey(my + 18.0, QStringLiteral("\u25CB"), QColor::fromRgb(255, 140, 0), QStringLiteral("Min THD (slice)"));
+        addKey(my + 36.0, QStringLiteral("\u25A1"), QColor::fromRgb(0, 0, 255), QStringLiteral("Max Even (slice)"));
+        addKey(my + 54.0, QStringLiteral("\u25BD"), QColor::fromRgb(0, 128, 0), QStringLiteral("Min Odd (slice)"));
+        addKey(my + 72.0, QStringLiteral("\u25C7"), QColor::fromRgb(128, 0, 128), QStringLiteral("Max Even/Odd (slice)"));
+        addKey(my + 90.0, QStringLiteral("★"), QColor::fromRgb(0, 0, 0), QStringLiteral("Surface sweet spots"));
+    }
+
+    // Identify a few candidate "sweet spots": points that have both a high THD (strong effect)
+    // and an even-dominant balance (more even than odd).
+    //
+    // We compute a simple desirability score:
+    //   score = THD * clamp01(0.5 + 0.5*balance)
+    // where balance in [-1..1] favors even-dominant points.
+    struct Spot { int h; int b; double score; double thd; double bal; };
+    QVector<Spot> spots;
+    spots.reserve(headSteps * biasSteps);
+
+    auto desirability = [](double thd, double bal) -> double {
+        const double w = std::clamp(0.5 + 0.5 * bal, 0.0, 1.0);
+        return thd * w;
+    };
+
+    for (int h = 1; h < headSteps - 1; ++h) {
+        for (int b = 1; b < biasSteps - 1; ++b) {
+            const double thd = thdGrid[h][b];
+            const double bal = balanceGrid[h][b];
+            if (!std::isfinite(thd) || thd <= 0.0) {
+                continue;
+            }
+            // Only consider even-favoring candidates.
+            if (bal < 0.10) {
+                continue;
+            }
+            const double sc = desirability(thd, bal);
+
+            // Local-maximum test vs 8-neighborhood in desirability.
+            bool isLocalMax = true;
+            for (int dh = -1; dh <= 1 && isLocalMax; ++dh) {
+                for (int db = -1; db <= 1; ++db) {
+                    if (dh == 0 && db == 0) continue;
+                    const double thdN = thdGrid[h + dh][b + db];
+                    const double balN = balanceGrid[h + dh][b + db];
+                    const double scN = desirability(thdN, balN);
+                    if (std::isfinite(scN) && scN >= sc) {
+                        isLocalMax = false;
+                        break;
+                    }
+                }
+            }
+            if (!isLocalMax) {
+                continue;
+            }
+
+            spots.push_back({h, b, sc, thd, bal});
+        }
+    }
+
+    std::sort(spots.begin(), spots.end(), [](const Spot &a, const Spot &b) { return a.score > b.score; });
+    const int maxSpots = std::min(5, static_cast<int>(spots.size()));
+    harmonicsText->append(tr("3D Dual Surface Waterfall generated"));
+    harmonicsText->append(tr("Surface: X=IA (mA), Y=Va(min) (V)."));
+    harmonicsText->append(tr("Heights: Blue=Even (HD2+HD4), Red=Odd (HD3+HD5)."));
+    harmonicsText->append(tr("Sweet-spot scoring: high THD + even-dominant local maxima."));
+    harmonicsText->append(tr("Candidate sweet spots:"));
+
+    for (int i = 0; i < maxSpots; ++i) {
+        const Spot &s = spots[i];
+        const double bias = biasPoints[s.b];
+        const double head = headroomPoints[s.h];
+        const double vaBias = se->estimateAnodeVoltageAtBias(bias);
+        const double vaMin = vaMinGrid[s.h][s.b];
+
+        const double hd2 = harmonicSurface[0][s.h][s.b];
+        const double hd3 = harmonicSurface[1][s.h][s.b];
+        const double hd4 = harmonicSurface[2][s.h][s.b];
+        const double hd5 = harmonicSurface[3][s.h][s.b];
+        const double even = (std::isfinite(hd2) ? std::max(0.0, hd2) : 0.0) + (std::isfinite(hd4) ? std::max(0.0, hd4) : 0.0);
+        const double odd = (std::isfinite(hd3) ? std::max(0.0, hd3) : 0.0) + (std::isfinite(hd5) ? std::max(0.0, hd5) : 0.0);
+        const double zMarker = std::max(even, odd);
+
+        const QPointF p = project(bias, vaMin, zMarker);
+
+        auto *marker = scene->addText(QStringLiteral("★"));
+        marker->setDefaultTextColor(Qt::black);
+        marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        marker->setZValue(3000.0);
+        marker->setPos(p.x() - 8.0, p.y() - 12.0);
+
+        harmonicsText->append(tr("  #%1: IA=%2 mA, Va(bias)=%3 V, Va(min)=%4 V, Headroom=%5 Vpk, THD=%6%, Even=%7%, Odd=%8%, balance=%9")
+                                  .arg(i + 1)
+                                  .arg(bias, 0, 'f', 2)
+                                  .arg(vaBias, 0, 'f', 1)
+                                  .arg(vaMin, 0, 'f', 1)
+                                  .arg(head, 0, 'f', 2)
+                                  .arg(s.thd, 0, 'f', 2)
+                                  .arg(even, 0, 'f', 2)
+                                  .arg(odd, 0, 'f', 2)
+                                  .arg(s.bal, 0, 'f', 2));
+    }
+
+    // Fit the view to the rendered content with padding.
+    if (harmonicsView && harmonicsView->scene()) {
+        QRectF r = harmonicsView->scene()->itemsBoundingRect();
+        if (r.isValid() && !r.isEmpty()) {
+            const double padX = std::max(10.0, r.width() * 0.05);
+            const double padY = std::max(10.0, r.height() * 0.05);
+            r.adjust(-padX, -padY, padX, padY);
+            harmonicsView->setSceneRect(r);
+            harmonicsView->fitInView(r, Qt::KeepAspectRatio);
+        }
+    }
 }
 
 void ValveWorkbench::onHarmonicsRotationChanged()
@@ -5788,7 +7174,7 @@ void ValveWorkbench::onHarmonicsRotationChanged()
     }
     
     // Only regenerate if a waterfall was the last plot generated
-    if (harmonicsText->toPlainText().contains("3D Continuous Surface Waterfall generated")) {
+    if (harmonicsText->toPlainText().contains("Waterfall generated")) {
         harmonicsText->append(tr("\n--- 3D Rotation Updated ---"));
         runHarmonicsWaterfall();
     }
@@ -5799,6 +7185,21 @@ void ValveWorkbench::runHarmonicsClippingAnalysis()
     if (!harmonicsText || !harmonicsView) {
         return;
     }
+
+    auto fitHarmonicsViewToContents = [this]() {
+        if (!harmonicsView || !harmonicsView->scene()) {
+            return;
+        }
+        QRectF r = harmonicsView->scene()->itemsBoundingRect();
+        if (!r.isValid() || r.isEmpty()) {
+            return;
+        }
+        const double padX = std::max(10.0, r.width() * 0.05);
+        const double padY = std::max(10.0, r.height() * 0.05);
+        r.adjust(-padX, -padY, padX, padY);
+        harmonicsView->setSceneRect(r);
+        harmonicsView->fitInView(r, Qt::KeepAspectRatio);
+    };
 
     harmonicsText->clear();
     harmonicsText->append(tr("Generating clipping analysis and sweet spot identification..."));
@@ -6146,6 +7547,8 @@ void ValveWorkbench::runHarmonicsClippingAnalysis()
     harmonicsText->append(tr("★ Warm Sweet Spot: Maximum even/odd harmonic ratio for tube warmth"));
     harmonicsText->append(tr("◆ Max Even Clipping: Highest even harmonics in clipping zones (THD > 5%)"));
     harmonicsText->append(tr("\nUse this map to identify optimal operating regions for different tonal goals."));
+
+    fitHarmonicsViewToContents();
 }
 
 void ValveWorkbench::refreshHarmonicsPlots()

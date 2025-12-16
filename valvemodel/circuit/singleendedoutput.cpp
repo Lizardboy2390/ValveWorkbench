@@ -343,6 +343,31 @@ void SingleEndedOutput::updateUI(QLabel *labels[], QLineEdit *values[])
     }
 }
 
+double SingleEndedOutput::estimateAnodeVoltageAtBias(double iaBias_mA) const
+{
+    const double vb  = parameter[SE_VB]->getValue();
+    const double raa = parameter[SE_RA]->getValue();
+
+    if (!(vb > 0.0) || !(raa > 0.0) || !(iaBias_mA > 0.0) || !std::isfinite(vb) || !std::isfinite(raa)) {
+        return vb;
+    }
+
+    const double iaBias_A = iaBias_mA / 1000.0;
+
+    double vaBias = vb;
+    if (inductiveLoad) {
+        vaBias = vb;
+    } else {
+        vaBias = vb - iaBias_A * raa;
+    }
+
+    if (!std::isfinite(vaBias)) {
+        vaBias = vb;
+    }
+
+    return std::clamp(vaBias, 0.0, vb);
+}
+
 void SingleEndedOutput::computeBiasSweepHarmonicCurve(QVector<double> &iaVals,
                                                       QVector<double> &hd2Vals,
                                                       QVector<double> &hd3Vals,
@@ -482,9 +507,14 @@ void SingleEndedOutput::computeHarmonicSurfaceData(QVector<double> &biasPoints,
         return;
     }
 
-    // Generate grid of bias and headroom points
-    const int biasSteps = 24;
-    const int headroomSteps = 16;
+    // Generate grid of bias and headroom points.
+    //
+    // This function is used by the Harmonics tab (heatmap / waterfall) and is expected
+    // to give a reasonably smooth surface. The time-domain harmonic simulation is
+    // fairly expensive, so we pick a moderate grid size that still yields *hundreds*
+    // of samples without making the UI unusably slow.
+    const int biasSteps = 48;
+    const int headroomSteps = 32;
 
     // Bias current range
     const double iaMin = std::max(iaCenter * 0.6, 1.0);
@@ -526,8 +556,9 @@ void SingleEndedOutput::computeHarmonicSurfaceData(QVector<double> &biasPoints,
             double bias = biasPoints[bIdx];
             
             double hd2 = 0.0, hd3 = 0.0, hd4 = 0.0, hd5 = 0.0, thd = 0.0;
-            // FIX: Use headroom as signal amplitude instead of vs parameter for realistic clipping
-            if (simulateHarmonicsTimeDomain(vb, bias, raa, headroom, headroom, hd2, hd3, hd4, hd5, thd)) {
+            // Use headroom as the requested anode swing (signal amplitude), but keep the device
+            // screen voltage parameter as the actual screen supply setting.
+            if (simulateHarmonicsTimeDomain(vb, bias, raa, headroom, vs, hd2, hd3, hd4, hd5, thd)) {
                 harmonicSurface[0][hIdx][bIdx] = hd2; // HD2
                 harmonicSurface[1][hIdx][bIdx] = hd3; // HD3
                 harmonicSurface[2][hIdx][bIdx] = hd4; // HD4

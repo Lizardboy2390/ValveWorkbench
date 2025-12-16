@@ -4,6 +4,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Active tasks (end-user focused)
 - [ ] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
+- [ ] Designer headroom waveform visualizer: verify Push-Pull Output primary waveshape and THD behaviour matches the Triode CC “advanced” expectation; audit PP bias/current unit conversions and revert PP helper if necessary.
 - [ ] Integrated SPICE export via Devices:
   - Extend **Export model to Device** so each device JSON optionally includes a SPICE representation of the fitted tube model (triode and pentode) suitable for `.inc`/`.subckt` use.
   - Implement **File → Export to Spice...** so it uses the active Device's SPICE block to export (a) tube model only (`.inc`/`.lib`), and (b) optional Designer circuit wrappers (Triode CC, SE Output, PP, etc.) that reference that model.
@@ -19,6 +20,9 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Use the eTracer PC software manual in `refrence code/ilovepdf_pages-to-jpg (1)` (quick scan, corners tests, Imax/Pmax usage) as the primary reference for feature design and defaults.
 
 ## Recently completed
+- [x] 2025-12-16: Designer Headroom Waveshape viewer: normalised time axis (0..1) with KeepAspectRatio and cosmetic-pen rendering so the waveform is drawn as a thin line and does not collapse due to extreme aspect ratio.
+- [x] 2025-12-16: Designer SE Output headroom/THD helper: fixed unbypassed cathode dynamics so Vk follows (Ia(t) − Ia_bias)·Rk around the DC bias, matching the documented “advanced” behaviour.
+- [x] 2025-12-16: Designer Push-Pull Output headroom/THD helper: replaced the 5-point VTADIY-derived approximation with a sine-driven time-domain helper that solves per-valve Va(t) against RAA/2 and derives primary Vaa(t)=Va1−Va2; HD2/HD3/HD4/THD are now computed from a Hann-windowed DFT of Vaa(t), and the Headroom Waveshape viewer shows the primary waveform.
 - [x] 2025-12-15: Analyser tab LCD semantics: top LCD now shows averaging window (`S0` samples-per-measurement), bottom LCD shows count of sweeps/points that exceeded verification retry limits.
 - [x] 2025-12-15: Export-to-Devices: classify exported fitted models by model type (pentode vs triode) so pentode exports (e.g. 6L6-GC) appear under pentode device lists in Designer circuits.
 - [x] 2025-12-15: Modeller pentode fitting (Process Modelling Tests): added extra transfer sweeps (2× at Vg2=150 V, 1× at Vg2=200 V) and binned/averaged transfer samples by Vg1, grouped by (Va, Vg2) so dense transfer data does not dominate fitting.

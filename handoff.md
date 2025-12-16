@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-15 (Modeller pentode fit pipeline: transfer repeats + binning, threaded-fit lifetime fix; model input sweep acceptance; Analyser LCD semantics fix; UI triage notes)
+Last updated: 2025-12-16 (Designer headroom waveshape viewer tweaks; SE cathode dynamics fix; Push-Pull primary time-domain helper)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -294,10 +294,16 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - Two time-domain engines coexist with the static small-signal and Health metrics:
     - The **Single-Ended Output THD** helper (`SingleEndedOutput::simulateHarmonicsTimeDomain`) and its scan wrappers (see 2025-11-21 summary) drive the model with a grid sine at the Designer bias point, solve Va(t) along the AC load line, derive Ia(t) via a DC load line, and perform a windowed DFT to obtain HD2/HD3/HD4/HD5/THD vs headroom or bias current. Headroom now maps to a single grid-drive Vpp via small-signal gain (no iterative Vpp rescaling), and the same Va(t) buffer feeds the shared Headroom Waveshape viewer.
     - The **Triode Common Cathode headroom/THD and waveshape** helper (see 2025-12-10 description in `tasks.md`) does the same for the Triode CC circuit, including dynamic cathode behaviour when K-bypass is off and providing both a THD-at-headroom metric and a Va(t) “Headroom Waveshape” trace, with headroom→Vpp mapping aligned to the SE path.
+    - The **Push-Pull Output headroom/THD and waveshape** helper (`PushPullOutput::simulateHarmonicsTimeDomain`) is a sine-driven time-domain helper intended to mirror the TriodeCC/SE “advanced” behaviour for PP: it solves per-valve Va(t) against an effective `RAA/2` load, derives the primary output waveform `Vaa(t)=Va1−Va2`, and computes HD2/HD3/HD4/THD from a Hann-windowed DFT of `Vaa(t)`. The Headroom Waveshape viewer uses this primary waveform.
   - The new Compare and Health paths tie into these surfaces rather than replacing them:
     - Compare’s μ/gm/rp/Ia values are local finite-difference linearisations of the same `Ia(Va,Vg1,Vg2)` model that the time-domain helpers integrate over.
     - Quick/Full Health use measured sweeps but reduce them to local Ia/gm/rp near each HealthPoint via `computeIaGmAt` and small LS fits of Ia vs Vg or Va; their scores then compare these static metrics against datasheet points or reference-tube surfaces built from embedded measurements.
   - Together, Designer time-domain views answer “What does the waveform look like and how distorted is it at this headroom/bias?”, while Compare and Health answer “How does this tube’s local small-signal behaviour compare to datasheet or Model B?”, and Export-to-Device stitches the two worlds together in a portable JSON preset (model + measurement + analyserDefaults + optional SPICE).
+
+- **Headroom Waveshape viewer rendering notes (Designer)**
+  - The viewer draws a DC-removed, peak-normalised waveform over one cycle from each circuit’s `lastHeadroomWaveform` buffer.
+  - The time axis is treated as a normalised 0..1 domain (so extremely long aspect ratios do not collapse Y).
+  - The waveform pen is configured as a cosmetic (1 px) stroke so the trace remains a line (not a thick filled band) under view scaling.
 
 ### 2025-11-21 Summary (Harmonics Explorer / time-domain THD helpers)
 

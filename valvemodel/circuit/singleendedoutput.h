@@ -71,6 +71,8 @@ public:
                                    QVector<double> &headroomPoints,
                                    QVector<QVector<QVector<double>>> &harmonicSurface) const;
 
+    double estimateAnodeVoltageAtBias(double iaBias_mA) const;
+
     const QVector<double> &getLastHeadroomWaveform() const { return lastHeadroomWaveform; }
 
 protected:

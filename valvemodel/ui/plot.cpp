@@ -58,7 +58,12 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
         if (xLabelEvery == 0 || (i % xLabelEvery) == 0) {
             QGraphicsTextItem *text;
             char labelText[16];
-            if (xMajorDivision < 1.0) {
+            const double div = std::abs(xMajorDivision);
+            if (div < 0.01) {
+                sprintf(labelText, "%.3f", x);
+            } else if (div < 0.1) {
+                sprintf(labelText, "%.2f", x);
+            } else if (div < 1.0) {
                 sprintf(labelText, "%.1f", x);
             } else {
                 sprintf(labelText, "%d", (int) (x + rounding));
@@ -110,7 +115,12 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
         if (yLabelEvery == 0 || (i % yLabelEvery) == 0) {
             QGraphicsTextItem *text;
             char labelText[16];
-            if (yMajorDivision < 1.0) {
+            const double div = std::abs(yMajorDivision);
+            if (div < 0.01) {
+                sprintf(labelText, "%.3f", y);
+            } else if (div < 0.1) {
+                sprintf(labelText, "%.2f", y);
+            } else if (div < 1.0) {
                 sprintf(labelText, "%.1f", y);
             } else {
                 sprintf(labelText, "%d", (int) (y + rounding));
