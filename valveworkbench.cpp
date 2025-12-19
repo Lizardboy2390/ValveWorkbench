@@ -2696,6 +2696,30 @@ void ValveWorkbench::finalizeHealthRun()
             fullOpCenter = datasheetJson.value(QStringLiteral("healthReference")).toObject().value(QStringLiteral("center")).toObject();
         }
 
+        // Reference values for percent columns should match what we show in the
+        // Ref column for the just-finished Health run.
+        double iaRefForPctA = ia0;
+        double gmRefForPctA = gm0;
+        double muRefForPctA = mu0;
+        double rpRefForPctA = rp0;
+
+        if (showFullOpRefs) {
+            if (haveHealthSurface) {
+                if (iaRefSurface.size() > 0 && iaRefSurface.at(0) > 0.0) iaRefForPctA = iaRefSurface.at(0);
+                if (gmRefSurface.size() > 0 && gmRefSurface.at(0) > 0.0) gmRefForPctA = gmRefSurface.at(0);
+            }
+            if (!fullOpCenter.isEmpty()) {
+                const double iaRefA_mA = fullOpCenter.value(QStringLiteral("iaRefA_mA")).toDouble(0.0);
+                const double gmRefA_mA_V = fullOpCenter.value(QStringLiteral("gmRefA_mA_V")).toDouble(0.0);
+                const double muRefA = fullOpCenter.value(QStringLiteral("muRefA")).toDouble(0.0);
+                const double rpRefA_ohms = fullOpCenter.value(QStringLiteral("rpRefA_ohms")).toDouble(0.0);
+                if (iaRefA_mA > 0.0) iaRefForPctA = iaRefA_mA;
+                if (gmRefA_mA_V > 0.0) gmRefForPctA = gmRefA_mA_V;
+                if (muRefA > 0.0) muRefForPctA = muRefA;
+                if (rpRefA_ohms > 0.0) rpRefForPctA = rpRefA_ohms;
+            }
+        }
+
         // Triode A (or Pentode) ref column.
         if (haveRef) {
             QString refIa;
@@ -2732,46 +2756,8 @@ void ValveWorkbench::finalizeHealthRun()
             setEditStyle(ui->triodeA_rp_ref, refStyle);
         }
 
-        // Triode B (or Screen) ref column.
-        if (deviceType == PENTODE) {
-            // Screen Health uses Ig2/Pg2.
-            QString refIg2;
-            QString refPg2;
-
-            if (showFullOpRefs && !fullOpCenter.isEmpty()) {
-                const double ig2Ref_mA = fullOpCenter.value(QStringLiteral("ig2Ref_mA")).toDouble(0.0);
-                double vg2ForPg2 = fullOpCenter.value(QStringLiteral("vg2")).toDouble(0.0);
-                if (!(vg2ForPg2 > 0.0)) {
-                    vg2ForPg2 = vg20;
-                }
-                const double pg2Ref_W = (vg2ForPg2 > 0.0 && ig2Ref_mA > 0.0) ? (vg2ForPg2 * ig2Ref_mA / 1000.0) : 0.0;
-                if (ig2Ref_mA > 0.0) refIg2 = QString::number(ig2Ref_mA, 'f', 3);
-                if (pg2Ref_W > 0.0) refPg2 = QString::number(pg2Ref_W, 'f', 3);
-            } else {
-                // Datasheet refPoints[0] may optionally carry ig2/pg2.
-                if (!datasheetJson.isEmpty()) {
-                    const QJsonArray refPoints = datasheetJson.value(QStringLiteral("refPoints")).toArray();
-                    if (!refPoints.isEmpty() && refPoints.at(0).isObject()) {
-                        const QJsonObject rpObj = refPoints.at(0).toObject();
-                        const double ig2Ds = rpObj.value(QStringLiteral("ig2")).toDouble(0.0);
-                        const double pg2Ds = rpObj.value(QStringLiteral("pg2")).toDouble(0.0);
-                        if (ig2Ds > 0.0) refIg2 = QString::number(ig2Ds, 'f', 3);
-                        if (pg2Ds > 0.0) {
-                            refPg2 = QString::number(pg2Ds, 'f', 3);
-                        } else {
-                            const double vg2Ds = rpObj.value(QStringLiteral("vg2")).toDouble(0.0);
-                            const double pg2Calc = (vg2Ds > 0.0 && ig2Ds > 0.0) ? (vg2Ds * ig2Ds / 1000.0) : 0.0;
-                            if (pg2Calc > 0.0) refPg2 = QString::number(pg2Calc, 'f', 3);
-                        }
-                    }
-                }
-            }
-
-            setEdit(ui->triodeB_Ia_ref, refIg2);
-            setEdit(ui->triodeB_rp_ref, refPg2);
-            setEditStyle(ui->triodeB_Ia_ref, refStyle);
-            setEditStyle(ui->triodeB_rp_ref, refStyle);
-        } else {
+        // Triode B ref column (screen handled later in the pentode block).
+        if (deviceType != PENTODE) {
             // Double triode Triode B: show B-specific reference when available.
             if (isDoubleTriode) {
                 QString refIa;
@@ -2906,15 +2892,15 @@ void ValveWorkbench::finalizeHealthRun()
                         (rpForDisplayA > 0.0) ? formatValue(rpForDisplayA, 0) : QString());
 
                 if (haveRef) {
-                    setEdit(ui->triodeA_Ia_pct, formatPercent(iaForDisplayA, ia0));
-                    setEdit(ui->triodeA_gm_pct, formatPercent(gmForDisplayA, gm0));
+                    setEdit(ui->triodeA_Ia_pct, formatPercent(iaForDisplayA, iaRefForPctA));
+                    setEdit(ui->triodeA_gm_pct, formatPercent(gmForDisplayA, gmRefForPctA));
                     setEdit(ui->triodeA_mu_pct,
-                            (mu0 > 0.0 && muMeasuredA > 0.0)
-                                ? formatPercent(muMeasuredA, mu0)
+                            (muRefForPctA > 0.0 && muMeasuredA > 0.0)
+                                ? formatPercent(muMeasuredA, muRefForPctA)
                                 : QString());
                     setEdit(ui->triodeA_rp_pct,
-                            (rp0 > 0.0 && rpForDisplayA > 0.0)
-                                ? formatPercent(rpForDisplayA, rp0)
+                            (rpRefForPctA > 0.0 && rpForDisplayA > 0.0)
+                                ? formatPercent(rpForDisplayA, rpRefForPctA)
                                 : QString());
                 } else {
                     setEdit(ui->triodeA_Ia_pct, QString());
@@ -2957,17 +2943,45 @@ void ValveWorkbench::finalizeHealthRun()
                     const double pg2Meas_W = havePg2Agg ? pg2Agg
                                                        : ((r0.vg2 > 0.0 && ig2Meas > 0.0) ? (r0.vg2 * ig2Meas / 1000.0) : 0.0);
 
+                    // Reference values for Screen Health should follow the
+                    // same rule as the other refs: Quick -> datasheet, Full ->
+                    // reference-tube Full-OP.
                     double ig2RefCentre = 0.0;
-                    if (haveHealthSurface && ig2RefSurface.size() > 0 && ig2RefSurface.at(0) > 0.0) {
-                        ig2RefCentre = ig2RefSurface.at(0);
-                    } else if (!datasheetJson.isEmpty()) {
-                        const QJsonObject centerObj = datasheetJson.value("healthReference").toObject().value("center").toObject();
-                        ig2RefCentre = centerObj.value("ig2Ref_mA").toDouble(0.0);
+                    double vg2RefForPg2 = r0.vg2;
+                    double pg2Ref_W = 0.0;
+
+                    if (showFullOpRefs) {
+                        if (haveHealthSurface && ig2RefSurface.size() > 0 && ig2RefSurface.at(0) > 0.0) {
+                            ig2RefCentre = ig2RefSurface.at(0);
+                        } else if (!datasheetJson.isEmpty()) {
+                            const QJsonObject centerObj = datasheetJson.value("healthReference").toObject().value("center").toObject();
+                            ig2RefCentre = centerObj.value("ig2Ref_mA").toDouble(0.0);
+                            const double vg2Tmp = centerObj.value("vg2").toDouble(0.0);
+                            if (vg2Tmp > 0.0) vg2RefForPg2 = vg2Tmp;
+                        }
+                        pg2Ref_W = (vg2RefForPg2 > 0.0 && ig2RefCentre > 0.0) ? (vg2RefForPg2 * ig2RefCentre / 1000.0) : 0.0;
+                    } else {
+                        // Datasheet refPoints[0] may optionally carry ig2/pg2.
+                        if (!datasheetJson.isEmpty()) {
+                            const QJsonArray refPoints = datasheetJson.value(QStringLiteral("refPoints")).toArray();
+                            if (!refPoints.isEmpty() && refPoints.at(0).isObject()) {
+                                const QJsonObject rpObj = refPoints.at(0).toObject();
+                                const double ig2Ds = rpObj.value(QStringLiteral("ig2")).toDouble(0.0);
+                                const double pg2Ds = rpObj.value(QStringLiteral("pg2")).toDouble(0.0);
+                                const double vg2Ds = rpObj.value(QStringLiteral("vg2")).toDouble(0.0);
+                                if (ig2Ds > 0.0) ig2RefCentre = ig2Ds;
+                                if (pg2Ds > 0.0) {
+                                    pg2Ref_W = pg2Ds;
+                                } else {
+                                    pg2Ref_W = (vg2Ds > 0.0 && ig2Ds > 0.0) ? (vg2Ds * ig2Ds / 1000.0) : 0.0;
+                                }
+                            }
+                        }
                     }
-                    const double pg2Ref_W = (r0.vg2 > 0.0 && ig2RefCentre > 0.0) ? (r0.vg2 * ig2RefCentre / 1000.0) : 0.0;
 
                     setEdit(ui->triodeB_Ia_measured, formatValue(ig2Meas, 3));
                     setEdit(ui->triodeB_Ia_ref, (ig2RefCentre > 0.0) ? formatValue(ig2RefCentre, 3) : QString());
+                    setEditStyle(ui->triodeB_Ia_ref, refStyle);
                     setEdit(ui->triodeB_Ia_pct,
                             (ig2RefCentre > 0.0)
                                 ? QString::number(100.0 * metricScore(ig2Meas, ig2RefCentre), 'f', 0)
@@ -2975,6 +2989,7 @@ void ValveWorkbench::finalizeHealthRun()
 
                     setEdit(ui->triodeB_rp_measured, (pg2Meas_W > 0.0) ? formatValue(pg2Meas_W, 3) : QString());
                     setEdit(ui->triodeB_rp_ref, (pg2Ref_W > 0.0) ? formatValue(pg2Ref_W, 3) : QString());
+                    setEditStyle(ui->triodeB_rp_ref, refStyle);
                     setEdit(ui->triodeB_rp_pct,
                             (pg2Ref_W > 0.0)
                                 ? QString::number(100.0 * metricScore(pg2Meas_W, pg2Ref_W), 'f', 0)
