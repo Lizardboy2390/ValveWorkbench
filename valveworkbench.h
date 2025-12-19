@@ -390,6 +390,9 @@ private:
     QList<HealthPoint> healthPoints;
     QList<HealthResult> healthResults;
 
+    bool healthPrereqAnodeSweepActive = false;
+    Measurement *healthPrereqAnodeMeasurement = nullptr;
+
     bool healthOpFinderActive = false;
     double healthOpTargetIa_mA = 0.0;
 

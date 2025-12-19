@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-16 (Designer headroom waveshape viewer tweaks; SE cathode dynamics fix; Push-Pull primary time-domain helper)
+Last updated: 2025-12-17 (Release prep: hide Harmonics tab; Data tab gated by Preferences)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -313,6 +313,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - New **Harmonics** tab added to the left-hand `QTabWidget` next to Designer/Modeller/Analyser/Data.
   - The Harmonics tab owns its own `Plot harmonicsPlot` and `QGraphicsView harmonicsView`, completely separate from the shared Designer `plot` scene, to avoid interference with load-line overlays and model curves.
   - All SE harmonic scans are currently driven from the **SingleEndedOutput** circuit model only; Push-Pull integration is postponed for stability.
+  - **Release status:** the Harmonics tab is treated as **experimental** and is currently **hidden/disabled** in release builds (see `enableHarmonicsTab` in `valveworkbench.cpp`).
 
 - **Time-domain THD helper (SE, sine-driven, grid-excited):**
   - Files: `valvemodel/circuit/singleendedoutput.h/.cpp`

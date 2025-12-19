@@ -233,14 +233,20 @@ public:
     QGridLayout *gridLayout_datasheet;
     QLabel *datasheetNameLabel;
     QLineEdit *datasheetRefName;
+    QLabel *datasheetRefCountLabel;
+    QLabel *datasheetRefCountValue;
     QLabel *datasheetSectionLabel;
     QLineEdit *datasheetSection;
+    QLabel *datasheetRefOpLabel;
     QLabel *datasheetVaLabel;
     QLineEdit *datasheetVa;
+    QLineEdit *datasheetVaRef;
     QLabel *datasheetVgLabel;
     QLineEdit *datasheetVg;
+    QLineEdit *datasheetVgRef;
     QLabel *datasheetVg2Label;
     QLineEdit *datasheetVg2;
+    QLineEdit *datasheetVg2Ref;
     QLabel *datasheetIaLabel;
     QLineEdit *datasheetIa;
     QLabel *datasheetGmLabel;
@@ -249,8 +255,6 @@ public:
     QLineEdit *datasheetMu;
     QLabel *datasheetRpLabel;
     QLineEdit *datasheetRp;
-    QLabel *datasheetRefCountLabel;
-    QLabel *datasheetRefCountValue;
     QSpacerItem *horizontalSpacer_8;
     QSpacerItem *verticalSpacer_3;
     QSpacerItem *horizontalSpacer;
@@ -338,7 +342,7 @@ public:
     {
         if (ValveWorkbench->objectName().isEmpty())
             ValveWorkbench->setObjectName("ValveWorkbench");
-        ValveWorkbench->resize(1278, 1080);
+        ValveWorkbench->resize(1305, 1080);
         actionLoad_Model = new QAction(ValveWorkbench);
         actionLoad_Model->setObjectName("actionLoad_Model");
         actionExit = new QAction(ValveWorkbench);
@@ -777,7 +781,7 @@ public:
         tab_2->setObjectName("tab_2");
         layoutWidget = new QWidget(tab_2);
         layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(10, 0, 337, 670));
+        layoutWidget->setGeometry(QRect(10, 0, 721, 670));
         verticalLayout_4 = new QVBoxLayout(layoutWidget);
         verticalLayout_4->setObjectName("verticalLayout_4");
         verticalLayout_4->setContentsMargins(0, 0, 0, 0);
@@ -1432,6 +1436,16 @@ public:
 
         gridLayout_datasheet->addWidget(datasheetRefName, 0, 1, 1, 1);
 
+        datasheetRefCountLabel = new QLabel(datasheetGroupBox);
+        datasheetRefCountLabel->setObjectName("datasheetRefCountLabel");
+
+        gridLayout_datasheet->addWidget(datasheetRefCountLabel, 0, 2, 1, 1);
+
+        datasheetRefCountValue = new QLabel(datasheetGroupBox);
+        datasheetRefCountValue->setObjectName("datasheetRefCountValue");
+
+        gridLayout_datasheet->addWidget(datasheetRefCountValue, 0, 3, 1, 1);
+
         datasheetSectionLabel = new QLabel(datasheetGroupBox);
         datasheetSectionLabel->setObjectName("datasheetSectionLabel");
         datasheetSectionLabel->setVisible(false);
@@ -1445,6 +1459,11 @@ public:
 
         gridLayout_datasheet->addWidget(datasheetSection, 1, 1, 1, 1);
 
+        datasheetRefOpLabel = new QLabel(datasheetGroupBox);
+        datasheetRefOpLabel->setObjectName("datasheetRefOpLabel");
+
+        gridLayout_datasheet->addWidget(datasheetRefOpLabel, 1, 2, 1, 1);
+
         datasheetVaLabel = new QLabel(datasheetGroupBox);
         datasheetVaLabel->setObjectName("datasheetVaLabel");
 
@@ -1455,6 +1474,12 @@ public:
         datasheetVa->setReadOnly(false);
 
         gridLayout_datasheet->addWidget(datasheetVa, 2, 1, 1, 1);
+
+        datasheetVaRef = new QLineEdit(datasheetGroupBox);
+        datasheetVaRef->setObjectName("datasheetVaRef");
+        datasheetVaRef->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetVaRef, 2, 2, 1, 1);
 
         datasheetVgLabel = new QLabel(datasheetGroupBox);
         datasheetVgLabel->setObjectName("datasheetVgLabel");
@@ -1467,6 +1492,12 @@ public:
 
         gridLayout_datasheet->addWidget(datasheetVg, 3, 1, 1, 1);
 
+        datasheetVgRef = new QLineEdit(datasheetGroupBox);
+        datasheetVgRef->setObjectName("datasheetVgRef");
+        datasheetVgRef->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetVgRef, 3, 2, 1, 1);
+
         datasheetVg2Label = new QLabel(datasheetGroupBox);
         datasheetVg2Label->setObjectName("datasheetVg2Label");
 
@@ -1477,6 +1508,12 @@ public:
         datasheetVg2->setReadOnly(false);
 
         gridLayout_datasheet->addWidget(datasheetVg2, 4, 1, 1, 1);
+
+        datasheetVg2Ref = new QLineEdit(datasheetGroupBox);
+        datasheetVg2Ref->setObjectName("datasheetVg2Ref");
+        datasheetVg2Ref->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetVg2Ref, 4, 2, 1, 1);
 
         datasheetIaLabel = new QLabel(datasheetGroupBox);
         datasheetIaLabel->setObjectName("datasheetIaLabel");
@@ -1521,16 +1558,6 @@ public:
         datasheetRp->setReadOnly(false);
 
         gridLayout_datasheet->addWidget(datasheetRp, 8, 1, 1, 1);
-
-        datasheetRefCountLabel = new QLabel(datasheetGroupBox);
-        datasheetRefCountLabel->setObjectName("datasheetRefCountLabel");
-
-        gridLayout_datasheet->addWidget(datasheetRefCountLabel, 2, 2, 1, 1);
-
-        datasheetRefCountValue = new QLabel(datasheetGroupBox);
-        datasheetRefCountValue->setObjectName("datasheetRefCountValue");
-
-        gridLayout_datasheet->addWidget(datasheetRefCountValue, 2, 3, 1, 1);
 
 
         verticalLayout_6->addWidget(datasheetGroupBox);
@@ -2007,7 +2034,7 @@ public:
         ValveWorkbench->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ValveWorkbench);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1278, 26));
+        menubar->setGeometry(QRect(0, 0, 1305, 26));
         menuFile = new QMenu(menubar);
         menuFile->setObjectName("menuFile");
         menuHelp = new QMenu(menubar);
@@ -2143,7 +2170,10 @@ public:
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
         datasheetGroupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Datasheet / Reference", nullptr));
         datasheetNameLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref name:", nullptr));
+        datasheetRefCountLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
+        datasheetRefCountValue->setText(QString());
         datasheetSectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Section:", nullptr));
+        datasheetRefOpLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref OP", nullptr));
         datasheetVaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Va (V):", nullptr));
         datasheetVgLabel->setText(QCoreApplication::translate("ValveWorkbench", "Vg (V):", nullptr));
         datasheetVg2Label->setText(QCoreApplication::translate("ValveWorkbench", "Vg2 (V):", nullptr));
@@ -2151,8 +2181,6 @@ public:
         datasheetGmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (\302\265S):", nullptr));
         datasheetMuLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274:", nullptr));
         datasheetRpLabel->setText(QCoreApplication::translate("ValveWorkbench", "rp (\316\251):", nullptr));
-        datasheetRefCountLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
-        datasheetRefCountValue->setText(QString());
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         plotTitle->setText(QString());
         measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));

@@ -193,6 +193,10 @@ The **Preferences** dialog controls analyser and model behaviour:
   - When checked, Ig2 curves are drawn alongside Ia on analyser and Designer plots (where applicable).
   - When unchecked, only anode current is shown.
 
+- **Show Data tab**
+  - When checked, enables the **Data** tab which displays a raw sweep table view.
+  - Default is off for release builds.
+
 - **Pentode remodel after screen modelling**
   - Enables an extra Gardiner pentode "remodel" pass after the screen-current fit.
   - When off, the model is used directly after the main screen fit.
@@ -212,6 +216,7 @@ The **Preferences** dialog controls analyser and model behaviour:
 ## Features
 - Double‑triode workflow with A/B overlays and color‑coded labels
 - Robust fitting with multiple model families (Triode/Pentode)
+- Experimental Harmonics Explorer (hidden in release builds)
 - Pentode support:
   - **Gardiner Pentode** — stable Ceres-based pentode fit used as the reference model in the main branch.
   - **Reefman Pentode (Derk / DerkE)** — experimental models based on Derk Reefman’s work; long-term goal is to bring their behaviour closer to the standalone ExtractModel tool at `C:\Users\lizar\Documents\ExtractModel_3p0`. These are not currently recommended for everyday fitting.

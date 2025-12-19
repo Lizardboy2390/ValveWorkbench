@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'preferencesdialog.ui'
 **
-** Created by: Qt User Interface Compiler version 6.5.0
+** Created by: Qt User Interface Compiler version 6.9.3
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -35,14 +35,6 @@ public:
     QLabel *label;
     QComboBox *portSelect;
     QSpacerItem *horizontalSpacer;
-    QHBoxLayout *horizontalLayout_2;
-    QLabel *label_2;
-    QComboBox *pentodeFit;
-    QSpacerItem *horizontalSpacer_2;
-    QHBoxLayout *horizontalLayout_3;
-    QLabel *label_3;
-    QComboBox *sampling;
-    QSpacerItem *horizontalSpacer_3;
     QHBoxLayout *horizontalLayout_4;
     QLabel *label_avgMode;
     QComboBox *avgMode;
@@ -51,6 +43,14 @@ public:
     QLabel *label_avgSamples;
     QSpinBox *avgSamples;
     QSpacerItem *horizontalSpacer_5;
+    QHBoxLayout *horizontalLayout_2;
+    QLabel *label_2;
+    QComboBox *pentodeFit;
+    QSpacerItem *horizontalSpacer_2;
+    QHBoxLayout *horizontalLayout_3;
+    QLabel *label_3;
+    QComboBox *sampling;
+    QSpacerItem *horizontalSpacer_3;
     QCheckBox *checkScreenCurrent;
     QCheckBox *checkSmoothCurves;
     QCheckBox *checkShowDataTab;
@@ -64,7 +64,7 @@ public:
     {
         if (PreferencesDialog->objectName().isEmpty())
             PreferencesDialog->setObjectName("PreferencesDialog");
-        PreferencesDialog->resize(445, 508);
+        PreferencesDialog->resize(440, 508);
         buttonBox = new QDialogButtonBox(PreferencesDialog);
         buttonBox->setObjectName("buttonBox");
         buttonBox->setGeometry(QRect(30, 450, 341, 32));
@@ -72,7 +72,7 @@ public:
         buttonBox->setStandardButtons(QDialogButtonBox::Cancel|QDialogButtonBox::Ok);
         verticalLayoutWidget = new QWidget(PreferencesDialog);
         verticalLayoutWidget->setObjectName("verticalLayoutWidget");
-        verticalLayoutWidget->setGeometry(QRect(20, 19, 406, 401));
+        verticalLayoutWidget->setGeometry(QRect(20, 19, 361, 401));
         verticalLayout = new QVBoxLayout(verticalLayoutWidget);
         verticalLayout->setObjectName("verticalLayout");
         verticalLayout->setContentsMargins(0, 0, 0, 0);
@@ -80,7 +80,7 @@ public:
         horizontalLayout->setObjectName("horizontalLayout");
         label = new QLabel(verticalLayoutWidget);
         label->setObjectName("label");
-        QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+        QSizePolicy sizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Preferred);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(label->sizePolicy().hasHeightForWidth());
@@ -91,7 +91,7 @@ public:
 
         portSelect = new QComboBox(verticalLayoutWidget);
         portSelect->setObjectName("portSelect");
-        QSizePolicy sizePolicy1(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QSizePolicy sizePolicy1(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
         sizePolicy1.setHorizontalStretch(0);
         sizePolicy1.setVerticalStretch(0);
         sizePolicy1.setHeightForWidth(portSelect->sizePolicy().hasHeightForWidth());
@@ -100,12 +100,62 @@ public:
 
         horizontalLayout->addWidget(portSelect);
 
-        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
         horizontalLayout->addItem(horizontalSpacer);
 
 
         verticalLayout->addLayout(horizontalLayout);
+
+        horizontalLayout_4 = new QHBoxLayout();
+        horizontalLayout_4->setObjectName("horizontalLayout_4");
+        label_avgMode = new QLabel(verticalLayoutWidget);
+        label_avgMode->setObjectName("label_avgMode");
+        sizePolicy.setHeightForWidth(label_avgMode->sizePolicy().hasHeightForWidth());
+        label_avgMode->setSizePolicy(sizePolicy);
+        label_avgMode->setMinimumSize(QSize(140, 0));
+
+        horizontalLayout_4->addWidget(label_avgMode);
+
+        avgMode = new QComboBox(verticalLayoutWidget);
+        avgMode->setObjectName("avgMode");
+        sizePolicy1.setHeightForWidth(avgMode->sizePolicy().hasHeightForWidth());
+        avgMode->setSizePolicy(sizePolicy1);
+        avgMode->setMinimumSize(QSize(120, 0));
+
+        horizontalLayout_4->addWidget(avgMode);
+
+        horizontalSpacer_4 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_4->addItem(horizontalSpacer_4);
+
+
+        verticalLayout->addLayout(horizontalLayout_4);
+
+        horizontalLayout_5 = new QHBoxLayout();
+        horizontalLayout_5->setObjectName("horizontalLayout_5");
+        label_avgSamples = new QLabel(verticalLayoutWidget);
+        label_avgSamples->setObjectName("label_avgSamples");
+        sizePolicy.setHeightForWidth(label_avgSamples->sizePolicy().hasHeightForWidth());
+        label_avgSamples->setSizePolicy(sizePolicy);
+        label_avgSamples->setMinimumSize(QSize(140, 0));
+
+        horizontalLayout_5->addWidget(label_avgSamples);
+
+        avgSamples = new QSpinBox(verticalLayoutWidget);
+        avgSamples->setObjectName("avgSamples");
+        avgSamples->setMinimum(1);
+        avgSamples->setMaximum(8);
+        avgSamples->setValue(5);
+
+        horizontalLayout_5->addWidget(avgSamples);
+
+        horizontalSpacer_5 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_5->addItem(horizontalSpacer_5);
+
+
+        verticalLayout->addLayout(horizontalLayout_5);
 
         horizontalLayout_2 = new QHBoxLayout();
         horizontalLayout_2->setObjectName("horizontalLayout_2");
@@ -125,7 +175,7 @@ public:
 
         horizontalLayout_2->addWidget(pentodeFit);
 
-        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
         horizontalLayout_2->addItem(horizontalSpacer_2);
 
@@ -150,59 +200,12 @@ public:
 
         horizontalLayout_3->addWidget(sampling);
 
-        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
         horizontalLayout_3->addItem(horizontalSpacer_3);
 
 
         verticalLayout->addLayout(horizontalLayout_3);
-
-        horizontalLayout_4 = new QHBoxLayout();
-        horizontalLayout_4->setObjectName("horizontalLayout_4");
-        label_avgMode = new QLabel(verticalLayoutWidget);
-        label_avgMode->setObjectName("label_avgMode");
-        sizePolicy.setHeightForWidth(label_avgMode->sizePolicy().hasHeightForWidth());
-        label_avgMode->setSizePolicy(sizePolicy);
-        label_avgMode->setMinimumSize(QSize(140, 0));
-
-        horizontalLayout_4->addWidget(label_avgMode);
-
-        avgMode = new QComboBox(verticalLayoutWidget);
-        avgMode->setObjectName("avgMode");
-        sizePolicy1.setHeightForWidth(avgMode->sizePolicy().hasHeightForWidth());
-        avgMode->setSizePolicy(sizePolicy1);
-        avgMode->setMinimumSize(QSize(120, 0));
-
-        horizontalLayout_4->addWidget(avgMode);
-
-        horizontalSpacer_4 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        horizontalLayout_4->addItem(horizontalSpacer_4);
-
-
-        verticalLayout->addLayout(horizontalLayout_4);
-
-        horizontalLayout_5 = new QHBoxLayout();
-        horizontalLayout_5->setObjectName("horizontalLayout_5");
-        label_avgSamples = new QLabel(verticalLayoutWidget);
-        label_avgSamples->setObjectName("label_avgSamples");
-        sizePolicy.setHeightForWidth(label_avgSamples->sizePolicy().hasHeightForWidth());
-        label_avgSamples->setSizePolicy(sizePolicy);
-        label_avgSamples->setMinimumSize(QSize(140, 0));
-
-        horizontalLayout_5->addWidget(label_avgSamples);
-
-        avgSamples = new QSpinBox(verticalLayoutWidget);
-        avgSamples->setObjectName("avgSamples");
-
-        horizontalLayout_5->addWidget(avgSamples);
-
-        horizontalSpacer_5 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        horizontalLayout_5->addItem(horizontalSpacer_5);
-
-
-        verticalLayout->addLayout(horizontalLayout_5);
 
         checkScreenCurrent = new QCheckBox(verticalLayoutWidget);
         checkScreenCurrent->setObjectName("checkScreenCurrent");
@@ -246,7 +249,7 @@ public:
 
         verticalLayout->addWidget(checkFixSecondary);
 
-        verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
 
         verticalLayout->addItem(verticalSpacer);
 
@@ -262,10 +265,10 @@ public:
     {
         PreferencesDialog->setWindowTitle(QCoreApplication::translate("PreferencesDialog", "Preferences", nullptr));
         label->setText(QCoreApplication::translate("PreferencesDialog", "Analyser Port:", nullptr));
-        label_2->setText(QCoreApplication::translate("PreferencesDialog", "Pentode Fit:", nullptr));
-        label_3->setText(QCoreApplication::translate("PreferencesDialog", "Sweep spacing:", nullptr));
         label_avgMode->setText(QCoreApplication::translate("PreferencesDialog", "Averaging mode:", nullptr));
         label_avgSamples->setText(QCoreApplication::translate("PreferencesDialog", "Fixed samples:", nullptr));
+        label_2->setText(QCoreApplication::translate("PreferencesDialog", "Pentode Fit:", nullptr));
+        label_3->setText(QCoreApplication::translate("PreferencesDialog", "Sweep spacing:", nullptr));
         checkScreenCurrent->setText(QCoreApplication::translate("PreferencesDialog", "Show screen current on anode plots", nullptr));
         checkSmoothCurves->setText(QCoreApplication::translate("PreferencesDialog", "Smooth measurement plotting", nullptr));
         checkShowDataTab->setText(QCoreApplication::translate("PreferencesDialog", "Show Data tab", nullptr));

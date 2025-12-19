@@ -34,6 +34,7 @@ public:
     bool fixTriodeParameters();
     bool showScreenCurrent();
     bool smoothCurves();
+    bool showDataTab();
 
     double getAnodeVoltageCalibration();
     double getAnodeCurrentCalibration();

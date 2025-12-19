@@ -1,5 +1,5 @@
 #include "projectdialog.h"
-#include "ui_projectdialog.h"
+#include <ui_projectdialog.h>
 
 /**
  * @brief ProjectDialog::ProjectDialog

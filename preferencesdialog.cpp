@@ -1,5 +1,5 @@
 #include "preferencesdialog.h"
-#include "ui_preferencesdialog.h"
+#include <ui_preferencesdialog.h>
 #include "valvemodel/model/model.h"
 #include "analyser/analyser.h"
 
@@ -253,6 +253,11 @@ bool PreferencesDialog::smoothCurves()
     return ui->checkSmoothCurves->isChecked();
 }
 
+bool PreferencesDialog::showDataTab()
+{
+    return ui->checkShowDataTab->isChecked();
+}
+
 double PreferencesDialog::getAnodeVoltageCalibration()
 {
     return anodeVoltageSpinBox->value();
@@ -364,6 +369,7 @@ void PreferencesDialog::loadFromSettings()
     ui->checkFixTriode->setChecked(s.value("preferences/fixTriodeParameters", true).toBool());
     ui->checkFixSecondary->setChecked(s.value("preferences/fixSecondaryEmission", true).toBool());
     ui->checkSmoothCurves->setChecked(s.value("preferences/smoothCurves", false).toBool());
+    ui->checkShowDataTab->setChecked(s.value("preferences/showDataTab", false).toBool());
 
     // Calibration offsets
     anodeVoltageSpinBox->setValue(s.value("cal/anodeVoltage", 0.0).toDouble());
@@ -395,6 +401,7 @@ void PreferencesDialog::saveToSettings() const
     s.setValue("preferences/fixTriodeParameters", ui->checkFixTriode->isChecked());
     s.setValue("preferences/fixSecondaryEmission", ui->checkFixSecondary->isChecked());
     s.setValue("preferences/smoothCurves", ui->checkSmoothCurves->isChecked());
+    s.setValue("preferences/showDataTab", ui->checkShowDataTab->isChecked());
 
     s.setValue("cal/anodeVoltage", anodeVoltageSpinBox->value());
     s.setValue("cal/anodeCurrent", anodeCurrentSpinBox->value());
