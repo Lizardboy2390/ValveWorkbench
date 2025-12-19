@@ -2059,7 +2059,7 @@
              <item row="0" column="2">
               <widget class="QLabel" name="datasheetRefCountLabel">
                <property name="text">
-                <string>Ref</string>
+                <string>Reference Saves</string>
                </property>
               </widget>
              </item>
@@ -2070,17 +2070,33 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
+             <item row="1" column="0" colspan="4">
+              <spacer name="verticalSpacer_datasheetRefGap">
+               <property name="orientation">
+                <enum>Qt::Orientation::Vertical</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Policy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>10</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="2" column="0">
               <widget class="QLabel" name="datasheetSectionLabel">
                <property name="visible">
-                <bool>false</bool>
+                <bool>true</bool>
                </property>
                <property name="text">
-                <string>Section:</string>
+                <string>Quick Health Test OP</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="2" column="1">
               <widget class="QLineEdit" name="datasheetSection">
                <property name="visible">
                 <bool>false</bool>
@@ -2090,129 +2106,199 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="2">
+             <item row="2" column="2">
               <widget class="QLabel" name="datasheetRefOpLabel">
                <property name="text">
-                <string>Ref OP</string>
+                <string>Full Health Test OP</string>
                </property>
               </widget>
              </item>
-             <item row="2" column="0">
+             <item row="3" column="0">
               <widget class="QLabel" name="datasheetVaLabel">
                <property name="text">
                 <string>Va (V):</string>
                </property>
               </widget>
              </item>
-             <item row="2" column="1">
+             <item row="3" column="1">
               <widget class="QLineEdit" name="datasheetVa">
                <property name="readOnly">
                 <bool>false</bool>
                </property>
               </widget>
              </item>
-             <item row="2" column="2">
+             <item row="3" column="2">
               <widget class="QLineEdit" name="datasheetVaRef">
                <property name="readOnly">
                 <bool>true</bool>
                </property>
               </widget>
              </item>
-             <item row="3" column="0">
+             <item row="4" column="0">
               <widget class="QLabel" name="datasheetVgLabel">
                <property name="text">
                 <string>Vg (V):</string>
                </property>
               </widget>
              </item>
-             <item row="3" column="1">
+             <item row="4" column="1">
               <widget class="QLineEdit" name="datasheetVg">
                <property name="readOnly">
                 <bool>false</bool>
                </property>
               </widget>
              </item>
-             <item row="3" column="2">
+             <item row="4" column="2">
               <widget class="QLineEdit" name="datasheetVgRef">
                <property name="readOnly">
                 <bool>true</bool>
                </property>
               </widget>
              </item>
-             <item row="4" column="0">
+             <item row="5" column="0">
               <widget class="QLabel" name="datasheetVg2Label">
                <property name="text">
                 <string>Vg2 (V):</string>
                </property>
               </widget>
              </item>
-             <item row="4" column="1">
+             <item row="5" column="1">
               <widget class="QLineEdit" name="datasheetVg2">
                <property name="readOnly">
                 <bool>false</bool>
                </property>
               </widget>
              </item>
-             <item row="4" column="2">
+             <item row="5" column="2">
               <widget class="QLineEdit" name="datasheetVg2Ref">
                <property name="readOnly">
                 <bool>true</bool>
                </property>
               </widget>
              </item>
-             <item row="5" column="0">
+             <item row="6" column="0">
               <widget class="QLabel" name="datasheetIaLabel">
                <property name="text">
                 <string>Ia (mA):</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="1">
+             <item row="6" column="1">
               <widget class="QLineEdit" name="datasheetIa">
                <property name="readOnly">
                 <bool>false</bool>
                </property>
               </widget>
              </item>
-             <item row="6" column="0">
+             <item row="6" column="2">
+              <widget class="QLineEdit" name="datasheetIaRef">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="0">
               <widget class="QLabel" name="datasheetGmLabel">
                <property name="text">
                 <string>gm (µS):</string>
                </property>
               </widget>
              </item>
-             <item row="6" column="1">
+             <item row="7" column="1">
               <widget class="QLineEdit" name="datasheetGm">
                <property name="readOnly">
                 <bool>false</bool>
                </property>
               </widget>
              </item>
-             <item row="7" column="0">
+             <item row="7" column="2">
+              <widget class="QLineEdit" name="datasheetGmRef">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="8" column="0">
               <widget class="QLabel" name="datasheetMuLabel">
                <property name="text">
                 <string>μ:</string>
                </property>
               </widget>
              </item>
-             <item row="7" column="1">
+             <item row="8" column="1">
               <widget class="QLineEdit" name="datasheetMu">
                <property name="readOnly">
                 <bool>false</bool>
                </property>
               </widget>
              </item>
-             <item row="8" column="0">
+             <item row="8" column="2">
+              <widget class="QLineEdit" name="datasheetMuRef">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="0">
               <widget class="QLabel" name="datasheetRpLabel">
                <property name="text">
                 <string>rp (Ω):</string>
                </property>
               </widget>
              </item>
-             <item row="8" column="1">
+             <item row="9" column="1">
               <widget class="QLineEdit" name="datasheetRp">
                <property name="readOnly">
                 <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="2">
+              <widget class="QLineEdit" name="datasheetRpRef">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="10" column="0">
+              <widget class="QLabel" name="datasheetIg2Label">
+               <property name="text">
+                <string>Ig2 (mA):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="10" column="1">
+              <widget class="QLineEdit" name="datasheetIg2">
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="10" column="2">
+              <widget class="QLineEdit" name="datasheetIg2Ref">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="11" column="0">
+              <widget class="QLabel" name="datasheetPg2Label">
+               <property name="text">
+                <string>Pg2 (W):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="11" column="1">
+              <widget class="QLineEdit" name="datasheetPg2">
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="11" column="2">
+              <widget class="QLineEdit" name="datasheetPg2Ref">
+               <property name="readOnly">
+                <bool>true</bool>
                </property>
               </widget>
              </item>

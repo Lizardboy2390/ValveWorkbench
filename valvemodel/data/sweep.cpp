@@ -833,7 +833,14 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
     double vg2 = firstSample->getVg2(); // Used for the family label
 
     if (nSamples == 1) {
-        segments->append(plot->createLabel(vg, ia, vg2, samplePen->color()));
+        QGraphicsTextItem *label = plot->createLabel(vg, ia, vg2, samplePen->color());
+        if (label) {
+            const int sweepCount = measurement ? measurement->count() : 0;
+            if (sweepCount <= 1 && std::isfinite(vaNominal) && vaNominal > 0.0) {
+                label->setPlainText(QStringLiteral("Va %1V").arg(vaNominal, 0, 'f', 0));
+            }
+            segments->append(label);
+        }
         return;
     }
 
@@ -856,7 +863,14 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
             ia = iaNext;
         }
 
-        segments->append(plot->createLabel(vg, ia, vg2, samplePen->color()));
+        QGraphicsTextItem *label = plot->createLabel(vg, ia, vg2, samplePen->color());
+        if (label) {
+            const int sweepCount = measurement ? measurement->count() : 0;
+            if (sweepCount <= 1 && std::isfinite(vaNominal) && vaNominal > 0.0) {
+                label->setPlainText(QStringLiteral("Va %1V").arg(vaNominal, 0, 'f', 0));
+            }
+            segments->append(label);
+        }
         return;
     }
 
@@ -957,7 +971,14 @@ void Sweep::plotPentodeTransfer(Plot *plot, QPen *samplePen, QList<QGraphicsItem
     }
 
     // Label the family using the effective screen voltage of the first sample.
-    segments->append(plot->createLabel(x[nSamples - 1], y[nSamples - 1], vg2, samplePen->color()));
+    QGraphicsTextItem *label = plot->createLabel(x[nSamples - 1], y[nSamples - 1], vg2, samplePen->color());
+    if (label) {
+        const int sweepCount = measurement ? measurement->count() : 0;
+        if (sweepCount <= 1 && std::isfinite(vaNominal) && vaNominal > 0.0) {
+            label->setPlainText(QStringLiteral("Va %1V").arg(vaNominal, 0, 'f', 0));
+        }
+        segments->append(label);
+    }
 }
 
 void Sweep::propertyEdited(QTableWidgetItem *item)

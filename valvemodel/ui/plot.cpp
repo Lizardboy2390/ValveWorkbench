@@ -12,7 +12,8 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
     yStart = _yStart;
     yStop = _yStop;
 
-    xScale = PLOT_WIDTH / (xStop - xStart);
+    const double plotWidth = PLOT_WIDTH - 80.0;
+    xScale = plotWidth / (xStop - xStart);
     yScale = PLOT_HEIGHT / (yStop - yStart);
 
     // Debug output for axis setup
@@ -110,7 +111,7 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
     i = 0;
     while (y <= yStop) {
         const double yScene = PLOT_HEIGHT - (y - yStart) * yScale;
-        scene->addLine(0, yScene, PLOT_WIDTH, yScene, majorPen);
+        scene->addLine(0, yScene, plotWidth, yScene, majorPen);
         rounding = (y > 0) ? 0.5 : -0.5;
         if (yLabelEvery == 0 || (i % yLabelEvery) == 0) {
             QGraphicsTextItem *text;
@@ -140,7 +141,7 @@ void Plot::setAxes(double _xStart, double _xStop, double xMajorDivision, double 
                     break;
                 }
                 const double yMinorScene = PLOT_HEIGHT - (yMinor - yStart) * yScale;
-                scene->addLine(0, yMinorScene, PLOT_WIDTH, yMinorScene, minorPen);
+                scene->addLine(0, yMinorScene, plotWidth, yMinorScene, minorPen);
             }
         }
 
@@ -203,7 +204,16 @@ QGraphicsTextItem *Plot::createLabel(double x, double y, double value, const QCo
     sprintf(labelText, "%.1fv", value + 0.04);
     text = scene->addText(labelText);
     // FIXED: Removed PLOT_HEIGHT inversion for Qt top-left coordinate system
-    text->setPos((x - xStart) * xScale + 5, PLOT_HEIGHT - (y - yStart) * yScale - 10);
+
+    double xPos = (x - xStart) * xScale + 5;
+    double yPos = PLOT_HEIGHT - (y - yStart) * yScale - 10;
+
+    const QRectF r = text->boundingRect();
+    const double maxX = PLOT_WIDTH - r.width() - 2.0;
+    if (xPos > maxX) xPos = maxX;
+    if (xPos < 0.0) xPos = 0.0;
+
+    text->setPos(xPos, yPos);
     text->setFlag(QGraphicsItem::ItemIsSelectable, false);
     text->setFlag(QGraphicsItem::ItemIsMovable, false);
     if (color.isValid()) {

@@ -568,6 +568,51 @@ void ValveWorkbench::updateDatasheetDisplay()
         return;
     }
 
+    auto applyDatasheetStyles = [this]() {
+        const QString dsBlue = QStringLiteral("color: rgb(0,0,192);");
+        const QString refOrange = QStringLiteral("color: rgb(255,140,0);");
+
+        auto setStyle = [](QLineEdit *edit, const QString &style) {
+            if (edit) {
+                edit->setStyleSheet(style);
+            }
+        };
+
+        // Datasheet column values (blue, like Quick Health)
+        setStyle(ui->datasheetVa, dsBlue);
+        setStyle(ui->datasheetVg, dsBlue);
+        setStyle(ui->datasheetVg2, dsBlue);
+        setStyle(ui->datasheetIa, dsBlue);
+        setStyle(ui->datasheetGm, dsBlue);
+        setStyle(ui->datasheetMu, dsBlue);
+        setStyle(ui->datasheetRp, dsBlue);
+        setStyle(ui->datasheetIg2, dsBlue);
+        setStyle(ui->datasheetPg2, dsBlue);
+
+        // Reference operating point column (orange, like Full Health)
+        setStyle(ui->datasheetVaRef, refOrange);
+        setStyle(ui->datasheetVgRef, refOrange);
+        setStyle(ui->datasheetVg2Ref, refOrange);
+
+        // Full Health Test OP additional rows
+        setStyle(ui->datasheetIaRef, refOrange);
+        setStyle(ui->datasheetGmRef, refOrange);
+        setStyle(ui->datasheetMuRef, refOrange);
+        setStyle(ui->datasheetRpRef, refOrange);
+        setStyle(ui->datasheetIg2Ref, refOrange);
+        setStyle(ui->datasheetPg2Ref, refOrange);
+
+        // Reference save-count indicator (label + value)
+        if (ui->datasheetRefCountLabel) {
+            ui->datasheetRefCountLabel->setStyleSheet(refOrange);
+        }
+        if (ui->datasheetRefCountValue) {
+            ui->datasheetRefCountValue->setStyleSheet(refOrange);
+        }
+    };
+
+    applyDatasheetStyles();
+
     auto setField = [](QLineEdit *edit, const QString &text) {
         if (edit) {
             edit->setText(text);
@@ -602,6 +647,14 @@ void ValveWorkbench::updateDatasheetDisplay()
         setField(ui->datasheetVaRef, QString());
         setField(ui->datasheetVgRef, QString());
         setField(ui->datasheetVg2Ref, QString());
+        setField(ui->datasheetIaRef, QString());
+        setField(ui->datasheetGmRef, QString());
+        setField(ui->datasheetMuRef, QString());
+        setField(ui->datasheetRpRef, QString());
+        setField(ui->datasheetIg2, QString());
+        setField(ui->datasheetPg2, QString());
+        setField(ui->datasheetIg2Ref, QString());
+        setField(ui->datasheetPg2Ref, QString());
         setField(ui->datasheetIa, QString());
         setField(ui->datasheetGm, QString());
         setField(ui->datasheetMu, QString());
@@ -648,6 +701,17 @@ void ValveWorkbench::updateDatasheetDisplay()
     setField(ui->datasheetMu, muStr);
     setField(ui->datasheetRp, rpStr);
 
+    // Optional pentode-only datasheet metrics.
+    if (deviceType == PENTODE) {
+        const QString ig2Str = numToString(rp.value("ig2"), 3);
+        const QString pg2Str = numToString(rp.value("pg2"), 3);
+        setField(ui->datasheetIg2, ig2Str);
+        setField(ui->datasheetPg2, pg2Str);
+    } else {
+        setField(ui->datasheetIg2, QString());
+        setField(ui->datasheetPg2, QString());
+    }
+
     // Optional reference-tube sample count surfaced as "Ref xN" in the
     // Datasheet / Reference box on the Va row. This is derived from the
     // datasheet.healthReference.sampleCount accumulated by
@@ -673,6 +737,53 @@ void ValveWorkbench::updateDatasheetDisplay()
     setField(ui->datasheetVaRef, numToString(centerObj.value(QStringLiteral("va")), 1));
     setField(ui->datasheetVgRef, numToString(centerObj.value(QStringLiteral("vg")), 1));
     setField(ui->datasheetVg2Ref, numToString(centerObj.value(QStringLiteral("vg2")), 1));
+
+    // Full Health Test OP (reference tube) metrics.
+    // Stored keys are reference-tube specific (iaRefA_mA, gmRefA_mA_V). Others
+    // may be absent in older templates.
+    const double iaRefA_mA = centerObj.value(QStringLiteral("iaRefA_mA")).toDouble(0.0);
+    const double gmRefA_mA_V = centerObj.value(QStringLiteral("gmRefA_mA_V")).toDouble(0.0);
+
+    double rpRef_ohms = centerObj.value(QStringLiteral("rpRefA_ohms")).toDouble(0.0);
+    if (!(rpRef_ohms > 0.0)) {
+        // Fall back to the last measured Full Health center rp, if available.
+        if (!healthResults.isEmpty()) {
+            const HealthResult &r0 = healthResults.first();
+            if (r0.valid && r0.rp > 0.0) {
+                rpRef_ohms = r0.rp;
+            }
+        }
+    }
+
+    double muRef = centerObj.value(QStringLiteral("muRefA")).toDouble(0.0);
+    if (!(muRef > 0.0) && (gmRefA_mA_V > 0.0) && (rpRef_ohms > 0.0)) {
+        // gm is in mA/V; convert to A/V for mu computation.
+        muRef = (gmRefA_mA_V / 1000.0) * rpRef_ohms;
+    }
+
+    setField(ui->datasheetIaRef, (iaRefA_mA > 0.0) ? QString::number(iaRefA_mA, 'f', 3) : QString());
+    setField(ui->datasheetGmRef, (gmRefA_mA_V > 0.0) ? QString::number(gmRefA_mA_V * 1000.0, 'f', 1) : QString());
+    setField(ui->datasheetRpRef, (rpRef_ohms > 0.0) ? QString::number(rpRef_ohms, 'f', 0) : QString());
+    setField(ui->datasheetMuRef, (muRef > 0.0) ? QString::number(muRef, 'f', 1) : QString());
+
+    // Full Health Test OP (reference tube) pentode extras.
+    if (deviceType == PENTODE) {
+        const double ig2Ref_mA = centerObj.value(QStringLiteral("ig2Ref_mA")).toDouble(0.0);
+
+        // Prefer the stored OP's vg2 for Pg2 computation.
+        double vg2ForPg2 = centerObj.value(QStringLiteral("vg2")).toDouble(0.0);
+        if (!(vg2ForPg2 > 0.0)) {
+            vg2ForPg2 = rp.value(QStringLiteral("vg2")).toDouble(0.0);
+        }
+
+        const double pg2Ref_W = (vg2ForPg2 > 0.0 && ig2Ref_mA > 0.0) ? (vg2ForPg2 * ig2Ref_mA / 1000.0) : 0.0;
+
+        setField(ui->datasheetIg2Ref, (ig2Ref_mA > 0.0) ? QString::number(ig2Ref_mA, 'f', 3) : QString());
+        setField(ui->datasheetPg2Ref, (pg2Ref_W > 0.0) ? QString::number(pg2Ref_W, 'f', 3) : QString());
+    } else {
+        setField(ui->datasheetIg2Ref, QString());
+        setField(ui->datasheetPg2Ref, QString());
+    }
 
     // Mirror reference metrics into the Triode A/B Health Ref columns.
     // Ia is in mA, gm is shown in µS for UI consistency.
@@ -1201,10 +1312,6 @@ bool ValveWorkbench::ensureDatasheetRefPoint(double &va0, double &vg0, double &i
         savedScreenStepForHealth = screenStep;
     }
 
-    if (!healthRunActive && !healthPrereqAnodeSweepActive) {
-        healthPrereqAnodeMeasurement = nullptr;
-    }
-
     Measurement *anodeCandidate = nullptr;
     if (currentProject) {
         anodeCandidate = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
@@ -1499,6 +1606,7 @@ bool ValveWorkbench::ensureDatasheetRefPoint(double &va0, double &vg0, double &i
 
 void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
 {
+    // Transfer sweep for Health: fix Va at pt.va and sweep Vg around pt.vg
     testType = TRANSFER_CHARACTERISTICS;
 
     anodeStart = pt.va;
@@ -1508,14 +1616,13 @@ void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
     const double vgMag = std::fabs(pt.vg);
 
     const double triodeHalfSpan = 0.3;
-    const double pentodeLoSpan  = 1.0;
-    const double pentodeHiSpan  = 8.0;
+    const double pentodeHalfSpan = 1.0;
 
     double startMag = 0.0;
     double stopMag  = 0.0;
     if (deviceType == PENTODE) {
-        startMag = (vgMag > pentodeLoSpan) ? (vgMag - pentodeLoSpan) : 0.0;
-        stopMag  = vgMag + pentodeHiSpan;
+        startMag = (vgMag > pentodeHalfSpan) ? (vgMag - pentodeHalfSpan) : 0.0;
+        stopMag  = vgMag + pentodeHalfSpan;
     } else {
         startMag = (vgMag > triodeHalfSpan) ? (vgMag - triodeHalfSpan) : 0.0;
         stopMag  = vgMag + triodeHalfSpan;
@@ -1541,6 +1648,128 @@ void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
         screenStop  = 0.0;
         screenStep  = 0.0;
     }
+}
+
+static double gmFromSweepAtVgBinned(Sweep *sweep, double vg1Op)
+{
+    if (!sweep || sweep->count() < 3) {
+        return 0.0;
+    }
+
+    const int sampleCount = sweep->count();
+    const double targetVg   = vg1Op;
+    const double maxWindow  = 0.6;
+    const double vgBinEps   = 0.01;
+    const int    minBinsReq = 3;
+
+    struct LocalPoint {
+        double vg;
+        double ia;
+    };
+
+    double window = 0.3;
+    QVector<LocalPoint> rawPoints;
+
+    auto collectPointsInWindow = [&](double halfWidth, QVector<LocalPoint> &out) {
+        out.clear();
+        for (int i = 0; i < sampleCount; ++i) {
+            Sample *s = sweep->at(i);
+            if (!s) continue;
+            const double ia = s->getIa();
+            const double vg = s->getVg1();
+            if (!std::isfinite(ia) || !std::isfinite(vg) || ia <= 0.0) {
+                continue;
+            }
+            const double dVg = vg - targetVg;
+            if (std::fabs(dVg) <= halfWidth) {
+                out.push_back({vg, ia});
+            }
+        }
+    };
+
+    while (true) {
+        collectPointsInWindow(window, rawPoints);
+        if (rawPoints.size() >= minBinsReq || window >= maxWindow) {
+            break;
+        }
+        window = std::min(maxWindow, window * 1.5 + 0.05);
+    }
+
+    if (rawPoints.size() < 2) {
+        return 0.0;
+    }
+
+    std::sort(rawPoints.begin(), rawPoints.end(), [](const LocalPoint &a, const LocalPoint &b) {
+        return a.vg < b.vg;
+    });
+
+    struct VgBin {
+        double vgSum;
+        double iaSum;
+        int    count;
+    };
+
+    QVector<VgBin> bins;
+    bins.reserve(rawPoints.size());
+
+    for (const LocalPoint &p : rawPoints) {
+        if (bins.isEmpty()) {
+            bins.push_back({p.vg, p.ia, 1});
+            continue;
+        }
+
+        VgBin &last = bins.last();
+        const double vgLastAvg = last.vgSum / static_cast<double>(last.count);
+        if (std::fabs(p.vg - vgLastAvg) <= vgBinEps) {
+            last.vgSum += p.vg;
+            last.iaSum += p.ia;
+            ++last.count;
+        } else {
+            bins.push_back({p.vg, p.ia, 1});
+        }
+    }
+
+    if (bins.size() < 2) {
+        return 0.0;
+    }
+
+    const int Nb = bins.size();
+    double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
+
+    for (int i = 0; i < Nb; ++i) {
+        const VgBin &b = bins.at(i);
+        const double vg = b.vgSum / static_cast<double>(b.count);
+        const double ia = b.iaSum / static_cast<double>(b.count);
+        Sx  += vg;
+        Sy  += ia;
+        Sxx += vg * vg;
+        Sxy += vg * ia;
+    }
+
+    double gm_mA_V = 0.0;
+    const double den = static_cast<double>(Nb) * Sxx - Sx * Sx;
+    if (std::fabs(den) > 1e-12) {
+        gm_mA_V = (static_cast<double>(Nb) * Sxy - Sx * Sy) / den;
+    }
+
+    if (gm_mA_V <= 0.0 || !std::isfinite(gm_mA_V)) {
+        const VgBin &b0 = bins.first();
+        const VgBin &b1 = bins.last();
+        const double vg0 = b0.vgSum / static_cast<double>(b0.count);
+        const double ia0 = b0.iaSum / static_cast<double>(b0.count);
+        const double vg1 = b1.vgSum / static_cast<double>(b1.count);
+        const double ia1 = b1.iaSum / static_cast<double>(b1.count);
+        const double dVg = vg1 - vg0;
+        if (std::fabs(dVg) < 1e-6) {
+            return 0.0;
+        }
+        gm_mA_V = (ia1 - ia0) / dVg;
+        if (gm_mA_V <= 0.0 || !std::isfinite(gm_mA_V)) {
+            return 0.0;
+        }
+    }
+
+    return gm_mA_V;
 }
 
 bool ValveWorkbench::computeIaGmAt(Measurement *measurement,
@@ -1626,6 +1855,11 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement,
         }
     }
 
+    const double gmBinned = gmFromSweepAtVgBinned(bestSweep, pt.vg);
+    if (gmBinned > 0.0 && std::isfinite(gmBinned)) {
+        gm_mA_V = gmBinned;
+    }
+
     auto slopeBetween = [](Sample *a, Sample *b, double &gmOut) -> bool {
         if (!a || !b) return false;
         const double ia0 = a->getIa();
@@ -1642,20 +1876,22 @@ bool ValveWorkbench::computeIaGmAt(Measurement *measurement,
     const int n = bestSweep->count();
     double gmTmp = 0.0;
     bool haveGm = false;
-    if (bestSampleIdx > 0 && bestSampleIdx + 1 < n) {
-        haveGm = slopeBetween(bestSweep->at(bestSampleIdx - 1), bestSweep->at(bestSampleIdx + 1), gmTmp);
-    }
-    if (!haveGm && bestSampleIdx > 0) {
-        haveGm = slopeBetween(bestSweep->at(bestSampleIdx - 1), bestSweep->at(bestSampleIdx), gmTmp);
-    }
-    if (!haveGm && bestSampleIdx + 1 < n) {
-        haveGm = slopeBetween(bestSweep->at(bestSampleIdx), bestSweep->at(bestSampleIdx + 1), gmTmp);
-    }
+    if (!(gm_mA_V > 0.0) || !std::isfinite(gm_mA_V)) {
+        if (bestSampleIdx > 0 && bestSampleIdx + 1 < n) {
+            haveGm = slopeBetween(bestSweep->at(bestSampleIdx - 1), bestSweep->at(bestSampleIdx + 1), gmTmp);
+        }
+        if (!haveGm && bestSampleIdx > 0) {
+            haveGm = slopeBetween(bestSweep->at(bestSampleIdx - 1), bestSweep->at(bestSampleIdx), gmTmp);
+        }
+        if (!haveGm && bestSampleIdx + 1 < n) {
+            haveGm = slopeBetween(bestSweep->at(bestSampleIdx), bestSweep->at(bestSampleIdx + 1), gmTmp);
+        }
 
-    if (haveGm) {
-        gm_mA_V = gmTmp;
-        if (!std::isfinite(gm_mA_V) || gm_mA_V < 0.0) {
-            gm_mA_V = 0.0;
+        if (haveGm) {
+            gm_mA_V = gmTmp;
+            if (!std::isfinite(gm_mA_V) || gm_mA_V < 0.0) {
+                gm_mA_V = 0.0;
+            }
         }
     }
 
@@ -2377,6 +2613,12 @@ void ValveWorkbench::finalizeHealthRun()
             }
         };
 
+        auto setEditStyle = [](QLineEdit *edit, const QString &style) {
+            if (edit) {
+                edit->setStyleSheet(style);
+            }
+        };
+
         auto formatValue = [](double v, int decimals) -> QString {
             if (!std::isfinite(v)) {
                 return QString();
@@ -2439,6 +2681,120 @@ void ValveWorkbench::finalizeHealthRun()
             }
             return QString::number(percent, 'f', 0);
         };
+
+        // --- Ref column display mode ---
+        //  - Quick Health: show datasheet OP reference values (blue)
+        //  - Full Health: show reference-tube Full-OP values (orange)
+        const bool showFullOpRefs = (healthMode == HEALTH_FULL);
+        const QString dsBlue = QStringLiteral("color: rgb(0,0,192);");
+        const QString refOrange = QStringLiteral("color: rgb(255,140,0);");
+        const QString refStyle = showFullOpRefs ? refOrange : dsBlue;
+
+        // Pull saved Full-OP reference values from datasheet.healthReference.center.
+        QJsonObject fullOpCenter;
+        if (showFullOpRefs && !datasheetJson.isEmpty()) {
+            fullOpCenter = datasheetJson.value(QStringLiteral("healthReference")).toObject().value(QStringLiteral("center")).toObject();
+        }
+
+        // Triode A (or Pentode) ref column.
+        if (haveRef) {
+            QString refIa;
+            QString refGm;
+            QString refMu;
+            QString refRp;
+
+            if (showFullOpRefs && !fullOpCenter.isEmpty()) {
+                const double iaRefA_mA = fullOpCenter.value(QStringLiteral("iaRefA_mA")).toDouble(0.0);
+                const double gmRefA_mA_V = fullOpCenter.value(QStringLiteral("gmRefA_mA_V")).toDouble(0.0);
+                const double muRefA = fullOpCenter.value(QStringLiteral("muRefA")).toDouble(0.0);
+                const double rpRefA_ohms = fullOpCenter.value(QStringLiteral("rpRefA_ohms")).toDouble(0.0);
+
+                if (iaRefA_mA > 0.0) refIa = QString::number(iaRefA_mA, 'f', 3);
+                if (gmRefA_mA_V > 0.0) refGm = QString::number(gmRefA_mA_V * 1000.0, 'f', 0); // µS
+                if (muRefA > 0.0) refMu = QString::number(muRefA, 'f', 1);
+                if (rpRefA_ohms > 0.0) refRp = QString::number(rpRefA_ohms, 'f', 0);
+            } else {
+                // Datasheet reference values (gm0 is mA/V; display in µS).
+                if (ia0 > 0.0) refIa = QString::number(ia0, 'f', 3);
+                if (gm0 > 0.0) refGm = QString::number(gm0 * 1000.0, 'f', 0);
+                if (mu0 > 0.0) refMu = QString::number(mu0, 'f', 1);
+                if (rp0 > 0.0) refRp = QString::number(rp0, 'f', 0);
+            }
+
+            setEdit(ui->triodeA_Ia_ref, refIa);
+            setEdit(ui->triodeA_gm_ref, refGm);
+            setEdit(ui->triodeA_mu_ref, refMu);
+            setEdit(ui->triodeA_rp_ref, refRp);
+
+            setEditStyle(ui->triodeA_Ia_ref, refStyle);
+            setEditStyle(ui->triodeA_gm_ref, refStyle);
+            setEditStyle(ui->triodeA_mu_ref, refStyle);
+            setEditStyle(ui->triodeA_rp_ref, refStyle);
+        }
+
+        // Triode B (or Screen) ref column.
+        if (deviceType == PENTODE) {
+            // Screen Health uses Ig2/Pg2.
+            QString refIg2;
+            QString refPg2;
+
+            if (showFullOpRefs && !fullOpCenter.isEmpty()) {
+                const double ig2Ref_mA = fullOpCenter.value(QStringLiteral("ig2Ref_mA")).toDouble(0.0);
+                double vg2ForPg2 = fullOpCenter.value(QStringLiteral("vg2")).toDouble(0.0);
+                if (!(vg2ForPg2 > 0.0)) {
+                    vg2ForPg2 = vg20;
+                }
+                const double pg2Ref_W = (vg2ForPg2 > 0.0 && ig2Ref_mA > 0.0) ? (vg2ForPg2 * ig2Ref_mA / 1000.0) : 0.0;
+                if (ig2Ref_mA > 0.0) refIg2 = QString::number(ig2Ref_mA, 'f', 3);
+                if (pg2Ref_W > 0.0) refPg2 = QString::number(pg2Ref_W, 'f', 3);
+            } else {
+                // Datasheet refPoints[0] may optionally carry ig2/pg2.
+                if (!datasheetJson.isEmpty()) {
+                    const QJsonArray refPoints = datasheetJson.value(QStringLiteral("refPoints")).toArray();
+                    if (!refPoints.isEmpty() && refPoints.at(0).isObject()) {
+                        const QJsonObject rpObj = refPoints.at(0).toObject();
+                        const double ig2Ds = rpObj.value(QStringLiteral("ig2")).toDouble(0.0);
+                        const double pg2Ds = rpObj.value(QStringLiteral("pg2")).toDouble(0.0);
+                        if (ig2Ds > 0.0) refIg2 = QString::number(ig2Ds, 'f', 3);
+                        if (pg2Ds > 0.0) {
+                            refPg2 = QString::number(pg2Ds, 'f', 3);
+                        } else {
+                            const double vg2Ds = rpObj.value(QStringLiteral("vg2")).toDouble(0.0);
+                            const double pg2Calc = (vg2Ds > 0.0 && ig2Ds > 0.0) ? (vg2Ds * ig2Ds / 1000.0) : 0.0;
+                            if (pg2Calc > 0.0) refPg2 = QString::number(pg2Calc, 'f', 3);
+                        }
+                    }
+                }
+            }
+
+            setEdit(ui->triodeB_Ia_ref, refIg2);
+            setEdit(ui->triodeB_rp_ref, refPg2);
+            setEditStyle(ui->triodeB_Ia_ref, refStyle);
+            setEditStyle(ui->triodeB_rp_ref, refStyle);
+        } else {
+            // Double triode Triode B: show B-specific reference when available.
+            if (isDoubleTriode) {
+                QString refIa;
+                QString refGm;
+
+                if (showFullOpRefs && !fullOpCenter.isEmpty()) {
+                    const double iaRefB_mA = fullOpCenter.value(QStringLiteral("iaRefB_mA")).toDouble(0.0);
+                    const double gmRefB_mA_V = fullOpCenter.value(QStringLiteral("gmRefB_mA_V")).toDouble(0.0);
+                    if (iaRefB_mA > 0.0) refIa = QString::number(iaRefB_mA, 'f', 3);
+                    if (gmRefB_mA_V > 0.0) refGm = QString::number(gmRefB_mA_V * 1000.0, 'f', 0);
+                } else {
+                    if (ia0 > 0.0) refIa = QString::number(ia0, 'f', 3);
+                    if (gm0 > 0.0) refGm = QString::number(gm0 * 1000.0, 'f', 0);
+                }
+
+                setEdit(ui->triodeB_Ia_ref, refIa);
+                setEdit(ui->triodeB_gm_ref, refGm);
+                setEditStyle(ui->triodeB_Ia_ref, refStyle);
+                setEditStyle(ui->triodeB_gm_ref, refStyle);
+                setEditStyle(ui->triodeB_mu_ref, refStyle);
+                setEditStyle(ui->triodeB_rp_ref, refStyle);
+            }
+        }
 
         if (!healthResults.isEmpty()) {
             const HealthResult &r0 = healthResults.first();
@@ -3080,6 +3436,7 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
 
     double iaCentreA = 0.0;
     double gmCentreA = 0.0;
+    double rpCentreA = 0.0;
     double ig2Centre = 0.0;
     bool haveCentreA = false;
     if (!healthResults.isEmpty()) {
@@ -3087,6 +3444,9 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
         if (hr0.valid && hr0.ia > 0.0 && hr0.gm > 0.0) {
             iaCentreA = hr0.ia;
             gmCentreA = hr0.gm;
+            if (hr0.rp > 0.0) {
+                rpCentreA = hr0.rp;
+            }
             haveCentreA = true;
         }
         if (deviceType == PENTODE && hr0.valid && hr0.ig2 > 0.0) {
@@ -3290,10 +3650,22 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
         if (haveCentreA || !existingCenter.isEmpty()) {
             const double oldIaA = existingCenter.value(QStringLiteral("iaRefA_mA")).toDouble(0.0);
             const double oldGmA = existingCenter.value(QStringLiteral("gmRefA_mA_V")).toDouble(0.0);
+            const double oldRpA = existingCenter.value(QStringLiteral("rpRefA_ohms")).toDouble(0.0);
+            const double oldMuA = existingCenter.value(QStringLiteral("muRefA")).toDouble(0.0);
             const double iaA = accumulateScalar(oldIaA, iaCentreA);
             const double gmA = accumulateScalar(oldGmA, gmCentreA);
+            const double rpA = accumulateScalar(oldRpA, rpCentreA);
+
+            double muCentreA = 0.0;
+            if (gmCentreA > 0.0 && rpCentreA > 0.0) {
+                muCentreA = (gmCentreA / 1000.0) * rpCentreA;
+            }
+            const double muA = accumulateScalar(oldMuA, muCentreA);
+
             if (iaA > 0.0) centerMerged.insert(QStringLiteral("iaRefA_mA"), iaA);
             if (gmA > 0.0) centerMerged.insert(QStringLiteral("gmRefA_mA_V"), gmA);
+            if (rpA > 0.0) centerMerged.insert(QStringLiteral("rpRefA_ohms"), rpA);
+            if (muA > 0.0) centerMerged.insert(QStringLiteral("muRefA"), muA);
         }
 
         if (deviceType == PENTODE) {
@@ -9162,14 +9534,7 @@ static double gmFromTransferAtOP(Measurement *transfer,
 
     const int sampleCount = sweep->count();
 
-    auto clampIndex = [](int idx, int max) {
-        if (idx < 0) return 0;
-        if (idx >= max) return max - 1;
-        return idx;
-    };
-
     // Find the sample whose Vg1 is closest to Vg1_op.
-    int centreIdx = 0;
     double bestVgDiff = std::numeric_limits<double>::infinity();
     for (int i = 0; i < sampleCount; ++i) {
         Sample *s = sweep->at(i);
@@ -9179,7 +9544,6 @@ static double gmFromTransferAtOP(Measurement *transfer,
         const double diff = std::fabs(vg - vg1Op);
         if (diff < bestVgDiff) {
             bestVgDiff = diff;
-            centreIdx = i;
         }
     }
 
@@ -9190,116 +9554,9 @@ static double gmFromTransferAtOP(Measurement *transfer,
         return 0.0;
     }
 
-    struct LocalPoint {
-        double vg;
-        double ia;
-    };
-
-    const double targetVg   = vg1Op;
-    const double maxWindow  = 0.6;
-    const double vgBinEps   = 0.01;
-    const int    minBinsReq = 3;
-
-    double window = 0.3;
-    QVector<LocalPoint> rawPoints;
-
-    auto collectPointsInWindow = [&](double halfWidth, QVector<LocalPoint> &out) {
-        out.clear();
-        for (int i = 0; i < sampleCount; ++i) {
-            Sample *s = sweep->at(i);
-            if (!s) continue;
-            const double ia = s->getIa();
-            const double vg = s->getVg1();
-            if (!std::isfinite(ia) || !std::isfinite(vg) || ia <= 0.0) {
-                continue;
-            }
-            const double dVg = vg - targetVg;
-            if (std::fabs(dVg) <= halfWidth) {
-                rawPoints.push_back({vg, ia});
-            }
-        }
-    };
-
-    while (true) {
-        collectPointsInWindow(window, rawPoints);
-        if (rawPoints.size() >= minBinsReq || window >= maxWindow) {
-            break;
-        }
-        window = std::min(maxWindow, window * 1.5 + 0.05);
-    }
-
-    if (rawPoints.size() < 2) {
-        return 0.0;
-    }
-
-    std::sort(rawPoints.begin(), rawPoints.end(), [](const LocalPoint &a, const LocalPoint &b) {
-        return a.vg < b.vg;
-    });
-
-    struct VgBin {
-        double vgSum;
-        double iaSum;
-        int    count;
-    };
-
-    QVector<VgBin> bins;
-    bins.reserve(rawPoints.size());
-
-    for (const LocalPoint &p : rawPoints) {
-        if (bins.isEmpty()) {
-            bins.push_back({p.vg, p.ia, 1});
-            continue;
-        }
-
-        VgBin &last = bins.last();
-        const double vgLastAvg = last.vgSum / static_cast<double>(last.count);
-        if (std::fabs(p.vg - vgLastAvg) <= vgBinEps) {
-            last.vgSum += p.vg;
-            last.iaSum += p.ia;
-            ++last.count;
-        } else {
-            bins.push_back({p.vg, p.ia, 1});
-        }
-    }
-
-    if (bins.size() < 2) {
-        return 0.0;
-    }
-
-    const int Nb = bins.size();
-    double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
-
-    for (int i = 0; i < Nb; ++i) {
-        const VgBin &b = bins.at(i);
-        const double vg = b.vgSum / static_cast<double>(b.count);
-        const double ia = b.iaSum / static_cast<double>(b.count);
-        Sx  += vg;
-        Sy  += ia;
-        Sxx += vg * vg;
-        Sxy += vg * ia;
-    }
-
-    double gm_mA_V = 0.0;
-    const double den = static_cast<double>(Nb) * Sxx - Sx * Sx;
-    if (std::fabs(den) > 1e-12) {
-        gm_mA_V = (static_cast<double>(Nb) * Sxy - Sx * Sy) / den;
-    }
-
-    if (gm_mA_V <= 0.0) {
-        const VgBin &b0 = bins.first();
-        const VgBin &b1 = bins.last();
-        const double vg0 = b0.vgSum / static_cast<double>(b0.count);
-        const double ia0 = b0.iaSum / static_cast<double>(b0.count);
-        const double vg1 = b1.vgSum / static_cast<double>(b1.count);
-        const double ia1 = b1.iaSum / static_cast<double>(b1.count);
-        const double dVg = vg1 - vg0;
-        if (std::fabs(dVg) < 1e-6) {
-            return 0.0;
-        }
-        gm_mA_V = (ia1 - ia0) / dVg;
-    }
-
-    return gm_mA_V;
+    // Compute gm using the shared Health/Modeller estimator so dense, quantised
+    // transfer sweeps yield a stable local slope.
+    return gmFromSweepAtVgBinned(sweep, vg1Op);
 }
 
 // Helper: compute small-signal gm, ra, mu from a measured dataset at an
@@ -11861,6 +12118,60 @@ void ValveWorkbench::on_deviceType_currentIndexChanged(int index)
         } else {
             ui->Triode_A_Box->setTitle(tr("Triode A Health"));
         }
+    }
+
+    // Keep the health box titles/visibility consistent with the selected
+    // device type. The UI uses the same underlying group boxes for:
+    //  - Triode: Triode A / Triode B (double triode only)
+    //  - Pentode: Pentode / Screen
+    if (ui->Triode_B_Box) {
+        if (logicalType == PENTODE) {
+            ui->Triode_B_Box->setTitle(tr("Screen Health"));
+        } else {
+            ui->Triode_B_Box->setTitle(tr("Triode B Health"));
+        }
+
+        // Only show the second box for double triodes (Triode B) or pentodes (Screen).
+        bool onAnalyserTab = false;
+        if (ui->tabWidget) {
+            QWidget *w = ui->tabWidget->currentWidget();
+            onAnalyserTab = (w == ui->tab_3);
+        }
+        ui->Triode_B_Box->setVisible(onAnalyserTab && (logicalType == PENTODE || isDoubleTriode));
+    }
+
+    // Reset the Triode B / Screen box fields back to their expected layout.
+    // finalizeHealthRun() can hide/show these depending on the last run; when
+    // switching devices we must restore defaults so the UI doesn't "stick".
+    if (ui) {
+        const bool pentodeUi = (logicalType == PENTODE);
+
+        if (ui->triodeB_Ia_label) {
+            ui->triodeB_Ia_label->setText(pentodeUi ? tr("Ig2(mA)") : tr("Ia(mA)"));
+            ui->triodeB_Ia_label->setVisible(true);
+        }
+        if (ui->triodeB_rp_label) {
+            ui->triodeB_rp_label->setText(pentodeUi ? tr("Pg2(W)") : tr("rp(Ω)"));
+            ui->triodeB_rp_label->setVisible(true);
+        }
+
+        if (ui->triodeB_gm_label) ui->triodeB_gm_label->setVisible(!pentodeUi);
+        if (ui->triodeB_mu_label) ui->triodeB_mu_label->setVisible(!pentodeUi);
+
+        if (ui->triodeB_gm_measured) ui->triodeB_gm_measured->setVisible(!pentodeUi);
+        if (ui->triodeB_gm_ref) ui->triodeB_gm_ref->setVisible(!pentodeUi);
+        if (ui->triodeB_gm_pct) ui->triodeB_gm_pct->setVisible(!pentodeUi);
+        if (ui->triodeB_mu_measured) ui->triodeB_mu_measured->setVisible(!pentodeUi);
+        if (ui->triodeB_mu_ref) ui->triodeB_mu_ref->setVisible(!pentodeUi);
+        if (ui->triodeB_mu_pct) ui->triodeB_mu_pct->setVisible(!pentodeUi);
+
+        // 4-corner column only makes sense for Triode B on double triodes.
+        const bool showBCorners = (!pentodeUi && isDoubleTriode);
+        if (ui->triodeBHeaderFourCornerPct) ui->triodeBHeaderFourCornerPct->setVisible(showBCorners);
+        if (ui->triodeB_corner1_pct) ui->triodeB_corner1_pct->setVisible(showBCorners);
+        if (ui->triodeB_corner2_pct) ui->triodeB_corner2_pct->setVisible(showBCorners);
+        if (ui->triodeB_corner3_pct) ui->triodeB_corner3_pct->setVisible(showBCorners);
+        if (ui->triodeB_corner4_pct) ui->triodeB_corner4_pct->setVisible(showBCorners);
     }
 
     switch (logicalType) {
