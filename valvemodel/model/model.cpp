@@ -115,15 +115,7 @@ SmallSignalResult Model::computeSmallSignal(double va0, double vg1_0, double vg2
         return result;
     }
 
-    const double dVa = 0.1; // V
     const double dVg = 0.1; // V
-
-    const double vaPlus  = std::max(0.0, va0 + dVa);
-    const double vaMinus = std::max(0.0, va0 - dVa);
-
-    if (std::fabs(vaPlus - vaMinus) < 1e-9) {
-        return result;
-    }
 
     const double vgPlus  = vg1_0 + dVg;
     const double vgMinus = vg1_0 - dVg;
@@ -131,22 +123,49 @@ SmallSignalResult Model::computeSmallSignal(double va0, double vg1_0, double vg2
     const double ia_vg_plus  = anodeCurrent(va0, vgPlus,  vg2_0, secondaryEmission);
     const double ia_vg_minus = anodeCurrent(va0, vgMinus, vg2_0, secondaryEmission);
 
-    const double ia_va_plus  = anodeCurrent(vaPlus,  vg1_0, vg2_0, secondaryEmission);
-    const double ia_va_minus = anodeCurrent(vaMinus, vg1_0, vg2_0, secondaryEmission);
+    // ra is highly sensitive in pentode regions because dIa/dVa can be very small.
+    // Avoid a two-point finite difference here; instead estimate dIa/dVa via a
+    // local least-squares fit of Ia vs Va over a small Va window.
+    const double vaWindow = 10.0; // volts (± window)
+    const double vaStep   = 2.0;  // volts
+    double Sx = 0.0;
+    double Sy = 0.0;
+    double Sxx = 0.0;
+    double Sxy = 0.0;
+    int N = 0;
+
+    for (double dv = -vaWindow; dv <= vaWindow + 1e-12; dv += vaStep) {
+        const double va = std::max(0.0, va0 + dv);
+        const double ia = anodeCurrent(va, vg1_0, vg2_0, secondaryEmission);
+        if (!std::isfinite(va) || !std::isfinite(ia)) {
+            continue;
+        }
+        Sx  += va;
+        Sy  += ia;
+        Sxx += va * va;
+        Sxy += va * ia;
+        ++N;
+    }
 
     auto finite = [](double v) {
         return std::isfinite(v);
     };
 
-    if (!finite(ia_vg_plus)  || !finite(ia_vg_minus) ||
-        !finite(ia_va_plus)  || !finite(ia_va_minus)) {
+    if (!finite(ia_vg_plus)  || !finite(ia_vg_minus)) {
         return result;
     }
 
     const double dIa_dVg = (ia_vg_plus - ia_vg_minus) / (2.0 * dVg);        // mA/V
-    const double dIa_dVa = (ia_va_plus - ia_va_minus) / (vaPlus - vaMinus); // mA/V
 
-    if (!finite(dIa_dVg) || !finite(dIa_dVa) || std::fabs(dIa_dVa) < 1e-9) {
+    double dIa_dVa = std::numeric_limits<double>::quiet_NaN();
+    if (N >= 3) {
+        const double den = static_cast<double>(N) * Sxx - Sx * Sx;
+        if (std::fabs(den) > 1e-12) {
+            dIa_dVa = (static_cast<double>(N) * Sxy - Sx * Sy) / den; // mA/V
+        }
+    }
+
+    if (!finite(dIa_dVg) || !finite(dIa_dVa) || dIa_dVg <= 0.0 || dIa_dVa <= 0.0 || std::fabs(dIa_dVa) < 1e-9) {
         return result;
     }
 

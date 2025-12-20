@@ -9680,8 +9680,8 @@ void ValveWorkbench::updateSmallSignalFromMeasurement(Measurement *measurement)
             Sample *samplePrev = sweep->at(iPrev);
             Sample *sampleNext = sweep->at(iNext);
             if (samplePrev && sampleNext) {
-                int iStart = std::max(0, sampleIdx - 2);
-                int iEnd   = std::min(sampleCount - 1, sampleIdx + 2);
+                int iStart = std::max(0, sampleIdx - 6);
+                int iEnd   = std::min(sampleCount - 1, sampleIdx + 6);
 
                 double Sx = 0.0, Sy = 0.0, Sxx = 0.0, Sxy = 0.0;
                 int N = 0;
@@ -9982,72 +9982,67 @@ void ValveWorkbench::updateSmallSignalFromModel(Model *modelForSmallSignal, Meas
         }
     };
 
-    // Choose an operating point. For anode characteristics we prefer a point
-    // near the middle of the tube's current (around 50% of Ia_max), matching
-    // the heuristic used for measurement-based small-signal.
-    int   sweepIdx  = sweepCount / 2;
-    int   sampleIdx = -1;
-    Sweep *sweep    = nullptr;
+    int opSweepIdx  = -1;
+    int opSampleIdx = -1;
+    double vaOp = 0.0, vg1Op = 0.0, vg2Op = 0.0;
 
-    if (testType == ANODE_CHARACTERISTICS) {
-        const double iaTarget = std::max(0.0, measurement->getIaMax() * 0.5);
-        double bestDiff = std::numeric_limits<double>::infinity();
+    double vaRef = 0.0;
+    double vgRef = 0.0;
+    double iaRef = 0.0;
+    double gmRef = 0.0;
+    double muRef = 0.0;
+    double rpRef = 0.0;
+    const bool haveDatasheetRef = ensureDatasheetRefPoint(vaRef, vgRef, iaRef, gmRef, muRef, rpRef);
 
-        for (int sw = 0; sw < sweepCount; ++sw) {
-            Sweep *s = measurement->at(sw);
-            if (!s || s->count() < 1) {
-                continue;
-            }
-            const int nSamples = s->count();
-            for (int sa = 0; sa < nSamples; ++sa) {
-                Sample *sample = s->at(sa);
-                if (!sample) continue;
-                const double ia = sample->getIa();
-                if (ia <= 0.0) {
-                    continue; // skip non-conducting points
-                }
-                const double diff = std::fabs(ia - iaTarget);
-                if (diff < bestDiff) {
-                    bestDiff = diff;
-                    sweepIdx = sw;
-                    sampleIdx = sa;
-                    sweep = s;
-                }
-            }
+    Measurement *anodeMeasurement = measurement;
+    if (testType != ANODE_CHARACTERISTICS) {
+        Measurement *candidate = findMeasurement(deviceType, ANODE_CHARACTERISTICS);
+        if (candidate && measurementHasValidSamples(candidate)) {
+            anodeMeasurement = candidate;
         }
-
-        // Fallback: if we didn't find a suitable point, use the central
-        // sweep/sample as before.
-        if (!sweep) {
-            sweepIdx = sweepCount / 2;
-            sweep = measurement->at(sweepIdx);
-            if (!sweep || sweep->count() == 0) {
-                qInfo("SMALL-SIGNAL (MODEL): chosen sweep index %d is null or empty", sweepIdx);
-                return;
-            }
-            sampleIdx = sweep->count() / 2;
-        }
-    } else {
-        // Transfer characteristics or other tests: retain the original
-        // central sweep/sample heuristic.
-        sweepIdx = sweepCount / 2;
-        sweep = measurement->at(sweepIdx);
-        if (!sweep || sweep->count() == 0) {
-            qInfo("SMALL-SIGNAL (MODEL): chosen sweep index %d is null or empty", sweepIdx);
-            return;
-        }
-        sampleIdx = sweep->count() / 2;
     }
 
+    if (!anodeMeasurement ||
+        anodeMeasurement->getTestType() != ANODE_CHARACTERISTICS ||
+        !pickOperatingPointFromAnode(anodeMeasurement,
+                                     opSweepIdx,
+                                     opSampleIdx,
+                                     vaOp,
+                                     vg1Op,
+                                     vg2Op,
+                                     haveDatasheetRef ? vaRef : std::numeric_limits<double>::quiet_NaN(),
+                                     haveDatasheetRef ? vgRef : std::numeric_limits<double>::quiet_NaN())) {
+        opSweepIdx = sweepCount / 2;
+        Sweep *s = measurement->at(opSweepIdx);
+        if (!s || s->count() < 1) {
+            qInfo("SMALL-SIGNAL (MODEL): chosen sweep index %d is null or empty", opSweepIdx);
+            return;
+        }
+        opSampleIdx = s->count() / 2;
+        Sample *mid = s->at(opSampleIdx);
+        if (!mid) {
+            qInfo("SMALL-SIGNAL (MODEL): central sample index %d is null", opSampleIdx);
+            return;
+        }
+        vaOp  = mid->getVa();
+        vg1Op = mid->getVg1();
+        vg2Op = mid->getVg2();
+    }
+
+    Sweep *sweep = anodeMeasurement ? anodeMeasurement->at(opSweepIdx) : nullptr;
+    if (!sweep || sweep->count() == 0) {
+        qInfo("SMALL-SIGNAL (MODEL): chosen sweep index %d is null or empty", opSweepIdx);
+        return;
+    }
     const int sampleCount = sweep->count();
-    Sample *sampleMid     = (sampleIdx >= 0 && sampleIdx < sampleCount) ? sweep->at(sampleIdx) : nullptr;
+    Sample *sampleMid = (opSampleIdx >= 0 && opSampleIdx < sampleCount) ? sweep->at(opSampleIdx) : nullptr;
     if (!sampleMid) {
-        qInfo("SMALL-SIGNAL (MODEL): central sample index %d is null", sampleIdx);
+        qInfo("SMALL-SIGNAL (MODEL): central sample index %d is null", opSampleIdx);
         return;
     }
 
-    double va0   = sampleMid->getVa();
-    double vg1_0 = sampleMid->getVg1();
+    double va0   = vaOp;
+    double vg1_0 = vg1Op;
     double vg2_0 = 0.0;
 
     if (!std::isfinite(va0) || !std::isfinite(vg1_0)) {
@@ -11595,7 +11590,14 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             currentMeasurement->setShowScreen(showScreen);
             currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
            // plot.add(measuredCurves);
-            modelledCurves = nullptr;
+            if (modelledCurves != nullptr) {
+                plot.remove(modelledCurves);
+                modelledCurves = nullptr;
+            }
+            if (modelledCurvesSecondary != nullptr) {
+                plot.remove(modelledCurvesSecondary);
+                modelledCurvesSecondary = nullptr;
+            }
             qInfo("=== BEFORE MEASUREMENT PLOT - Scene items count: %d ===", plot.getScene()->items().count());
             measuredCurves = currentMeasurement->updatePlot(&plot);
             qInfo("=== AFTER MEASUREMENT PLOT - measuredCurves items: %d, Scene items: %d ===", measuredCurves ? measuredCurves->childItems().count() : 0, plot.getScene()->items().count());
@@ -11641,6 +11643,37 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             }
             qInfo("Added measuredCurves to plot");
             ui->measureCheck->setChecked(true);
+
+            // If a model is currently selected and the user has Show Model
+            // enabled, re-plot the model overlay against the *current*
+            // measurement. This prevents stale model overlays (often from a
+            // different Vg2 dataset such as 200V) from remaining on the plot.
+            if (ui->modelCheck && ui->modelCheck->isChecked() && currentModelItem && currentModelItem->type() == TYP_MODEL) {
+                Model *selectedModel = (Model *) currentModelItem->data(0, Qt::UserRole).value<void *>();
+                if (selectedModel) {
+                    const int modelType = selectedModel->getType();
+                    const bool triodeMatch =
+                        (currentMeasurement->getDeviceType() == TRIODE && modelType == COHEN_HELIE_TRIODE);
+                    const bool pentodeMatch =
+                        (currentMeasurement->getDeviceType() == PENTODE &&
+                         (modelType == GARDINER_PENTODE ||
+                          modelType == SIMPLE_MANUAL_PENTODE ||
+                          modelType == REEFMAN_DERK_PENTODE ||
+                          modelType == REEFMAN_DERK_E_PENTODE ||
+                          modelType == EXTRACT_DERK_E_PENTODE));
+
+                    if (triodeMatch || pentodeMatch) {
+                        selectedModel->setShowScreen(showScreen);
+                        QGraphicsItemGroup *plottedModel = selectedModel->plotModel(&plot, currentMeasurement, nullptr);
+                        if (plottedModel) {
+                            modelledCurves = plottedModel;
+                            plot.add(modelledCurves);
+                            modelledCurves->setVisible(true);
+                        }
+                    }
+                }
+            }
+
             // Auto-refresh small-signal LCDs based on the current mode.
             if (ui->mes_mod_select && ui->mes_mod_select->isChecked()) {
                 // Model mode: prefer Designer triode circuit, otherwise fall
@@ -11811,6 +11844,29 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             // previous triode Model A curves visible.
 
             Model *model = (Model *) data;
+            this->model = model;
+
+            // When the user clicks a model node, prefer to plot it over the last
+            // explicitly selected measurement/sweep in the project tree. This keeps
+            // the model overlay aligned with the visible measurement dataset (e.g.
+            // Vg2=150/200/250) instead of silently switching to some other anode
+            // measurement.
+            if (currentMeasurementItem != nullptr) {
+                if (currentMeasurementItem->type() == TYP_MEASUREMENT) {
+                    Measurement *treeMeasurement = (Measurement *) currentMeasurementItem->data(0, Qt::UserRole).value<void *>();
+                    if (treeMeasurement != nullptr) {
+                        currentMeasurement = treeMeasurement;
+                    }
+                } else if (currentMeasurementItem->type() == TYP_SWEEP) {
+                    QTreeWidgetItem *m = getParent(currentMeasurementItem, TYP_MEASUREMENT);
+                    if (m != nullptr) {
+                        Measurement *treeMeasurement = (Measurement *) m->data(0, Qt::UserRole).value<void *>();
+                        if (treeMeasurement != nullptr) {
+                            currentMeasurement = treeMeasurement;
+                        }
+                    }
+                }
+            }
 
             if (!currentMeasurement && currentProject) {
                 // Try to find a default measurement in the current project if none
@@ -11891,7 +11947,14 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
 
             if (triodeMatch || pentodeMatch) {
                 qInfo("Type check PASSED - proceeding with model plotting");
-                plot.remove(modelledCurves);
+                if (modelledCurves != nullptr) {
+                    plot.remove(modelledCurves);
+                    modelledCurves = nullptr;
+                }
+                if (modelledCurvesSecondary != nullptr) {
+                    plot.remove(modelledCurvesSecondary);
+                    modelledCurvesSecondary = nullptr;
+                }
                 QGraphicsItemGroup *plotted = nullptr;
 
                 if (currentMeasurement->getDeviceType() == PENTODE) {
