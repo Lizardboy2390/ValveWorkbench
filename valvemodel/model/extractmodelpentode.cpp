@@ -113,7 +113,12 @@ struct ExtractDerkEPentodeResidual {
         T iaModel = ip * (invKg1 - invKg2 + a[0] * T(va_) * invKg1 - g * term);
 
         const T denom = ceres::sqrt(T(std::fabs(ia_)) + T(10.0));
-        residual[0] = (T(ia_) - iaModel) / denom;
+        T diff = T(ia_) - iaModel;
+        if (ia_ >= 49.5) {
+            residual[0] = ((diff > T(0.0)) ? diff : T(0.0)) / denom;
+        } else {
+            residual[0] = diff / denom;
+        }
         return true;
     }
 
@@ -171,7 +176,12 @@ struct ExtractDerkEPentodeSEResidual {
                           - psec * invKg2 - g * term);
 
         const T denom = ceres::sqrt(T(std::fabs(ia_)) + T(10.0));
-        residual[0] = (T(ia_) - iaModel) / denom;
+        T diff = T(ia_) - iaModel;
+        if (ia_ >= 49.5) {
+            residual[0] = ((diff > T(0.0)) ? diff : T(0.0)) / denom;
+        } else {
+            residual[0] = diff / denom;
+        }
         return true;
     }
 

@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-17 (Release prep: hide Harmonics tab; Data tab gated by Preferences)
+Last updated: 2025-12-21 (Release prep: hide Harmonics tab; Data tab gated by Preferences)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -144,6 +144,30 @@ while keeping the **rules** and current **technical state** clear.
     ~70% along the curve and inside the visible axes. This path should be
     treated as the reference for any future label work on measurement plots.
 
+- **Modeller small-signal LCDs (gm / ra / μ) – 2025-12-20**
+  - The Modeller tab has three LCDs (`gmLcd`, `raLcd`, `μ`) that can show either **measured** or **modelled** small-signal values via the `mes_mod_select` toggle.
+  - **Definitions / units:**
+    - `gm` is reported in **mA/V**.
+    - `ra` is reported in **kΩ** (because `1 / (mA/V) = V/mA = kΩ`).
+    - `μ` is unitless and shown as `μ ≈ gm·ra`.
+  - **Operating point (OP) selection (shared for measured and model modes):**
+    - Prefer the datasheet reference point when available (`datasheet.refPoints[0]` via `ensureDatasheetRefPoint`).
+    - Otherwise fall back to an automatic OP from the anode-characteristics measurement via `pickOperatingPointFromAnode` (nominally near `Ia ≈ 0.5 × Ia_max`).
+  - **Measured-mode calculation (mes/mod unchecked):**
+    - `gm` prefers a **transfer-characteristics** measurement when available by using a Vg-centred window with bin-averaged samples and a local least-squares slope (`gmFromTransferAtOP` → `gmFromSweepAtVgBinned`).
+    - `ra` is derived from an **anode-characteristics** sweep near the OP by fitting a local line to `Ia(Va)` over a small sample window around the OP and inverting the slope.
+    - `μ` is derived as `μ = gm·ra`.
+  - **Model-mode calculation (mes/mod checked):**
+    - `gm/ra/μ` are computed directly from the fitted model law `Ia(Va,Vg1,Vg2)` via `Model::computeSmallSignal(va0, vg1, vg2, secondaryEmission)`.
+    - `gm` uses a small grid-voltage finite difference around the OP (central diff in `Vg1`).
+    - `ra` uses a **local least-squares fit of `Ia` vs `Va`** over a Va window around the OP (regression-based `dIa/dVa`), then inverts that slope. This replaces the earlier two-point `±dVa` estimate which was too sensitive for pentode flat-plate regions.
+    - `μ` is derived as `μ = gm·ra`.
+  - **Pentode caveat:** in pentode regions where `dIa/dVa` is very small (very flat curves), `ra` and therefore `μ` can be inherently ill-conditioned. Regression windowing improves repeatability but cannot make `ra` precise when the physical slope approaches zero.
+
+- **Modeller model overlay selection binding – 2025-12-20**
+  - When selecting a model node in the project tree (`TYP_MODEL`), Modeller now rebinds the overlay to the last-selected measurement/sweep (via `currentMeasurementItem`) before plotting, preventing stale overlays (e.g. a fixed Vg2 family) from being shown over a different measurement dataset.
+  - Both `modelledCurves` and `modelledCurvesSecondary` are cleared before replotting.
+
 - **Modeller pentode fitting (Process Modelling Tests) – 2025-12-15**
   - Transfer-characteristics measurements are now treated as a **constraint** rather than raw dense data:
     - Multiple transfer repeats are captured (including Vg2=200 V) to stabilise gm estimation.
@@ -202,6 +226,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 - **Code Quality**
   - Code comments must be extensive, accurate, and kept strictly up to date. When you touch a file, you must review existing comments, remove or fix anything stale or misleading, and add new comments so that intent, assumptions, units, ranges, and edge cases are clear.
   - Comment all public methods, complex algorithms, hardware interactions, and any non-obvious logic; whenever behaviour changes, update the relevant comments in the same change.
+  - Treat comment maintenance as part of “done”: a change is not complete until the comments match the code.
   - Functions ≤ 50 lines where practical.
   - Descriptive names (e.g., `anodeCurrent`, `gridVoltage`).
   - Replace magic numbers with named constants; validate parameters; log errors.
@@ -216,7 +241,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - Regression tests for core algorithm changes.
 - **Documentation & Version Control**
   - Doxygen for public APIs; README updates with feature changes.
-  - `tasks.md` must be updated for every non-trivial code or documentation change (add or adjust entries under Active tasks or Recently completed).
+  - `tasks.md` must be updated for every non-trivial code or documentation change, but **ONLY AFTER the change has been tested** (at minimum: successful build; ideally a quick runtime smoke test relevant to the change).
   - Commit format: `Component: Brief description of changes`.
   - Feature branches; PR review required; resolve conflicts immediately.
 - **Hardware Interface**
@@ -926,7 +951,9 @@ If you need additional context (specific log excerpts or diffs), search for "Des
 
 ## Global Rules (Authoritative Summary)
 - **Code Quality**
-  - Comment public methods, complex algorithms, and non-obvious logic.
+  - Code comments must be extensive, accurate, and kept strictly up to date. When you touch a file, you must review existing comments, remove or fix anything stale or misleading, and add new comments so that intent, assumptions, units, ranges, and edge cases are clear.
+  - Comment all public methods, complex algorithms, hardware interactions, and any non-obvious logic; whenever behaviour changes, update the relevant comments in the same change.
+  - Treat comment maintenance as part of “done”: a change is not complete until the comments match the code.
   - Functions ≤ 50 lines where practical.
   - Descriptive names (e.g., `anodeCurrent`, `gridVoltage`).
   - Replace magic numbers with named constants; validate parameters; log errors.
@@ -941,6 +968,7 @@ If you need additional context (specific log excerpts or diffs), search for "Des
   - Regression tests for core algorithm changes.
 - **Documentation & Version Control**
   - Doxygen for public APIs; README updates with feature changes.
+  - `tasks.md` must be updated for every non-trivial code or documentation change, but **ONLY AFTER the change has been tested** (at minimum: successful build; ideally a quick runtime smoke test relevant to the change).
   - Commit format: `Component: Brief description of changes`.
   - Feature branches; PR review required; resolve conflicts immediately.
 - **Hardware Interface**

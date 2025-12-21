@@ -3,16 +3,16 @@
 Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 
 ## Active tasks (end-user focused)
-- [ ] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
-- [ ] Designer headroom waveform visualizer: verify Push-Pull Output primary waveshape and THD behaviour matches the Triode CC “advanced” expectation; audit PP bias/current unit conversions and revert PP helper if necessary.
-- [ ] Integrated SPICE export via Devices:
+- [x] README / docs: clearly describe that Gardiner is the stable reference pentode fit in `main`, that **Simple Manual Pentode** is the manual slider-based path, and that Reefman/uTracer/ExtractModel work belongs on an experimental branch.
+- [x] Designer headroom waveform visualizer: verify Push-Pull Output primary waveshape and THD behaviour matches the Triode CC “advanced” expectation; audit PP bias/current unit conversions and revert PP helper if necessary.
+- [x] Integrated SPICE export via Devices:
   - Extend **Export model to Device** so each device JSON optionally includes a SPICE representation of the fitted tube model (triode and pentode) suitable for `.inc`/`.subckt` use.
   - Implement **File → Export to Spice...** so it uses the active Device's SPICE block to export (a) tube model only (`.inc`/`.lib`), and (b) optional Designer circuit wrappers (Triode CC, SE Output, PP, etc.) that reference that model.
-- [ ] UI triage (post-modelling-work):
+- [x] UI triage (post-modelling-work):
   - Make it obvious in Modeller which measurement/family set the red model curves are being compared against (include screen voltage context for pentodes).
   - Review Modeller plot controls and defaults after recent Autoscale / fixed-scale additions; ensure behaviour is consistent when switching tabs and devices.
   - Review any remaining Modelling Tests UX rough edges (e.g., clarity of what measurements were collected and used for fitting).
-- [ ] Datasheet reference stats + tube health metric:
+- [x] Datasheet reference stats + tube health metric:
   - Add a Designer-side "Datasheet / Reference" group box to hold one or more datasheet operating points (Va, Vg, Ia, gm, μ, rp) for each tube/section, with values stored in templates.
   - Extend template JSON (Load/Save Template and Export-to-Devices) to persist a nested `datasheet.refPoints[]` block carrying these reference stats alongside analyserDefaults and measurement.
   - Implement a helper that, given a Measurement and a reference point, computes measured Ia/gm/μ/rp at (or near) the datasheet operating point and derives a simple tube "health %" from the ratios.
@@ -20,6 +20,10 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Use the eTracer PC software manual in `refrence code/ilovepdf_pages-to-jpg (1)` (quick scan, corners tests, Imax/Pmax usage) as the primary reference for feature design and defaults.
 
 ## Recently completed
+- [x] 2025-12-20: Modeller: added an operating point marker (red crosshair) on the anode plot, using the same OP selection logic as the small-signal LCDs.
+- [x] 2025-12-20: Analyser iaMax scaling: Analyser UI and run-time iaMax are now capped to the hardware limit (50 mA) while still respecting smaller tube/template limits (<50 mA). Removed the 80 mA minimum clamp previously applied by Modelling Tests.
+- [x] 2025-12-20: Modeller model overlay selection: selecting a model node now rebinds overlay plotting to the last-selected measurement/sweep (prevents stale Vg2 family overlays) and clears both model overlay groups before replotting.
+- [x] 2025-12-20: Modeller small-signal LCD alignment (pentodes): measured vs model modes now use the same operating-point selection (datasheet-ref preferred), and model-mode `ra` uses a local Ia-vs-Va regression window (more stable than two-point dVa). Measured-mode `ra` uses a wider local regression window.
 - [x] 2025-12-16: Designer Headroom Waveshape viewer: normalised time axis (0..1) with KeepAspectRatio and cosmetic-pen rendering so the waveform is drawn as a thin line and does not collapse due to extreme aspect ratio.
 - [x] 2025-12-16: Designer SE Output headroom/THD helper: fixed unbypassed cathode dynamics so Vk follows (Ia(t) − Ia_bias)·Rk around the DC bias, matching the documented “advanced” behaviour.
 - [x] 2025-12-16: Designer Push-Pull Output headroom/THD helper: replaced the 5-point VTADIY-derived approximation with a sine-driven time-domain helper that solves per-valve Va(t) against RAA/2 and derives primary Vaa(t)=Va1−Va2; HD2/HD3/HD4/THD are now computed from a Hann-windowed DFT of Vaa(t), and the Headroom Waveshape viewer shows the primary waveform.

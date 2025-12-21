@@ -190,10 +190,35 @@ void Model::addMeasurement(Measurement *measurement)
     for (int s = 0; s < sweeps; s++) {
         Sweep *sweep = measurement->at(s);
 
+        double sweepMaxIa_mA = 0.0;
+        if (sweep != nullptr) {
+            for (int mi = 0; mi < sweep->count(); ++mi) {
+                Sample *sm = sweep->at(mi);
+                if (!sm) {
+                    continue;
+                }
+                const double ia = sm->getIa();
+                if (std::isfinite(ia)) {
+                    sweepMaxIa_mA = std::max(sweepMaxIa_mA, ia);
+                }
+            }
+        }
+
+        const double clampIa_mA = 50.0;
+        double iaMaxEffective_mA = measurement->getIaMax();
+        if (!std::isfinite(iaMaxEffective_mA) || iaMaxEffective_mA <= 0.0) {
+            iaMaxEffective_mA = 0.0;
+        }
+        if (std::isfinite(sweepMaxIa_mA) && sweepMaxIa_mA >= 49.0) {
+            if (iaMaxEffective_mA <= 0.0 || iaMaxEffective_mA > clampIa_mA) {
+                iaMaxEffective_mA = clampIa_mA;
+            }
+        }
+
         // Filter out incomplete/limit-hit sweeps (likely ended early due to limits)
         const int minPoints = 20; // accept coarser sweeps exported from web/datasheet sources
-        if (sweep == nullptr || sweep->count() < minPoints) {
-            qInfo("MODEL INPUT: skipping sweep %d (only %d points, need >= %d)", s, sweep ? sweep->count() : 0, minPoints);
+        if (sweep == nullptr || sweep->count() < 1) {
+            qInfo("MODEL INPUT: skipping sweep %d (only %d points, need >= 1)", s, sweep ? sweep->count() : 0);
             continue;
         }
         Sample *last = sweep->at(sweep->count() - 1);
@@ -208,15 +233,31 @@ void Model::addMeasurement(Measurement *measurement)
         const bool allowLimitHitShortSweep = (measurement->getTestType() == ANODE_CHARACTERISTICS);
         bool looksLikeLimitHit = false;
         double iaEnd = last->getIa();
+        double ig2End = last->getIg2();
         double pEnd = 0.0;
+        double pg2End = 0.0;
         if (allowLimitHitShortSweep) {
             pEnd = (std::isfinite(iaEnd) && std::isfinite(vaEnd)) ? (iaEnd * vaEnd / 1000.0) : 0.0;
-            const double iaMax = measurement->getIaMax();
+            const double iaMax = iaMaxEffective_mA;
             const double pMax = measurement->getPMax();
+            pg2End = (std::isfinite(ig2End) && std::isfinite(last->getVg2())) ? (ig2End * last->getVg2() / 1000.0) : 0.0;
+            const double ig2Max = measurement->getIg2Max();
+            const double pg2Max = measurement->getPg2Max();
             looksLikeLimitHit =
                 (std::isfinite(iaEnd) && iaEnd >= 49.0) ||
                 (std::isfinite(iaEnd) && std::isfinite(iaMax) && iaMax > 0.0 && iaEnd >= 0.90 * iaMax) ||
-                (std::isfinite(pEnd) && std::isfinite(pMax) && pMax > 0.0 && pEnd >= 0.90 * pMax);
+                (std::isfinite(pEnd) && std::isfinite(pMax) && pMax > 0.0 && pEnd >= 0.90 * pMax) ||
+                (std::isfinite(ig2End) && std::isfinite(ig2Max) && ig2Max > 0.0 && ig2End >= 0.98 * ig2Max) ||
+                (std::isfinite(pg2End) && std::isfinite(pg2Max) && pg2Max > 0.0 && pg2End >= 0.98 * pg2Max);
+        }
+
+        if (sweep->count() < minPoints && (!allowLimitHitShortSweep || !looksLikeLimitHit)) {
+            qInfo("MODEL INPUT: skipping sweep %d (only %d points, need >= %d)", s, sweep->count(), minPoints);
+            continue;
+        }
+        if (sweep->count() < minPoints && allowLimitHitShortSweep && looksLikeLimitHit) {
+            qInfo("MODEL INPUT: keeping short sweep %d (%d points < %d) due to likely limit-hit (Ia=%.3f mA, P=%.3f W)",
+                  s, sweep->count(), minPoints, iaEnd, pEnd);
         }
 
         if (vaEnd < minEndVa && (!allowLimitHitShortSweep || !looksLikeLimitHit)) {
@@ -259,6 +300,35 @@ void Model::addMeasurement(Measurement *measurement)
             const double ia = sample->getIa();
             const double vg2 = sample->getVg2();
             const double ig2 = sample->getIg2();
+
+            {
+                const double iaLimitFrac = 0.90;
+                const double pLimitFrac = 0.90;
+                const double ig2LimitFrac = 0.98;
+                const double pg2LimitFrac = 0.98;
+
+                const double iaMax_mA = iaMaxEffective_mA;
+                const double pMax_W   = measurement->getPMax();
+                const double ig2Max_mA = measurement->getIg2Max();
+                const double pg2Max_W  = measurement->getPg2Max();
+
+                const bool haveIaLimit  = (std::isfinite(iaMax_mA) && iaMax_mA > 0.0);
+                const bool havePLimit   = (std::isfinite(pMax_W) && pMax_W > 0.0);
+                const bool haveIg2Limit = (std::isfinite(ig2Max_mA) && ig2Max_mA > 0.0);
+                const bool havePg2Limit = (std::isfinite(pg2Max_W) && pg2Max_W > 0.0);
+
+                const double p_W   = (std::isfinite(ia) && std::isfinite(va)) ? (ia * va / 1000.0) : 0.0;
+                const double pg2_W = (std::isfinite(ig2) && std::isfinite(vg2)) ? (ig2 * vg2 / 1000.0) : 0.0;
+
+                const bool iaNearLimit  = haveIaLimit  && std::isfinite(ia)   && ia   >= iaLimitFrac  * iaMax_mA;
+                const bool pNearLimit   = havePLimit   && std::isfinite(p_W)  && p_W  >= pLimitFrac   * pMax_W;
+                const bool ig2NearLimit = haveIg2Limit && std::isfinite(ig2)  && ig2  >= ig2LimitFrac * ig2Max_mA;
+                const bool pg2NearLimit = havePg2Limit && std::isfinite(pg2_W) && pg2_W >= pg2LimitFrac * pg2Max_W;
+
+                if (iaNearLimit || pNearLimit || ig2NearLimit || pg2NearLimit) {
+                    continue;
+                }
+            }
 
             // Use sample Vg1 when available; otherwise fall back to the sweep's nominal grid
             double vg1raw = sample->getVg1();

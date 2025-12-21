@@ -198,9 +198,6 @@ private slots:
     void on_modellingTestsButton_clicked();
     void on_processModellingTestsButton_clicked();
 
-    void on_autoscaleModellerPlotButton_clicked();
-    void on_fullScale50mAButton_clicked();
-
     void on_actionSave_as_Reference_Tube_triggered();
     void on_actionReset_Reference_Tube_triggered();
 
@@ -211,6 +208,12 @@ private slots:
     void on_datasheetGm_editingFinished();
     void on_datasheetMu_editingFinished();
     void on_datasheetRp_editingFinished();
+    void on_datasheetIg2_editingFinished();
+    void on_datasheetPg2_editingFinished();
+
+    void clearModellerOpMarker();
+    void updateModellerOpMarker();
+    bool computeModellerOperatingPoint(double &xOp, double &iaOp_mA);
 
 private:
     enum HealthMode {
@@ -326,6 +329,7 @@ private:
     QGraphicsItemGroup *estimatedCurves = nullptr;
     QGraphicsItemGroup *modelledCurves = nullptr;
     QGraphicsItemGroup *modelledCurvesSecondary = nullptr;
+    QGraphicsItemGroup *modellerOpMarker = nullptr;
 
     // Harmonics tab UI elements (created programmatically)
     QWidget *harmonicsTab = nullptr;

@@ -131,11 +131,26 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
 ### Small-signal & harmonic controls (Modeller / Designer)
 
 - **Modeller μ/gm/ra (mes/mod toggle)**
-  - On the Modeller tab, the small-signal μ/gm/ra LCDs can show either **measured** or **modelled** values at a single operating point near 50% of the tube's Ia_max.
+  - On the Modeller tab, the small-signal μ/gm/ra LCDs can show either **measured** or **modelled** values at a single operating point.
   - Use the **mes/mod** checkbox above the LCDs:
     - **Unchecked (measured mode)**: LCDs and labels are **black**. Values are computed from the current measurement using a least-squares estimate over samples near the OP.
     - **Checked (model mode, plain model)**: LCDs and labels turn **red**. Values are computed from the fitted model at the **same** operating point as the measurement, so you can directly compare μ/gm/ra.
     - **Checked (Designer override active)**: when the Designer Triode Common Cathode circuit is active and shares a suitable triode measurement, LCDs and labels turn **green** and show the Designer's μ/gm/ra at its operating point. This keeps Designer and Modeller in sync when you are biasing a triode stage.
+
+  - **Operating point selection (measured + model modes):**
+    - If a datasheet reference point exists (`datasheet.refPoints[0]`), the small-signal OP is chosen near that point.
+    - Otherwise an OP is chosen automatically from an anode-characteristics measurement (nominally near `Ia ≈ 0.5 × Ia_max`).
+
+  - **Measured mode details:**
+    - `gm` prefers a matching **transfer-characteristics** measurement when available and uses a Vg-centred, bin-averaged local regression to reduce DAC stair-step artefacts.
+    - `ra` is derived from the anode-characteristics curve at the OP by a local least-squares fit of `Ia` vs `Va`, then inverting the slope.
+    - `μ` is derived as `μ ≈ gm·ra`.
+
+  - **Model mode details:**
+    - `gm/ra/μ` are computed from the fitted model law `Ia(Va,Vg1,Vg2)` at the same OP.
+    - `ra` uses a local least-squares fit of modelled `Ia` vs `Va` over a small Va window around the OP (then inverts slope). This is more stable for pentodes than a two-point `±dVa` estimate.
+
+  - For full derivations and pentode caveats (flat-plate regions make `ra` and therefore `μ` ill-conditioned), see `handoff.md`.
 
 - **Designer Triode Common Cathode (TriodeCC)**
   - **Max Sym Swing** checkbox: chooses which helper drives the *Headroom* and μ/gm/ra context when Headroom is zero:

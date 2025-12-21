@@ -8,7 +8,7 @@
         "doubleTriode": false,
         "grid": {
             "start": 35,
-            "step": 1,
+            "step": 2,
             "stop": 2
         },
         "limits": {
@@ -16,9 +16,9 @@
             "pMax": 30
         },
         "screen": {
-            "start": 250,
-            "step": 1.023614101805949e-306,
-            "stop": 1.1125853113534208e-307
+            "start": 200,
+            "step": 200,
+            "stop": 200
         },
         "testType": 0,
         "tests": {
@@ -30,7 +30,7 @@
                 },
                 "grid": {
                     "start": 35,
-                    "step": 1,
+                    "step": 2,
                     "stop": 2
                 },
                 "limits": {
@@ -38,9 +38,9 @@
                     "pMax": 30
                 },
                 "screen": {
-                    "start": 250,
+                    "start": 200,
                     "step": 0,
-                    "stop": 250
+                    "stop": 200
                 },
                 "testType": 0
             }
@@ -92,6 +92,7 @@
                 "gm": 4500,
                 "ia": 28,
                 "mu": 90,
+                "pg2": 5,
                 "rp": 20000,
                 "va": 120,
                 "vg": -7,

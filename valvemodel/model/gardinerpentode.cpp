@@ -50,7 +50,12 @@ struct UnifiedPentodeIaResidual {
         T g = ceres::exp(-ceres::pow(ceres::abs(shift * T(va_)) + T(1e-12), gamma[0]));
         T scale = 1.0 - g;
         T ia = epk * ((safe_div(T(1.0), kg1[0]) - safe_div(T(1.0), kg2[0])) * scale + a[0] * T(va_) * safe_div(T(1.0), kg2[0])) + os[0] * T(vg2_);
-        residual[0] = (T(ia_) - ia);
+        T diff = T(ia_) - ia;
+        if (ia_ >= 49.5) {
+            residual[0] = (diff > T(0.0)) ? diff : T(0.0);
+        } else {
+            residual[0] = diff;
+        }
         return true;
     }
 
@@ -80,7 +85,12 @@ struct UnifiedPentodeIaSEResidual {
         T vco = T(vg2_) / (lambda[0] + T(1e-12)) - T(vg1_) * nu[0] - omega[0];
         T psec = s[0] * T(va_) * (1.0 + ceres::tanh(-ap[0] * (T(va_) - vco)));
         T ia = epk * ((safe_div(T(1.0), kg1[0]) - safe_div(T(1.0), kg2[0])) * scale + a[0] * T(va_) * safe_div(T(1.0), kg2[0]) - psec * safe_div(T(1.0), kg2[0])) + os[0] * T(vg2_);
-        residual[0] = (T(ia_) - ia);
+        T diff = T(ia_) - ia;
+        if (ia_ >= 49.5) {
+            residual[0] = (diff > T(0.0)) ? diff : T(0.0);
+        } else {
+            residual[0] = diff;
+        }
         return true;
     }
 

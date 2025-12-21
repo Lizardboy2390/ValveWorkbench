@@ -74,6 +74,10 @@ public:
     void setIaMax(double newIaMax);
     double getPMax() const;
     void setPMax(double newPMax);
+    double getIg2Max() const;
+    void setIg2Max(double newIg2Max);
+    double getPg2Max() const;
+    void setPg2Max(double newPg2Max);
 
     void setSampleColor(const QColor &color);
     QColor getSampleColor() const;
@@ -109,6 +113,8 @@ protected:
 
     double iaMax;
     double pMax;
+    double ig2Max = 0.0;
+    double pg2Max = 0.0;
 
     QList<Sweep *> sweeps;
 

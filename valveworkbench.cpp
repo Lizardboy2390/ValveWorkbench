@@ -812,206 +812,6 @@ void ValveWorkbench::updateDatasheetDisplay()
     }
 }
 
-static double axisIntervalFor(double maxValue)
-{
-    double interval = 0.5;
-    if (maxValue > 5.0)   interval = 1.0;
-    if (maxValue > 10.0)  interval = 2.0;
-    if (maxValue > 20.0)  interval = 5.0;
-    if (maxValue > 50.0)  interval = 10.0;
-    if (maxValue > 100.0) interval = 20.0;
-    if (maxValue > 200.0) interval = 50.0;
-    if (maxValue > 500.0) interval = 100.0;
-    return interval;
-}
-
-void ValveWorkbench::on_autoscaleModellerPlotButton_clicked()
-{
-    if (!ui || !currentMeasurement) {
-        return;
-    }
-
-    const int testType = currentMeasurement->getTestType();
-
-    auto measureBounds = [this](double &vaMaxOut, double &iaMaxOut, double &vg1MinOut, double &vg1MaxOut) {
-        vaMaxOut = 0.0;
-        iaMaxOut = 0.0;
-        vg1MinOut = 0.0;
-        vg1MaxOut = 0.0;
-        bool haveVg = false;
-
-        const int sweepCount = currentMeasurement->count();
-        for (int si = 0; si < sweepCount; ++si) {
-            Sweep *sw = currentMeasurement->at(si);
-            if (!sw) continue;
-            const int sampleCount = sw->count();
-            for (int sj = 0; sj < sampleCount; ++sj) {
-                Sample *s = sw->at(sj);
-                if (!s) continue;
-
-                const double va = s->getVa();
-                const double ia = s->getIa();
-                const double vg1 = s->getVg1();
-
-                if (std::isfinite(va) && va > vaMaxOut) vaMaxOut = va;
-                if (std::isfinite(ia) && ia > iaMaxOut) iaMaxOut = ia;
-                if (std::isfinite(vg1)) {
-                    if (!haveVg) {
-                        vg1MinOut = vg1;
-                        vg1MaxOut = vg1;
-                        haveVg = true;
-                    } else {
-                        if (vg1 < vg1MinOut) vg1MinOut = vg1;
-                        if (vg1 > vg1MaxOut) vg1MaxOut = vg1;
-                    }
-                }
-            }
-        }
-
-        // If there were no samples, fall back to config-derived hints.
-        if (!(vaMaxOut > 0.0)) {
-            vaMaxOut = currentMeasurement->getAnodeStop();
-        }
-        if (!(iaMaxOut > 0.0)) {
-            iaMaxOut = currentMeasurement->getIaMax();
-        }
-        if (!haveVg) {
-            const double gridStop = currentMeasurement->getGridStop();
-            vg1MinOut = (gridStop > 0.0) ? -gridStop : -5.0;
-            vg1MaxOut = 0.0;
-        }
-    };
-
-    double vaMaxObs = 0.0;
-    double iaMaxObs = 0.0;
-    double vg1MinObs = 0.0;
-    double vg1MaxObs = 0.0;
-    measureBounds(vaMaxObs, iaMaxObs, vg1MinObs, vg1MaxObs);
-
-    double xStart = 0.0;
-    double xStop = 0.0;
-    if (testType == ANODE_CHARACTERISTICS) {
-        xStart = 0.0;
-        // Autorange X to observed Va (but never exceed the configured stop).
-        xStop = vaMaxObs;
-        const double configured = currentMeasurement->getAnodeStop();
-        if (configured > 0.0 && configured < xStop) {
-            xStop = configured;
-        }
-    } else {
-        // Transfer / screen plots: autorange grid voltage span (clamped to <= 0V on the right).
-        xStart = vg1MinObs;
-        xStop = vg1MaxObs;
-        if (xStop > 0.0) xStop = 0.0;
-        if (xStart > xStop) std::swap(xStart, xStop);
-    }
-    if (!(xStop > xStart)) {
-        xStart = 0.0;
-        xStop = 300.0;
-    }
-
-    double yStop = iaMaxObs;
-    if (std::isfinite(yStop) && yStop > 0.0) {
-        yStop *= 1.05;
-    }
-    if (!(yStop > 0.0)) yStop = 50.0;
-
-    plot.clear();
-    plot.setAxes(xStart, xStop, axisIntervalFor(std::fabs(xStop - xStart)),
-                 0.0, yStop, axisIntervalFor(yStop), 2, 1);
-
-    if (measuredCurves) {
-        plot.remove(measuredCurves);
-        measuredCurves = nullptr;
-    }
-    if (measuredCurvesSecondary) {
-        plot.remove(measuredCurvesSecondary);
-        measuredCurvesSecondary = nullptr;
-    }
-    if (modelledCurves) {
-        plot.remove(modelledCurves);
-        modelledCurves = nullptr;
-    }
-    if (modelledCurvesSecondary) {
-        plot.remove(modelledCurvesSecondary);
-        modelledCurvesSecondary = nullptr;
-    }
-
-    currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
-    if (currentMeasurement->getDeviceType() == PENTODE) {
-        currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
-    }
-
-    if (ui->measureCheck && ui->measureCheck->isChecked()) {
-        measuredCurves = currentMeasurement->updatePlotWithoutAxes(&plot);
-        if (measuredCurves) {
-            plot.add(measuredCurves);
-            measuredCurves->setVisible(true);
-        }
-    }
-
-    if (ui->modelCheck && ui->modelCheck->isChecked()) {
-        plotCurrentModelOverMeasurement();
-    }
-}
-
-void ValveWorkbench::on_fullScale50mAButton_clicked()
-{
-    if (!ui || !currentMeasurement) {
-        return;
-    }
-
-    const double xScale = plot.getXScale();
-    const double yScale = plot.getYScale();
-    const double xStart = plot.getXStart();
-    double xStop = xStart;
-    if (xScale > 0.0 && yScale > 0.0) {
-        xStop = xStart + static_cast<double>(PLOT_WIDTH) / xScale;
-    } else {
-        // If the plot hasn't been initialized yet, fall back to autoscale.
-        on_autoscaleModellerPlotButton_clicked();
-        return;
-    }
-
-    plot.clear();
-    plot.setAxes(xStart, xStop, axisIntervalFor(std::fabs(xStop - xStart)),
-                 0.0, 50.0, axisIntervalFor(50.0), 2, 1);
-
-    if (measuredCurves) {
-        plot.remove(measuredCurves);
-        measuredCurves = nullptr;
-    }
-    if (measuredCurvesSecondary) {
-        plot.remove(measuredCurvesSecondary);
-        measuredCurvesSecondary = nullptr;
-    }
-    if (modelledCurves) {
-        plot.remove(modelledCurves);
-        modelledCurves = nullptr;
-    }
-    if (modelledCurvesSecondary) {
-        plot.remove(modelledCurvesSecondary);
-        modelledCurvesSecondary = nullptr;
-    }
-
-    currentMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
-    if (currentMeasurement->getDeviceType() == PENTODE) {
-        currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
-    }
-
-    if (ui->measureCheck && ui->measureCheck->isChecked()) {
-        measuredCurves = currentMeasurement->updatePlotWithoutAxes(&plot);
-        if (measuredCurves) {
-            plot.add(measuredCurves);
-            measuredCurves->setVisible(true);
-        }
-    }
-
-    if (ui->modelCheck && ui->modelCheck->isChecked()) {
-        plotCurrentModelOverMeasurement();
-    }
-}
-
 QList<Measurement *> ValveWorkbench::collectModellingTestMeasurements(QTreeWidgetItem *projectItem) const
 {
     QList<Measurement *> result;
@@ -1107,6 +907,8 @@ void ValveWorkbench::syncDatasheetFromUi()
     setFromField("gm", ui->datasheetGm);
     setFromField("mu", ui->datasheetMu);
     setFromField("rp", ui->datasheetRp);
+    setFromField("ig2", ui->datasheetIg2);
+    setFromField("pg2", ui->datasheetPg2);
 
     if (refPoints.isEmpty()) {
         refPoints.append(rp);
@@ -1117,6 +919,7 @@ void ValveWorkbench::syncDatasheetFromUi()
     datasheetJson.insert(QStringLiteral("refPoints"), refPoints);
 }
 
+// ...
 bool ValveWorkbench::ensureDatasheetRefPoint(double &va0, double &vg0, double &ia0, double &gm0, double &mu0, double &rp0)
 {
     if (datasheetJson.isEmpty()) {
@@ -4061,7 +3864,6 @@ void ValveWorkbench::applyModellingStep(const ModellingTestStep &s)
     screenStop  = s.screenStop;
     screenStep  = s.screenStep;
 
-    iaMax = std::max(iaMax, 80.0);
     pMax  = std::max(pMax, 20.0);
 
     updateParameterDisplay();
@@ -4648,6 +4450,8 @@ Measurement *ValveWorkbench::createTriodeBMeasurementClone(Measurement *source) 
     clone->setShowScreen(source->getShowScreen());
     clone->setIaMax(source->getIaMax());
     clone->setPMax(source->getPMax());
+    clone->setIg2Max(source->getIg2Max());
+    clone->setPg2Max(source->getPg2Max());
     clone->setAnodeStart(source->getAnodeStart());
     clone->setAnodeStop(source->getAnodeStop());
     clone->setAnodeStep(source->getAnodeStep());
@@ -4935,6 +4739,8 @@ void ValveWorkbench::on_screenCheck_stateChanged(int arg1)
             measuredCurves = currentMeasurement->updatePlot(&plot);
             if (measuredCurves) {
                 plot.add(measuredCurves);
+
+                updateModellerOpMarker();
                 measuredCurves->setVisible(ui->measureCheck && ui->measureCheck->isChecked());
             }
         }
@@ -9392,8 +9198,8 @@ static bool pickOperatingPointFromAnode(Measurement *measurement,
                                         double &vaOp,
                                         double &vg1Op,
                                         double &vg2Op,
-                                        double vaTarget,
-                                        double vg1Target)
+                                        double vaRef,
+                                        double vgRef)
 {
     if (!measurement) return false;
 
@@ -9402,6 +9208,8 @@ static bool pickOperatingPointFromAnode(Measurement *measurement,
         return false;
     }
 
+    const double vaTarget = vaRef;
+    const double vg1Target = vgRef;
     const bool haveTarget = std::isfinite(vaTarget) && std::isfinite(vg1Target);
 
     sweepIdx  = sweepCount / 2;
@@ -9484,6 +9292,138 @@ static bool pickOperatingPointFromAnode(Measurement *measurement,
     vg1Op  = sampleMid->getVg1();
     vg2Op  = sampleMid->getVg2();
     return std::isfinite(vaOp) && std::isfinite(vg1Op);
+}
+
+void ValveWorkbench::clearModellerOpMarker()
+{
+    QGraphicsScene *scene = plot.getScene();
+    if (!scene) {
+        modellerOpMarker = nullptr;
+        return;
+    }
+
+    const QList<QGraphicsItem *> items = scene->items();
+    for (QGraphicsItem *item : items) {
+        if (!item) continue;
+        if (item->data(0).toString() == QLatin1String("modellerOpMarker")) {
+            delete item;
+        }
+    }
+    modellerOpMarker = nullptr;
+}
+
+bool ValveWorkbench::computeModellerOperatingPoint(double &xOp, double &iaOp_mA)
+{
+    xOp = 0.0;
+    iaOp_mA = 0.0;
+
+    if (!currentMeasurement) {
+        return false;
+    }
+    if (!ui || !ui->tabWidget || ui->tabWidget->currentWidget() != ui->tab_2) {
+        return false;
+    }
+
+    Measurement *anodeMeasurement = currentMeasurement;
+    if (currentMeasurement->getTestType() != ANODE_CHARACTERISTICS) {
+        Measurement *candidate = findMeasurement(currentMeasurement->getDeviceType(), ANODE_CHARACTERISTICS);
+        if (candidate && measurementHasValidSamples(candidate)) {
+            anodeMeasurement = candidate;
+        }
+    }
+    if (!anodeMeasurement || anodeMeasurement->getTestType() != ANODE_CHARACTERISTICS) {
+        return false;
+    }
+
+    int opSweepIdx = -1;
+    int opSampleIdx = -1;
+    double va = 0.0, vg1 = 0.0, vg2 = 0.0;
+
+    double va0 = 0.0;
+    double vg0 = 0.0;
+    double ia0 = 0.0;
+    double gm0 = 0.0;
+    double mu0 = 0.0;
+    double rp0 = 0.0;
+    const bool haveDatasheetRef = ensureDatasheetRefPoint(va0, vg0, ia0, gm0, mu0, rp0);
+
+    if (!pickOperatingPointFromAnode(anodeMeasurement,
+                                     opSweepIdx,
+                                     opSampleIdx,
+                                     va,
+                                     vg1,
+                                     vg2,
+                                     haveDatasheetRef ? va0 : std::numeric_limits<double>::quiet_NaN(),
+                                     haveDatasheetRef ? vg0 : std::numeric_limits<double>::quiet_NaN())) {
+        return false;
+    }
+
+    Sweep *sweep = anodeMeasurement->at(opSweepIdx);
+    if (!sweep || opSampleIdx < 0 || opSampleIdx >= sweep->count()) {
+        return false;
+    }
+    Sample *sample = sweep->at(opSampleIdx);
+    if (!sample) {
+        return false;
+    }
+
+    const int plotTestType = currentMeasurement->getTestType();
+    if (plotTestType != ANODE_CHARACTERISTICS) {
+        return false;
+    }
+    xOp = sample->getVa();
+    iaOp_mA = sample->getIa();
+    return std::isfinite(xOp) && std::isfinite(iaOp_mA) && (iaOp_mA >= 0.0);
+}
+
+void ValveWorkbench::updateModellerOpMarker()
+{
+    // Only show on Modeller tab, and only when measurement curves are visible.
+    if (!ui || !ui->tabWidget || ui->tabWidget->currentWidget() != ui->tab_2) {
+        clearModellerOpMarker();
+        return;
+    }
+    if (!ui->measureCheck || !ui->measureCheck->isChecked()) {
+        clearModellerOpMarker();
+        return;
+    }
+    if (!currentMeasurement) {
+        clearModellerOpMarker();
+        return;
+    }
+
+    if (currentMeasurement->getTestType() != ANODE_CHARACTERISTICS) {
+        clearModellerOpMarker();
+        return;
+    }
+
+    double xOp = 0.0;
+    double iaOp_mA = 0.0;
+    if (!computeModellerOperatingPoint(xOp, iaOp_mA)) {
+        clearModellerOpMarker();
+        return;
+    }
+
+    clearModellerOpMarker();
+
+    modellerOpMarker = new QGraphicsItemGroup();
+    modellerOpMarker->setData(0, QLatin1String("modellerOpMarker"));
+    modellerOpMarker->setZValue(10.0);
+    QPen pen;
+    pen.setColor(QColor::fromRgb(255, 0, 0));
+    pen.setWidth(2);
+    const double d = 5.0;
+    QGraphicsLineItem *h = plot.createSegment(xOp - d, iaOp_mA, xOp + d, iaOp_mA, pen);
+    QGraphicsLineItem *v = plot.createSegment(xOp, iaOp_mA - d, xOp, iaOp_mA + d, pen);
+    if (h) modellerOpMarker->addToGroup(h);
+    if (v) modellerOpMarker->addToGroup(v);
+
+    if (!modellerOpMarker->childItems().isEmpty()) {
+        plot.add(modellerOpMarker);
+    } else {
+        delete modellerOpMarker;
+        modellerOpMarker = nullptr;
+    }
 }
 
 // Helper: compute gm from a TRANSFER_CHARACTERISTICS measurement at a desired
@@ -10257,6 +10197,17 @@ void ValveWorkbench::testFinished()
 
     currentMeasurement = analyser->getResult();
     if (currentMeasurement) {
+        if (currentMeasurement->getDeviceType() == PENTODE && !datasheetJson.isEmpty()) {
+            const QJsonArray refPoints = datasheetJson.value(QStringLiteral("refPoints")).toArray();
+            if (!refPoints.isEmpty() && refPoints.at(0).isObject()) {
+                const QJsonObject rp = refPoints.at(0).toObject();
+                const double ig2Max_mA = rp.value(QStringLiteral("ig2")).toDouble(0.0);
+                const double pg2Max_W  = rp.value(QStringLiteral("pg2")).toDouble(0.0);
+                currentMeasurement->setIg2Max(ig2Max_mA);
+                currentMeasurement->setPg2Max(pg2Max_W);
+            }
+        }
+
         // Apply current checkbox state to measurement so screen overlay can be drawn
         currentMeasurement->setShowScreen(ui->screenCheck && ui->screenCheck->isChecked());
         // Apply smoothing preference for new analyser measurements so that
@@ -10961,6 +10912,13 @@ void ValveWorkbench::updateParameterDisplay()
     }
 
     updateDoubleValue(ui->pMax, pMax);
+
+    if (!(iaMax > 0.0)) {
+        iaMax = 50.0;
+    }
+    if (iaMax > 50.0) {
+        iaMax = 50.0;
+    }
     updateDoubleValue(ui->iaMax, iaMax);
 }
 
@@ -11119,8 +11077,11 @@ double ValveWorkbench::updateIaMax()
 {
     double value = checkDoubleValue(ui->iaMax, iaMax);
 
-    if (value > 500.0) {
-        value = 500.0;
+    if (!(value > 0.0)) {
+        value = 50.0;
+    }
+    if (value > 50.0) {
+        value = 50.0;
     }
 
     updateDoubleValue(ui->iaMax, value);
@@ -11605,6 +11566,8 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 plot.add(measuredCurves);
             }
 
+            updateModellerOpMarker();
+
             // Keep Triode B clone/overlay in sync with the currently selected measurement.
             if (triodeMeasurementSecondary != nullptr) {
                 deleteMeasurementClone(triodeMeasurementSecondary);
@@ -11978,6 +11941,8 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 } else {
                     qInfo("Model plotting returned null item group - nothing added to plot");
                 }
+
+                updateModellerOpMarker();
             } else {
                 qInfo("Type check FAILED - skipping model plotting");
                 qInfo("Measurement device: %d, Model type: %d", currentMeasurement->getDeviceType(), model->getType());
@@ -12546,6 +12511,19 @@ void ValveWorkbench::on_datasheetRp_editingFinished()
     syncDatasheetFromUi();
     updateDatasheetDisplay();
 }
+
+void ValveWorkbench::on_datasheetIg2_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
+}
+
+void ValveWorkbench::on_datasheetPg2_editingFinished()
+{
+    syncDatasheetFromUi();
+    updateDatasheetDisplay();
+}
+
 void ValveWorkbench::on_runButton_clicked()
 {
     static int clickCount = 0;
@@ -12575,7 +12553,14 @@ void ValveWorkbench::on_runButton_clicked()
     analyser->setIsDoubleTriode(isDoubleTriode);
     analyser->setIsTriodeConnectedPentode(isTriodeConnectedPentode);
     analyser->setPMax(pMax);
-    analyser->setIaMax(iaMax);
+    double runIaMax = iaMax;
+    if (!(runIaMax > 0.0)) {
+        runIaMax = 50.0;
+    }
+    if (runIaMax > 50.0) {
+        runIaMax = 50.0;
+    }
+    analyser->setIaMax(runIaMax);
     analyser->setSweepParameters(anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep, secondGridStart, secondGridStop, secondGridStep, secondAnodeStart, secondAnodeStop, secondAnodeStep);
 
     qInfo("Analyser parameters: anodeStart=%f, anodeStop=%f, anodeStep=%f, gridStart=%f, gridStop=%f, gridStep=%f, screenStart=%f, screenStop=%f, screenStep=%f", anodeStart, anodeStop, anodeStep, gridStart, gridStop, gridStep, screenStart, screenStop, screenStep);
@@ -13101,11 +13086,85 @@ void ValveWorkbench::loadModel()
                   model->getType() == EXTRACT_DERK_E_PENTODE ||
                   model->getType() == SIMPLE_MANUAL_PENTODE)) {
 
-        Measurement *pentodeMeasurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
+        auto nominalVg2Of = [](Measurement *m) -> double {
+            if (!m) {
+                return std::numeric_limits<double>::quiet_NaN();
+            }
+            if (m->count() > 0) {
+                Sweep *sw = m->at(0);
+                if (sw) {
+                    const double vg2 = sw->getVg2Nominal();
+                    if (std::isfinite(vg2) && std::fabs(vg2) > 1e-9) {
+                        return vg2;
+                    }
+                }
+            }
+
+            QRegularExpression re(QStringLiteral(R"(Vg2\s*=\s*(\d+(?:\.\d+)?)\s*V)"), QRegularExpression::CaseInsensitiveOption);
+            QRegularExpressionMatch match = re.match(m->getCustomLabel());
+            if (match.hasMatch()) {
+                bool ok = false;
+                const double vg2 = match.captured(1).toDouble(&ok);
+                if (ok && std::isfinite(vg2)) {
+                    return vg2;
+                }
+            }
+            return std::numeric_limits<double>::quiet_NaN();
+        };
+
+        auto findClosestPentodeAnodeByVg2 = [&](double targetVg2) -> Measurement * {
+            QTreeWidgetItem *proj = getProject(currentProject);
+            if (!proj) {
+                return nullptr;
+            }
+
+            Measurement *best = nullptr;
+            double bestDelta = std::numeric_limits<double>::infinity();
+
+            const int children = proj->childCount();
+            for (int i = 0; i < children; ++i) {
+                QTreeWidgetItem *child = proj->child(i);
+                if (!child || child->type() != TYP_MEASUREMENT) {
+                    continue;
+                }
+                Measurement *m = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+                if (!m) {
+                    continue;
+                }
+                if (m->getDeviceType() != PENTODE || m->getTestType() != ANODE_CHARACTERISTICS) {
+                    continue;
+                }
+                const double vg2 = nominalVg2Of(m);
+                if (!std::isfinite(vg2)) {
+                    continue;
+                }
+                const double d = std::fabs(vg2 - targetVg2);
+                if (d < bestDelta) {
+                    bestDelta = d;
+                    best = m;
+                }
+            }
+
+            return best;
+        };
+
+        Measurement *pentodeMeasurement = findClosestPentodeAnodeByVg2(200.0);
+        if (!pentodeMeasurement) {
+            pentodeMeasurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
+        }
         if (pentodeMeasurement) {
             if (measuredCurves != nullptr) {
                 plot.remove(measuredCurves);
                 measuredCurves = nullptr;
+            }
+
+            if (modelledCurves != nullptr) {
+                plot.remove(modelledCurves);
+                modelledCurves = nullptr;
+            }
+            if (modelledCurvesSecondary != nullptr) {
+                plot.remove(modelledCurvesSecondary);
+                modelledCurvesSecondary = nullptr;
             }
 
             pentodeMeasurement->setSmoothPlotting(preferencesDialog.smoothCurves());
@@ -13118,6 +13177,36 @@ void ValveWorkbench::loadModel()
             // Make this pentode measurement the active one for subsequent
             // overlay and small-signal calculations.
             currentMeasurement = pentodeMeasurement;
+
+            currentMeasurementItem = nullptr;
+            if (currentProject) {
+                for (int i = 0; i < currentProject->childCount(); ++i) {
+                    QTreeWidgetItem *child = currentProject->child(i);
+                    if (!child || child->type() != TYP_MEASUREMENT) {
+                        continue;
+                    }
+                    void *mData = child->data(0, Qt::UserRole).value<void *>();
+                    if (mData == static_cast<void *>(currentMeasurement)) {
+                        currentMeasurementItem = child;
+                        break;
+                    }
+                }
+            }
+
+            // Selecting the measurement in the project tree triggers the same
+            // code path as a user click (on_projectTree_currentItemChanged),
+            // which ensures the plotted Vg1 family/grid-line labelling and any
+            // dependent UI state is fully synchronized.
+            if (ui && ui->projectTree && currentMeasurementItem) {
+                QTreeWidgetItem *itemToSelect = currentMeasurementItem;
+                QTimer::singleShot(0, this, [this, itemToSelect]() {
+                    if (ui && ui->projectTree && itemToSelect) {
+                        ui->projectTree->setCurrentItem(itemToSelect);
+                    }
+                });
+            }
+
+            plotCurrentModelOverMeasurement();
         }
     }
 }
@@ -13197,32 +13286,122 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
         return;
     }
 
-    auto parseVg2FromLabel = [](const QString &label, bool *okOut) -> double {
-        if (okOut) *okOut = false;
-        QRegularExpression re(QStringLiteral(R"(Vg2\s*=\s*(\d+(?:\.\d+)?)\s*V)"), QRegularExpression::CaseInsensitiveOption);
-        QRegularExpressionMatch m = re.match(label);
-        if (!m.hasMatch()) {
-            return 0.0;
+    auto nominalVg2Of = [](Measurement *m) -> double {
+        if (!m) {
+            return std::numeric_limits<double>::quiet_NaN();
         }
-        bool ok = false;
-        const double vg2 = m.captured(1).toDouble(&ok);
-        if (okOut) *okOut = ok;
-        return ok ? vg2 : 0.0;
+
+        if (m->count() > 0) {
+            Sweep *sw = m->at(0);
+            if (sw) {
+                const double vg2 = sw->getVg2Nominal();
+                if (std::isfinite(vg2) && std::fabs(vg2) > 1e-9) {
+                    return vg2;
+                }
+            }
+        }
+
+        QRegularExpression re(QStringLiteral(R"(Vg2\s*=\s*(\d+(?:\.\d+)?)\s*V)"), QRegularExpression::CaseInsensitiveOption);
+        QRegularExpressionMatch match = re.match(m->getCustomLabel());
+        if (match.hasMatch()) {
+            bool ok = false;
+            const double vg2 = match.captured(1).toDouble(&ok);
+            if (ok && std::isfinite(vg2)) {
+                return vg2;
+            }
+        }
+
+        return std::numeric_limits<double>::quiet_NaN();
     };
 
-    Measurement *seedMeasurement = nullptr;
-    for (Measurement *m : pentodeAnodes) {
-        if (!m) continue;
-        bool ok = false;
-        const double vg2 = parseVg2FromLabel(m->getCustomLabel(), &ok);
-        if (ok && std::fabs(vg2 - 150.0) < 0.5) {
-            seedMeasurement = m;
-            break;
+    auto selectedPentodeAnodeMeasurement = [&]() -> Measurement * {
+        if (currentMeasurementItem != nullptr) {
+            QTreeWidgetItem *mItem = nullptr;
+            if (currentMeasurementItem->type() == TYP_MEASUREMENT) {
+                mItem = currentMeasurementItem;
+            } else if (currentMeasurementItem->type() == TYP_SWEEP) {
+                mItem = getParent(currentMeasurementItem, TYP_MEASUREMENT);
+            }
+            if (mItem != nullptr) {
+                Measurement *m = (Measurement *) mItem->data(0, Qt::UserRole).value<void *>();
+                if (m && m->getDeviceType() == PENTODE && m->getTestType() == ANODE_CHARACTERISTICS) {
+                    // Ensure it is one of the Modelling Tests measurements we collected.
+                    for (Measurement *cand : pentodeAnodes) {
+                        if (cand == m) {
+                            return m;
+                        }
+                    }
+                }
+            }
+        }
+        return nullptr;
+    };
+
+    auto findClosestPentodeAnodeByVg2 = [&](double targetVg2) -> Measurement * {
+        Measurement *best = nullptr;
+        double bestDelta = std::numeric_limits<double>::infinity();
+        for (Measurement *m : pentodeAnodes) {
+            if (!m) continue;
+            const double vg2 = nominalVg2Of(m);
+            if (!std::isfinite(vg2)) continue;
+            const double d = std::fabs(vg2 - targetVg2);
+            if (d < bestDelta) {
+                bestDelta = d;
+                best = m;
+            }
+        }
+        return best;
+    };
+
+    QList<Measurement *> fitPentodeAnodes;
+    {
+        const double targets[] = {200.0, 225.0, 250.0};
+        for (double t : targets) {
+            Measurement *m = findClosestPentodeAnodeByVg2(t);
+            if (!m) {
+                continue;
+            }
+            bool dup = false;
+            for (Measurement *e : fitPentodeAnodes) {
+                if (e == m) {
+                    dup = true;
+                    break;
+                }
+            }
+            if (!dup) {
+                fitPentodeAnodes.append(m);
+            }
         }
     }
-    if (seedMeasurement == nullptr) {
-        seedMeasurement = pentodeAnodes.first();
+
+    if (fitPentodeAnodes.isEmpty()) {
+        fitPentodeAnodes.append(pentodeAnodes.first());
     }
+
+    Measurement *primaryAnode = nullptr;
+    {
+        Measurement *m225 = findClosestPentodeAnodeByVg2(225.0);
+        for (Measurement *m : fitPentodeAnodes) {
+            if (m && m == m225) {
+                primaryAnode = m;
+                break;
+            }
+        }
+        if (!primaryAnode) {
+            Measurement *sel = selectedPentodeAnodeMeasurement();
+            for (Measurement *m : fitPentodeAnodes) {
+                if (m && m == sel) {
+                    primaryAnode = m;
+                    break;
+                }
+            }
+        }
+        if (!primaryAnode) {
+            primaryAnode = fitPentodeAnodes.first();
+        }
+    }
+
+    Measurement *seedMeasurement = primaryAnode;
 
     modelProject = projectItem;
     if (ui && ui->fitPentodeButton) ui->fitPentodeButton->setEnabled(false);
@@ -13260,7 +13439,7 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
     model->setPreferences(&preferencesDialog);
     model->setPlotColor(QColor::fromRgb(255, 0, 0));
 
-    for (Measurement *m : pentodeAnodes) {
+    for (Measurement *m : fitPentodeAnodes) {
         if (m) {
             model->addMeasurement(m);
         }
@@ -13440,9 +13619,24 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
     };
 
     std::map<TransferCondition, QList<Measurement *>> transferGroups;
+
+    std::set<int> allowedVg2Keys;
+    {
+        for (Measurement *m : fitPentodeAnodes) {
+            const double vg2 = nominalVg2Of(m);
+            if (std::isfinite(vg2)) {
+                allowedVg2Keys.insert(static_cast<int>(std::lround(vg2)));
+            }
+        }
+    }
+
     for (Measurement *m : transfers) {
         if (!m) continue;
-        transferGroups[transferConditionOf(m)].append(m);
+        const TransferCondition cond = transferConditionOf(m);
+        if (!allowedVg2Keys.empty() && allowedVg2Keys.find(cond.vg2Key) == allowedVg2Keys.end()) {
+            continue;
+        }
+        transferGroups[cond].append(m);
     }
 
     processModellingTestsBinnedTransfers.clear();
@@ -13483,7 +13677,7 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
     used << tr("Seed measurement: %1").arg(seedMeasurement ? seedMeasurement->measurementName() : tr("(none)"));
     used << tr("Triode seed: %1").arg(triodeModel ? tr("available") : tr("none"));
     used << tr("Included pentode anode measurements:");
-    for (Measurement *m : pentodeAnodes) {
+    for (Measurement *m : fitPentodeAnodes) {
         used << tr("  - %1").arg(m ? m->measurementName() : tr("(null)"));
     }
     if (!transfers.isEmpty()) {
@@ -13550,9 +13744,119 @@ void ValveWorkbench::modelPentode()
     // Refresh pentode model selection from preferences each time, so changes
     // made in the Preferences dialog are respected for every new fit.
     pentodeModelType = preferencesDialog.getPentodeModelType();
-    Measurement *measurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
 
-    if (measurement == nullptr) {
+    auto measurementNominalVg2Local = [&](Measurement *m) -> double {
+        if (!m) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        if (m->count() > 0) {
+            Sweep *sw = m->at(0);
+            if (sw) {
+                const double vg2 = sw->getVg2Nominal();
+                if (std::isfinite(vg2) && std::fabs(vg2) > 1e-9) {
+                    return vg2;
+                }
+            }
+        }
+
+        const QString label = m->getCustomLabel();
+        if (!label.isEmpty()) {
+            QRegularExpression re(QStringLiteral(R"(Vg2\s*=\s*(\d+(?:\.\d+)?)\s*V)"), QRegularExpression::CaseInsensitiveOption);
+            QRegularExpressionMatch match = re.match(label);
+            if (match.hasMatch()) {
+                bool ok = false;
+                const double vg2 = match.captured(1).toDouble(&ok);
+                if (ok && std::isfinite(vg2)) {
+                    return vg2;
+                }
+            }
+        }
+
+        return std::numeric_limits<double>::quiet_NaN();
+    };
+
+    auto selectedPentodeAnodeMeasurement = [&]() -> Measurement * {
+        if (currentMeasurementItem != nullptr) {
+            QTreeWidgetItem *mItem = nullptr;
+            if (currentMeasurementItem->type() == TYP_MEASUREMENT) {
+                mItem = currentMeasurementItem;
+            } else if (currentMeasurementItem->type() == TYP_SWEEP) {
+                mItem = getParent(currentMeasurementItem, TYP_MEASUREMENT);
+            }
+            if (mItem != nullptr) {
+                Measurement *m = (Measurement *) mItem->data(0, Qt::UserRole).value<void *>();
+                if (m && m->getDeviceType() == PENTODE && m->getTestType() == ANODE_CHARACTERISTICS) {
+                    return m;
+                }
+            }
+        }
+        return nullptr;
+    };
+
+    auto findClosestPentodeAnodeMeasurementByVg2Local = [&](double targetVg2) -> Measurement * {
+        if (!currentProject || !std::isfinite(targetVg2)) {
+            return nullptr;
+        }
+
+        Measurement *best = nullptr;
+        double bestDelta = std::numeric_limits<double>::infinity();
+
+        const int children = currentProject->childCount();
+        for (int i = 0; i < children; ++i) {
+            QTreeWidgetItem *child = currentProject->child(i);
+            if (!child || child->type() != TYP_MEASUREMENT) {
+                continue;
+            }
+            Measurement *m = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
+            if (!m) {
+                continue;
+            }
+            if (m->getDeviceType() != PENTODE || m->getTestType() != ANODE_CHARACTERISTICS) {
+                continue;
+            }
+            const double vg2 = measurementNominalVg2Local(m);
+            if (!std::isfinite(vg2)) {
+                continue;
+            }
+            const double d = std::fabs(vg2 - targetVg2);
+            if (d < bestDelta) {
+                bestDelta = d;
+                best = m;
+            }
+        }
+
+        return best;
+    };
+
+    QList<Measurement *> fitPentodeAnodes;
+    {
+        const double targets[] = {200.0, 225.0, 250.0};
+        for (double t : targets) {
+            Measurement *m = findClosestPentodeAnodeMeasurementByVg2Local(t);
+            if (!m) {
+                continue;
+            }
+            bool dup = false;
+            for (Measurement *e : fitPentodeAnodes) {
+                if (e == m) {
+                    dup = true;
+                    break;
+                }
+            }
+            if (!dup) {
+                fitPentodeAnodes.append(m);
+            }
+        }
+    }
+
+    if (fitPentodeAnodes.isEmpty()) {
+        Measurement *fallback = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
+        if (fallback) {
+            fitPentodeAnodes.append(fallback);
+        }
+    }
+
+    if (fitPentodeAnodes.isEmpty()) {
         QMessageBox message;
         message.setText("There is no Pentode Anode Characteristic measurement in the project - this is required for model fitting");
         message.exec();
@@ -13561,6 +13865,20 @@ void ValveWorkbench::modelPentode()
         ui->fitTriodeButton->setEnabled(true);
 
         return;
+    }
+
+    Measurement *primary = nullptr;
+    {
+        Measurement *m225 = findClosestPentodeAnodeMeasurementByVg2Local(225.0);
+        for (Measurement *m : fitPentodeAnodes) {
+            if (m && m == m225) {
+                primary = m;
+                break;
+            }
+        }
+        if (!primary) {
+            primary = fitPentodeAnodes.first();
+        }
     }
 
     if (pentodeModelType == SIMPLE_MANUAL_PENTODE) {
@@ -13583,7 +13901,7 @@ void ValveWorkbench::modelPentode()
         Estimate estimate;
         // Use GARDINER_PENTODE as the estimation target so alpha/beta/gamma, etc.
         // follow the same heuristics as the main fitted model.
-        estimate.estimatePentode(measurement, triodeModel, GARDINER_PENTODE, preferencesDialog.useSecondaryEmission());
+        estimate.estimatePentode(primary, triodeModel, GARDINER_PENTODE, preferencesDialog.useSecondaryEmission());
 
         // Run a single Ceres fit using a temporary GardinerPentode so we get the
         // same "estimate + one solve" behaviour as the main fitted pentode model.
@@ -13592,7 +13910,11 @@ void ValveWorkbench::modelPentode()
             tempGardiner->setEstimate(&estimate);
             tempGardiner->setMode(NORMAL_MODE);
             tempGardiner->setPreferences(&preferencesDialog);
-            tempGardiner->addMeasurement(measurement);
+            for (Measurement *m : fitPentodeAnodes) {
+                if (m) {
+                    tempGardiner->addMeasurement(m);
+                }
+            }
             tempGardiner->solve();
         }
 
@@ -13655,7 +13977,7 @@ void ValveWorkbench::modelPentode()
         }
 
         model->setPreferences(&preferencesDialog);
-        currentMeasurement = measurement;
+        currentMeasurement = primary;
         plotCurrentModelOverMeasurement();
         ensureSimplePentodeDialog();
 
@@ -13679,7 +14001,7 @@ void ValveWorkbench::modelPentode()
         // Normal path: use the project's triode model or the embedded
         // triodeModel seed as the base for pentode estimation so the
         // Gardiner/Reefman pentode starts from a consistent triode base.
-        estimate.estimatePentode(measurement, triodeModel, pentodeModelType, preferencesDialog.useSecondaryEmission());
+        estimate.estimatePentode(primary, triodeModel, pentodeModelType, preferencesDialog.useSecondaryEmission());
     } else if (currentDevice && currentDevice->getDeviceType() == PENTODE) {
         // Secondary fallback: if we have no explicit triode seed but do have a
         // pentode device model, copy its parameters into the Estimate as a
@@ -13711,7 +14033,7 @@ void ValveWorkbench::modelPentode()
         // Last resort: fall back to the legacy gradient-based estimate that
         // derives all parameters directly from the measurement alone.
         qWarning("No triode model found in project and no suitable current device; proceeding with gradient-based seed for pentode fit");
-        estimate.estimatePentode(measurement, nullptr, pentodeModelType, preferencesDialog.useSecondaryEmission());
+        estimate.estimatePentode(primary, nullptr, pentodeModelType, preferencesDialog.useSecondaryEmission());
     }
 
     model = ModelFactory::createModel(pentodeModelType);
@@ -13719,15 +14041,9 @@ void ValveWorkbench::modelPentode()
     model->setMode(NORMAL_MODE);
     model->setPreferences(&preferencesDialog);
 
-    int children = currentProject->childCount();
-    for (int i = 0; i < children; i++) {
-        QTreeWidgetItem *child = currentProject->child(i);
-        if (child->type() == TYP_MEASUREMENT) {
-            measurement = (Measurement *) child->data(0, Qt::UserRole).value<void *>();
-            if (measurement->getDeviceType() == PENTODE &&
-                measurement->getTestType() == ANODE_CHARACTERISTICS) {
-                model->addMeasurement(measurement);
-            }
+    for (Measurement *m : fitPentodeAnodes) {
+        if (m) {
+            model->addMeasurement(m);
         }
     }
 
@@ -13912,6 +14228,12 @@ void ValveWorkbench::on_tabWidget_currentChanged(int index)
         if (overlayStates[tabRole].showMeasurement && ui->measureCheck) {
             on_measureCheck_stateChanged(ui->measureCheck->checkState());
         }
+
+        if (tabRole != 1) {
+            clearModellerOpMarker();
+        } else {
+            updateModellerOpMarker();
+        }
     }
 }
 
@@ -14010,6 +14332,7 @@ void ValveWorkbench::on_measureCheck_stateChanged(int arg1)
         if (measuredCurves) {
             plot.add(measuredCurves);
             measuredCurves->setVisible(true);
+            updateModellerOpMarker();
         }
 
         // Recreate Triode B measurement overlay if present.

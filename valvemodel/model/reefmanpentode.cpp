@@ -11,7 +11,15 @@ struct DerkPentodeResidual {
         T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
         T g = 1.0 / (1.0 + beta[0] * va_);
         T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * (1.0 - g) + a[0] * va_ / kg1[0]);
-        residual[0] = ia_ - ia;
+        // Censored measurement handling: when the analyser hits the current limit
+        // (typically 50mA), the sample represents Ia >= Ilimit, not an exact Ia.
+        // Penalize only if the model under-predicts Ilimit.
+        T diff = T(ia_) - ia;
+        if (ia_ >= 49.5) {
+            residual[0] = (diff > T(0.0)) ? diff : T(0.0);
+        } else {
+            residual[0] = diff;
+        }
         return !(isnan(ia) || isinf(ia));
     }
 
@@ -32,7 +40,12 @@ struct DerkEPentodeResidual {
         T epk = pow(vg2_ * log(1.0 + exp(kp[0] * (1.0 / mu[0] + (vg1_ + vct[0]) / f))) / kp[0], x[0]);
         T g = exp(-pow(beta[0] * va_, 1.5));
         T ia = epk * ((1.0 / kg1[0] - 1.0 / kg2[0]) * (1.0 - g) + a[0] * va_ / kg1[0]);
-        residual[0] = ia_ - ia;
+        T diff = T(ia_) - ia;
+        if (ia_ >= 49.5) {
+            residual[0] = (diff > T(0.0)) ? diff : T(0.0);
+        } else {
+            residual[0] = diff;
+        }
         return !(isnan(ia) || isinf(ia));
     }
 

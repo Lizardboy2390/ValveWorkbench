@@ -123,7 +123,6 @@ public:
     QGraphicsView *headroomWaveformView;
     QSpacerItem *verticalSpacer;
     QWidget *tab_2;
-    QWidget *layoutWidget;
     QVBoxLayout *verticalLayout_4;
     QLabel *label_2;
     QTreeWidget *projectTree;
@@ -139,12 +138,9 @@ public:
     QTableWidget *properties;
     QSpacerItem *verticalSpacer_2;
     QHBoxLayout *horizontalLayout_3;
-    QSpacerItem *horizontalSpacer_10;
     QPushButton *fitTriodeButton;
     QPushButton *fitPentodeButton;
     QPushButton *processModellingTestsButton;
-    QPushButton *autoscaleModellerPlotButton;
-    QPushButton *fullScale50mAButton;
     QPushButton *compareButton;
     QSpacerItem *horizontalSpacer_12;
     QWidget *tab_3;
@@ -790,18 +786,14 @@ public:
         tabWidget->addTab(tab, QString());
         tab_2 = new QWidget();
         tab_2->setObjectName("tab_2");
-        layoutWidget = new QWidget(tab_2);
-        layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(10, 0, 721, 670));
-        verticalLayout_4 = new QVBoxLayout(layoutWidget);
+        verticalLayout_4 = new QVBoxLayout(tab_2);
         verticalLayout_4->setObjectName("verticalLayout_4");
-        verticalLayout_4->setContentsMargins(0, 0, 0, 0);
-        label_2 = new QLabel(layoutWidget);
+        label_2 = new QLabel(tab_2);
         label_2->setObjectName("label_2");
 
         verticalLayout_4->addWidget(label_2);
 
-        projectTree = new QTreeWidget(layoutWidget);
+        projectTree = new QTreeWidget(tab_2);
         QTreeWidgetItem *__qtreewidgetitem = new QTreeWidgetItem();
         __qtreewidgetitem->setText(0, QString::fromUtf8("1"));
         projectTree->setHeaderItem(__qtreewidgetitem);
@@ -813,7 +805,7 @@ public:
 
         verticalLayout_4->addWidget(projectTree);
 
-        groupBox = new QGroupBox(layoutWidget);
+        groupBox = new QGroupBox(tab_2);
         groupBox->setObjectName("groupBox");
         groupBox->setEnabled(true);
         groupBox->setMinimumSize(QSize(40, 100));
@@ -850,16 +842,16 @@ public:
 
         verticalLayout_4->addWidget(groupBox);
 
-        label = new QLabel(layoutWidget);
+        label = new QLabel(tab_2);
         label->setObjectName("label");
 
         verticalLayout_4->addWidget(label);
 
-        properties = new QTableWidget(layoutWidget);
+        properties = new QTableWidget(tab_2);
         if (properties->columnCount() < 2)
             properties->setColumnCount(2);
-        if (properties->rowCount() < 15)
-            properties->setRowCount(15);
+        if (properties->rowCount() < 14)
+            properties->setRowCount(14);
         properties->setObjectName("properties");
         properties->setMinimumSize(QSize(0, 212));
         properties->setRowCount(15);
@@ -879,38 +871,24 @@ public:
 
         horizontalLayout_3 = new QHBoxLayout();
         horizontalLayout_3->setObjectName("horizontalLayout_3");
-        horizontalSpacer_10 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        horizontalLayout_3->addItem(horizontalSpacer_10);
-
-        fitTriodeButton = new QPushButton(layoutWidget);
+        fitTriodeButton = new QPushButton(tab_2);
         fitTriodeButton->setObjectName("fitTriodeButton");
         fitTriodeButton->setEnabled(true);
 
         horizontalLayout_3->addWidget(fitTriodeButton);
 
-        fitPentodeButton = new QPushButton(layoutWidget);
+        fitPentodeButton = new QPushButton(tab_2);
         fitPentodeButton->setObjectName("fitPentodeButton");
         fitPentodeButton->setEnabled(true);
 
         horizontalLayout_3->addWidget(fitPentodeButton);
 
-        processModellingTestsButton = new QPushButton(layoutWidget);
+        processModellingTestsButton = new QPushButton(tab_2);
         processModellingTestsButton->setObjectName("processModellingTestsButton");
 
         horizontalLayout_3->addWidget(processModellingTestsButton);
 
-        autoscaleModellerPlotButton = new QPushButton(layoutWidget);
-        autoscaleModellerPlotButton->setObjectName("autoscaleModellerPlotButton");
-
-        horizontalLayout_3->addWidget(autoscaleModellerPlotButton);
-
-        fullScale50mAButton = new QPushButton(layoutWidget);
-        fullScale50mAButton->setObjectName("fullScale50mAButton");
-
-        horizontalLayout_3->addWidget(fullScale50mAButton);
-
-        compareButton = new QPushButton(layoutWidget);
+        compareButton = new QPushButton(tab_2);
         compareButton->setObjectName("compareButton");
 
         horizontalLayout_3->addWidget(compareButton);
@@ -2211,9 +2189,7 @@ public:
         label->setText(QCoreApplication::translate("ValveWorkbench", "Properties", nullptr));
         fitTriodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Triode", nullptr));
         fitPentodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Pentode...", nullptr));
-        processModellingTestsButton->setText(QCoreApplication::translate("ValveWorkbench", "Process Modelling Tests", nullptr));
-        autoscaleModellerPlotButton->setText(QCoreApplication::translate("ValveWorkbench", "Autoscale Plot", nullptr));
-        fullScale50mAButton->setText(QCoreApplication::translate("ValveWorkbench", "Y Max 50mA", nullptr));
+        processModellingTestsButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Modelling Tests", nullptr));
         compareButton->setText(QCoreApplication::translate("ValveWorkbench", "Compare Device", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("ValveWorkbench", "Modeller", nullptr));
         pushButton_3->setText(QCoreApplication::translate("ValveWorkbench", "Load Template...", nullptr));

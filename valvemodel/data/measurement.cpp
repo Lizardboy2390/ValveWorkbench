@@ -13,6 +13,8 @@ void Measurement::reset()
     sweeps.clear();
     triodeConnectedPentode = false;
     customLabel.clear();
+    ig2Max = 0.0;
+    pg2Max = 0.0;
 }
 
 void Measurement::setCustomLabel(const QString &label)
@@ -96,6 +98,14 @@ void Measurement::fromJson(QJsonObject source)
         pMax = source["paMax"].toDouble();
     }
 
+    if (source.contains("ig2Max") && source["ig2Max"].isDouble()) {
+        ig2Max = source["ig2Max"].toDouble();
+    }
+
+    if (source.contains("pg2Max") && source["pg2Max"].isDouble()) {
+        pg2Max = source["pg2Max"].toDouble();
+    }
+
     if (source.contains("anodeStart") && source["anodeStart"].isDouble()) {
         anodeStart = source["anodeStart"].toDouble();
     }
@@ -175,6 +185,8 @@ void Measurement::toJson(QJsonObject &destination)
     destination["vh"] = heaterVoltage;
     destination["iaMax"] = iaMax;
     destination["paMax"] = pMax;
+    destination["ig2Max"] = ig2Max;
+    destination["pg2Max"] = pg2Max;
 
     destination["anodeStart"] = anodeStart;
     destination["anodeStop"] = anodeStop;
@@ -487,6 +499,26 @@ double Measurement::getPMax() const
 void Measurement::setPMax(double newPMax)
 {
     pMax = newPMax;
+}
+
+double Measurement::getIg2Max() const
+{
+    return ig2Max;
+}
+
+void Measurement::setIg2Max(double newIg2Max)
+{
+    ig2Max = newIg2Max;
+}
+
+double Measurement::getPg2Max() const
+{
+    return pg2Max;
+}
+
+void Measurement::setPg2Max(double newPg2Max)
+{
+    pg2Max = newPg2Max;
 }
 
 Sweep *Measurement::at(int i)
