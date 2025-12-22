@@ -65,6 +65,8 @@ Model::Model()
 
     plotColor = QColor::fromRgb(255, 0, 0);
 
+    secondaryEmission = false;
+
     // Diagnostic: report default Os on model construction
     qInfo("MODEL INIT: default Os=%.6f", parameter[PAR_OS]->getValue());
 }
@@ -1204,6 +1206,10 @@ void Model::setShowScreen(bool newShowScreen)
 void Model::setPreferences(PreferencesDialog *newPreferences)
 {
     preferences = newPreferences;
+
+    if (preferences) {
+        secondaryEmission = preferences->useSecondaryEmission();
+    }
 }
 
 void Model::setPlotColor(const QColor &color)

@@ -633,9 +633,9 @@ bool CompareDialog::isPentodeModel(Model *model) const
     }
 
     switch (model->getType()) {
-    case REEFMAN_DERK_PENTODE:
-    case REEFMAN_DERK_E_PENTODE:
     case GARDINER_PENTODE:
+    case EXTRACT_DERK_E_PENTODE:
+    case SIMPLE_MANUAL_PENTODE:
         return true;
     default:
         return false;

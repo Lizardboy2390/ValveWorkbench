@@ -22,8 +22,6 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) :
     }
 
     ui->pentodeFit->addItem("Gardiner", GARDINER_PENTODE);
-    ui->pentodeFit->addItem("Reefman (Derk)", REEFMAN_DERK_PENTODE);
-    ui->pentodeFit->addItem("Reefman (DerkE)", REEFMAN_DERK_E_PENTODE);
     ui->pentodeFit->addItem("ExtractModel (DerkE exact)", EXTRACT_DERK_E_PENTODE);
     ui->pentodeFit->addItem("Simple Manual Pentode", SIMPLE_MANUAL_PENTODE);
 
@@ -348,8 +346,16 @@ void PreferencesDialog::loadFromSettings()
         setPort(savedPort);
     }
     int savedPentodeFit = s.value("preferences/pentodeFit", GARDINER_PENTODE).toInt();
+    // Reefman fits are no longer offered in the UI. If a prior session saved a
+    // Reefman selection, fall back to ExtractModel so the user still gets a
+    // working pentode fit without needing to manually reset preferences.
+    if (savedPentodeFit == REEFMAN_DERK_PENTODE || savedPentodeFit == REEFMAN_DERK_E_PENTODE) {
+        savedPentodeFit = EXTRACT_DERK_E_PENTODE;
+    }
     int idxFit = ui->pentodeFit->findData(savedPentodeFit);
-    if (idxFit >= 0) ui->pentodeFit->setCurrentIndex(idxFit);
+    if (idxFit >= 0) {
+        ui->pentodeFit->setCurrentIndex(idxFit);
+    }
     int savedSampling = s.value("preferences/sampling", SMP_LINEAR).toInt();
     int idxSamp = ui->sampling->findData(savedSampling);
     if (idxSamp >= 0) ui->sampling->setCurrentIndex(idxSamp);

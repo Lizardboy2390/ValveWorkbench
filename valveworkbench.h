@@ -74,6 +74,8 @@ private slots:
 
     void on_stdDeviceSelection_currentIndexChanged(int index);
 
+    void on_stdDeviceSelection2_currentIndexChanged(int index);
+
     void on_circuitSelection_currentIndexChanged(int index);
 
     void on_cir1Value_editingFinished();

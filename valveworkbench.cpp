@@ -8533,6 +8533,9 @@ void ValveWorkbench::selectCircuit(int circuitType)
         buildStdDeviceSelection(ui->stdDeviceSelection, -1);
         buildStdDeviceSelection(ui->stdDeviceSelection2, -1);
 
+        if (ui->stdDeviceSelection2) ui->stdDeviceSelection2->setVisible(false);
+        if (ui->label_5) ui->label_5->setVisible(false);
+
         // No valid circuit: hide stage-level Designer toggles such as
         // Max Sym Swing and K bypass.
         if (symSwingCheck) {
@@ -8555,6 +8558,19 @@ void ValveWorkbench::selectCircuit(int circuitType)
 
     int deviceType1 = circuit->getDeviceType(1);
     int deviceType2 = circuit->getDeviceType(2);
+
+    const bool wantsDevice2 = (deviceType2 >= 0);
+    if (ui->stdDeviceSelection2) {
+        ui->stdDeviceSelection2->setVisible(wantsDevice2);
+        ui->stdDeviceSelection2->setEnabled(wantsDevice2);
+        if (!wantsDevice2) {
+            ui->stdDeviceSelection2->setCurrentIndex(0);
+        }
+    }
+    if (ui->label_5) {
+        ui->label_5->setVisible(wantsDevice2);
+        ui->label_5->setEnabled(wantsDevice2);
+    }
 
     qInfo("Circuit requires device1 type: %d, device2 type: %d", deviceType1, deviceType2);
 
@@ -9881,10 +9897,10 @@ void ValveWorkbench::updateSmallSignalFromModel(Model *modelForSmallSignal, Meas
         if (deviceType == TRIODE) {
             return (t == COHEN_HELIE_TRIODE || t == KOREN_TRIODE || t == SIMPLE_TRIODE);
         }
-        // Pentode: accept any pentode family (Gardiner, Reefman, SimpleManual)
+        // Pentode: accept any pentode family (Gardiner, ExtractModel, SimpleManual)
         if (deviceType == PENTODE) {
-            return (t == GARDINER_PENTODE || t == SIMPLE_MANUAL_PENTODE ||
-                    t == REEFMAN_DERK_PENTODE || t == REEFMAN_DERK_E_PENTODE ||
+            return (t == GARDINER_PENTODE ||
+                    t == SIMPLE_MANUAL_PENTODE ||
                     t == EXTRACT_DERK_E_PENTODE);
         }
         return false;
@@ -11115,6 +11131,11 @@ void ValveWorkbench::on_stdDeviceSelection_currentIndexChanged(int index)
     selectStdDevice(1, ui->stdDeviceSelection->itemData(index).toInt());
 }
 
+void ValveWorkbench::on_stdDeviceSelection2_currentIndexChanged(int index)
+{
+    selectStdDevice(2, ui->stdDeviceSelection2->itemData(index).toInt());
+}
+
 void ValveWorkbench::on_circuitSelection_currentIndexChanged(int index)
 {
     int circuitType = ui->circuitSelection->currentData().toInt();
@@ -11336,8 +11357,9 @@ void ValveWorkbench::on_actionLoad_Model_triggered()
         desiredType = SIMPLE_TRIODE;
     } else if (mt == "GARDINER_PENTODE" || mt == "PENTODE") {
         desiredType = GARDINER_PENTODE;
-    } else if (mt == "REEFMAN_DERK_PENTODE" || mt == "REEFMAN_PENTODE") {
-        desiredType = REEFMAN_DERK_PENTODE;
+    } else if (mt == "EXTRACT_DERK_E_PENTODE" || mt == "EXTRACTDERKE" || mt == "EXTRACT_DERKE") {
+        // ExtractModel pentode exports use type "extractDerkE" in JSON (uppercased here)
+        desiredType = EXTRACT_DERK_E_PENTODE;
     }
 
     // If no explicit type, infer from parameter keys
@@ -11355,7 +11377,7 @@ void ValveWorkbench::on_actionLoad_Model_triggered()
     // As last resort, ask the user
     if (desiredType == -1) {
         QStringList options;
-        options << "COHEN_HELIE_TRIODE" << "KOREN_TRIODE" << "SIMPLE_TRIODE" << "GARDINER_PENTODE" << "REEFMAN_DERK_PENTODE";
+        options << "COHEN_HELIE_TRIODE" << "KOREN_TRIODE" << "SIMPLE_TRIODE" << "GARDINER_PENTODE" << "EXTRACT_DERK_E_PENTODE";
         bool ok = false;
         QString chosen = QInputDialog::getItem(this, tr("Select Model Type"), tr("Model type not found in JSON. Select type:"), options, 0, false, &ok);
         if (!ok || chosen.isEmpty()) {
@@ -11367,7 +11389,7 @@ void ValveWorkbench::on_actionLoad_Model_triggered()
         else if (ch == "KOREN_TRIODE") desiredType = KOREN_TRIODE;
         else if (ch == "SIMPLE_TRIODE") desiredType = SIMPLE_TRIODE;
         else if (ch == "GARDINER_PENTODE") desiredType = GARDINER_PENTODE;
-        else if (ch == "REEFMAN_DERK_PENTODE") desiredType = REEFMAN_DERK_PENTODE;
+        else if (ch == "EXTRACT_DERK_E_PENTODE") desiredType = EXTRACT_DERK_E_PENTODE;
     }
 
     if (desiredType == -1) {
@@ -11621,8 +11643,6 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                         (currentMeasurement->getDeviceType() == PENTODE &&
                          (modelType == GARDINER_PENTODE ||
                           modelType == SIMPLE_MANUAL_PENTODE ||
-                          modelType == REEFMAN_DERK_PENTODE ||
-                          modelType == REEFMAN_DERK_E_PENTODE ||
                           modelType == EXTRACT_DERK_E_PENTODE));
 
                     if (triodeMatch || pentodeMatch) {
@@ -11838,8 +11858,6 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                     currentMeasurement = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
                 } else if (model->getType() == GARDINER_PENTODE ||
                            model->getType() == SIMPLE_MANUAL_PENTODE ||
-                           model->getType() == REEFMAN_DERK_PENTODE ||
-                           model->getType() == REEFMAN_DERK_E_PENTODE ||
                            model->getType() == EXTRACT_DERK_E_PENTODE) {
                     currentMeasurement = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
                 }
@@ -11852,8 +11870,6 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 if (mType == TRIODE &&
                     (modelType == GARDINER_PENTODE ||
                      modelType == SIMPLE_MANUAL_PENTODE ||
-                     modelType == REEFMAN_DERK_PENTODE ||
-                     modelType == REEFMAN_DERK_E_PENTODE ||
                      modelType == EXTRACT_DERK_E_PENTODE)) {
                     Measurement *pentodeMeas = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
                     if (pentodeMeas) {
@@ -11904,8 +11920,6 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 (currentMeasurement->getDeviceType() == PENTODE &&
                  (model->getType() == GARDINER_PENTODE ||
                   model->getType() == SIMPLE_MANUAL_PENTODE ||
-                  model->getType() == REEFMAN_DERK_PENTODE ||
-                  model->getType() == REEFMAN_DERK_E_PENTODE ||
                   model->getType() == EXTRACT_DERK_E_PENTODE));
 
             if (triodeMatch || pentodeMatch) {
@@ -13081,8 +13095,6 @@ void ValveWorkbench::loadModel()
     // so the red model curves immediately overlay the data we just fitted,
     // rather than leaving the previous triode measurement visible.
     if (model && (model->getType() == GARDINER_PENTODE ||
-                  model->getType() == REEFMAN_DERK_PENTODE ||
-                  model->getType() == REEFMAN_DERK_E_PENTODE ||
                   model->getType() == EXTRACT_DERK_E_PENTODE ||
                   model->getType() == SIMPLE_MANUAL_PENTODE)) {
 
@@ -13286,6 +13298,9 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
         return;
     }
 
+    const int selectedPentodeModelType = preferencesDialog.getPentodeModelType();
+    const bool includeTransfers = false;
+
     auto nominalVg2Of = [](Measurement *m) -> double {
         if (!m) {
             return std::numeric_limits<double>::quiet_NaN();
@@ -13355,7 +13370,18 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
 
     QList<Measurement *> fitPentodeAnodes;
     {
-        const double targets[] = {200.0, 225.0, 250.0};
+        const Measurement *baseMeasurement = selectedPentodeAnodeMeasurement();
+        double baseVg2 = nominalVg2Of(const_cast<Measurement *>(baseMeasurement));
+        if (!std::isfinite(baseVg2) && !pentodeAnodes.isEmpty()) {
+            baseVg2 = nominalVg2Of(pentodeAnodes.first());
+        }
+
+        const double targets[] = {
+            std::isfinite(baseVg2) ? baseVg2 : 200.0,
+            std::isfinite(baseVg2) ? (baseVg2 + 25.0) : 225.0,
+            std::isfinite(baseVg2) ? (baseVg2 + 50.0) : 250.0
+        };
+
         for (double t : targets) {
             Measurement *m = findClosestPentodeAnodeByVg2(t);
             if (!m) {
@@ -13380,7 +13406,14 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
 
     Measurement *primaryAnode = nullptr;
     {
-        Measurement *m225 = findClosestPentodeAnodeByVg2(225.0);
+        const Measurement *baseMeasurement = selectedPentodeAnodeMeasurement();
+        double baseVg2 = nominalVg2Of(const_cast<Measurement *>(baseMeasurement));
+        if (!std::isfinite(baseVg2) && !pentodeAnodes.isEmpty()) {
+            baseVg2 = nominalVg2Of(pentodeAnodes.first());
+        }
+        const double primaryTarget = std::isfinite(baseVg2) ? (baseVg2 + 25.0) : 225.0;
+
+        Measurement *m225 = findClosestPentodeAnodeByVg2(primaryTarget);
         for (Measurement *m : fitPentodeAnodes) {
             if (m && m == m225) {
                 primaryAnode = m;
@@ -13423,14 +13456,14 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
     }
 
     Estimate estimate;
-    estimate.estimatePentode(seedMeasurement, triodeModel, EXTRACT_DERK_E_PENTODE, preferencesDialog.useSecondaryEmission());
+    estimate.estimatePentode(seedMeasurement, triodeModel, selectedPentodeModelType, preferencesDialog.useSecondaryEmission());
 
-    model = ModelFactory::createModel(EXTRACT_DERK_E_PENTODE);
+    model = ModelFactory::createModel(selectedPentodeModelType);
     if (!model) {
         if (ui && ui->fitPentodeButton) ui->fitPentodeButton->setEnabled(true);
         if (ui && ui->fitTriodeButton) ui->fitTriodeButton->setEnabled(true);
         if (ui && ui->processModellingTestsButton) ui->processModellingTestsButton->setEnabled(true);
-        QMessageBox::warning(this, tr("Process Modelling Tests"), tr("Failed to create ExtractModel pentode model."));
+        QMessageBox::warning(this, tr("Process Modelling Tests"), tr("Failed to create pentode model."));
         return;
     }
 
@@ -13630,13 +13663,15 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
         }
     }
 
-    for (Measurement *m : transfers) {
-        if (!m) continue;
-        const TransferCondition cond = transferConditionOf(m);
-        if (!allowedVg2Keys.empty() && allowedVg2Keys.find(cond.vg2Key) == allowedVg2Keys.end()) {
-            continue;
+    if (includeTransfers) {
+        for (Measurement *m : transfers) {
+            if (!m) continue;
+            const TransferCondition cond = transferConditionOf(m);
+            if (!allowedVg2Keys.empty() && allowedVg2Keys.find(cond.vg2Key) == allowedVg2Keys.end()) {
+                continue;
+            }
+            transferGroups[cond].append(m);
         }
-        transferGroups[cond].append(m);
     }
 
     processModellingTestsBinnedTransfers.clear();
@@ -13651,26 +13686,28 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
     QList<TransferGroupReport> transferReport;
 
     int transferBinnedPoints = 0;
-    for (auto it = transferGroups.begin(); it != transferGroups.end(); ++it) {
-        const TransferCondition &cond = it->first;
-        const QList<Measurement *> &group = it->second;
-        std::unique_ptr<Measurement> binned = makeBinnedTransfer(group);
-        int points = 0;
-        if (binned) {
-            for (int si = 0; si < binned->count(); ++si) {
-                Sweep *sw = binned->at(si);
-                if (sw) points += sw->count();
+    if (includeTransfers) {
+        for (auto it = transferGroups.begin(); it != transferGroups.end(); ++it) {
+            const TransferCondition &cond = it->first;
+            const QList<Measurement *> &group = it->second;
+            std::unique_ptr<Measurement> binned = makeBinnedTransfer(group);
+            int points = 0;
+            if (binned) {
+                for (int si = 0; si < binned->count(); ++si) {
+                    Sweep *sw = binned->at(si);
+                    if (sw) points += sw->count();
+                }
+                transferBinnedPoints += points;
+                model->addMeasurement(binned.get());
+                processModellingTestsBinnedTransfers.emplace_back(std::move(binned));
             }
-            transferBinnedPoints += points;
-            model->addMeasurement(binned.get());
-            processModellingTestsBinnedTransfers.emplace_back(std::move(binned));
+            TransferGroupReport r;
+            r.vaKey = cond.vaKey;
+            r.vg2Key = cond.vg2Key;
+            r.measurements = group.size();
+            r.binnedPoints = points;
+            transferReport.append(r);
         }
-        TransferGroupReport r;
-        r.vaKey = cond.vaKey;
-        r.vg2Key = cond.vg2Key;
-        r.measurements = group.size();
-        r.binnedPoints = points;
-        transferReport.append(r);
     }
 
     QStringList used;
@@ -13680,7 +13717,10 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
     for (Measurement *m : fitPentodeAnodes) {
         used << tr("  - %1").arg(m ? m->measurementName() : tr("(null)"));
     }
-    if (!transfers.isEmpty()) {
+    if (!includeTransfers && !transfers.isEmpty()) {
+        used << tr("Skipped transfer measurements: %1").arg(transfers.size());
+    }
+    if (includeTransfers && !transfers.isEmpty()) {
         used << tr("Included transfer measurements: %1 (total binned points: %2)")
                     .arg(transfers.size())
                     .arg(transferBinnedPoints);
@@ -14726,8 +14766,6 @@ void ValveWorkbench::exportFittedModelToDevices()
     int exportDeviceType = deviceType;
     const int exportModelType = toExport->getType();
     switch (exportModelType) {
-    case REEFMAN_DERK_PENTODE:
-    case REEFMAN_DERK_E_PENTODE:
     case EXTRACT_DERK_E_PENTODE:
     case GARDINER_PENTODE:
     case SIMPLE_MANUAL_PENTODE:
@@ -15159,7 +15197,7 @@ void ValveWorkbench::exportFittedModelToDevices()
     if (toExport) {
         int mtype = toExport->getType();
         qInfo("EXPORT MODEL: type=%d name='%s'", mtype, deviceName.toUtf8().constData());
-        if (mtype == GARDINER_PENTODE || mtype == REEFMAN_DERK_PENTODE) {
+        if (mtype == GARDINER_PENTODE || mtype == EXTRACT_DERK_E_PENTODE || mtype == SIMPLE_MANUAL_PENTODE) {
             qInfo("  EXPORT CORE: mu=%.12f kg1=%.12f x=%.12f kp=%.12f kvb=%.12f kvb1=%.12f vct=%.12f",
                   toExport->getParameter(PAR_MU),
                   toExport->getParameter(PAR_KG1),

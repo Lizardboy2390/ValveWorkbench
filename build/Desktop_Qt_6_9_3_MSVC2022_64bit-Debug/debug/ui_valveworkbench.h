@@ -412,13 +412,15 @@ public:
 
         circuitSelection = new QComboBox(tab);
         circuitSelection->setObjectName("circuitSelection");
-        QSizePolicy sizePolicy2(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+        QSizePolicy sizePolicy2(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Fixed);
         sizePolicy2.setHorizontalStretch(0);
         sizePolicy2.setVerticalStretch(0);
         sizePolicy2.setHeightForWidth(circuitSelection->sizePolicy().hasHeightForWidth());
         circuitSelection->setSizePolicy(sizePolicy2);
-        circuitSelection->setMinimumSize(QSize(160, 0));
-        circuitSelection->setMaximumSize(QSize(160, 16777215));
+        circuitSelection->setMinimumSize(QSize(300, 0));
+        circuitSelection->setMaximumSize(QSize(16777215, 16777215));
+        circuitSelection->setMinimumContentsLength(30);
+        circuitSelection->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
 
         horizontalLayout_4->addWidget(circuitSelection);
 
@@ -434,8 +436,11 @@ public:
 
         stdDeviceSelection = new QComboBox(tab);
         stdDeviceSelection->setObjectName("stdDeviceSelection");
-        sizePolicy2.setHeightForWidth(stdDeviceSelection->sizePolicy().hasHeightForWidth());
-        stdDeviceSelection->setSizePolicy(sizePolicy2);
+        QSizePolicy sizePolicy3(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+        sizePolicy3.setHorizontalStretch(0);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(stdDeviceSelection->sizePolicy().hasHeightForWidth());
+        stdDeviceSelection->setSizePolicy(sizePolicy3);
         stdDeviceSelection->setMinimumSize(QSize(160, 0));
         stdDeviceSelection->setMaximumSize(QSize(160, 16777215));
 
@@ -453,7 +458,10 @@ public:
 
         stdDeviceSelection2 = new QComboBox(tab);
         stdDeviceSelection2->setObjectName("stdDeviceSelection2");
+        sizePolicy3.setHeightForWidth(stdDeviceSelection2->sizePolicy().hasHeightForWidth());
+        stdDeviceSelection2->setSizePolicy(sizePolicy3);
         stdDeviceSelection2->setMinimumSize(QSize(160, 0));
+        stdDeviceSelection2->setMaximumSize(QSize(160, 16777215));
 
         horizontalLayout_17->addWidget(stdDeviceSelection2);
 
@@ -481,8 +489,8 @@ public:
 
         cir1Value = new QLineEdit(tab);
         cir1Value->setObjectName("cir1Value");
-        sizePolicy2.setHeightForWidth(cir1Value->sizePolicy().hasHeightForWidth());
-        cir1Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir1Value->sizePolicy().hasHeightForWidth());
+        cir1Value->setSizePolicy(sizePolicy3);
         cir1Value->setMinimumSize(QSize(60, 0));
         cir1Value->setMaximumSize(QSize(60, 16777215));
 
@@ -500,8 +508,8 @@ public:
 
         cir2Value = new QLineEdit(tab);
         cir2Value->setObjectName("cir2Value");
-        sizePolicy2.setHeightForWidth(cir2Value->sizePolicy().hasHeightForWidth());
-        cir2Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir2Value->sizePolicy().hasHeightForWidth());
+        cir2Value->setSizePolicy(sizePolicy3);
         cir2Value->setMinimumSize(QSize(60, 0));
         cir2Value->setMaximumSize(QSize(60, 16777215));
 
@@ -519,8 +527,8 @@ public:
 
         cir3Value = new QLineEdit(tab);
         cir3Value->setObjectName("cir3Value");
-        sizePolicy2.setHeightForWidth(cir3Value->sizePolicy().hasHeightForWidth());
-        cir3Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir3Value->sizePolicy().hasHeightForWidth());
+        cir3Value->setSizePolicy(sizePolicy3);
         cir3Value->setMinimumSize(QSize(60, 0));
         cir3Value->setMaximumSize(QSize(60, 16777215));
 
@@ -538,8 +546,8 @@ public:
 
         cir4Value = new QLineEdit(tab);
         cir4Value->setObjectName("cir4Value");
-        sizePolicy2.setHeightForWidth(cir4Value->sizePolicy().hasHeightForWidth());
-        cir4Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir4Value->sizePolicy().hasHeightForWidth());
+        cir4Value->setSizePolicy(sizePolicy3);
         cir4Value->setMinimumSize(QSize(60, 0));
         cir4Value->setMaximumSize(QSize(60, 16777215));
 
@@ -557,8 +565,8 @@ public:
 
         cir5Value = new QLineEdit(tab);
         cir5Value->setObjectName("cir5Value");
-        sizePolicy2.setHeightForWidth(cir5Value->sizePolicy().hasHeightForWidth());
-        cir5Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir5Value->sizePolicy().hasHeightForWidth());
+        cir5Value->setSizePolicy(sizePolicy3);
         cir5Value->setMinimumSize(QSize(60, 0));
         cir5Value->setMaximumSize(QSize(60, 16777215));
 
@@ -576,8 +584,8 @@ public:
 
         cir6Value = new QLineEdit(tab);
         cir6Value->setObjectName("cir6Value");
-        sizePolicy2.setHeightForWidth(cir6Value->sizePolicy().hasHeightForWidth());
-        cir6Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir6Value->sizePolicy().hasHeightForWidth());
+        cir6Value->setSizePolicy(sizePolicy3);
         cir6Value->setMinimumSize(QSize(60, 0));
         cir6Value->setMaximumSize(QSize(60, 16777215));
 
@@ -595,8 +603,8 @@ public:
 
         cir7Value = new QLineEdit(tab);
         cir7Value->setObjectName("cir7Value");
-        sizePolicy2.setHeightForWidth(cir7Value->sizePolicy().hasHeightForWidth());
-        cir7Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir7Value->sizePolicy().hasHeightForWidth());
+        cir7Value->setSizePolicy(sizePolicy3);
         cir7Value->setMinimumSize(QSize(60, 0));
         cir7Value->setMaximumSize(QSize(60, 16777215));
 
@@ -609,18 +617,18 @@ public:
         horizontalLayout_11->setObjectName("horizontalLayout_11");
         cir8Label = new QLabel(tab);
         cir8Label->setObjectName("cir8Label");
-        QSizePolicy sizePolicy3(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
-        sizePolicy3.setHorizontalStretch(0);
-        sizePolicy3.setVerticalStretch(0);
-        sizePolicy3.setHeightForWidth(cir8Label->sizePolicy().hasHeightForWidth());
-        cir8Label->setSizePolicy(sizePolicy3);
+        QSizePolicy sizePolicy4(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
+        sizePolicy4.setHorizontalStretch(0);
+        sizePolicy4.setVerticalStretch(0);
+        sizePolicy4.setHeightForWidth(cir8Label->sizePolicy().hasHeightForWidth());
+        cir8Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_11->addWidget(cir8Label);
 
         cir8Value = new QLineEdit(tab);
         cir8Value->setObjectName("cir8Value");
-        sizePolicy2.setHeightForWidth(cir8Value->sizePolicy().hasHeightForWidth());
-        cir8Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir8Value->sizePolicy().hasHeightForWidth());
+        cir8Value->setSizePolicy(sizePolicy3);
         cir8Value->setMinimumSize(QSize(60, 0));
         cir8Value->setMaximumSize(QSize(60, 16777215));
 
@@ -633,8 +641,8 @@ public:
         horizontalLayout_14->setObjectName("horizontalLayout_14");
         cir9Label = new QLabel(tab);
         cir9Label->setObjectName("cir9Label");
-        sizePolicy3.setHeightForWidth(cir9Label->sizePolicy().hasHeightForWidth());
-        cir9Label->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(cir9Label->sizePolicy().hasHeightForWidth());
+        cir9Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_14->addWidget(cir9Label);
 
@@ -651,8 +659,8 @@ public:
         horizontalLayout_15->setObjectName("horizontalLayout_15");
         cir10Label = new QLabel(tab);
         cir10Label->setObjectName("cir10Label");
-        sizePolicy3.setHeightForWidth(cir10Label->sizePolicy().hasHeightForWidth());
-        cir10Label->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(cir10Label->sizePolicy().hasHeightForWidth());
+        cir10Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_15->addWidget(cir10Label);
 
@@ -669,8 +677,8 @@ public:
         horizontalLayout_18->setObjectName("horizontalLayout_18");
         cir11Label = new QLabel(tab);
         cir11Label->setObjectName("cir11Label");
-        sizePolicy3.setHeightForWidth(cir11Label->sizePolicy().hasHeightForWidth());
-        cir11Label->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(cir11Label->sizePolicy().hasHeightForWidth());
+        cir11Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_18->addWidget(cir11Label);
 
@@ -687,8 +695,8 @@ public:
         horizontalLayout_19->setObjectName("horizontalLayout_19");
         cir12Label = new QLabel(tab);
         cir12Label->setObjectName("cir12Label");
-        sizePolicy3.setHeightForWidth(cir12Label->sizePolicy().hasHeightForWidth());
-        cir12Label->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(cir12Label->sizePolicy().hasHeightForWidth());
+        cir12Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_19->addWidget(cir12Label);
 
@@ -945,16 +953,16 @@ public:
         horizontalLayout_26->setObjectName("horizontalLayout_26");
         deviceTypeLabel_2 = new QLabel(layoutWidget_2);
         deviceTypeLabel_2->setObjectName("deviceTypeLabel_2");
-        sizePolicy3.setHeightForWidth(deviceTypeLabel_2->sizePolicy().hasHeightForWidth());
-        deviceTypeLabel_2->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(deviceTypeLabel_2->sizePolicy().hasHeightForWidth());
+        deviceTypeLabel_2->setSizePolicy(sizePolicy4);
         deviceTypeLabel_2->setMinimumSize(QSize(100, 0));
 
         horizontalLayout_26->addWidget(deviceTypeLabel_2);
 
         deviceType = new QComboBox(layoutWidget_2);
         deviceType->setObjectName("deviceType");
-        sizePolicy2.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
-        deviceType->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
+        deviceType->setSizePolicy(sizePolicy3);
         deviceType->setMinimumSize(QSize(160, 0));
         deviceType->setMaximumSize(QSize(160, 16777215));
 
@@ -972,8 +980,8 @@ public:
 
         testType = new QComboBox(layoutWidget_2);
         testType->setObjectName("testType");
-        sizePolicy2.setHeightForWidth(testType->sizePolicy().hasHeightForWidth());
-        testType->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(testType->sizePolicy().hasHeightForWidth());
+        testType->setSizePolicy(sizePolicy3);
         testType->setMinimumSize(QSize(160, 0));
         testType->setMaximumSize(QSize(160, 16777215));
 
@@ -999,8 +1007,8 @@ public:
 
         label_15 = new QLabel(layoutWidget_2);
         label_15->setObjectName("label_15");
-        sizePolicy2.setHeightForWidth(label_15->sizePolicy().hasHeightForWidth());
-        label_15->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(label_15->sizePolicy().hasHeightForWidth());
+        label_15->setSizePolicy(sizePolicy3);
         label_15->setMinimumSize(QSize(50, 20));
         label_15->setMaximumSize(QSize(50, 20));
         label_15->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -1009,11 +1017,11 @@ public:
 
         label_16 = new QLabel(layoutWidget_2);
         label_16->setObjectName("label_16");
-        QSizePolicy sizePolicy4(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Preferred);
-        sizePolicy4.setHorizontalStretch(0);
-        sizePolicy4.setVerticalStretch(0);
-        sizePolicy4.setHeightForWidth(label_16->sizePolicy().hasHeightForWidth());
-        label_16->setSizePolicy(sizePolicy4);
+        QSizePolicy sizePolicy5(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Preferred);
+        sizePolicy5.setHorizontalStretch(0);
+        sizePolicy5.setVerticalStretch(0);
+        sizePolicy5.setHeightForWidth(label_16->sizePolicy().hasHeightForWidth());
+        label_16->setSizePolicy(sizePolicy5);
         label_16->setMinimumSize(QSize(50, 0));
         label_16->setMaximumSize(QSize(50, 16777215));
         label_16->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -1022,8 +1030,8 @@ public:
 
         label_17 = new QLabel(layoutWidget_2);
         label_17->setObjectName("label_17");
-        sizePolicy4.setHeightForWidth(label_17->sizePolicy().hasHeightForWidth());
-        label_17->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(label_17->sizePolicy().hasHeightForWidth());
+        label_17->setSizePolicy(sizePolicy5);
         label_17->setMinimumSize(QSize(50, 0));
         label_17->setMaximumSize(QSize(50, 16777215));
         label_17->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -1037,19 +1045,19 @@ public:
         horizontalLayout_30->setObjectName("horizontalLayout_30");
         anodeLabel = new QLabel(layoutWidget_2);
         anodeLabel->setObjectName("anodeLabel");
-        QSizePolicy sizePolicy5(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
-        sizePolicy5.setHorizontalStretch(100);
-        sizePolicy5.setVerticalStretch(0);
-        sizePolicy5.setHeightForWidth(anodeLabel->sizePolicy().hasHeightForWidth());
-        anodeLabel->setSizePolicy(sizePolicy5);
+        QSizePolicy sizePolicy6(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
+        sizePolicy6.setHorizontalStretch(100);
+        sizePolicy6.setVerticalStretch(0);
+        sizePolicy6.setHeightForWidth(anodeLabel->sizePolicy().hasHeightForWidth());
+        anodeLabel->setSizePolicy(sizePolicy6);
         anodeLabel->setMinimumSize(QSize(100, 0));
 
         horizontalLayout_30->addWidget(anodeLabel);
 
         anodeStart = new QLineEdit(layoutWidget_2);
         anodeStart->setObjectName("anodeStart");
-        sizePolicy2.setHeightForWidth(anodeStart->sizePolicy().hasHeightForWidth());
-        anodeStart->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(anodeStart->sizePolicy().hasHeightForWidth());
+        anodeStart->setSizePolicy(sizePolicy3);
         anodeStart->setMinimumSize(QSize(50, 0));
         anodeStart->setMaximumSize(QSize(50, 16777215));
 
@@ -1057,16 +1065,16 @@ public:
 
         anodeStop = new QLineEdit(layoutWidget_2);
         anodeStop->setObjectName("anodeStop");
-        sizePolicy2.setHeightForWidth(anodeStop->sizePolicy().hasHeightForWidth());
-        anodeStop->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(anodeStop->sizePolicy().hasHeightForWidth());
+        anodeStop->setSizePolicy(sizePolicy3);
         anodeStop->setMaximumSize(QSize(50, 16777215));
 
         horizontalLayout_30->addWidget(anodeStop);
 
         anodeStep = new QLineEdit(layoutWidget_2);
         anodeStep->setObjectName("anodeStep");
-        sizePolicy2.setHeightForWidth(anodeStep->sizePolicy().hasHeightForWidth());
-        anodeStep->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(anodeStep->sizePolicy().hasHeightForWidth());
+        anodeStep->setSizePolicy(sizePolicy3);
         anodeStep->setMaximumSize(QSize(50, 16777215));
 
         horizontalLayout_30->addWidget(anodeStep);
@@ -1078,16 +1086,16 @@ public:
         gridGroup->setObjectName("gridGroup");
         gridLabel = new QLabel(layoutWidget_2);
         gridLabel->setObjectName("gridLabel");
-        sizePolicy3.setHeightForWidth(gridLabel->sizePolicy().hasHeightForWidth());
-        gridLabel->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(gridLabel->sizePolicy().hasHeightForWidth());
+        gridLabel->setSizePolicy(sizePolicy4);
         gridLabel->setMinimumSize(QSize(100, 0));
 
         gridGroup->addWidget(gridLabel);
 
         gridStart = new QLineEdit(layoutWidget_2);
         gridStart->setObjectName("gridStart");
-        sizePolicy2.setHeightForWidth(gridStart->sizePolicy().hasHeightForWidth());
-        gridStart->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(gridStart->sizePolicy().hasHeightForWidth());
+        gridStart->setSizePolicy(sizePolicy3);
         gridStart->setMinimumSize(QSize(50, 0));
         gridStart->setMaximumSize(QSize(50, 16777215));
 
@@ -1095,8 +1103,8 @@ public:
 
         gridStop = new QLineEdit(layoutWidget_2);
         gridStop->setObjectName("gridStop");
-        sizePolicy2.setHeightForWidth(gridStop->sizePolicy().hasHeightForWidth());
-        gridStop->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(gridStop->sizePolicy().hasHeightForWidth());
+        gridStop->setSizePolicy(sizePolicy3);
         gridStop->setMinimumSize(QSize(50, 0));
         gridStop->setMaximumSize(QSize(50, 16777215));
 
@@ -1104,8 +1112,8 @@ public:
 
         gridStep = new QLineEdit(layoutWidget_2);
         gridStep->setObjectName("gridStep");
-        sizePolicy2.setHeightForWidth(gridStep->sizePolicy().hasHeightForWidth());
-        gridStep->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(gridStep->sizePolicy().hasHeightForWidth());
+        gridStep->setSizePolicy(sizePolicy3);
         gridStep->setMinimumSize(QSize(50, 0));
         gridStep->setMaximumSize(QSize(50, 16777215));
 
@@ -1118,16 +1126,16 @@ public:
         screenGroup_2->setObjectName("screenGroup_2");
         screenLabel = new QLabel(layoutWidget_2);
         screenLabel->setObjectName("screenLabel");
-        sizePolicy3.setHeightForWidth(screenLabel->sizePolicy().hasHeightForWidth());
-        screenLabel->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(screenLabel->sizePolicy().hasHeightForWidth());
+        screenLabel->setSizePolicy(sizePolicy4);
         screenLabel->setMinimumSize(QSize(100, 0));
 
         screenGroup_2->addWidget(screenLabel);
 
         screenStart = new QLineEdit(layoutWidget_2);
         screenStart->setObjectName("screenStart");
-        sizePolicy2.setHeightForWidth(screenStart->sizePolicy().hasHeightForWidth());
-        screenStart->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(screenStart->sizePolicy().hasHeightForWidth());
+        screenStart->setSizePolicy(sizePolicy3);
         screenStart->setMinimumSize(QSize(50, 0));
         screenStart->setMaximumSize(QSize(50, 16777215));
 
@@ -1135,8 +1143,8 @@ public:
 
         screenStop = new QLineEdit(layoutWidget_2);
         screenStop->setObjectName("screenStop");
-        sizePolicy2.setHeightForWidth(screenStop->sizePolicy().hasHeightForWidth());
-        screenStop->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(screenStop->sizePolicy().hasHeightForWidth());
+        screenStop->setSizePolicy(sizePolicy3);
         screenStop->setMinimumSize(QSize(50, 0));
         screenStop->setMaximumSize(QSize(50, 16777215));
 
@@ -1144,8 +1152,8 @@ public:
 
         screenStep = new QLineEdit(layoutWidget_2);
         screenStep->setObjectName("screenStep");
-        sizePolicy2.setHeightForWidth(screenStep->sizePolicy().hasHeightForWidth());
-        screenStep->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(screenStep->sizePolicy().hasHeightForWidth());
+        screenStep->setSizePolicy(sizePolicy3);
         screenStep->setMinimumSize(QSize(50, 0));
         screenStep->setMaximumSize(QSize(50, 16777215));
 
@@ -1160,8 +1168,8 @@ public:
         horizontalLayout_31->setObjectName("horizontalLayout_31");
         label_18 = new QLabel(layoutWidget_2);
         label_18->setObjectName("label_18");
-        sizePolicy3.setHeightForWidth(label_18->sizePolicy().hasHeightForWidth());
-        label_18->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(label_18->sizePolicy().hasHeightForWidth());
+        label_18->setSizePolicy(sizePolicy4);
         label_18->setMinimumSize(QSize(120, 0));
         label_18->setMaximumSize(QSize(16777215, 16777215));
 
@@ -1169,8 +1177,8 @@ public:
 
         iaMax = new QLineEdit(layoutWidget_2);
         iaMax->setObjectName("iaMax");
-        sizePolicy2.setHeightForWidth(iaMax->sizePolicy().hasHeightForWidth());
-        iaMax->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(iaMax->sizePolicy().hasHeightForWidth());
+        iaMax->setSizePolicy(sizePolicy3);
         iaMax->setMinimumSize(QSize(50, 0));
         iaMax->setMaximumSize(QSize(50, 16777215));
 
@@ -1187,8 +1195,8 @@ public:
         horizontalLayout_32->setObjectName("horizontalLayout_32");
         label_19 = new QLabel(layoutWidget_2);
         label_19->setObjectName("label_19");
-        sizePolicy3.setHeightForWidth(label_19->sizePolicy().hasHeightForWidth());
-        label_19->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(label_19->sizePolicy().hasHeightForWidth());
+        label_19->setSizePolicy(sizePolicy4);
         label_19->setMinimumSize(QSize(120, 0));
         label_19->setMaximumSize(QSize(16777215, 16777215));
 
@@ -1196,8 +1204,8 @@ public:
 
         pMax = new QLineEdit(layoutWidget_2);
         pMax->setObjectName("pMax");
-        sizePolicy2.setHeightForWidth(pMax->sizePolicy().hasHeightForWidth());
-        pMax->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(pMax->sizePolicy().hasHeightForWidth());
+        pMax->setSizePolicy(sizePolicy3);
         pMax->setMinimumSize(QSize(50, 0));
         pMax->setMaximumSize(QSize(50, 16777215));
 
@@ -1226,8 +1234,8 @@ public:
         horizontalLayout_33->setObjectName("horizontalLayout_33");
         heaterVLabel = new QLabel(layoutWidget_2);
         heaterVLabel->setObjectName("heaterVLabel");
-        sizePolicy4.setHeightForWidth(heaterVLabel->sizePolicy().hasHeightForWidth());
-        heaterVLabel->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(heaterVLabel->sizePolicy().hasHeightForWidth());
+        heaterVLabel->setSizePolicy(sizePolicy5);
         heaterVLabel->setMinimumSize(QSize(100, 0));
 
         horizontalLayout_33->addWidget(heaterVLabel);
@@ -1238,11 +1246,11 @@ public:
 
         heaterVlcd = new QLCDNumber(layoutWidget_2);
         heaterVlcd->setObjectName("heaterVlcd");
-        QSizePolicy sizePolicy6(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Minimum);
-        sizePolicy6.setHorizontalStretch(0);
-        sizePolicy6.setVerticalStretch(0);
-        sizePolicy6.setHeightForWidth(heaterVlcd->sizePolicy().hasHeightForWidth());
-        heaterVlcd->setSizePolicy(sizePolicy6);
+        QSizePolicy sizePolicy7(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Minimum);
+        sizePolicy7.setHorizontalStretch(0);
+        sizePolicy7.setVerticalStretch(0);
+        sizePolicy7.setHeightForWidth(heaterVlcd->sizePolicy().hasHeightForWidth());
+        heaterVlcd->setSizePolicy(sizePolicy7);
         heaterVlcd->setMinimumSize(QSize(50, 0));
         heaterVlcd->setDigitCount(6);
         heaterVlcd->setSegmentStyle(QLCDNumber::SegmentStyle::Flat);
@@ -1260,8 +1268,8 @@ public:
         horizontalLayout_34->setObjectName("horizontalLayout_34");
         heaterILabel = new QLabel(layoutWidget_2);
         heaterILabel->setObjectName("heaterILabel");
-        sizePolicy4.setHeightForWidth(heaterILabel->sizePolicy().hasHeightForWidth());
-        heaterILabel->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(heaterILabel->sizePolicy().hasHeightForWidth());
+        heaterILabel->setSizePolicy(sizePolicy5);
         heaterILabel->setMinimumSize(QSize(100, 0));
 
         horizontalLayout_34->addWidget(heaterILabel);
@@ -1272,8 +1280,8 @@ public:
 
         heaterIlcd = new QLCDNumber(layoutWidget_2);
         heaterIlcd->setObjectName("heaterIlcd");
-        sizePolicy6.setHeightForWidth(heaterIlcd->sizePolicy().hasHeightForWidth());
-        heaterIlcd->setSizePolicy(sizePolicy6);
+        sizePolicy7.setHeightForWidth(heaterIlcd->sizePolicy().hasHeightForWidth());
+        heaterIlcd->setSizePolicy(sizePolicy7);
         heaterIlcd->setMinimumSize(QSize(50, 0));
         heaterIlcd->setLineWidth(1);
         heaterIlcd->setDigitCount(6);
@@ -1633,8 +1641,8 @@ public:
         verticalLayout_2->setObjectName("verticalLayout_2");
         graphicsView = new QGraphicsView(horizontalLayoutWidget);
         graphicsView->setObjectName("graphicsView");
-        sizePolicy2.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
-        graphicsView->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
+        graphicsView->setSizePolicy(sizePolicy3);
         graphicsView->setMinimumSize(QSize(720, 640));
         graphicsView->setMaximumSize(QSize(720, 640));
         graphicsView->setSizeIncrement(QSize(11, 0));

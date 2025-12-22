@@ -350,7 +350,13 @@ void GardinerPentode::fromJson(QJsonObject source)
     CohenHelieTriode::fromJson(source);
     
     if (source.contains("kg2") && source["kg2"].isDouble()) {
-        parameter[PAR_KG2]->setValue(source["kg2"].toDouble() / 1000.0);
+        const double kg2Raw = source["kg2"].toDouble();
+        // Backward compatible load:
+        // - Legacy Gardiner presets stored Kg2 in the "thousands" range (e.g. ~5800)
+        //   and expect a /1000 conversion to the internal solver/plot domain.
+        // - Newer presets may already store the normalized value (~1..30).
+        // Treat values > 100 as legacy-scaled; otherwise take as already-normalized.
+        parameter[PAR_KG2]->setValue((kg2Raw > 100.0) ? (kg2Raw / 1000.0) : kg2Raw);
     }
     
     if (source.contains("a") && source["a"].isDouble()) {
@@ -370,7 +376,9 @@ void GardinerPentode::fromJson(QJsonObject source)
     }
     
     if (source.contains("kg2a") && source["kg2a"].isDouble()) {
-        parameter[PAR_KG2A]->setValue(source["kg2a"].toDouble() / 1000.0);
+        const double kg2aRaw = source["kg2a"].toDouble();
+        // Same backward compatible semantics as Kg2 above.
+        parameter[PAR_KG2A]->setValue((kg2aRaw > 100.0) ? (kg2aRaw / 1000.0) : kg2aRaw);
     }
     
     if (source.contains("tau") && source["tau"].isDouble()) {

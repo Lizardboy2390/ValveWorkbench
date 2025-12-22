@@ -39,8 +39,10 @@ TriodeCcDccfTwoStage::TriodeCcDccfTwoStage()
 
 int TriodeCcDccfTwoStage::getDeviceType(int index)
 {
-    // Single triode device reused for both stages
     if (index == 1) {
+        return TRIODE;
+    }
+    if (index == 2) {
         return TRIODE;
     }
     return -1;
@@ -78,7 +80,7 @@ void TriodeCcDccfTwoStage::updateUI(QLabel *labels[], QLineEdit *values[])
         }
 
         labels[row]->setText(labelText);
-        if (!device1) {
+        if (!device1 || !device2) {
             values[row]->setText("N/A");
         } else if (paramIndex >= 0 && parameter[paramIndex]) {
             values[row]->setText(QString::number(parameter[paramIndex]->getValue(), 'f', decimals));
@@ -133,7 +135,7 @@ void TriodeCcDccfTwoStage::updateUI(QLabel *labels[], QLineEdit *values[])
                                     ? parameter[TCC_DCCF_HEADROOM2]->getValue()
                                     : 0.0;
 
-        if (!device1 || headroom <= 0.0 || !(followerThdPct > 0.0) || !std::isfinite(followerThdPct)) {
+        if (!device1 || !device2 || headroom <= 0.0 || !(followerThdPct > 0.0) || !std::isfinite(followerThdPct)) {
             // No valid THD metric: hide the row to avoid stale values.
             values[15]->setText(QString());
             labels[15]->setStyleSheet(QString());
@@ -301,9 +303,11 @@ bool TriodeCcDccfTwoStage::computeStage2(double va1,
 {
     gain2 = 0.0;
 
-    if (!device1) {
+    if (!device1 || !device2) {
         return false;
     }
+
+    Device *stage2Device = device2;
 
     const double vb2 = parameter[TCC_DCCF_VB2]->getValue();
     const double ra2 = parameter[TCC_DCCF_RA2]->getValue();
@@ -350,10 +354,10 @@ bool TriodeCcDccfTwoStage::computeStage2(double va1,
 
         // Clamp grid bias into the model's supported range, matching other
         // triode circuits (negative for normal operation, up to 0 V).
-        const double vg_min   = -device1->getVg1Max();
+        const double vg_min   = -stage2Device->getVg1Max();
         const double vg_param = std::clamp(vgk, vg_min, 0.0);
 
-        const double va_model = device1->anodeVoltage(ia_mA, vg_param);
+        const double va_model = stage2Device->anodeVoltage(ia_mA, vg_param);
         if (std::isfinite(va_model) && va_model > 0.0001 && va_model <= vb2 * 2.0) {
             cathodeData2.push_back(QPointF(va_model, ia_mA));
         }
@@ -430,7 +434,7 @@ void TriodeCcDccfTwoStage::update(int index)
     // Reset cached follower THD for this update pass.
     followerThdPct = 0.0;
 
-    if (!device1) {
+    if (!device1 || !device2) {
         for (int i = TCC_DCCF_VA1; i <= TCC_DCCF_GAIN2; ++i) {
             if (parameter[i]) {
                 parameter[i]->setValue(0.0);
@@ -496,9 +500,11 @@ void TriodeCcDccfTwoStage::update(int index)
 
 void TriodeCcDccfTwoStage::plot(Plot *plot)
 {
-    if (!device1) {
+    if (!device1 || !device2) {
         return;
     }
+
+    Device *stage2Device = device2;
 
     // Clear previous overlays for this circuit.
     if (anodeLoadLine) {
@@ -524,8 +530,8 @@ void TriodeCcDccfTwoStage::plot(Plot *plot)
 
     // Ensure axes are set if this is the first overlay on the shared scene,
     // mirroring the behaviour of other Designer circuits.
-    const double vaMax = device1->getVaMax();
-    const double iaMax = device1->getIaMax();
+    const double vaMax = stage2Device->getVaMax();
+    const double iaMax = stage2Device->getIaMax();
     const double xMajor = std::max(5.0, vaMax / 10.0);
     const double yMajor = std::max(0.5, iaMax / 10.0);
 
@@ -578,10 +584,10 @@ void TriodeCcDccfTwoStage::plot(Plot *plot)
         const double vk_eq = ia_A * rk_eq;
         const double vgk   = va1 - vk_eq; // grid-to-cathode voltage
 
-        const double vg_min   = -device1->getVg1Max();
+        const double vg_min   = -stage2Device->getVg1Max();
         const double vg_param = std::clamp(vgk, vg_min, 0.0);
 
-        const double va_model = device1->anodeVoltage(ia_mA, vg_param);
+        const double va_model = stage2Device->anodeVoltage(ia_mA, vg_param);
         if (std::isfinite(va_model) && va_model > 0.0001 && va_model <= vb2 * 2.0) {
             cathodeData2.push_back(QPointF(va_model, ia_mA));
         }
@@ -709,17 +715,19 @@ void TriodeCcDccfTwoStage::plot(Plot *plot)
 }
 
 bool TriodeCcDccfTwoStage::computeFollowerHeadroomHarmonicCurrents(double headroomVpk,
-                                                                    double &Ia,
-                                                                    double &Ib,
-                                                                    double &Ic,
-                                                                    double &Id,
-                                                                    double &Ie) const
+                                                                   double &Ia,
+                                                                   double &Ib,
+                                                                   double &Ic,
+                                                                   double &Id,
+                                                                   double &Ie) const
 {
     Ia = Ib = Ic = Id = Ie = 0.0;
 
-    if (!device1 || headroomVpk <= 0.0) {
+    if (!device1 || !device2 || headroomVpk <= 0.0) {
         return false;
     }
+
+    Device *stage2Device = device2;
 
     const double vb2    = parameter[TCC_DCCF_VB2] ? parameter[TCC_DCCF_VB2]->getValue() : 0.0;
     const double va2_op = parameter[TCC_DCCF_VA2] ? parameter[TCC_DCCF_VA2]->getValue() : 0.0;
@@ -730,19 +738,19 @@ bool TriodeCcDccfTwoStage::computeFollowerHeadroomHarmonicCurrents(double headro
         return false;
     }
 
-    const double maxHeadroom = 0.9 * std::max(1.0, std::min(vb2, device1->getVaMax()));
+    const double maxHeadroom = 0.9 * std::max(1.0, std::min(vb2, stage2Device->getVaMax()));
     const double vpk = std::min(std::max(0.0, headroomVpk), maxHeadroom);
     if (vpk <= 0.0) {
         return false;
     }
 
-    const double vgMin      = -device1->getVg1Max();
+    const double vgMin      = -stage2Device->getVg1Max();
     const double vgridkRaw  = va1 - vk2;
     const double vg0        = std::clamp(vgridkRaw, vgMin, 0.0);
 
     auto sampleCurrent = [&](double va) -> double {
-        const double vaClamped = std::clamp(va, 0.0, device1->getVaMax());
-        const double ia_mA     = device1->anodeCurrent(vaClamped, vg0);
+        const double vaClamped = std::clamp(va, 0.0, stage2Device->getVaMax());
+        const double ia_mA     = stage2Device->anodeCurrent(vaClamped, vg0);
         if (!std::isfinite(ia_mA) || ia_mA < 0.0) {
             return 0.0;
         }
@@ -769,15 +777,15 @@ bool TriodeCcDccfTwoStage::computeFollowerHeadroomHarmonicCurrents(double headro
 }
 
 bool TriodeCcDccfTwoStage::simulateFollowerHarmonicsTimeDomain(double headroomVpk,
-                                                                double &hd2,
-                                                                double &hd3,
-                                                                double &hd4,
-                                                                double &hd5,
-                                                                double &thd) const
+                                                               double &hd2,
+                                                               double &hd3,
+                                                               double &hd4,
+                                                               double &hd5,
+                                                               double &thd) const
 {
     hd2 = hd3 = hd4 = hd5 = thd = 0.0;
 
-    if (!device1 || headroomVpk <= 0.0) {
+    if (!device1 || !device2 || headroomVpk <= 0.0) {
         return false;
     }
 

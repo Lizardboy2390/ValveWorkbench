@@ -31,8 +31,10 @@ PushPullUlOutput::PushPullUlOutput()
 
 int PushPullUlOutput::getDeviceType(int index)
 {
-    Q_UNUSED(index);
-    return PENTODE;
+    if (index == 1 || index == 2) {
+        return PENTODE;
+    }
+    return -1;
 }
 
 QTreeWidgetItem *PushPullUlOutput::buildTree(QTreeWidgetItem *parent)
@@ -114,7 +116,7 @@ void PushPullUlOutput::updateUI(QLabel *labels[], QLineEdit *values[])
         }
 
         labels[i]->setText(labelText);
-        if (!device1) {
+        if (!device1 || !device2) {
             values[i]->setText("N/A");
         } else if (parameter[i]) {
             int decimals = 3;
@@ -198,7 +200,7 @@ void PushPullUlOutput::update(int index)
 {
     Q_UNUSED(index);
 
-    if (!device1) {
+    if (!device1 || !device2) {
         parameter[PPUL_VK]->setValue(0.0);
         parameter[PPUL_IK]->setValue(0.0);
         parameter[PPUL_RK]->setValue(0.0);
@@ -822,7 +824,7 @@ bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
 
 void PushPullUlOutput::plot(Plot *plot)
 {
-    if (!device1) {
+    if (!device1 || !device2) {
         return;
     }
 
