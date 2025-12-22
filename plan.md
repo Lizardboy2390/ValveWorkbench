@@ -9,6 +9,7 @@ Deliver a stable, end‑user application for measuring, modeling, and designing 
 - Modeller threading: Bounds now applied to anode, screen, and remodel passes; no "parameter block not found" crashes observed
 - Analyser: Automated sweeps remain stable; Save to Project prompts every time
 - Designer: Triode Common Cathode enhancements completed (2025‑11‑06): axes clamp, overlays cleared, gain/swing UI refreshed
+- Designer: Two-device circuit support (Device 2 selector only shown when required; push-pull output harmonic simulation now mismatch-aware when Device 1/2 differ)
 
 - Reliability: Verify full measurement → save → pentode fit → overlay workflow with the restored baseline (no experimental Reefman/bounds changes)
 - Pentode UX: surface manual/automatic fitting options (Simple Manual Pentode sliders TBD, manual-first)

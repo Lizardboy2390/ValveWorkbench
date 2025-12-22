@@ -1,6 +1,7 @@
 #pragma once
 
 #include "circuit.h"
+ #include <QPointF>
 #include <QVector>
 
 // Parameters for the push-pull output stage. The first four are
@@ -91,4 +92,6 @@ private:
     bool showSymSwing = true;
     bool inductiveLoad = true;
     mutable QVector<double> lastHeadroomWaveform;
+    mutable QVector<QPointF> lastTopTrajectory;
+    mutable QVector<QPointF> lastBotTrajectory;
 };

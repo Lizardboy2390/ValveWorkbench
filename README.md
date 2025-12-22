@@ -51,6 +51,11 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Adjust parameters and see load lines and operating point
   - Export SPICE netlist when ready
   - Device selection: pick a device from the dropdown; if "Show Fitted Model" is checked, red model curves will auto-plot even without measurements
+  - Two-device circuits:
+    - Some Designer circuits require two devices (e.g. Push-Pull Output, Push-Pull UL Output, and the two-stage Triode CC + DC cathode follower test calculator).
+    - The **Device 2** selector is only shown/enabled for circuits that explicitly request a second device.
+    - For these circuits, calculations/plotting are gated until both Device 1 and Device 2 are selected.
+    - For Push-Pull Output specifically, the harmonic simulation is now **mismatch-aware**: when Device 1 and Device 2 differ, the time-domain solver uses both models and HD2/HD3/THD will reflect tube mismatch.
   - For **Single-Ended Output (pentode)**, when the selected device JSON contains an embedded `measurement` block from the analyser, the numeric SE panel now prefers **measurement-based idle**:
     - Given `Vb`, `Vs`, and target `Ia`, Designer interpolates the embedded sweeps near that Va/Vg2 to find `Vg1` and `Ig2`, then reports `Vk = -Vg1`, `Ik = Ia + Ig2`.
     - When no measurement data is present in the preset (legacy or hand-authored JSON), Designer falls back to the model-only bias search used previously.
