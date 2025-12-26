@@ -188,6 +188,32 @@ SmallSignalResult Model::computeSmallSignal(double va0, double vg1_0, double vg2
 
 void Model::addMeasurement(Measurement *measurement)
 {
+    double observedMaxVaMeasurement = std::numeric_limits<double>::quiet_NaN();
+    for (int s = 0; s < measurement->count(); ++s) {
+        Sweep *sw = measurement->at(s);
+        if (!sw) {
+            continue;
+        }
+        for (int i = 0; i < sw->count(); ++i) {
+            Sample *sm = sw->at(i);
+            if (!sm) {
+                continue;
+            }
+            const double va = sm->getVa();
+            if (std::isfinite(va)) {
+                if (!std::isfinite(observedMaxVaMeasurement) || va > observedMaxVaMeasurement) {
+                    observedMaxVaMeasurement = va;
+                }
+            }
+        }
+    }
+    double effectiveAnodeStopGlobal = measurement->getAnodeStop();
+    if (!std::isfinite(effectiveAnodeStopGlobal) || effectiveAnodeStopGlobal <= 0.0) {
+        effectiveAnodeStopGlobal = observedMaxVaMeasurement;
+    } else if (std::isfinite(observedMaxVaMeasurement) && observedMaxVaMeasurement > 0.0) {
+        effectiveAnodeStopGlobal = std::min(effectiveAnodeStopGlobal, observedMaxVaMeasurement);
+    }
+
     int sweeps = measurement->count();
     for (int s = 0; s < sweeps; s++) {
         Sweep *sweep = measurement->at(s);
@@ -224,7 +250,7 @@ void Model::addMeasurement(Measurement *measurement)
             continue;
         }
         Sample *last = sweep->at(sweep->count() - 1);
-        const double minEndVa = 0.75 * measurement->getAnodeStop();
+        const double minEndVa = std::isfinite(effectiveAnodeStopGlobal) ? (0.75 * effectiveAnodeStopGlobal) : 0.0;
         if (last == nullptr) {
             qInfo("MODEL INPUT: skipping sweep %d (missing last sample)", s);
             continue;
@@ -264,7 +290,7 @@ void Model::addMeasurement(Measurement *measurement)
 
         if (vaEnd < minEndVa && (!allowLimitHitShortSweep || !looksLikeLimitHit)) {
             qInfo("MODEL INPUT: skipping sweep %d (end Va %.3f < 0.75*Va_stop %.3f)", s,
-                  vaEnd, measurement->getAnodeStop());
+                  vaEnd, effectiveAnodeStopGlobal);
             continue;
         }
         if (vaEnd < minEndVa && allowLimitHitShortSweep && looksLikeLimitHit) {
@@ -559,10 +585,10 @@ QTreeWidgetItem *Model::buildTree(QTreeWidgetItem *parent)
 
 QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep *sweep)
 {
-    qInfo("=== MODEL PLOTTING DEBUG ===");
-    qInfo("Model::plotModel called with measurement type: %s, test type: %s",
-           measurement->getDeviceType() == TRIODE ? "TRIODE" : "PENTODE",
-           measurement->getTestType() == ANODE_CHARACTERISTICS ? "ANODE_CHARACTERISTICS" : "TRANSFER_CHARACTERISTICS");
+    // qInfo("=== MODEL PLOTTING DEBUG ===");
+    // qInfo("Model::plotModel called with measurement type: %s, test type: %s",
+    //        measurement->getDeviceType() == TRIODE ? "TRIODE" : "PENTODE",
+    //        measurement->getTestType() == ANODE_CHARACTERISTICS ? "ANODE_CHARACTERISTICS" : "TRANSFER_CHARACTERISTICS");
 
     QGraphicsItemGroup *group = new QGraphicsItemGroup();
     QPen anodePen;
@@ -572,7 +598,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
     int deviceType = measurement->getDeviceType();
     int testType = measurement->getTestType();
-    qInfo("Device type: %d, Test type: %d", deviceType, testType);
+    // qInfo("Device type: %d, Test type: %d", deviceType, testType);
     if (deviceType == TRIODE) {
             if (testType == ANODE_CHARACTERISTICS) {
                 double vgStart = measurement->getGridStart();
@@ -583,8 +609,8 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 if (!std::isfinite(vgStop))  vgStop  = 0.0;
                 if (!std::isfinite(vgStep))  vgStep  = 0.0;
 
-                qInfo("STORED VALUES: vgStart=%.3f, vgStop=%.3f, vgStep=%.3f", vgStart, vgStop, vgStep);
-                qInfo("Measurement has %d sweeps", measurement->count());
+                // qInfo("STORED VALUES: vgStart=%.3f, vgStop=%.3f, vgStep=%.3f", vgStart, vgStop, vgStep);
+                // qInfo("Measurement has %d sweeps", measurement->count());
 
                 auto deriveGridRangeFromSweeps = [measurement]() -> std::pair<double, double> {
                     auto scaleVg = [](double vg) {
@@ -615,7 +641,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                                 continue;
                             }
                             if (vg >= zeroClampLower && vg <= zeroClampUpper) {
-                                qInfo("GRID RANGE: sample vg=%.3f within [%0.1f, %0.1f], clamping to 0V", vg, zeroClampLower, zeroClampUpper);
+                                // qInfo("GRID RANGE: sample vg=%.3f within [%0.1f, %0.1f], clamping to 0V", vg, zeroClampLower, zeroClampUpper);
                                 vg = 0.0;
                                 sawZeroBias = true;
                             }
@@ -630,7 +656,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                             double vgNominal = scaleVg(sweep->getVg1Nominal());
                             if (std::isfinite(vgNominal)) {
                                 if (vgNominal >= zeroClampLower && vgNominal <= zeroClampUpper) {
-                                    qInfo("GRID RANGE: nominal vg=%.3f within [%0.1f, %0.1f], clamping to 0V", vgNominal, zeroClampLower, zeroClampUpper);
+                                    // qInfo("GRID RANGE: nominal vg=%.3f within [%0.1f, %0.1f], clamping to 0V", vgNominal, zeroClampLower, zeroClampUpper);
                                     vgNominal = 0.0;
                                     sawZeroBias = true;
                                     sawZeroNominal = true;
@@ -672,11 +698,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     if (std::isfinite(derivedStart) && std::isfinite(derivedStop) && derivedStart < derivedStop) {
                         vgStart = derivedStart;
                         vgStop = derivedStop;
-                        qInfo("Derived grid range from sweep data: start=%.3f, stop=%.3f", vgStart, vgStop);
+                        // qInfo("Derived grid range from sweep data: start=%.3f, stop=%.3f", vgStart, vgStop);
                     } else {
                         vgStart = -60.0;
                         vgStop = 0.0;
-                        qInfo("Unable to derive grid range, using defaults: start=%.3f, stop=%.3f", vgStart, vgStop);
+                        // qInfo("Unable to derive grid range, using defaults: start=%.3f, stop=%.3f", vgStart, vgStop);
                     }
                 }
                 // Enforce non-positive grids for triode modelling regardless of source
@@ -686,12 +712,12 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 if (vgStop > 0.0) vgStop = 0.0;
             // If step is 0 or invalid, calculate from actual sweep data
             if (vgStep <= 0.0 || vgStep > (vgStop - vgStart)) {
-                qInfo("GRID STEP FALLBACK: stored step %.6f invalid, analysing sweeps (count=%d)",
-                      vgStep, measurement->count());
+                // qInfo("GRID STEP FALLBACK: stored step %.6f invalid, analysing sweeps (count=%d)",
+                //       vgStep, measurement->count());
                 double calculatedStep = 0.0;
                 if (measurement->count() > 1) {
                     const double firstVg = measurement->at(0)->getVg1Nominal();
-                    qInfo("GRID STEP FALLBACK: sweep 0 Vg1Nominal=%.6f", firstVg);
+                    // qInfo("GRID STEP FALLBACK: sweep 0 Vg1Nominal=%.6f", firstVg);
                     for (int sweepIndex = 1; sweepIndex < measurement->count(); ++sweepIndex) {
                         const double candidateVg = measurement->at(sweepIndex)->getVg1Nominal();
                         double diff = std::numeric_limits<double>::quiet_NaN();
@@ -700,8 +726,8 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                             double b = (std::fabs(candidateVg) > 50.0) ? candidateVg / 1000.0 : candidateVg;
                             diff = std::fabs(b - a);
                         }
-                        qInfo("GRID STEP FALLBACK: comparing sweep %d Vg1Nominal=%.6f (diff vs sweep 0 = %.6f)",
-                              sweepIndex, candidateVg, diff);
+                        // qInfo("GRID STEP FALLBACK: comparing sweep %d Vg1Nominal=%.6f (diff vs sweep 0 = %.6f)",
+                        //       sweepIndex, candidateVg, diff);
                         if (!std::isfinite(candidateVg)) {
                             continue;
                         }
@@ -710,8 +736,8 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                                                      : std::fabs(candidateVg - firstVg);
                         if (stepCandidate > 0.0 && stepCandidate < 10.0) {
                             calculatedStep = stepCandidate;
-                            qInfo("GRID STEP FALLBACK: accepting sweep %d diff %.6f as grid step",
-                                  sweepIndex, calculatedStep);
+                            // qInfo("GRID STEP FALLBACK: accepting sweep %d diff %.6f as grid step",
+                            //       sweepIndex, calculatedStep);
                             break;
                         }
                     }
@@ -719,12 +745,12 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
 
                 if (calculatedStep > 0.0) {
                     vgStep = calculatedStep;
-                    qInfo("GRID STEP FALLBACK: using calculated grid step %.6f", vgStep);
+                    // qInfo("GRID STEP FALLBACK: using calculated grid step %.6f", vgStep);
                 } else {
                     vgStep = 0.5;
-                    qInfo("GRID STEP FALLBACK: no valid diff found, using default %.6f", vgStep);
+                    // qInfo("GRID STEP FALLBACK: no valid diff found, using default %.6f", vgStep);
                 }
-                qInfo("GRID STEP FALLBACK: final vgStep %.6f", vgStep);
+                // qInfo("GRID STEP FALLBACK: final vgStep %.6f", vgStep);
             }
 
             if (sweep != nullptr) {
@@ -736,24 +762,24 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             }
 
             if (vgStart > vgStop) {
-                qInfo("GRID RANGE NORMALIZATION: swapping start %.3f and stop %.3f", vgStart, vgStop);
+                // qInfo("GRID RANGE NORMALIZATION: swapping start %.3f and stop %.3f", vgStart, vgStop);
                 std::swap(vgStart, vgStop);
             }
 
             if (vgStep < 0.0) {
-                qInfo("GRID STEP NORMALIZATION: converting negative step %.6f to positive", vgStep);
+                // qInfo("GRID STEP NORMALIZATION: converting negative step %.6f to positive", vgStep);
                 vgStep = std::abs(vgStep);
             }
 
             if (vgStep == 0.0) {
                 vgStep = 0.5;
-                qInfo("GRID STEP NORMALIZATION: step was zero, using default %.3f", vgStep);
+                // qInfo("GRID STEP NORMALIZATION: step was zero, using default %.3f", vgStep);
             }
 
             double vg2 = measurement->getScreenStart();
 
-            qInfo("Final grid voltage range: start=%.3f, stop=%.3f, step=%.3f", vgStart, vgStop, vgStep);
-            qInfo("Screen voltage: %.3f", vg2);
+            // qInfo("Final grid voltage range: start=%.3f, stop=%.3f, step=%.3f", vgStart, vgStop, vgStep);
+            // qInfo("Screen voltage: %.3f", vg2);
 
             // Do not set axes here; measurement defines axes
 
@@ -762,15 +788,15 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             const double yMaxAxis = measurement->getIaMax();
             // Do not set axes here; measurement defines axes
             while ( vg1 <= vgStop) {
-                qInfo("TRIODE LOOP: vg1=%.3f, vgStart=%.3f, vgStop=%.3f, vgStep=%.3f, condition (%.3f <= %.3f) = %s",
-                      vg1, vgStart, vgStop, vgStep, vg1, vgStop, (vg1 <= vgStop) ? "true" : "false");
+                // qInfo("TRIODE LOOP: vg1=%.3f, vgStart=%.3f, vgStop=%.3f, vgStep=%.3f, condition (%.3f <= %.3f) = %s",
+                //       vg1, vgStart, vgStop, vgStep, vg1, vgStop, (vg1 <= vgStop) ? "true" : "false");
 
-                qInfo("Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
+                // qInfo("Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
                 double vaStart = measurement->getAnodeStart();
                 double vaStop = measurement->getAnodeStop();
                 double vaInc = (vaStop - vaStart) / 50;
 
-                qInfo("Anode voltage range: start=%.1f, stop=%.1f, inc=%.3f", vaStart, vaStop, vaInc);
+                // qInfo("Anode voltage range: start=%.1f, stop=%.1f, inc=%.3f", vaStart, vaStop, vaInc);
 
                 // X-position for the triode family label in data space (~70% along the anode range)
                 const double vaLabel = vaStart + 0.7 * (vaStop - vaStart);
@@ -783,10 +809,10 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 int segmentCount = 0;
                 QList<QGraphicsItem*> triodeSegments;
                 while (va < vaStop) {
-                    qInfo("TRIODE: Calculating current for va=%.3f, vg1=%.3f", va, vg1);
+                    // qInfo("TRIODE: Calculating current for va=%.3f, vg1=%.3f", va, vg1);
                     double vgPhysSeg = -std::fabs(vg1);
                     double ia = anodeCurrent(va, vgPhysSeg, vg2);
-                    qInfo("TRIODE: Current result ia=%.3f mA", ia);
+                    // qInfo("TRIODE: Current result ia=%.3f mA", ia);
 
                     QGraphicsItem *segment = plot->createSegment(vaPrev, iaPrev, va, ia, anodePen);
 
@@ -803,7 +829,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     va += vaInc;
                 }
 
-                qInfo("Curve %d completed: %d segments created", curveCount + 1, segmentCount);
+                // qInfo("Curve %d completed: %d segments created", curveCount + 1, segmentCount);
 
                 // Add a label around 70% of the way along the anode voltage range so that
                 // triode family labels are distributed along the curves instead of bunching
@@ -862,14 +888,14 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 double oldVg1 = vg1;
                 vg1 += vgStep;
                 curveCount++;
-                qInfo("TRIODE LOOP: Progressed vg1 from %.3f to %.3f (added %.3f)", oldVg1, vg1, vgStep);
+                // qInfo("TRIODE LOOP: Progressed vg1 from %.3f to %.3f (added %.3f)", oldVg1, vg1, vgStep);
             }
 
-            qInfo("Total curves created: %d", curveCount);
+            // qInfo("Total curves created: %d", curveCount);
         }
     } else if (deviceType == PENTODE) {
         if (testType == ANODE_CHARACTERISTICS) {
-            qInfo("PENTODE: Measurement has %d sweeps", measurement->count());
+            // qInfo("PENTODE: Measurement has %d sweeps", measurement->count());
 
             // Build unique sorted Vg family list from measurement sweeps' Vg1Nominal (volts),
             // converted to negative magnitudes to match model convention. No unit conversion.
@@ -880,11 +906,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                 double fam = -std::fabs(vgNom);
                 // Ignore nearly-zero families (should not happen for pentode grids)
                 if (std::fabs(fam) < 0.5) {
-                    qInfo("PENTODE: Skipping tiny-magnitude Vg family %.3fV (likely unit mismatch)", fam);
+                    // qInfo("PENTODE: Skipping tiny-magnitude Vg family %.3fV (likely unit mismatch)", fam);
                     continue;
                 }
                 familySet.insert(fam);
-                qInfo("PENTODE: Sweep %d Vg1Nominal=%.3fV -> family %.3fV", i, measurement->at(i)->getVg1Nominal(), fam);
+                // qInfo("PENTODE: Sweep %d Vg1Nominal=%.3fV -> family %.3fV", i, measurement->at(i)->getVg1Nominal(), fam);
             }
 
             std::vector<double> vgFamilies;
@@ -892,7 +918,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             for (double v : familySet) vgFamilies.push_back(v);
             std::sort(vgFamilies.begin(), vgFamilies.end()); // ascending: most negative -> least negative (towards 0)
 
-            qInfo("PENTODE: Using %zu Vg families from measurement", vgFamilies.size());
+            // qInfo("PENTODE: Using %zu Vg families from measurement", vgFamilies.size());
 
             const double vg2 = measurement->getScreenStart();
             const bool drawScreen = false; // Temporarily disable screen overlay per debugging plan
@@ -913,11 +939,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
             // Disabled for now so that plotting uses the fitted Kg1 directly and avoids
             // aggressive re-scaling of Ia.
             double iaScale = 1.0; // display-only scaling to match measurement units/axis
-            qInfo("PENTODE KG1 CAL: disabled plotting-only calibration; using fitted Kg1 and iaScale=1.0");
+            // qInfo("PENTODE KG1 CAL: disabled plotting-only calibration; using fitted Kg1 and iaScale=1.0");
 
             int curveCount = 0;
             for (double vg1 : vgFamilies) {
-                qInfo("PENTODE: Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
+                // qInfo("PENTODE: Creating curve %d for vg1=%.3f", curveCount + 1, vg1);
                 // Find a representative sweep whose Vg1Nominal matches this family (within tolerance)
                 const double kTol = 1e-3; // volts
                 Sweep *famSweep = nullptr;
@@ -959,7 +985,7 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     // Diagnostics: report OS parameter and the effective screen voltage used for this family
                     double osParam = parameter[PAR_OS]->getValue();
                     double v2First = sampleVg2(s0);
-                    qInfo("PENTODE OS: os=%.6f, vg1=%.3f, vg2(effective first)=%.3f", osParam, vg1, v2First);
+                    // qInfo("PENTODE OS: os=%.6f, vg1=%.3f, vg2(effective first)=%.3f", osParam, vg1, v2First);
 
                     double vaPrev = s0->getVa();
                     double iaPrev = anodeCurrent(vaPrev, vg1, sampleVg2(s0)) * iaScale;
@@ -982,8 +1008,8 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     // red curve in the UI.
                     const double vaDebug = 90.0;
                     double iaDebug = anodeCurrent(vaDebug, vg1, sampleVg2(sm)) * iaScale;
-                    qInfo("PENTODE DEBUG POINT: vg1=%.3f, vg2=%.3f, Va=%.3f -> Ia=%.6f",
-                          vg1, sampleVg2(sm), vaDebug, iaDebug);
+                    // qInfo("PENTODE DEBUG POINT: vg1=%.3f, vg2=%.3f, Va=%.3f -> Ia=%.6f",
+                    //       vg1, sampleVg2(sm), vaDebug, iaDebug);
                     double iaMin   = iaFirst;
                     double iaMax   = iaFirst;
 
@@ -1030,27 +1056,27 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                         double vg2Op = sampleVg2(sm);
                         SmallSignalResult ss = computeSmallSignal(vaOp, vg1Op, vg2Op, withSecondaryEmission());
                         if (ss.valid) {
-                            qInfo("SMALL-SIGNAL: vg1=%.3f, vg2=%.3f, Va=%.3f -> gm=%.3f mA/V, ra=%.3f kOhm, mu=%.3f",
-                                  vg1Op, vg2Op, vaOp, ss.gm, ss.ra, ss.mu);
+                            // qInfo("SMALL-SIGNAL: vg1=%.3f, vg2=%.3f, Va=%.3f -> gm=%.3f mA/V, ra=%.3f kOhm, mu=%.3f",
+                            //       vg1Op, vg2Op, vaOp, ss.gm, ss.ra, ss.mu);
                         } else {
-                            qInfo("SMALL-SIGNAL: vg1=%.3f, vg2=%.3f, Va=%.3f -> invalid",
-                                  vg1Op, vg2Op, vaOp);
+                            // qInfo("SMALL-SIGNAL: vg1=%.3f, vg2=%.3f, Va=%.3f -> invalid",
+                            //       vg1Op, vg2Op, vaOp);
                         }
                     }
 
                     // If the entire family computes ~zero current, still plot it so the user can
                     // see that the model predicts negligible conduction for this bias.
                     if (iaMax < 1e-3) {
-                        qInfo("PENTODE: iaMax=%.6f for vg1=%.3f (near-zero Ia); plotting curve anyway", iaMax, vg1);
+                        // qInfo("PENTODE: iaMax=%.6f for vg1=%.3f (near-zero Ia); plotting curve anyway", iaMax, vg1);
                     }
                     if (std::isfinite(iaMax) && iaMax > yMaxAxis * 5.0) {
-                        qInfo("PENTODE: Skipping vg1=%.3f due to extreme Ia (iaMax=%.3f > %.3f)", vg1, iaMax, yMaxAxis * 5.0);
+                        // qInfo("PENTODE: Skipping vg1=%.3f due to extreme Ia (iaMax=%.3f > %.3f)", vg1, iaMax, yMaxAxis * 5.0);
                         continue;
                     }
                     endVa = vaPrev;
                     endIa = iaPrev;
-                    qInfo("PENTODE DIAG: vg1=%.3f, vg2=%.3f, Va[first/mid/last]=[%.3f, %.3f, %.3f], Ia[first/mid/last]=[%.3f, %.3f, %.3f], Ia[min/max]=[%.3f, %.3f]",
-                          vg1, vg2, vaFirst, vaMid, vaLast, iaFirst, iaMid, iaLast, iaMin, iaMax);
+                    // qInfo("PENTODE DIAG: vg1=%.3f, vg2=%.3f, Va[first/mid/last]=[%.3f, %.3f, %.3f], Ia[first/mid/last]=[%.3f, %.3f, %.3f], Ia[min/max]=[%.3f, %.3f]",
+                    //       vg1, vg2, vaFirst, vaMid, vaLast, iaFirst, iaMid, iaLast, iaMin, iaMax);
 
                     double axisVaMax = plot->sceneToData(QPointF(PLOT_WIDTH, 0.0)).x();
                     if (std::isfinite(axisVaMax) && axisVaMax > endVa + 1e-6) {
@@ -1148,18 +1174,18 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                     }
                 }
 
-                qInfo("PENTODE: Curve %d completed: %d anode segments", curveCount + 1, segmentCount);
+                // qInfo("PENTODE: Curve %d completed: %d anode segments", curveCount + 1, segmentCount);
                 curveCount++;
             }
 
-            qInfo("PENTODE: Total curves created: %d", curveCount);
+            // qInfo("PENTODE: Total curves created: %d", curveCount);
 
             // Restore original Os after plotting
             parameter[PAR_OS]->setValue(osSavedForPlot);
         }
     }
 
-    qInfo("Model plotting completed - returning group with %d items", group->childItems().count());
+    // qInfo("Model plotting completed - returning group with %d items", group->childItems().count());
     return group;
 }
 
@@ -1171,6 +1197,11 @@ double Model::getParameter(int parameterIndex)
 bool Model::isConverged() const
 {
     return converged;
+}
+
+void Model::setConverged(bool newConverged)
+{
+    converged = newConverged;
 }
 
 int Model::getMode() const

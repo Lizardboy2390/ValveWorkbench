@@ -2,6 +2,9 @@
 
 #include "circuit.h"
 
+#include <QPointF>
+#include <QVector>
+
 // Parameters for the ultralinear push-pull output stage. The first four are
 // user-editable inputs; the remaining entries are computed outputs.
 enum ePushPullUlParameter {
@@ -38,6 +41,8 @@ public:
     // Toggle symmetric vs max-swing helper preference for Designer overlays.
     void setSymSwingEnabled(bool enabled);
     void setInductiveLoad(bool enabled);
+
+    const QVector<double> &getLastHeadroomWaveform() const { return lastHeadroomWaveform; }
 
 protected:
     void update(int index) override;
@@ -84,4 +89,8 @@ private:
     int gainMode = 1;
     bool showSymSwing = true;
     bool inductiveLoad = true;
+
+    mutable QVector<double> lastHeadroomWaveform;
+    mutable QVector<QPointF> lastTopTrajectory;
+    mutable QVector<QPointF> lastBotTrajectory;
 };

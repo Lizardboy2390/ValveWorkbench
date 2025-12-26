@@ -58,6 +58,13 @@ public:
     virtual void testFinished();
     virtual void testAborted();
 
+    virtual void hvCalibrationSampleReady(int hv1Adc,
+                                          int iaHi1Adc,
+                                          int iaLo1Adc,
+                                          int hv2Adc,
+                                          int iaHi2Adc,
+                                          int iaLo2Adc) override;
+
 public slots:
     void loadModel();
     void modelScreen();
@@ -246,6 +253,7 @@ private:
         int deviceType;
         int testType;
         bool triodeConnectedPentode;
+        bool doubleTriode;
 
         double anodeStart;
         double anodeStop;
@@ -258,6 +266,14 @@ private:
         double screenStart;
         double screenStop;
         double screenStep;
+
+        double secondAnodeStart;
+        double secondAnodeStop;
+        double secondAnodeStep;
+
+        double secondGridStart;
+        double secondGridStop;
+        double secondGridStep;
     };
 
     Ui::ValveWorkbench *ui;
@@ -421,6 +437,7 @@ private:
     bool modellingStateSaved = false;
     int savedDeviceTypeForModelling = 0;
     bool savedIsTriodeConnectedForModelling = false;
+    bool savedIsDoubleTriodeForModelling = false;
     int savedTestTypeForModelling = 0;
     double savedAnodeStartForModelling = 0.0;
     double savedAnodeStopForModelling = 0.0;
@@ -431,6 +448,12 @@ private:
     double savedScreenStartForModelling = 0.0;
     double savedScreenStopForModelling = 0.0;
     double savedScreenStepForModelling = 0.0;
+    double savedSecondAnodeStartForModelling = 0.0;
+    double savedSecondAnodeStopForModelling = 0.0;
+    double savedSecondAnodeStepForModelling = 0.0;
+    double savedSecondGridStartForModelling = 0.0;
+    double savedSecondGridStopForModelling = 0.0;
+    double savedSecondGridStepForModelling = 0.0;
     double savedIaMaxForModelling = 0.0;
     double savedPMaxForModelling = 0.0;
 
@@ -531,4 +554,5 @@ private:
     void updateHeadroomWaveformView(TriodeCommonCathode *tcc);
     void updateHeadroomWaveformView(class SingleEndedOutput *se);
     void updateHeadroomWaveformView(class PushPullOutput *pp);
+    void updateHeadroomWaveformView(class PushPullUlOutput *ppul);
 };

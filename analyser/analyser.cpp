@@ -8,6 +8,9 @@
 
 #include <QDebug>
 #include <cmath>
+#include <QSettings>
+#include <QVector>
+#include <algorithm>
 
 QRegularExpression *Analyser::sampleMatcher = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
 QRegularExpression *Analyser::sampleMatcher2 = new QRegularExpression(R"(^OK: Mode\(2\) (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+))");
@@ -52,8 +55,8 @@ Sample *Analyser::createSample(QString response)
           match.captured(9).toInt(), match.captured(10).toInt(), match.captured(11).toInt(), match.captured(12).toInt());
 
     double vg1 = convertMeasuredVoltage(GRID, match.captured(3).toInt());       // Commanded grid bias (not sensed)
-    double va = convertMeasuredVoltage(ANODE, match.captured(4).toInt());        // Primary anode voltage
-    double ia = convertMeasuredCurrent(ANODE, match.captured(5).toInt(), match.captured(6).toInt(), match.captured(11).toInt()) * 1000;
+    double va = convertMeasuredHvVoltage(1, match.captured(4).toInt());         // HV1 voltage (anode 1)
+    double ia = convertMeasuredHvCurrent(1, match.captured(5).toInt(), match.captured(6).toInt()) * 1000;
     double vg2 = 0.0;                                                           // Screen grid (pentode) or unused
     double ig2 = 0.0;
     double vg3 = 0.0;                                                           // Commanded grid bias for secondary triode
@@ -62,8 +65,8 @@ Sample *Analyser::createSample(QString response)
 
     if (isDoubleTriode) {
         vg3 = convertMeasuredVoltage(GRID, match.captured(7).toInt());          // Commanded secondary grid bias
-        va2 = convertMeasuredVoltage(ANODE, match.captured(8).toInt());         // Secondary anode sense channel
-        ia2 = convertMeasuredCurrent(ANODE, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
+        va2 = convertMeasuredHvVoltage(2, match.captured(8).toInt());           // HV2 voltage (anode 2)
+        ia2 = convertMeasuredHvCurrent(2, match.captured(9).toInt(), match.captured(10).toInt()) * 1000;
 
         qInfo("Sample (double triode): vg1(set)=%.3f vg3(set)=%.3f va=%.3f va2=%.3f ia=%.3f ia2(pre)=%.4f",
               vg1, vg3, va, va2, ia, ia2);
@@ -72,8 +75,8 @@ Sample *Analyser::createSample(QString response)
         qInfo("Raw ADC secondary: HI=%d LO=%d HI2=%d -> raw=%.4fmA",\
               match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt(), ia2);
     } else {
-        vg2 = convertMeasuredVoltage(SCREEN, match.captured(8).toInt());
-        ig2 = convertMeasuredCurrent(SCREEN, match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt()) * 1000;
+        vg2 = convertMeasuredHvVoltage(2, match.captured(8).toInt());
+        ig2 = convertMeasuredHvCurrent(2, match.captured(9).toInt(), match.captured(10).toInt()) * 1000;
 
         qInfo("Sample (single channel): vg1(set)=%.3f vg2=%.3f va=%.3f ia=%.3f ig2=%.3f",
               vg1, vg2, va, ia, ig2);
@@ -125,6 +128,134 @@ int Analyser::convertTargetVoltage(int electrode, double voltage)
     }
 
     return value;
+}
+
+namespace {
+struct CurvePoint {
+    double x;
+    double y;
+};
+
+static bool loadCurveFromSettings(const QString &xKey, const QString &yKey, QVector<double> &xs, QVector<double> &ys)
+{
+    QSettings s("ValveWorkbench", "ValveWorkbench");
+    const QVariantList xList = s.value(xKey).toList();
+    const QVariantList yList = s.value(yKey).toList();
+    if (xList.size() < 2 || yList.size() < 2 || xList.size() != yList.size()) {
+        return false;
+    }
+
+    QVector<CurvePoint> pts;
+    pts.reserve(xList.size());
+    for (int i = 0; i < xList.size(); ++i) {
+        pts.push_back(CurvePoint{ xList.at(i).toDouble(), yList.at(i).toDouble() });
+    }
+
+    std::sort(pts.begin(), pts.end(), [](const CurvePoint &a, const CurvePoint &b){ return a.x < b.x; });
+
+    if (!((pts.last().x - pts.first().x) > 1e-9)) {
+        return false;
+    }
+
+    xs.clear();
+    ys.clear();
+    xs.reserve(pts.size());
+    ys.reserve(pts.size());
+    for (const CurvePoint &p : pts) {
+        xs.push_back(p.x);
+        ys.push_back(p.y);
+    }
+    return true;
+}
+
+static double interpolateClamped(const QVector<double> &xs, const QVector<double> &ys, double x)
+{
+    if (xs.size() < 2 || ys.size() != xs.size()) {
+        return 0.0;
+    }
+    if (x <= xs.first()) {
+        return ys.first();
+    }
+    if (x >= xs.last()) {
+        return ys.last();
+    }
+
+    for (int i = 0; i < xs.size() - 1; ++i) {
+        const double x0 = xs.at(i);
+        const double x1 = xs.at(i + 1);
+        if (x >= x0 && x <= x1) {
+            const double y0 = ys.at(i);
+            const double y1 = ys.at(i + 1);
+            const double dx = x1 - x0;
+            if (!(dx > 0.0)) {
+                return y0;
+            }
+            const double t = (x - x0) / dx;
+            return y0 + (y1 - y0) * t;
+        }
+    }
+    return ys.last();
+}
+
+static QString hvKeyPrefix(int hvChannel)
+{
+    return (hvChannel == 1) ? QStringLiteral("hvCal/hv1/") : QStringLiteral("hvCal/hv2/");
+}
+}
+
+double Analyser::convertMeasuredHvVoltage(int hvChannel, int adc)
+{
+    const double adcD = static_cast<double>(adc);
+
+    QVector<double> xs;
+    QVector<double> ys;
+    const QString prefix = hvKeyPrefix(hvChannel);
+    const bool hasCurve = loadCurveFromSettings(prefix + "voltage/adc", prefix + "voltage/volts", xs, ys);
+
+    double v = 0.0;
+    if (hasCurve) {
+        v = interpolateClamped(xs, ys, adcD);
+    } else {
+        v = (((double) adc) / 1023 / 9400 * 1419400 * vRefMaster);
+    }
+
+    return v;
+}
+
+double Analyser::convertMeasuredHvCurrent(int hvChannel, int adcHi, int adcLo)
+{
+    const double highRangeDivisor = 2.0 * 33.0;
+    const double lowRangeDivisor = 2.0 * 3.333333;
+
+    const bool highRangeSaturated = adcHi >= 1000;
+    const bool useLow = highRangeSaturated && adcLo > 0;
+
+    double iA = 0.0;
+    if (!useLow) {
+        const QString prefix = hvKeyPrefix(hvChannel);
+        QVector<double> xs;
+        QVector<double> ys;
+        const bool hasCurve = loadCurveFromSettings(prefix + "currentHi/adc", prefix + "currentHi/mA", xs, ys);
+        if (hasCurve) {
+            iA = interpolateClamped(xs, ys, static_cast<double>(adcHi)) / 1000.0;
+        } else {
+            iA = ((double) adcHi) * vRefMaster / 1023 / highRangeDivisor;
+        }
+    } else {
+        const QString prefix = hvKeyPrefix(hvChannel);
+        QVector<double> xs;
+        QVector<double> ys;
+        const bool hasCurve = loadCurveFromSettings(prefix + "currentLo/adc", prefix + "currentLo/mA", xs, ys);
+        if (hasCurve) {
+            iA = interpolateClamped(xs, ys, static_cast<double>(adcLo)) / 1000.0;
+        } else {
+            iA = ((double) adcLo) * vRefMaster / 1023 / lowRangeDivisor;
+        }
+    }
+
+    if (iA < 0.0) iA = 0.0;
+    if (iA > 0.05) iA = 0.05;
+    return iA;
 }
 
 double Analyser::convertMeasuredVoltage(int electrode, int voltage)
@@ -923,9 +1054,28 @@ void Analyser::checkResponse(QString response)
         }
     } else if (response.startsWith("OK: Set")) {
         // qInfo("Processing OK: Set response");
-        expectedResponses--;
+        if (expectedResponses > 0) {
+            expectedResponses--;
+        }
         // qInfo("Decremented expectedResponses to: %d", expectedResponses);
     } else if (response.startsWith("OK: Mode(2)")) {
+        if (expectedResponses > 0) {
+            expectedResponses--;
+        }
+
+        if (hvCalibrationSampling && client) {
+            QRegularExpressionMatch match = sampleMatcher2->match(response);
+            if (match.hasMatch()) {
+                client->hvCalibrationSampleReady(match.captured(4).toInt(),
+                                                 match.captured(5).toInt(),
+                                                 match.captured(6).toInt(),
+                                                 match.captured(8).toInt(),
+                                                 match.captured(9).toInt(),
+                                                 match.captured(10).toInt());
+            }
+            hvCalibrationSampling = false;
+        }
+
         if (isTestRunning) {
             Sample *sample = createSample(response);
             if (!sample) {
@@ -1121,6 +1271,62 @@ void Analyser::checkResponse(QString response)
     // qInfo("About to call nextCommand, commandBuffer.size(): %d", commandBuffer.size());
     awaitingResponse = false;
     nextCommand();
+}
+
+void Analyser::requestHvCalibrationSampleOnce()
+{
+    if (!serialPort || !serialPort->isOpen()) {
+        qWarning("HV calibration sample requested but serial port is not open");
+        return;
+    }
+    if (isTestRunning) {
+        qWarning("HV calibration sample requested while test is running - ignoring");
+        return;
+    }
+    hvCalibrationSampling = true;
+    sendCommand(QStringLiteral("M2"));
+}
+
+void Analyser::setHvHold(int hvChannel, double volts, bool enabled)
+{
+    if (!serialPort || !serialPort->isOpen()) {
+        qWarning("HV hold requested but serial port is not open");
+        return;
+    }
+    if (isTestRunning) {
+        qWarning("HV hold requested while test is running - ignoring");
+        return;
+    }
+
+    if (!enabled) {
+        if (hvChannel == 1) {
+            sendCommand(QStringLiteral("S3 0"));
+        } else if (hvChannel == 2) {
+            sendCommand(QStringLiteral("S7 0"));
+        } else {
+            sendCommand(QStringLiteral("S3 0"));
+            sendCommand(QStringLiteral("S7 0"));
+        }
+        return;
+    }
+
+    const int electrode = (hvChannel == 1) ? ANODE : SCREEN;
+    const QString cmdPrefix = (hvChannel == 1) ? QStringLiteral("S3 ") : QStringLiteral("S7 ");
+    const int code = convertTargetVoltage(electrode, volts);
+    sendCommand(buildSetCommand(cmdPrefix, code));
+}
+
+void Analyser::requestHvDischarge()
+{
+    if (!serialPort || !serialPort->isOpen()) {
+        qWarning("HV discharge requested but serial port is not open");
+        return;
+    }
+    if (isTestRunning) {
+        qWarning("HV discharge requested while test is running - ignoring");
+        return;
+    }
+    sendCommand(QStringLiteral("M1"));
 }
 
 void Analyser::handleReadyRead()

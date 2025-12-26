@@ -162,6 +162,8 @@ public:
 
     bool isConverged() const;
 
+    void setConverged(bool newConverged);
+
     int getMode() const;
     void setMode(int newMode);
 

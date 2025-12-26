@@ -42,7 +42,12 @@ template <> constexpr inline auto PreferencesDialog::qt_create_metaobjectdata<qt
         "applyGridRefRequested",
         "",
         "commandVoltage",
-        "enabled"
+        "enabled",
+        "requestHvCalibrationSampleOnce",
+        "hvHoldRequested",
+        "hvChannel",
+        "volts",
+        "hvDischargeRequested"
     };
 
     QtMocHelpers::UintData qt_methods {
@@ -50,6 +55,14 @@ template <> constexpr inline auto PreferencesDialog::qt_create_metaobjectdata<qt
         QtMocHelpers::SignalData<void(double, bool)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
             { QMetaType::Double, 3 }, { QMetaType::Bool, 4 },
         }}),
+        // Signal 'requestHvCalibrationSampleOnce'
+        QtMocHelpers::SignalData<void()>(5, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'hvHoldRequested'
+        QtMocHelpers::SignalData<void(int, double, bool)>(6, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 7 }, { QMetaType::Double, 8 }, { QMetaType::Bool, 4 },
+        }}),
+        // Signal 'hvDischargeRequested'
+        QtMocHelpers::SignalData<void()>(9, 2, QMC::AccessPublic, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -74,11 +87,20 @@ void PreferencesDialog::qt_static_metacall(QObject *_o, QMetaObject::Call _c, in
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
         case 0: _t->applyGridRefRequested((*reinterpret_cast< std::add_pointer_t<double>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
+        case 1: _t->requestHvCalibrationSampleOnce(); break;
+        case 2: _t->hvHoldRequested((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[3]))); break;
+        case 3: _t->hvDischargeRequested(); break;
         default: ;
         }
     }
     if (_c == QMetaObject::IndexOfMethod) {
         if (QtMocHelpers::indexOfMethod<void (PreferencesDialog::*)(double , bool )>(_a, &PreferencesDialog::applyGridRefRequested, 0))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (PreferencesDialog::*)()>(_a, &PreferencesDialog::requestHvCalibrationSampleOnce, 1))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (PreferencesDialog::*)(int , double , bool )>(_a, &PreferencesDialog::hvHoldRequested, 2))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (PreferencesDialog::*)()>(_a, &PreferencesDialog::hvDischargeRequested, 3))
             return;
     }
 }
@@ -102,14 +124,14 @@ int PreferencesDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 1)
+        if (_id < 4)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 1;
+        _id -= 4;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 1)
+        if (_id < 4)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 1;
+        _id -= 4;
     }
     return _id;
 }
@@ -118,5 +140,23 @@ int PreferencesDialog::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 void PreferencesDialog::applyGridRefRequested(double _t1, bool _t2)
 {
     QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1, _t2);
+}
+
+// SIGNAL 1
+void PreferencesDialog::requestHvCalibrationSampleOnce()
+{
+    QMetaObject::activate(this, &staticMetaObject, 1, nullptr);
+}
+
+// SIGNAL 2
+void PreferencesDialog::hvHoldRequested(int _t1, double _t2, bool _t3)
+{
+    QMetaObject::activate<void>(this, &staticMetaObject, 2, nullptr, _t1, _t2, _t3);
+}
+
+// SIGNAL 3
+void PreferencesDialog::hvDischargeRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 3, nullptr);
 }
 QT_WARNING_POP

@@ -131,6 +131,7 @@ Device::Device(QJsonDocument modelDocument)
 
             if (model != nullptr) {
                 model->fromJson(modelObject);
+                model->setConverged(true);
                 qInfo("Model created and initialized");
                 if (modelTypeStr == "gardiner") {
                     qInfo("Device '%s' Gardiner parameters after fromJson: mu=%.12f kg1=%.12f x=%.12f kp=%.12f kvb=%.12f kvb1=%.12f vct=%.12f",
@@ -174,6 +175,7 @@ Device::Device(QJsonDocument modelDocument)
             QJsonObject triodeObj = deviceObject["triodeModel"].toObject();
             triodeSeed = new CohenHelieTriode();
             triodeSeed->fromJson(triodeObj);
+            triodeSeed->setConverged(true);
             qInfo("Device '%s' has embedded triode seed model", name.toStdString().c_str());
         }
 

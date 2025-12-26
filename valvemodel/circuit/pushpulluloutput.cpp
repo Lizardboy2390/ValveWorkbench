@@ -5,8 +5,12 @@
 #include <QPointF>
 #include <QVector>
 
+#include <QGraphicsPolygonItem>
+#include <QGraphicsTextItem>
+
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 PushPullUlOutput::PushPullUlOutput()
 {
@@ -201,6 +205,9 @@ void PushPullUlOutput::update(int index)
     Q_UNUSED(index);
 
     if (!device1 || !device2) {
+        lastHeadroomWaveform.clear();
+        lastTopTrajectory.clear();
+        lastBotTrajectory.clear();
         parameter[PPUL_VK]->setValue(0.0);
         parameter[PPUL_IK]->setValue(0.0);
         parameter[PPUL_RK]->setValue(0.0);
@@ -214,6 +221,9 @@ void PushPullUlOutput::update(int index)
     const double raa = parameter[PPUL_RAA]->getValue();
 
     if (vb <= 0.0 || raa <= 0.0 || ia <= 0.0) {
+        lastHeadroomWaveform.clear();
+        lastTopTrajectory.clear();
+        lastBotTrajectory.clear();
         parameter[PPUL_VK]->setValue(0.0);
         parameter[PPUL_IK]->setValue(0.0);
         parameter[PPUL_RK]->setValue(0.0);
@@ -348,7 +358,7 @@ void PushPullUlOutput::update(int index)
     double maxVpp = 0.0;
 
     if (raa > 0.0 && device1) {
-        const double slope = -2000.0 / raa; // mA/V, same as AC load line
+        const double slope = -2000.0 / raa;          // mA/V
         const double ia0   = ia;
         double va0   = vb;
 
@@ -357,7 +367,7 @@ void PushPullUlOutput::update(int index)
         if (!inductiveLoad) {
             const double ia_A     = ia / 1000.0;
             const double rPerValve = raa / 2.0;
-            double vaBias = vb;
+            double vaBias          = vb;
             if (rPerValve > 0.0 && ia_A > 0.0) {
                 vaBias = vb - ia_A * rPerValve;
                 if (!std::isfinite(vaBias)) {
@@ -459,6 +469,12 @@ void PushPullUlOutput::update(int index)
         }
     }
     effectiveHeadroomVpk = effective;
+
+    if (!(effectiveHeadroomVpk > 0.0)) {
+        lastHeadroomWaveform.clear();
+        lastTopTrajectory.clear();
+        lastBotTrajectory.clear();
+    }
 
     if (effectiveHeadroomVpk > 0.0 && raa > 0.0) {
         // For push-pull, each valve effectively sees a fraction of RAA, so
@@ -718,7 +734,7 @@ bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
     hd4 = 0.0;
     thd = 0.0;
 
-    if (!device1) {
+    if (!device1 || !device2) {
         return false;
     }
 
@@ -726,62 +742,266 @@ bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
         return false;
     }
 
-    double Ia_base = 0.0;
-    double Ib_base = 0.0;
-    double Ic_base = 0.0;
-    double Id_base = 0.0;
-    double Ie_base = 0.0;
-    if (!computeHeadroomHarmonicCurrents(vb,
-                                         iaBias_mA,
-                                         raa,
-                                         headroomVpk,
-                                         tap,
-                                         Ia_base,
-                                         Ib_base,
-                                         Ic_base,
-                                         Id_base,
-                                         Ie_base)) {
+    const double rPerValve = raa / 2.0;
+    if (!(rPerValve > 0.0) || !std::isfinite(rPerValve)) {
         return false;
     }
 
-    // Map the single-ended 5-point currents into a push-pull primary current
-    // waveform, mirroring PushPullOutput::simulateHarmonicsTimeDomain.
-    const double Ia_pp = Ia_base - Ie_base;
-    const double Ib_pp = Ib_base - Id_base;
-    const double Ic_pp = 0.0;
-    const double Id_pp = Id_base - Ib_base;
-    const double Ie_pp = Ie_base - Ia_base;
+    // Headroom parameter is specified per-anode (Vpk). The primary (anode-to-anode)
+    // output swing is approximately 2x that (Vpk) for ideal symmetric operation.
+    const double vprimaryVppTarget = 4.0 * headroomVpk;
+    if (!(vprimaryVppTarget > 0.0) || !std::isfinite(vprimaryVppTarget)) {
+        return false;
+    }
 
-    double samples[5];
-    samples[0] = Ia_pp;
-    samples[1] = Ib_pp;
-    samples[2] = Ic_pp;
-    samples[3] = Id_pp;
-    samples[4] = Ie_pp;
+    // Bias and cathode state. Vk is stored as a positive magnitude.
+    const double iaBias_A = iaBias_mA / 1000.0;
+    const double vk       = parameter[PPUL_VK] ? parameter[PPUL_VK]->getValue() : 0.0;
+    const double rk        = parameter[PPUL_RK] ? parameter[PPUL_RK]->getValue() : 0.0;
+    const double vgBias    = -vk;
 
-    const int sampleCount = 512;
-    const double twoPi = 6.28318530717958647692; // 2 * pi
+    const bool   cathodeBypassed = (gainMode == 1);
+    const double rk_ac           = (cathodeBypassed || rk <= 0.0) ? 0.0 : rk;
+
+    // Estimate differential small-signal gain (primary Vaa per grid V) so we can
+    // map requested headroom to an approximate grid-drive Vpp.
+    double vaBias = vb;
+    if (!inductiveLoad) {
+        vaBias = vb - iaBias_A * rPerValve;
+    }
+    vaBias = std::clamp(vaBias, 0.0, 2.0 * vb);
+
+    const double dVg = std::max(0.05, std::abs(vgBias) * 0.02);
+    const double vg2Bias = vaBias * tap + vb * (1.0 - tap);
+
+    double gmTop_mA_per_V = 0.0;
+    double gmBot_mA_per_V = 0.0;
+    {
+        double iaPlus_mA  = device1->anodeCurrent(vaBias, vgBias + dVg, vg2Bias);
+        double iaMinus_mA = device1->anodeCurrent(vaBias, vgBias - dVg, vg2Bias);
+        if (std::isfinite(iaPlus_mA) && std::isfinite(iaMinus_mA) && dVg > 0.0) {
+            gmTop_mA_per_V = (iaPlus_mA - iaMinus_mA) / (2.0 * dVg);
+        }
+    }
+    {
+        double iaPlus_mA  = device2->anodeCurrent(vaBias, vgBias + dVg, vg2Bias);
+        double iaMinus_mA = device2->anodeCurrent(vaBias, vgBias - dVg, vg2Bias);
+        if (std::isfinite(iaPlus_mA) && std::isfinite(iaMinus_mA) && dVg > 0.0) {
+            gmBot_mA_per_V = (iaPlus_mA - iaMinus_mA) / (2.0 * dVg);
+        }
+    }
+    double gm_mA_per_V = 0.5 * (gmTop_mA_per_V + gmBot_mA_per_V);
+    if (!std::isfinite(gm_mA_per_V) || std::abs(gm_mA_per_V) < 1e-6) {
+        gm_mA_per_V = std::isfinite(gmTop_mA_per_V) ? gmTop_mA_per_V : gmBot_mA_per_V;
+    }
+    if (!std::isfinite(gm_mA_per_V) || std::abs(gm_mA_per_V) < 1e-6) {
+        return false;
+    }
+    const double gm_A_per_V = gm_mA_per_V / 1000.0;
+
+    double gainPrimary = 2.0 * std::abs(gm_A_per_V * rPerValve); // Vaa/Vg
+    if (gainPrimary <= 1e-6 || !std::isfinite(gainPrimary)) {
+        return false;
+    }
+
+    if (rk_ac > 0.0) {
+        const double feedback = 1.0 + std::abs(gm_A_per_V) * rk_ac;
+        if (feedback > 1.0 && std::isfinite(feedback)) {
+            gainPrimary /= feedback;
+        }
+    }
+
+    if (gainPrimary <= 1e-6 || !std::isfinite(gainPrimary)) {
+        return false;
+    }
+
+    const double gridVpp = vprimaryVppTarget / gainPrimary;
+    if (!(gridVpp > 0.0) || !std::isfinite(gridVpp)) {
+        return false;
+    }
+
+    const int sampleCount = 1024;
+    const double twoPi = 6.28318530717958647692;
 
     double a[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
     double b[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
 
+    lastHeadroomWaveform.clear();
+    lastHeadroomWaveform.reserve(sampleCount);
+
+    lastTopTrajectory.clear();
+    lastBotTrajectory.clear();
+    lastTopTrajectory.reserve(sampleCount);
+    lastBotTrajectory.reserve(sampleCount);
+
+    const double vaCentre = vaBias;
+
+    const double ig2BiasTop_mA = (device1->getDeviceType() == PENTODE)
+                                    ? device1->screenCurrent(vaCentre, vgBias, vaCentre * tap + vb * (1.0 - tap))
+                                    : 0.0;
+    const double ig2BiasBot_mA = (device2->getDeviceType() == PENTODE)
+                                    ? device2->screenCurrent(vaCentre, vgBias, vaCentre * tap + vb * (1.0 - tap))
+                                    : 0.0;
+    const double ikBiasTotal_A = (iaBias_mA + ig2BiasTop_mA + iaBias_mA + ig2BiasBot_mA) / 1000.0;
+
+    auto solvePrimaryVoltage = [&](double vgTop_abs, double vgBot_abs, double vk_eff, double &vPri_out,
+                                    double &iaTop_mA_out, double &iaBot_mA_out,
+                                    double &ig2Top_mA_out, double &ig2Bot_mA_out) -> bool {
+        iaTop_mA_out = iaBot_mA_out = 0.0;
+        ig2Top_mA_out = ig2Bot_mA_out = 0.0;
+
+        auto eval = [&](double vPri) -> double {
+            double vaTop = vaCentre + 0.5 * vPri;
+            double vaBot = vaCentre - 0.5 * vPri;
+            vaTop = std::clamp(vaTop, 0.0, 2.0 * vb);
+            vaBot = std::clamp(vaBot, 0.0, 2.0 * vb);
+
+            const double vg2Top = vaTop * tap + vb * (1.0 - tap);
+            const double vg2Bot = vaBot * tap + vb * (1.0 - tap);
+
+            double vg1Top = vgTop_abs - vk_eff;
+            double vg1Bot = vgBot_abs - vk_eff;
+            if (vg1Top > 0.0) vg1Top = 0.0;
+            if (vg1Bot > 0.0) vg1Bot = 0.0;
+
+            const double iaTop_mA = device1->anodeCurrent(vaTop, vg1Top, vg2Top);
+            const double iaBot_mA = device2->anodeCurrent(vaBot, vg1Bot, vg2Bot);
+            if (!std::isfinite(iaTop_mA) || !std::isfinite(iaBot_mA)) {
+                return std::numeric_limits<double>::quiet_NaN();
+            }
+            const double vLoad = raa * (iaTop_mA - iaBot_mA) / 1000.0;
+            return vPri - vLoad;
+        };
+
+        double lo = -2.0 * vb;
+        double hi =  2.0 * vb;
+        double flo = eval(lo);
+        double fhi = eval(hi);
+        if (!std::isfinite(flo) || !std::isfinite(fhi)) {
+            return false;
+        }
+        if (flo * fhi > 0.0) {
+            lo = -vb;
+            hi =  vb;
+            flo = eval(lo);
+            fhi = eval(hi);
+            if (!std::isfinite(flo) || !std::isfinite(fhi) || flo * fhi > 0.0) {
+                return false;
+            }
+        }
+
+        double mid = 0.0;
+        for (int it = 0; it < 30; ++it) {
+            mid = 0.5 * (lo + hi);
+            double fmid = eval(mid);
+            if (!std::isfinite(fmid)) {
+                return false;
+            }
+            if (std::abs(fmid) < 1e-6) {
+                break;
+            }
+            if (flo * fmid <= 0.0) {
+                hi = mid;
+                fhi = fmid;
+            } else {
+                lo = mid;
+                flo = fmid;
+            }
+        }
+
+        double vaTop = vaCentre + 0.5 * mid;
+        double vaBot = vaCentre - 0.5 * mid;
+        vaTop = std::clamp(vaTop, 0.0, 2.0 * vb);
+        vaBot = std::clamp(vaBot, 0.0, 2.0 * vb);
+
+        const double vg2Top = vaTop * tap + vb * (1.0 - tap);
+        const double vg2Bot = vaBot * tap + vb * (1.0 - tap);
+
+        double vg1Top = vgTop_abs - vk_eff;
+        double vg1Bot = vgBot_abs - vk_eff;
+        if (vg1Top > 0.0) vg1Top = 0.0;
+        if (vg1Bot > 0.0) vg1Bot = 0.0;
+
+        iaTop_mA_out = device1->anodeCurrent(vaTop, vg1Top, vg2Top);
+        iaBot_mA_out = device2->anodeCurrent(vaBot, vg1Bot, vg2Bot);
+        if (!std::isfinite(iaTop_mA_out) || !std::isfinite(iaBot_mA_out)) {
+            return false;
+        }
+
+        if (device1->getDeviceType() == PENTODE) {
+            ig2Top_mA_out = device1->screenCurrent(vaTop, vg1Top, vg2Top);
+        }
+        if (device2->getDeviceType() == PENTODE) {
+            ig2Bot_mA_out = device2->screenCurrent(vaBot, vg1Bot, vg2Bot);
+        }
+
+        vPri_out = mid;
+        return true;
+    };
+
     for (int k = 0; k < sampleCount; ++k) {
         const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
-        const double u = phase / twoPi;
+        const double drive = 0.5 * gridVpp * std::sin(phase);
 
-        const double pos = u * 5.0;
-        const double indexF = std::floor(pos);
-        int i0 = static_cast<int>(indexF);
-        if (i0 < 0) i0 = 0;
-        if (i0 >= 5) i0 = i0 % 5;
-        const int i1 = (i0 + 1) % 5;
-        const double frac = pos - indexF;
+        const double vgTop_abs = drive;
+        const double vgBot_abs = -drive;
 
-        const double ip = samples[i0] + (samples[i1] - samples[i0]) * frac;
+        double vk_inst = vk;
+        double vPri = 0.0;
+        double iaTop_mA = 0.0;
+        double iaBot_mA = 0.0;
+        double ig2Top_mA = 0.0;
+        double ig2Bot_mA = 0.0;
+
+        if (rk_ac > 0.0) {
+            bool ok = true;
+            for (int iter = 0; iter < 6; ++iter) {
+                if (!solvePrimaryVoltage(vgTop_abs, vgBot_abs, vk_inst, vPri, iaTop_mA, iaBot_mA, ig2Top_mA, ig2Bot_mA)) {
+                    ok = false;
+                    break;
+                }
+                const double ikTotal_A = (iaTop_mA + iaBot_mA + ig2Top_mA + ig2Bot_mA) / 1000.0;
+                double vk_new = vk + (ikTotal_A - ikBiasTotal_A) * rk_ac;
+                if (!std::isfinite(vk_new)) {
+                    vk_new = vk;
+                }
+                if (vk_new < 0.0) {
+                    vk_new = 0.0;
+                }
+                const double delta = std::abs(vk_new - vk_inst);
+                vk_inst = vk_new;
+                if (delta < 1e-3) {
+                    break;
+                }
+            }
+            if (!ok) {
+                continue;
+            }
+            if (!solvePrimaryVoltage(vgTop_abs, vgBot_abs, vk_inst, vPri, iaTop_mA, iaBot_mA, ig2Top_mA, ig2Bot_mA)) {
+                continue;
+            }
+        } else {
+            if (!solvePrimaryVoltage(vgTop_abs, vgBot_abs, vk, vPri, iaTop_mA, iaBot_mA, ig2Top_mA, ig2Bot_mA)) {
+                continue;
+            }
+        }
+
+        if (std::isfinite(vPri)) {
+            lastHeadroomWaveform.push_back(vPri);
+        }
+
+        const double vaTop = std::clamp(vaCentre + 0.5 * vPri, 0.0, 2.0 * vb);
+        const double vaBot = std::clamp(vaCentre - 0.5 * vPri, 0.0, 2.0 * vb);
+        if (std::isfinite(vaTop) && std::isfinite(iaTop_mA)) {
+            lastTopTrajectory.push_back(QPointF(vaTop, std::max(0.0, iaTop_mA)));
+        }
+        if (std::isfinite(vaBot) && std::isfinite(iaBot_mA)) {
+            lastBotTrajectory.push_back(QPointF(vaBot, std::max(0.0, iaBot_mA)));
+        }
 
         const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
                                                    static_cast<double>(sampleCount - 1)));
-        const double v = ip * window;
+        const double v = vPri * window;
 
         for (int n = 1; n <= 4; ++n) {
             const double angle = static_cast<double>(n) * phase;
@@ -1023,6 +1243,148 @@ void PushPullUlOutput::plot(Plot *plot)
         } else {
             delete opMarker;
             opMarker = nullptr;
+        }
+    }
+
+    // Draw a headroom segment around the operating point along the AC load
+    // line, with a filled polygon down to Ia = 0.
+    if (effectiveHeadroomVpk > 0.0) {
+        const double headroomManual = parameter[PPUL_HEADROOM]->getValue();
+        const double vaCentre = inductiveLoad ? vb : vaBias;
+        const double headroomUse = effectiveHeadroomVpk;
+        double vaMin = vaCentre - headroomUse;
+        double vaMax2 = vaCentre + headroomUse;
+
+        vaMin  = std::max(0.0, vaMin);
+        vaMax2 = std::min(axisVaMax, vaMax2);
+
+        if (vaMax2 > vaMin) {
+            QGraphicsItemGroup *headroomGroup = new QGraphicsItemGroup();
+            QPen pen;
+            if (headroomManual > 0.0) {
+                pen.setColor(QColor::fromRgb(0, 0, 255));
+            } else if (showSymSwing) {
+                pen.setColor(QColor::fromRgb(100, 149, 237));
+            } else {
+                pen.setColor(QColor::fromRgb(165, 42, 42));
+            }
+            pen.setWidth(2);
+
+            auto ia_line_mA = [&](double va) {
+                return ia + gradient * (va - vaCentre);
+            };
+
+            double iaHigh = ia_line_mA(vaMin);
+            double iaLow  = ia_line_mA(vaMax2);
+
+            if (std::isfinite(iaHigh) && std::isfinite(iaLow)) {
+                iaHigh = std::clamp(iaHigh, 0.0, iaMax);
+                iaLow  = std::clamp(iaLow,  0.0, iaMax);
+
+                if (auto *seg = plot->createSegment(vaMin, iaHigh, vaMax2, iaLow, pen)) {
+                    headroomGroup->addToGroup(seg);
+                }
+
+                const double xScale = plot->getXScale();
+                const double yScale = plot->getYScale();
+                const double xStart = plot->getXStart();
+                const double yStart = plot->getYStart();
+                if (xScale > 0.0 && yScale > 0.0) {
+                    const double sx1 = (vaMin  - xStart) * xScale;
+                    const double sy1 = PLOT_HEIGHT - (iaHigh - yStart) * yScale;
+                    const double sx2 = (vaMax2 - xStart) * xScale;
+                    const double sy2 = PLOT_HEIGHT - (iaLow  - yStart) * yScale;
+                    const double sx3 = sx2;
+                    const double sy3 = PLOT_HEIGHT - (0.0 - yStart) * yScale;
+                    const double sx4 = sx1;
+                    const double sy4 = sy3;
+
+                    QPolygonF poly;
+                    poly << QPointF(sx1, sy1)
+                         << QPointF(sx2, sy2)
+                         << QPointF(sx3, sy3)
+                         << QPointF(sx4, sy4);
+
+                    auto *polyItem = new QGraphicsPolygonItem(poly);
+                    QColor fillColor = pen.color();
+                    fillColor.setAlpha(40);
+                    polyItem->setBrush(fillColor);
+                    polyItem->setPen(Qt::NoPen);
+                    headroomGroup->addToGroup(polyItem);
+                }
+            }
+
+            if (!headroomGroup->childItems().isEmpty()) {
+                if (!acSignalLine) {
+                    acSignalLine = new QGraphicsItemGroup();
+                    plot->getScene()->addItem(acSignalLine);
+                }
+                acSignalLine->addToGroup(headroomGroup);
+            } else {
+                delete headroomGroup;
+            }
+        }
+    }
+
+    if (effectiveHeadroomVpk > 0.0 && lastTopTrajectory.size() > 1 && lastBotTrajectory.size() > 1) {
+        QGraphicsItemGroup *trajGroup = new QGraphicsItemGroup();
+
+        QPen penTop;
+        penTop.setColor(QColor::fromRgb(255, 140, 0));
+        penTop.setWidth(2);
+
+        QPen penBot;
+        penBot.setColor(QColor::fromRgb(160, 32, 240));
+        penBot.setWidth(2);
+
+        for (int i = 0; i < lastTopTrajectory.size() - 1; ++i) {
+            const QPointF s = lastTopTrajectory[i];
+            const QPointF e = lastTopTrajectory[i + 1];
+            if (auto *seg = plot->createSegment(s.x(), s.y(), e.x(), e.y(), penTop)) {
+                trajGroup->addToGroup(seg);
+            }
+        }
+        for (int i = 0; i < lastBotTrajectory.size() - 1; ++i) {
+            const QPointF s = lastBotTrajectory[i];
+            const QPointF e = lastBotTrajectory[i + 1];
+            if (auto *seg = plot->createSegment(s.x(), s.y(), e.x(), e.y(), penBot)) {
+                trajGroup->addToGroup(seg);
+            }
+        }
+
+        if (!trajGroup->childItems().isEmpty()) {
+            if (!acSignalLine) {
+                acSignalLine = new QGraphicsItemGroup();
+                plot->getScene()->addItem(acSignalLine);
+            }
+            acSignalLine->addToGroup(trajGroup);
+
+            const double xScale = plot->getXScale();
+            const double yScale = plot->getYScale();
+            if (xScale > 0.0 && yScale > 0.0) {
+                const double xStart = plot->getXStart();
+                const double yStart = plot->getYStart();
+                const double xStop  = xStart + static_cast<double>(PLOT_WIDTH)  / xScale;
+                const double yStop  = yStart + static_cast<double>(PLOT_HEIGHT) / yScale;
+
+                const double xText = xStart + 0.03 * (xStop - xStart);
+                const double yText = yStart + 0.95 * (yStop - yStart);
+
+                const double sx = (xText - xStart) * xScale;
+                const double sy = PLOT_HEIGHT - (yText - yStart) * yScale;
+
+                QGraphicsTextItem *t1 = new QGraphicsTextItem("D1 trajectory");
+                t1->setDefaultTextColor(penTop.color());
+                t1->setPos(sx, sy);
+                trajGroup->addToGroup(t1);
+
+                QGraphicsTextItem *t2 = new QGraphicsTextItem("D2 trajectory");
+                t2->setDefaultTextColor(penBot.color());
+                t2->setPos(sx, sy + 14.0);
+                trajGroup->addToGroup(t2);
+            }
+        } else {
+            delete trajGroup;
         }
     }
 

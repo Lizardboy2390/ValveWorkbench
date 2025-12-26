@@ -105,6 +105,11 @@ public:
 
     void setPreferences(PreferencesDialog *newPreferences);
 
+    void requestHvCalibrationSampleOnce();
+
+    void setHvHold(int hvChannel, double volts, bool enabled);
+    void requestHvDischarge();
+
     // Apply grid reference (command magnitude in volts, e.g. 5 or 60) to both grids (S2 and S6)
     void applyGridReferenceBoth(double commandVoltage, bool enabled);
 
@@ -168,13 +173,16 @@ private:
 
     PreferencesDialog *preferences;
 
+    double convertMeasuredHvVoltage(int hvChannel, int adc);
+    double convertMeasuredHvCurrent(int hvChannel, int adcHi, int adcLo);
+
     QList<double> stepValue;
     QList<int> stepParameter;
     QList<QList <int>> sweepParameter;
-    int stepIndex;
-    int sweepIndex;
-    int stepType;
-    int sweepType;
+    int stepIndex = 0;
+    int sweepIndex = 0;
+    int stepType = 0;
+    int sweepType = 0;
     int sweepPoints = 60;
 
     int sampleCount = 0;
@@ -194,6 +202,8 @@ private:
     bool isVerifyingHardware = false;  // ← ADD THIS: Track verification state
     int verificationAttempts = 0;      // ← ADD THIS: Track verification attempts
     static const int MAX_VERIFICATION_ATTEMPTS = 3; // ← ADD THIS: Max verification retries
+
+    bool hvCalibrationSampling = false;
 
     static QRegularExpression *sampleMatcher;
     static QRegularExpression *sampleMatcher2;

@@ -6,6 +6,7 @@
 #include <QVector>
 
 #include <QGraphicsPolygonItem>
+#include <QGraphicsTextItem>
 
 #include <algorithm>
 #include <cmath>
@@ -748,7 +749,7 @@ void PushPullOutput::computeTimeDomainHarmonicScan(QVector<double> &headroomVals
     hd4Vals.clear();
     thdVals.clear();
 
-    if (!device1) {
+    if (!device1 || !device2) {
         return;
     }
 
@@ -834,7 +835,7 @@ bool PushPullOutput::simulateHarmonicsTimeDomain(double vb,
     hd4 = 0.0;
     thd = 0.0;
 
-    if (!device1) {
+    if (!device1 || !device2) {
         return false;
     }
 
