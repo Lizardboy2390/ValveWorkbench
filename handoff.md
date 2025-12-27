@@ -1,6 +1,6 @@
 # ValveWorkbench – Engineering Handoff
 
-Last updated: 2025-12-21 (Release prep: hide Harmonics tab; Data tab gated by Preferences)
+Last updated: 2025-12-26 (Designer layout standardisation; Triode CC + DC Follower 2-stage UI/plot fixes)
 
 This handoff is intended as a concise technical snapshot for whoever picks up
 work on ValveWorkbench next. It deliberately avoids long incident narratives
@@ -216,6 +216,7 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
 ## Open Items (For Successor)
 - [x] Verify valveworkbench.cpp file integrity after manual revert — 2025-11-30: Verified manually after revert; content matches expected baseline.
 - [x] Test compilation to ensure no remaining corruption — 2025-11-30: Full project rebuild in Qt Creator; no errors.
+- [x] Designer layout standardisation: UI-row-to-parameter mapping + consistent Headroom/Harmonics grouping for output stages; Triode CC + DC Follower (2-stage) Designer row visibility + plot overlays fixed — 2025-12-26.
 - [ ] Complete time-domain harmonic heatmap using proper methodology
 - [ ] UI follow-up after modelling work: clarify Modeller plot context (which measurement/Vg2), and review plot scaling defaults and tab-switch behaviour.
 - [x] Document any changes properly in handoff.md — 2025-11-30: Updated with Designer Autoscale Y semantics and output-stage axis behaviour.
@@ -273,6 +274,14 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - `valvemodel/circuit/singleendedoutput.cpp` - Time-domain harmonic functions
   - `valvemodel/circuit/singleendedoutput.h` - Function declarations
   - External reference: `refrence code/ilovepdf_pages-to-jpg (1)` — eTracer PC software manual (quick-scan, corners tests, Imax/Pmax usage, tube grading ideas).
+
+### 2025-12-26 Summary (Designer layout standardisation)
+
+- Designer parameter edits are now routed through a UI-row-to-parameter-index mapping hook (`Circuit::parameterIndexForUiRow`) so circuits can present consistent Designer row layouts even when internal parameter indices differ.
+- Harmonic-capable output-stage circuits (SE, SE-UL, PP, UL-PP) were refactored to use a consistent “Headroom / Harmonics” block layout in the bottom rows.
+- Triode CC + DC Cathode Follower (2-stage) Designer fixes:
+  - Always show the final Designer row (THD line) as `N/A` when not valid instead of hiding it.
+  - Ensure plot overlays are drawn after the initial compute pass when selecting devices (plotting previously ran before Va1 was computed, so no load lines appeared).
 
 ### 2025-12-11 Summary (Compare / Export-to-Device / analyser overlays / grid helpers)
 

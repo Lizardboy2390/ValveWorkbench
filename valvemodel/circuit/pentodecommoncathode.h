@@ -18,7 +18,9 @@ enum ePentodeCommonCathodeParameter {
     PENT_CC_IG2,      // Screen current Ig2 (mA)
     PENT_CC_GM,       // Transconductance gm (mA/V)
     PENT_CC_GAIN,     // Gain (unbypassed)
-    PENT_CC_GAIN_B    // Gain (bypassed)
+    PENT_CC_GAIN_B,   // Gain (bypassed)
+    PENT_CC_HEADROOM, // Manual headroom override at anode (Vpk)
+    PENT_CC_THD       // THD at headroom (% of fundamental)
 };
 
 class PentodeCommonCathode : public Circuit

@@ -36,11 +36,15 @@ void Measurement::addSweep(Sweep *sweep)
 void Measurement::addSample(Sample *sample)
 {
     int sweepIndex = sweeps.indexOf(currentSweep);
+#ifdef QT_DEBUG
     qInfo("=== ADDING SAMPLE TO SWEEP %d ===", sweepIndex);
     qInfo("Sweep v1Nominal: %f, v2Nominal: %f", currentSweep->getVg1Nominal(), currentSweep->getVg2Nominal());
     qInfo("Sample va: %f V, ia: %f mA", sample->getVa(), sample->getIa());
+#endif
     currentSweep->addSample(sample);
+#ifdef QT_DEBUG
     qInfo("Sample added, sweep now has %d samples", currentSweep->count());
+#endif
 }
 
 void Measurement::nextSweep(double v1Nominal, double v2Nominal)

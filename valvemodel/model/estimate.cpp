@@ -15,10 +15,36 @@ Estimate::Estimate()
 }
 
 void Estimate::estimateTriode(Measurement *measurement) {
+    auto clamp = [](double value, double lower, double upper, double fallback) -> double {
+        if (!std::isfinite(value)) {
+            return fallback;
+        }
+        if (upper < lower) {
+            std::swap(lower, upper);
+        }
+        if (value < lower) {
+            return lower;
+        }
+        if (value > upper) {
+            return upper;
+        }
+        return value;
+    };
+
     estimateMu(measurement);
+    mu = clamp(std::fabs(mu), 5.0, 150.0, 40.0);
+
     estimateKg1X(measurement);
+    x = clamp(x, 1.0, 2.0, 1.4);
+    kg1 = clamp(kg1, 0.02, 5.0, 0.5);
+
     estimateKp(measurement);
+    kp = clamp(kp, 20.0, 400.0, 200.0);
+
     estimateKvbKvb1(measurement);
+    kvb = clamp(kvb, 50.0, 800.0, 300.0);
+    kvb1 = clamp(kvb1, 1.0, 80.0, 10.0);
+    vct = clamp(vct, 0.0, 5.0, 0.2);
 }
 
 namespace {
@@ -424,12 +450,14 @@ void Estimate::estimateMu(Measurement *measurement)
             int sweeps = measurement->count();
             for (int sw = 0; sw < sweeps; sw++) {
                 Sweep *sweep = measurement->at(sw);
+                double vg1Nom = sweep->getVg1Nominal();
+                if (!std::isfinite(vg1Nom) || std::fabs(vg1Nom) < 1e-9) {
+                    continue;
+                }
                 double vaAtIMu = findVa(sweep, iMu);
                 if (vaAtIMu < 0) {
                     continue;
                 }
-
-                double vg1Nom = sweep->getVg1Nominal();
                 vg1Samples.append(normVg(vg1Nom));
                 vaSamples.append(vaAtIMu);
             }

@@ -135,25 +135,22 @@ void TriodeCcDccfTwoStage::updateUI(QLabel *labels[], QLineEdit *values[])
                                     ? parameter[TCC_DCCF_HEADROOM2]->getValue()
                                     : 0.0;
 
+        labels[15]->setText("Stage 2 THD at headroom (%):");
+        labels[15]->setVisible(true);
+        values[15]->setVisible(true);
+        values[15]->setReadOnly(true);
+
         if (!device1 || !device2 || headroom <= 0.0 || !(followerThdPct > 0.0) || !std::isfinite(followerThdPct)) {
-            // No valid THD metric: hide the row to avoid stale values.
-            values[15]->setText(QString());
+            values[15]->setText("N/A");
             labels[15]->setStyleSheet(QString());
             values[15]->setStyleSheet(QString());
-            labels[15]->setVisible(false);
-            values[15]->setVisible(false);
         } else {
-            labels[15]->setText("Stage 2 THD at headroom (%):");
             values[15]->setText(QString::number(followerThdPct, 'f', 1));
 
             // Manual headroom only for now: bright blue.
             const QString style = "color: rgb(0,0,255);";
             labels[15]->setStyleSheet(style);
             values[15]->setStyleSheet(style);
-
-            labels[15]->setVisible(true);
-            values[15]->setVisible(true);
-            values[15]->setReadOnly(true);
         }
     }
 }

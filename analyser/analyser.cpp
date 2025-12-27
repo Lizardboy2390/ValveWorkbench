@@ -49,10 +49,12 @@ Sample *Analyser::createSample(QString response)
         return nullptr;
     }
 
+#ifdef QT_DEBUG
     qInfo("Raw capture: vh=%d ih=%d vg1=%d va1=%d ia1=%d ia1_lo=%d vg3=%d va2=%d ia2=%d ia2_lo=%d ia_hi=%d ig2_hi=%d",
           match.captured(1).toInt(), match.captured(2).toInt(), match.captured(3).toInt(), match.captured(4).toInt(),
           match.captured(5).toInt(), match.captured(6).toInt(), match.captured(7).toInt(), match.captured(8).toInt(),
           match.captured(9).toInt(), match.captured(10).toInt(), match.captured(11).toInt(), match.captured(12).toInt());
+#endif
 
     double vg1 = convertMeasuredVoltage(GRID, match.captured(3).toInt());       // Commanded grid bias (not sensed)
     double va = convertMeasuredHvVoltage(1, match.captured(4).toInt());         // HV1 voltage (anode 1)
@@ -68,20 +70,24 @@ Sample *Analyser::createSample(QString response)
         va2 = convertMeasuredHvVoltage(2, match.captured(8).toInt());           // HV2 voltage (anode 2)
         ia2 = convertMeasuredHvCurrent(2, match.captured(9).toInt(), match.captured(10).toInt()) * 1000;
 
+#ifdef QT_DEBUG
         qInfo("Sample (double triode): vg1(set)=%.3f vg3(set)=%.3f va=%.3f va2=%.3f ia=%.3f ia2(pre)=%.4f",
               vg1, vg3, va, va2, ia, ia2);
         qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
               match.captured(5).toInt(), match.captured(6).toInt(), ia);
-        qInfo("Raw ADC secondary: HI=%d LO=%d HI2=%d -> raw=%.4fmA",\
+        qInfo("Raw ADC secondary: HI=%d LO=%d HI2=%d -> raw=%.4fmA",
               match.captured(9).toInt(), match.captured(10).toInt(), match.captured(12).toInt(), ia2);
+#endif
     } else {
         vg2 = convertMeasuredHvVoltage(2, match.captured(8).toInt());
         ig2 = convertMeasuredHvCurrent(2, match.captured(9).toInt(), match.captured(10).toInt()) * 1000;
 
+#ifdef QT_DEBUG
         qInfo("Sample (single channel): vg1(set)=%.3f vg2=%.3f va=%.3f ia=%.3f ig2=%.3f",
               vg1, vg2, va, ia, ig2);
         qInfo("Raw ADC primary: HI=%d LO=%d (%.3fmA)",
               match.captured(5).toInt(), match.captured(6).toInt(), ia);
+#endif
     }
     double vh = convertMeasuredVoltage(HEATER, match.captured(1).toInt());
     double ih = convertMeasuredCurrent(HEATER, match.captured(2).toInt());
@@ -103,7 +109,9 @@ Sample *Analyser::createSample(QString response)
 
     Sample *sample = new Sample(vg1, va, ia, vg2, ig2, vh, ih, vg3, va2, ia2);
 
-     qInfo("Converted values - Va: %.3fV, Ia: %.3fmA, Vg1: %.3fV, Vg2: %.3fV", va, ia, vg1, vg2);
+#ifdef QT_DEBUG
+    qInfo("Converted values - Va: %.3fV, Ia: %.3fmA, Vg1: %.3fV, Vg2: %.3fV", va, ia, vg1, vg2);
+#endif
 
     return sample;
 }
@@ -554,7 +562,9 @@ void Analyser::startTest()
                     if (i) stepList.append(", ");
                     stepList.append(QString::asprintf("%.3f", stepValue.at(i)));
                 }
+#ifdef QT_DEBUG
                 qInfo("AnodeChar steps: count=%d gridSteps=[%s]", stepValue.size(), stepList.toStdString().c_str());
+#endif
 
                 result->setGridStart(minGrid);
                 result->setGridStop(maxGrid);
@@ -584,7 +594,9 @@ void Analyser::startTest()
             result->setAnodeStart(anodeStart);
 
             int initialSecondaryGrid = convertTargetVoltage(GRID, secondGridStart);
+#ifdef QT_DEBUG
             qInfo("Command: S6 %d (initial secondary grid)", initialSecondaryGrid);
+#endif
 
             // Set BOTH grids to the same initial code, then bias both anodes
             sendCommand(buildSetCommand("S2 ", initialSecondaryGrid));
@@ -601,7 +613,9 @@ void Analyser::startTest()
             // Log initial S2 setting at start of first sweep (Anode Characteristics)
             if (stepCommandPrefix == "S2 ") {
                 double gridV = stepValue.isEmpty() ? 0.0 : stepValue.at(0);
+#ifdef QT_DEBUG
                 qInfo("AnodeChar set S2 (initial): code=%d grid=%.3fV", stepParameter.at(0), gridV);
+#endif
             }
             // For pentode anode characteristics, S2 will be reasserted after verification PASS in checkResponse()
             if (!(deviceType == PENTODE && testType == ANODE_CHARACTERISTICS && stepCommandPrefix == "S2 ")) {
@@ -765,20 +779,28 @@ void Analyser::nextSample() {
             // TRANSFER (double triode): sweep both grids together (S2 and S6)
             QString cmdS2 = buildSetCommand("S2 ", sweepValue);
             QString cmdS6 = buildSetCommand("S6 ", sweepValue);
+#ifdef QT_DEBUG
             qInfo("Command: %s (primary grid sweep)", cmdS2.toStdString().c_str());
+#endif
             sendCommand(cmdS2);
+#ifdef QT_DEBUG
             qInfo("Command: %s (secondary grid sweep)", cmdS6.toStdString().c_str());
+#endif
             sendCommand(cmdS6);
         } else {
             // Single triode or anode sweep cases (including triode-connected pentode)
             QString primaryCommand = buildSetCommand(sweepCommandPrefix, sweepValue);
+#ifdef QT_DEBUG
             qInfo("Command: %s (primary sweep)", primaryCommand.toStdString().c_str());
+#endif
             sendCommand(primaryCommand);
 
             // For double triode TRANSFER with ANODE sweep we mirror S3->S7.
             if (isDoubleTriode && sweepType == ANODE) {
                 QString secondaryCommand = buildSetCommand("S7 ", sweepValue);
+#ifdef QT_DEBUG
                 qInfo("Command: %s (secondary anode tracking)", secondaryCommand.toStdString().c_str());
+#endif
                 sendCommand(secondaryCommand);
             }
 
@@ -787,7 +809,9 @@ void Analyser::nextSample() {
             // a triode-connected pentode without requiring a physical strap.
             if (isTriodeConnectedPentode && deviceType == PENTODE && sweepType == ANODE) {
                 QString screenTrack = buildSetCommand("S7 ", sweepValue);
+#ifdef QT_DEBUG
                 qInfo("Command: %s (triode-connected screen tracking)", screenTrack.toStdString().c_str());
+#endif
                 sendCommand(screenTrack);
             }
         }
@@ -797,19 +821,25 @@ void Analyser::nextSample() {
         }
         sendCommand("M2");
     } else {
+#ifdef QT_DEBUG
         qInfo("=== END OF SWEEP DEBUG ===");
         qInfo("End of sweep reached, moving to next step");
         qInfo("Before increment: stepIndex=%d, sweepIndex=%d", stepIndex, sweepIndex);
+#endif
         stepIndex++;
         sweepIndex = 0;
         isEndSweep = false;
         measuredIaMax = 0.0;      // ← ADD THIS
         measuredIg2Max = 0.0;     // ← ADD THIS
+#ifdef QT_DEBUG
         qInfo("After increment: stepIndex=%d, sweepIndex=%d, isEndSweep=%d", stepIndex, sweepIndex, isEndSweep);
+#endif
 
         if (stepIndex < stepParameter.length()) {// There is another sweep to measure
+#ifdef QT_DEBUG
             qInfo("=== NEW SWEEP DEBUG ===");
             qInfo("Creating new sweep - stepIndex: %d, total steps: %d", stepIndex, stepParameter.length());
+#endif
             double v1Nominal = stepValue.at(stepIndex);
             double v2Nominal = 0.0;
             if (deviceType == PENTODE) {
@@ -833,7 +863,9 @@ void Analyser::nextSample() {
                 // Log S2 setting at the start of each new sweep (Anode Characteristics)
                 if (stepCommandPrefix == "S2 ") {
                     double gridV = (stepIndex < stepValue.size()) ? stepValue.at(stepIndex) : 0.0;
+#ifdef QT_DEBUG
                     qInfo("AnodeChar set S2 (new sweep): stepIndex=%d code=%d grid=%.3fV", stepIndex, stepParameter.at(stepIndex), gridV);
+#endif
                 }
                 sendCommand(buildSetCommand(stepCommandPrefix, stepParameter.at(stepIndex)));
             }
@@ -1014,7 +1046,7 @@ void Analyser::checkResponse(QString response)
 
     if (sweepIndex == 0) {
         isEndSweep = false;
-        measuredIaMax = 0.0;     // ← ADD THIS  
+        measuredIaMax = 0.0;     // ← ADD THIS
         measuredIg2Max = 0.0;    // ← ADD THIS
         // qInfo("Reset isEndSweep to false for new sweep stepIndex=%d", stepIndex);
     }
@@ -1240,13 +1272,17 @@ void Analyser::checkResponse(QString response)
                 double power2 = ia2 * va2 / 1000.0;
                 if (ia > iaMax || ia2 > iaMax || power1 > pMax || power2 > pMax) {
                     // Mark end-of-sweep; keep the measured sample as-is for storage
+#ifdef QT_DEBUG
                     qInfo("AN LIMIT: end sweep on limit (va=%.3f ia=%.3f va2=%.3f ia2=%.3f p1=%.3f p2=%.3f)",
                           va, ia, va2, ia2, power1, power2);
+#endif
                     isEndSweep = true;
                 }
 
+#ifdef QT_DEBUG
                 qInfo("ADD SAMPLE: testType=%d stepIndex=%d sweepIndex=%d va=%.3f ia=%.3f",
                       (int)testType, stepIndex, sweepIndex, va, ia);
+#endif
                 result->addSample(sample);
 
                 if (!isEndSweep) {
@@ -1370,7 +1406,6 @@ void Analyser::handleCommandTimeout()
     abortTest();
 }
 
-
 void Analyser::setPreferences(PreferencesDialog *newPreferences)
 {
     preferences = newPreferences;
@@ -1380,11 +1415,13 @@ void Analyser::applyGridReferenceBoth(double commandVoltage, bool enabled)
 {
     // commandVoltage is the magnitude (e.g., 5 or 60). For grids, hardware expects a positive DAC code
     // to generate a negative grid potential, consistent with convertTargetVoltage(GRID, +magnitude).
+#ifdef QT_DEBUG
     qInfo("applyGridReferenceBoth: cmd=%.3f enabled=%d portOpen=%d isTestRunning=%d awaitingResponse=%d",
           commandVoltage, enabled ? 1 : 0,
           (serialPort && serialPort->isOpen()) ? 1 : 0,
           isTestRunning ? 1 : 0,
           awaitingResponse ? 1 : 0);
+#endif
 
     if (!serialPort || !serialPort->isOpen()) {
         qWarning("Grid reference requested but serial port is not open");
@@ -1408,8 +1445,10 @@ void Analyser::applyGridReferenceBoth(double commandVoltage, bool enabled)
         int codeVg2 = convertTargetVoltage(GRID, std::fabs(cmdVg2));
         cmdPrimary = buildSetCommand("S2 ", codeVg1);
         cmdSecondary = buildSetCommand("S6 ", codeVg2);
+#ifdef QT_DEBUG
         qInfo("Grid ref (calibrated): desired=%.3f cmdVg1=%.3f cmdVg2=%.3f codes=(%d,%d)",
               desiredV, cmdVg1, cmdVg2, codeVg1, codeVg2);
+#endif
     } else {
         cmdPrimary = "S2 0";
         cmdSecondary = "S6 0";
@@ -1423,7 +1462,9 @@ void Analyser::applyGridReferenceBoth(double commandVoltage, bool enabled)
         serialPort->write(cmdSecondary.toLatin1());
         serialPort->write("\r\n");
         // Do not start timeout or set awaitingResponse for these calibration nudges
+#ifdef QT_DEBUG
         qInfo("Grid ref (immediate): %s, %s", cmdPrimary.toStdString().c_str(), cmdSecondary.toStdString().c_str());
+#endif
     } else {
         sendCommand(cmdPrimary);
         sendCommand(cmdSecondary);

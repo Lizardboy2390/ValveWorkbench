@@ -26,12 +26,16 @@ PentodeCommonCathode::PentodeCommonCathode()
     parameter[PENT_CC_GM]      = new Parameter("gm (mA/V)", 0.0);
     parameter[PENT_CC_GAIN]    = new Parameter("Gain (unbypassed)", 0.0);
     parameter[PENT_CC_GAIN_B]  = new Parameter("Gain (bypassed)", 0.0);
+    parameter[PENT_CC_HEADROOM] = new Parameter("Headroom (Vpk)", 0.0);
+    parameter[PENT_CC_THD]      = new Parameter("THD at headroom (%)", 0.0);
 }
 
 int PentodeCommonCathode::getDeviceType(int index)
 {
-    Q_UNUSED(index);
-    return PENTODE;
+    if (index == 1) {
+        return PENTODE;
+    }
+    return -1;
 }
 
 QTreeWidgetItem *PentodeCommonCathode::buildTree(QTreeWidgetItem *parent)
@@ -93,6 +97,27 @@ void PentodeCommonCathode::updateUI(QLabel *labels[], QLineEdit *values[])
             labels[i]->setVisible(false);
             values[i]->setVisible(false);
         }
+    }
+
+    // Headroom + THD
+    if (labels[PENT_CC_HEADROOM] && values[PENT_CC_HEADROOM] && parameter[PENT_CC_HEADROOM]) {
+        labels[PENT_CC_HEADROOM]->setText("Headroom (Vpk):");
+        values[PENT_CC_HEADROOM]->setText(QString::number(parameter[PENT_CC_HEADROOM]->getValue(), 'f', 2));
+        labels[PENT_CC_HEADROOM]->setVisible(true);
+        values[PENT_CC_HEADROOM]->setVisible(true);
+        values[PENT_CC_HEADROOM]->setReadOnly(false);
+    }
+
+    if (labels[PENT_CC_THD] && values[PENT_CC_THD] && parameter[PENT_CC_THD]) {
+        labels[PENT_CC_THD]->setText("THD at headroom (%):");
+        if (!device1 || !(parameter[PENT_CC_HEADROOM]->getValue() > 0.0)) {
+            values[PENT_CC_THD]->setText("N/A");
+        } else {
+            values[PENT_CC_THD]->setText(QString::number(parameter[PENT_CC_THD]->getValue(), 'f', 2));
+        }
+        labels[PENT_CC_THD]->setVisible(true);
+        values[PENT_CC_THD]->setVisible(true);
+        values[PENT_CC_THD]->setReadOnly(true);
     }
 }
 
@@ -387,6 +412,96 @@ void PentodeCommonCathode::update(int index)
     parameter[PENT_CC_GM]->setValue(gm_mA_V);
     parameter[PENT_CC_GAIN]->setValue(gain_unbyp);
     parameter[PENT_CC_GAIN_B]->setValue(gain_byp);
+
+    double thd = 0.0;
+    if (device1) {
+        const double headroomVpk = parameter[PENT_CC_HEADROOM]->getValue();
+        const double vbLocal = parameter[PENT_CC_VB]->getValue();
+        const double raLocal = parameter[PENT_CC_RA]->getValue();
+        const double rlLocal = parameter[PENT_CC_RL]->getValue();
+
+        double r_ac = 0.0;
+        if (raLocal > 0.0 && rlLocal > 0.0) {
+            r_ac = (raLocal * rlLocal) / (raLocal + rlLocal);
+        } else if (raLocal > 0.0) {
+            r_ac = raLocal;
+        } else if (rlLocal > 0.0) {
+            r_ac = rlLocal;
+        }
+
+        if (headroomVpk > 0.0 && vbLocal > 0.0 && r_ac > 0.0 && std::isfinite(r_ac) &&
+            std::isfinite(vk) && std::isfinite(vg2) && std::isfinite(va)) {
+
+            double Av = parameter[PENT_CC_GAIN_B] ? parameter[PENT_CC_GAIN_B]->getValue() : 0.0;
+            if (!std::isfinite(Av) || std::abs(Av) < 1e-6) {
+                Av = parameter[PENT_CC_GAIN] ? parameter[PENT_CC_GAIN]->getValue() : 0.0;
+            }
+            if (std::isfinite(Av) && std::abs(Av) > 1e-6) {
+                const double vpp_out = 2.0 * headroomVpk;
+                const double vpp_in = vpp_out / std::abs(Av);
+
+                const int sampleCount = 1024;
+                const double twoPi = 6.28318530717958647692;
+
+                double a[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+                double b[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+                for (int k = 0; k < sampleCount; ++k) {
+                    const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
+                    double vg1 = -vk + 0.5 * vpp_in * std::sin(phase);
+                    if (vg1 > 0.0) {
+                        vg1 = 0.0;
+                    }
+
+                    double vaGuess = va;
+                    for (int iter = 0; iter < 12; ++iter) {
+                        const double ia_here_mA = device1->anodeCurrent(vaGuess, vg1, vg2);
+                        if (!std::isfinite(ia_here_mA) || ia_here_mA < 0.0) {
+                            break;
+                        }
+                        const double vaNext = vbLocal - (ia_here_mA / 1000.0) * r_ac;
+                        const double vaClamped = std::clamp(vaNext, 0.0, 2.0 * vbLocal);
+                        const double delta = std::abs(vaClamped - vaGuess);
+                        vaGuess = vaClamped;
+                        if (delta < 1e-3) {
+                            break;
+                        }
+                    }
+
+                    const double vaSample = std::clamp(vaGuess, 0.0, 2.0 * vbLocal);
+                    const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
+                                                               static_cast<double>(sampleCount - 1)));
+                    const double v = vaSample * window;
+
+                    for (int n = 1; n <= 4; ++n) {
+                        const double angle = static_cast<double>(n) * phase;
+                        a[n] += v * std::cos(angle);
+                        b[n] += v * std::sin(angle);
+                    }
+                }
+
+                const double scale = 2.0 / static_cast<double>(sampleCount);
+                double A[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+                for (int n = 1; n <= 4; ++n) {
+                    a[n] *= scale;
+                    b[n] *= scale;
+                    A[n] = std::sqrt(a[n] * a[n] + b[n] * b[n]);
+                }
+
+                if (A[1] > 0.0 && std::isfinite(A[1])) {
+                    const double hd2 = 100.0 * A[2] / A[1];
+                    const double hd3 = 100.0 * A[3] / A[1];
+                    const double hd4 = 100.0 * A[4] / A[1];
+                    thd = std::sqrt(hd2 * hd2 + hd3 * hd3 + hd4 * hd4);
+                    if (!std::isfinite(thd) || thd < 0.0) {
+                        thd = 0.0;
+                    }
+                }
+            }
+        }
+    }
+
+    parameter[PENT_CC_THD]->setValue(thd);
 }
 
 void PentodeCommonCathode::plot(Plot *plot)

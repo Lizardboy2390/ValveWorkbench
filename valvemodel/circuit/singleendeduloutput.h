@@ -2,6 +2,8 @@
 
 #include "circuit.h"
 
+#include <QVector>
+
 // Parameters for the single-ended ultralinear output stage. The first four are
 // user-editable inputs; the remaining entries are computed outputs.
 enum eSingleEndedUlParameter {
@@ -27,6 +29,17 @@ class SingleEndedUlOutput : public Circuit
 public:
     SingleEndedUlOutput();
 
+    int parameterIndexForUiRow(int uiRow) const override {
+        switch (uiRow) {
+        case 0: return SEUL_VB;
+        case 1: return SEUL_TAP;
+        case 2: return SEUL_IA;
+        case 3: return SEUL_RA;
+        case 12: return SEUL_HEADROOM;
+        default: return -1;
+        }
+    }
+
     void updateUI(QLabel *labels[], QLineEdit *values[]) override;
     void plot(Plot *plot) override;
     int getDeviceType(int index) override;
@@ -38,6 +51,8 @@ public:
     // Toggle symmetric vs max-swing helper preference for Designer overlays.
     void setSymSwingEnabled(bool enabled) { showSymSwing = enabled; }
     void setInductiveLoad(bool enabled);
+
+    const QVector<double> &getLastHeadroomWaveform() const { return lastHeadroomWaveform; }
 
 protected:
     void update(int index) override;
@@ -84,4 +99,6 @@ private:
     int gainMode = 1;
     bool showSymSwing = true;
     bool inductiveLoad = true;
+
+    mutable QVector<double> lastHeadroomWaveform;
 };

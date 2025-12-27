@@ -28,6 +28,17 @@ class SingleEndedOutput : public Circuit
 public:
     SingleEndedOutput();
 
+    int parameterIndexForUiRow(int uiRow) const override {
+        switch (uiRow) {
+        case 0: return SE_VB;
+        case 1: return SE_VS;
+        case 2: return SE_IA;
+        case 3: return SE_RA;
+        case 12: return SE_HEADROOM;
+        default: return -1;
+        }
+    }
+
     void updateUI(QLabel *labels[], QLineEdit *values[]) override;
     void plot(Plot *plot) override;
     int getDeviceType(int index) override;

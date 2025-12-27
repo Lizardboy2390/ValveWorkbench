@@ -553,6 +553,7 @@ private:
     void refreshHarmonicsPlots();
     void updateHeadroomWaveformView(TriodeCommonCathode *tcc);
     void updateHeadroomWaveformView(class SingleEndedOutput *se);
+    void updateHeadroomWaveformView(class SingleEndedUlOutput *seul);
     void updateHeadroomWaveformView(class PushPullOutput *pp);
     void updateHeadroomWaveformView(class PushPullUlOutput *ppul);
 };

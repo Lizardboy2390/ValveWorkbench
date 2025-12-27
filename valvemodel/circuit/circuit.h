@@ -32,6 +32,8 @@ class Circuit : public UIBridge
 public:
     Circuit();
 
+    virtual int parameterIndexForUiRow(int uiRow) const { return uiRow; }
+
     virtual void plot(Plot *plot) = 0;
     virtual int getDeviceType(int index) = 0;
 

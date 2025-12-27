@@ -51,6 +51,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Adjust parameters and see load lines and operating point
   - Export SPICE netlist when ready
   - Device selection: pick a device from the dropdown; if "Show Fitted Model" is checked, red model curves will auto-plot even without measurements
+  - Designer parameter rows are circuit-defined and may be reordered/grouped for readability (for example a consistent Headroom/Harmonics block) even when the circuit’s internal parameter indices differ.
   - Two-device circuits:
     - Some Designer circuits require two devices (e.g. Push-Pull Output, Push-Pull UL Output, and the two-stage Triode CC + DC cathode follower test calculator).
     - The **Device 2** selector is only shown/enabled for circuits that explicitly request a second device.
@@ -73,6 +74,7 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
     - Single-Ended UL Output (pentode, UL tap)
     - Push-Pull Output (pentode)
     - Push-Pull UL Output (pentode, UL tap)
+    - Triode CC + DC Follower (2-stage)
 
 #### Designer Autoscale Y (output stages)
 

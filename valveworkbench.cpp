@@ -4261,34 +4261,56 @@ void ValveWorkbench::on_pushButton_3_clicked()
 
     // Name: prefer the filename base (what the user actually picked) and
     // fall back to the JSON 'name' if no usable base name is available.
+    QString chosenName;
     if (ui && ui->deviceName) {
         const QString baseName = QFileInfo(fileName).baseName().trimmed();
         const QString jsonName = obj.value("name").toString().trimmed();
-        const QString chosenName = !baseName.isEmpty() ? baseName
-                                                       : (!jsonName.isEmpty() ? jsonName
-                                                                              : QStringLiteral("Device"));
+        chosenName = !baseName.isEmpty() ? baseName
+                                         : (!jsonName.isEmpty() ? jsonName
+                                                                : QStringLiteral("Device"));
         ui->deviceName->setText(chosenName);
     }
 
     // Device type
+    int expectedDeviceType = -1;
     const QString devType = obj.value("deviceType").toString().toUpper();
     if (devType == QLatin1String("TRIODE")) {
         deviceType = TRIODE;
+        expectedDeviceType = TRIODE;
         if (ui && ui->deviceType) {
             ui->deviceType->setCurrentIndex(0);
             on_deviceType_currentIndexChanged(ui->deviceType->currentIndex());
         }
     } else if (devType == QLatin1String("PENTODE")) {
         deviceType = PENTODE;
+        expectedDeviceType = PENTODE;
         if (ui && ui->deviceType) {
             ui->deviceType->setCurrentIndex(1);
             on_deviceType_currentIndexChanged(ui->deviceType->currentIndex());
         }
     } else if (devType == QLatin1String("DOUBLE_TRIODE")) {
         deviceType = DOUBLE_TRIODE;
+        expectedDeviceType = DOUBLE_TRIODE;
         if (ui && ui->deviceType) {
             ui->deviceType->setCurrentIndex(2);
             on_deviceType_currentIndexChanged(ui->deviceType->currentIndex());
+        }
+    }
+
+    if (!chosenName.isEmpty() && expectedDeviceType != -1) {
+        Device *matched = nullptr;
+        for (Device *d : devices) {
+            if (!d) {
+                continue;
+            }
+            if (d->getName().trimmed().compare(chosenName, Qt::CaseInsensitive) == 0 &&
+                d->getDeviceType() == expectedDeviceType) {
+                matched = d;
+                break;
+            }
+        }
+        if (matched) {
+            currentDevice = matched;
         }
     }
 
@@ -8503,6 +8525,17 @@ void ValveWorkbench::buildCircuitParameters()
     circuitValues[14] = ui->cir15Value;
     circuitValues[15] = ui->cir16Value;
 
+    for (int i = 0; i < 16; ++i) {
+        if (circuitLabels[i]) {
+            QSizePolicy sp = circuitLabels[i]->sizePolicy();
+            sp.setHorizontalPolicy(QSizePolicy::Expanding);
+            circuitLabels[i]->setSizePolicy(sp);
+        }
+        if (circuitValues[i]) {
+            circuitValues[i]->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        }
+    }
+
     for (int i=0; i < 16; i++) { // Parameters all initially hidden
         circuitValues[i]->setVisible(false);
         circuitLabels[i]->setVisible(false);
@@ -8641,7 +8674,6 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         circuit->setDevice2(device);
     }
     circuit->updateUI(circuitLabels, circuitValues);
-    circuit->plot(&plot);
     // Trigger a compute pass so derived fields (e.g., gains, Va, Ia, Vk) populate on initial load
     // Use index 0 (first editable parameter) with its current value to invoke Circuit::update(int)
     if (circuit) {
@@ -8649,11 +8681,16 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
         circuit->setParameter(0, current);
     }
     circuit->updateUI(circuitLabels, circuitValues);
+    circuit->plot(&plot);
+
+    circuit->updateUI(circuitLabels, circuitValues);
 
     if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
         updateHeadroomWaveformView(tcc);
     } else if (auto se = dynamic_cast<SingleEndedOutput*>(circuit)) {
         updateHeadroomWaveformView(se);
+    } else if (auto seul = dynamic_cast<SingleEndedUlOutput*>(circuit)) {
+        updateHeadroomWaveformView(seul);
     } else if (auto pp = dynamic_cast<PushPullOutput*>(circuit)) {
         updateHeadroomWaveformView(pp);
     } else if (auto ppul = dynamic_cast<PushPullUlOutput*>(circuit)) {
@@ -8924,6 +8961,7 @@ void ValveWorkbench::selectCircuit(int circuitType)
         bool showWave =
             (dynamic_cast<TriodeCommonCathode*>(circuit) != nullptr) ||
             (dynamic_cast<SingleEndedOutput*>(circuit)     != nullptr) ||
+            (dynamic_cast<SingleEndedUlOutput*>(circuit)   != nullptr) ||
             (dynamic_cast<PushPullOutput*>(circuit)        != nullptr) ||
             (dynamic_cast<PushPullUlOutput*>(circuit)      != nullptr);
         ui->headroomWaveformGroupBox->setVisible(showWave);
@@ -9018,7 +9056,12 @@ void ValveWorkbench::updateCircuitParameter(int index)
     }
 
     Circuit *circuit = circuits.at(currentCircuitType);
-    double value = checkDoubleValue(circuitValues[index], circuit->getParameter(index));
+    const int paramIndex = circuit ? circuit->parameterIndexForUiRow(index) : -1;
+    if (paramIndex < 0 || paramIndex >= 16) {
+        return;
+    }
+
+    double value = checkDoubleValue(circuitValues[index], circuit->getParameter(paramIndex));
 
     updateDoubleValue(circuitValues[index], value);
 
@@ -9027,12 +9070,12 @@ void ValveWorkbench::updateCircuitParameter(int index)
     {
         #include "valvemodel/circuit/triodecommoncathode.h"
         if (auto tcc = dynamic_cast<TriodeCommonCathode*>(circuit)) {
-            if (index == TRI_CC_RA || index == TRI_CC_RL) {
+            if (paramIndex == TRI_CC_RA || paramIndex == TRI_CC_RL) {
                 // Circuit::setParameter already calls update(index), so we only
                 // need to scale the user value from kΩ to Ω here.
-                circuit->setParameter(index, value * 1000.0);
+                circuit->setParameter(paramIndex, value * 1000.0);
             } else {
-                circuit->setParameter(index, value);
+                circuit->setParameter(paramIndex, value);
             }
 
             circuit->updateUI(circuitLabels, circuitValues);
@@ -9106,12 +9149,12 @@ void ValveWorkbench::updateCircuitParameter(int index)
         auto pp   = dynamic_cast<PushPullOutput*>(circuit);
         auto ppul = dynamic_cast<PushPullUlOutput*>(circuit);
 
-        const bool isSeVB   = (se   && index == SE_VB);
-        const bool isSeUlVB = (seul && index == SEUL_VB);
-        const bool isPpVB   = (pp   && index == PP_VB);
-        const bool isPpUlVB = (ppul && index == PPUL_VB);
-        const bool isPpRaa   = (pp   && index == PP_RAA);
-        const bool isPpUlRaa = (ppul && index == PPUL_RAA);
+        const bool isSeVB   = (se   && paramIndex == SE_VB);
+        const bool isSeUlVB = (seul && paramIndex == SEUL_VB);
+        const bool isPpVB   = (pp   && paramIndex == PP_VB);
+        const bool isPpUlVB = (ppul && paramIndex == PPUL_VB);
+        const bool isPpRaa   = (pp   && paramIndex == PP_RAA);
+        const bool isPpUlRaa = (ppul && paramIndex == PPUL_RAA);
 
         // When Autoscale Y is enabled, treat any parameter change on the
         // main output-stage circuits as affecting the stage so that axis
@@ -9219,12 +9262,12 @@ void ValveWorkbench::updateCircuitParameter(int index)
                         }
                     } else if (se) {
                         double iaBias_mA = se->getParameter(SE_IA);
-                        if (index == SE_IA) {
+                        if (paramIndex == SE_IA) {
                             iaBias_mA = value;
                         }
 
                         double headroomVpk = se->getParameter(SE_HEADROOM);
-                        if (index == SE_HEADROOM) {
+                        if (paramIndex == SE_HEADROOM) {
                             headroomVpk = value;
                         }
 
@@ -9259,7 +9302,7 @@ void ValveWorkbench::updateCircuitParameter(int index)
         }
     }
 
-    circuit->setParameter(index, value);
+    circuit->setParameter(paramIndex, value);
     circuit->updateUI(circuitLabels, circuitValues);
     circuit->plot(&plot);
     circuit->updateUI(circuitLabels, circuitValues);
@@ -9268,6 +9311,8 @@ void ValveWorkbench::updateCircuitParameter(int index)
         updateHeadroomWaveformView(tcc);
     } else if (auto se = dynamic_cast<SingleEndedOutput*>(circuit)) {
         updateHeadroomWaveformView(se);
+    } else if (auto seul = dynamic_cast<SingleEndedUlOutput*>(circuit)) {
+        updateHeadroomWaveformView(seul);
     } else if (auto pp = dynamic_cast<PushPullOutput*>(circuit)) {
         updateHeadroomWaveformView(pp);
     } else if (auto ppul = dynamic_cast<PushPullUlOutput*>(circuit)) {
@@ -9395,6 +9440,64 @@ void ValveWorkbench::updateHeadroomWaveformView(SingleEndedOutput *se)
     }
 
     const QVector<double> &wave = se->getLastHeadroomWaveform();
+    if (wave.isEmpty()) {
+        return;
+    }
+
+    double mean = 0.0;
+    for (double v : wave) {
+        mean += v;
+    }
+    mean /= static_cast<double>(wave.size());
+
+    double peak = 0.0;
+    for (double v : wave) {
+        const double y = v - mean;
+        peak = std::max(peak, std::fabs(y));
+    }
+    if (!(peak > 0.0) || !std::isfinite(peak)) {
+        return;
+    }
+
+    QPainterPath path;
+    const int n = wave.size();
+    for (int i = 0; i < n; ++i) {
+        const double x = (n > 1) ? (static_cast<double>(i) / static_cast<double>(n - 1)) : 0.0;
+        const double y = -(wave.at(i) - mean) / peak;
+        if (i == 0) {
+            path.moveTo(x, y);
+        } else {
+            path.lineTo(x, y);
+        }
+    }
+
+    QPen pen(QColor::fromRgb(0, 120, 255));
+    pen.setWidthF(0.0);
+    pen.setCosmetic(true);
+    QGraphicsPathItem *item = headroomWaveformScene->addPath(path, pen);
+
+    QRectF r = item ? item->boundingRect() : QRectF();
+    if (r.isValid()) {
+        const double padX = r.width() * 0.05;
+        const double padY = r.height() * 0.20;
+        r.adjust(-padX, -padY, padX, padY);
+        headroomWaveformScene->setSceneRect(r);
+        ui->headroomWaveformView->fitInView(r, Qt::KeepAspectRatio);
+    }
+}
+
+void ValveWorkbench::updateHeadroomWaveformView(SingleEndedUlOutput *seul)
+{
+    if (!ui || !ui->headroomWaveformView || !headroomWaveformScene) {
+        return;
+    }
+
+    headroomWaveformScene->clear();
+    if (!seul) {
+        return;
+    }
+
+    const QVector<double> &wave = seul->getLastHeadroomWaveform();
     if (wave.isEmpty()) {
         return;
     }
@@ -11238,6 +11341,25 @@ void ValveWorkbench::loadTemplate(int index)
     Template tpl = templates.at(index);
 
     ui->deviceName->setText(tpl.getName());
+
+    {
+        const QString tplName = tpl.getName().trimmed();
+        Device *matched = nullptr;
+        for (Device *d : devices) {
+            if (!d) {
+                continue;
+            }
+            if (d->getName().trimmed().compare(tplName, Qt::CaseInsensitive) == 0 &&
+                d->getDeviceType() == tpl.getDeviceType()) {
+                matched = d;
+                break;
+            }
+        }
+        if (matched) {
+            currentDevice = matched;
+        }
+    }
+
     heaterVoltage = tpl.getVHeater();
     anodeStart = tpl.getVaStart();
     anodeStop = tpl.getVaStop();
@@ -12163,9 +12285,11 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
             setSelectedTreeItem(currentProject, true);
             setFitButtons();
 
+#ifdef QT_DEBUG
             qInfo("=== MODEL PLOTTING: currentMeasurementItem type = %d, is null = %s ===",
                    currentMeasurementItem ? currentMeasurementItem->type() : -1,
                    currentMeasurementItem ? "false" : "true");
+#endif
 
             // Require a valid measurement selection before attempting model plotting.
             // If the currently selected measurement/device type does not match the
@@ -12222,7 +12346,9 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                      modelType == EXTRACT_DERK_E_PENTODE)) {
                     Measurement *pentodeMeas = findMeasurement(PENTODE, ANODE_CHARACTERISTICS);
                     if (pentodeMeas) {
+#ifdef QT_DEBUG
                         qInfo("MODEL PLOTTING: Switching currentMeasurement to pentode dataset for pentode model overlay");
+#endif
                         currentMeasurement = pentodeMeas;
                     }
                 }
@@ -12232,14 +12358,18 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 if (mType == PENTODE && modelType == COHEN_HELIE_TRIODE) {
                     Measurement *triodeMeas = findMeasurement(TRIODE, ANODE_CHARACTERISTICS);
                     if (triodeMeas) {
+#ifdef QT_DEBUG
                         qInfo("MODEL PLOTTING: Switching currentMeasurement to triode dataset for triode model overlay");
+#endif
                         currentMeasurement = triodeMeas;
                     }
                 }
             }
 
             if (!currentMeasurement) {
+#ifdef QT_DEBUG
                 qInfo("MODEL PLOTTING: No suitable measurement found for selected model - skipping model overlay");
+#endif
                 ui->modelCheck->setChecked(true);
                 break;
             }
@@ -12256,12 +12386,16 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                 }
                 // Otherwise, leave sweep as nullptr for full measurement plotting
             }
+#ifdef QT_DEBUG
             qInfo("=== MODEL PLOTTING: sweep is %s, about to call plotModel ===", sweep ? "NOT null" : "null");
+#endif
             model->updateProperties(ui->properties);
 
+#ifdef QT_DEBUG
             qInfo("=== VALVEWORKBENCH: Attempting model plotting ===");
             qInfo("Current measurement device type: %d, model type: %d",
                    currentMeasurement->getDeviceType(), model->getType());
+#endif
 
             const bool triodeMatch =
                 (currentMeasurement->getDeviceType() == TRIODE && model->getType() == COHEN_HELIE_TRIODE);
@@ -12272,7 +12406,9 @@ void ValveWorkbench::on_projectTree_currentItemChanged(QTreeWidgetItem *current,
                   model->getType() == EXTRACT_DERK_E_PENTODE));
 
             if (triodeMatch || pentodeMatch) {
+#ifdef QT_DEBUG
                 qInfo("Type check PASSED - proceeding with model plotting");
+#endif
                 if (modelledCurves != nullptr) {
                     plot.remove(modelledCurves);
                     modelledCurves = nullptr;
@@ -14841,6 +14977,7 @@ void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
         seul->setSymSwingEnabled(enabled);
         seul->plot(&plot);
         seul->updateUI(circuitLabels, circuitValues);
+        updateHeadroomWaveformView(seul);
     } else if (auto *ppul = dynamic_cast<PushPullUlOutput*>(c)) {
         ppul->setSymSwingEnabled(enabled);
         ppul->plot(&plot);
@@ -14900,6 +15037,7 @@ void ValveWorkbench::on_useBypassedGainCheck_stateChanged(int arg1)
         seul->setGainMode(useBypassed ? 1 : 0);
         seul->plot(&plot);
         seul->updateUI(circuitLabels, circuitValues);
+        updateHeadroomWaveformView(seul);
     } else if (auto *ppul = dynamic_cast<PushPullUlOutput*>(c)) {
         // Apply K-bypass choice to the PP-UL output stage so that its
         // input sensitivity and THD reflect bypassed vs unbypassed cathode.

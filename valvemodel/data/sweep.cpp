@@ -284,10 +284,14 @@ void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> 
 
     bool smooth = (measurement && measurement->isSmoothPlotting());
 
+#ifdef QT_DEBUG
     qInfo("Sweep::plotTriodeAnode: smooth=%d samples=%d", smooth ? 1 : 0, samples.count());
+#endif
 
     if (!smooth) {
+#ifdef QT_DEBUG
         qInfo("Sweep::plotTriodeAnode: using raw segments (no smoothing)");
+#endif
         Sample *firstSample = samples.at(0);
         double vg = firstSample->getVg1();
         double va = firstSample->getVa();
@@ -374,8 +378,10 @@ void Sweep::plotTriodeAnode(Plot *plot, QPen *samplePen, QList<QGraphicsItem *> 
 
     const int subdivisions = 4; // 4x plotting density when smoothing is enabled
 
+#ifdef QT_DEBUG
     qInfo("Sweep::plotTriodeAnode: using spline smoothing, samples=%d, subdivisions=%d, expectedSegments=%d",
           nSamples, subdivisions, (nSamples - 1) * subdivisions);
+#endif
 
     for (int i = 0; i < nSamples - 1; ++i) {
         double xi = x[i];

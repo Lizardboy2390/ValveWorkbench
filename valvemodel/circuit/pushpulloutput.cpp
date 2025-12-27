@@ -73,131 +73,141 @@ QTreeWidgetItem *PushPullOutput::buildTree(QTreeWidgetItem *parent)
 
 void PushPullOutput::updateUI(QLabel *labels[], QLineEdit *values[])
 {
-    // Inputs up to PP_HEADROOM
-    for (int i = 0; i <= PP_HEADROOM; ++i) {
-        if (parameter[i] && labels[i] && values[i]) {
-            labels[i]->setText(parameter[i]->getName());
-            values[i]->setText(QString::number(parameter[i]->getValue(), 'f', 1));
-            labels[i]->setVisible(true);
-            values[i]->setVisible(true);
-            values[i]->setReadOnly(false);
-
-            if (i == PP_HEADROOM) {
-                const double headroomManual = parameter[PP_HEADROOM]->getValue();
-                const bool overrideActive   = (headroomManual > 0.0);
-
-                QString style;
-                if (overrideActive) {
-                    // Manual override of helper swings: bright blue.
-                    style = "color: rgb(0,0,255);";
-                } else if (effectiveHeadroomVpk > 0.0) {
-                    // Headroom derived from helpers: lighter blue for symmetric
-                    // mode, brown for max-swing mode.
-                    if (showSymSwing) {
-                        style = "color: rgb(100,149,237);";
-                    } else {
-                        style = "color: rgb(165,42,42);";
-                    }
-                }
-                labels[i]->setStyleSheet(style);
-                values[i]->setStyleSheet(style);
-            } else {
-                labels[i]->setStyleSheet("");
-                values[i]->setStyleSheet("");
-            }
+    for (int i = 0; i < 16; ++i) {
+        if (labels[i]) {
+            labels[i]->setVisible(false);
+            labels[i]->setStyleSheet("");
+        }
+        if (values[i]) {
+            values[i]->setVisible(false);
+            values[i]->setReadOnly(true);
+            values[i]->setStyleSheet("");
         }
     }
 
     const double headroomManual = parameter[PP_HEADROOM]->getValue();
     const bool overrideActive   = (headroomManual > 0.0);
 
-    // Outputs PP_VK..PP_THD
-    for (int i = PP_VK; i <= PP_THD; ++i) {
-        if (!labels[i] || !values[i]) continue;
-
-        QString labelText;
-        switch (i) {
-        case PP_VK:   labelText = "Bias point Vk (V):"; break;
-        case PP_IK:   labelText = "Cathode current (mA):"; break;
-        case PP_RK:   labelText = "Cathode resistor (\u03a9):"; break;
-        case PP_POUT: labelText = "Max output power (W):"; break;
-        case PP_PHEAD:labelText = "Power at headroom (W):"; break;
-        case PP_HD2:  labelText = "2nd harmonic (%):"; break;
-        case PP_HD3:  labelText = "3rd harmonic (%):"; break;
-        case PP_HD4:  labelText = "4th harmonic (%):"; break;
-        case PP_THD:  labelText = "Total harmonic (%):"; break;
-        default: break;
-        }
-
-        labels[i]->setText(labelText);
-        if (!device1 || !device2) {
-            values[i]->setText("N/A");
-        } else if (parameter[i]) {
-            int decimals = 3;
-            if (i == PP_POUT || i == PP_PHEAD || i == PP_HD2 || i == PP_HD3 || i == PP_HD4 || i == PP_THD) {
-                decimals = 2;
+    auto styleForHeadroom = [&]() -> QString {
+        if (effectiveHeadroomVpk > 0.0) {
+            if (overrideActive) {
+                return "color: rgb(0,0,255);";
             }
-            values[i]->setText(QString::number(parameter[i]->getValue(), 'f', decimals));
-        } else {
-            values[i]->setText("-");
-        }
-
-        labels[i]->setVisible(true);
-        values[i]->setVisible(true);
-        values[i]->setReadOnly(true);
-
-        // Colour distortion-related outputs based on the active headroom source.
-        if (i == PP_PHEAD || i == PP_HD2 || i == PP_HD3 || i == PP_HD4 || i == PP_THD) {
-            if (effectiveHeadroomVpk > 0.0) {
-                if (overrideActive) {
-                    // Manual override: bright blue.
-                    values[i]->setStyleSheet("color: rgb(0,0,255);");
-                } else if (showSymSwing) {
-                    // Symmetric-mode metrics: lighter blue.
-                    values[i]->setStyleSheet("color: rgb(100,149,237);");
-                } else {
-                    // Max-swing metrics: brown.
-                    values[i]->setStyleSheet("color: rgb(165,42,42);");
-                }
-            } else {
-                values[i]->setStyleSheet("");
+            if (showSymSwing) {
+                return "color: rgb(100,149,237);";
             }
-        } else {
-            values[i]->setStyleSheet("");
+            return "color: rgb(165,42,42);";
+        }
+        return QString();
+    };
+
+    // Inputs: rows 0..3
+    const int inputParams[4] = { PP_VB, PP_VS, PP_IA, PP_RAA };
+    for (int r = 0; r < 4; ++r) {
+        const int p = inputParams[r];
+        if (parameter[p] && labels[r] && values[r]) {
+            labels[r]->setText(parameter[p]->getName());
+            values[r]->setText(QString::number(parameter[p]->getValue(), 'f', 2));
+            labels[r]->setVisible(true);
+            values[r]->setVisible(true);
+            values[r]->setReadOnly(false);
         }
     }
 
-    const int sensIndex = PP_THD + 1;
-    if (sensIndex < 16 && labels[sensIndex] && values[sensIndex]) {
+    // Core outputs: rows 4..8
+    struct RowOut { int row; int param; const char *label; int decimals; };
+    const RowOut outs[] = {
+        { 4, PP_VK,   "Bias point Vk (V):", 3 },
+        { 5, PP_IK,   "Cathode current (mA):", 3 },
+        { 6, PP_RK,   "Cathode resistor (\u03a9):", 3 },
+        { 7, PP_POUT, "Max output power (W):", 2 },
+        { 8, PP_PHEAD,"Power at headroom (W):", 2 },
+    };
+    for (const RowOut &o : outs) {
+        if (labels[o.row] && values[o.row] && parameter[o.param]) {
+            labels[o.row]->setText(o.label);
+            if (!device1 || !device2) {
+                values[o.row]->setText("N/A");
+            } else {
+                values[o.row]->setText(QString::number(parameter[o.param]->getValue(), 'f', o.decimals));
+            }
+            labels[o.row]->setVisible(true);
+            values[o.row]->setVisible(true);
+            values[o.row]->setReadOnly(true);
+            if (o.param == PP_PHEAD) {
+                const QString style = styleForHeadroom();
+                labels[o.row]->setStyleSheet(style);
+                values[o.row]->setStyleSheet(style);
+            }
+        }
+    }
+
+    // THD: row 9
+    if (labels[9] && values[9] && parameter[PP_THD]) {
+        labels[9]->setText("THD at headroom (%):");
+        if (!device1 || !device2) {
+            values[9]->setText("N/A");
+        } else {
+            values[9]->setText(QString::number(parameter[PP_THD]->getValue(), 'f', 2));
+        }
+        const QString style = styleForHeadroom();
+        labels[9]->setStyleSheet(style);
+        values[9]->setStyleSheet(style);
+        labels[9]->setVisible(true);
+        values[9]->setVisible(true);
+        values[9]->setReadOnly(true);
+    }
+
+    // Headroom manual override: row 12
+    if (labels[12] && values[12] && parameter[PP_HEADROOM]) {
+        labels[12]->setText("Headroom (Vpk):");
+        values[12]->setText(QString::number(parameter[PP_HEADROOM]->getValue(), 'f', 2));
+        const QString style = styleForHeadroom();
+        labels[12]->setStyleSheet(style);
+        values[12]->setStyleSheet(style);
+        labels[12]->setVisible(true);
+        values[12]->setVisible(true);
+        values[12]->setReadOnly(false);
+    }
+
+    // Input sensitivity: row 13
+    const int sensIndex = 13;
+    if (labels[sensIndex] && values[sensIndex]) {
         labels[sensIndex]->setText("Input sensitivity (Vpp):");
         if (inputSensitivityVpp > 0.0) {
             values[sensIndex]->setText(QString::number(inputSensitivityVpp, 'f', 2));
         } else {
             values[sensIndex]->setText("");
         }
+        const QString style = styleForHeadroom();
+        labels[sensIndex]->setStyleSheet(style);
+        values[sensIndex]->setStyleSheet(style);
         labels[sensIndex]->setVisible(true);
         values[sensIndex]->setVisible(true);
         values[sensIndex]->setReadOnly(true);
-
-        // Match sensitivity colour to the headroom source, mirroring SE Output.
-        if (inputSensitivityVpp > 0.0 && effectiveHeadroomVpk > 0.0) {
-            if (overrideActive) {
-                values[sensIndex]->setStyleSheet("color: rgb(0,0,255);");
-            } else if (showSymSwing) {
-                values[sensIndex]->setStyleSheet("color: rgb(100,149,237);");
-            } else {
-                values[sensIndex]->setStyleSheet("color: rgb(165,42,42);");
-            }
-        } else {
-            values[sensIndex]->setStyleSheet("");
-        }
     }
 
-    for (int i = sensIndex + 1; i < 16; ++i) {
-        if (labels[i] && values[i]) {
-            labels[i]->setVisible(false);
-            values[i]->setVisible(false);
-        }
+    // Harmonics: rows 14..15
+    if (labels[14] && values[14] && labels[15] && values[15] && device1 && device2 && effectiveHeadroomVpk > 0.0) {
+        const QString style = styleForHeadroom();
+
+        labels[14]->setText("HD2/HD4 at headroom (%):");
+        values[14]->setText(QString("%1 / %2")
+                                .arg(parameter[PP_HD2]->getValue(), 0, 'f', 1)
+                                .arg(parameter[PP_HD4]->getValue(), 0, 'f', 1));
+        labels[14]->setStyleSheet(style);
+        values[14]->setStyleSheet(style);
+        labels[14]->setVisible(true);
+        values[14]->setVisible(true);
+        values[14]->setReadOnly(true);
+
+        labels[15]->setText("HD3 at headroom (%):");
+        values[15]->setText(QString::number(parameter[PP_HD3]->getValue(), 'f', 1));
+        labels[15]->setStyleSheet(style);
+        values[15]->setStyleSheet(style);
+        labels[15]->setVisible(true);
+        values[15]->setVisible(true);
+        values[15]->setReadOnly(true);
     }
 }
 

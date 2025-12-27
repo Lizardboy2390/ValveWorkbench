@@ -20,6 +20,8 @@ Brand: AudioSmith — Darrin Smith, Nelson BC, Canada
   - Use the eTracer PC software manual in `refrence code/ilovepdf_pages-to-jpg (1)` (quick scan, corners tests, Imax/Pmax usage) as the primary reference for feature design and defaults.
 
 ## Recently completed
+- [x] 2025-12-26: Designer UI layout: added a UI-row-to-parameter-index mapping hook so Designer circuits can reorder/group displayed rows; refactored harmonic-capable output stages (SE, SE-UL, PP, UL-PP) to use a consistent Headroom/Harmonics block layout.
+- [x] 2025-12-26: Designer Triode CC + DC cathode follower (2-stage): always show the final Designer row as `N/A` when THD/headroom is not valid, and fix plot overlays by plotting after the initial compute pass on device select (Qt Creator build + smoke test).
 - [x] 2025-12-20: Modeller: added an operating point marker (red crosshair) on the anode plot, using the same OP selection logic as the small-signal LCDs.
 - [x] 2025-12-20: Analyser iaMax scaling: Analyser UI and run-time iaMax are now capped to the hardware limit (50 mA) while still respecting smaller tube/template limits (<50 mA). Removed the 80 mA minimum clamp previously applied by Modelling Tests.
 - [x] 2025-12-20: Modeller model overlay selection: selecting a model node now rebinds overlay plotting to the last-selected measurement/sweep (prevents stale Vg2 family overlays) and clears both model overlay groups before replotting.

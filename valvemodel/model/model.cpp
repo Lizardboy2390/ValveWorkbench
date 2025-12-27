@@ -246,13 +246,17 @@ void Model::addMeasurement(Measurement *measurement)
         // Filter out incomplete/limit-hit sweeps (likely ended early due to limits)
         const int minPoints = 20; // accept coarser sweeps exported from web/datasheet sources
         if (sweep == nullptr || sweep->count() < 1) {
+#ifdef QT_DEBUG
             qInfo("MODEL INPUT: skipping sweep %d (only %d points, need >= 1)", s, sweep ? sweep->count() : 0);
+#endif
             continue;
         }
         Sample *last = sweep->at(sweep->count() - 1);
         const double minEndVa = std::isfinite(effectiveAnodeStopGlobal) ? (0.75 * effectiveAnodeStopGlobal) : 0.0;
         if (last == nullptr) {
+#ifdef QT_DEBUG
             qInfo("MODEL INPUT: skipping sweep %d (missing last sample)", s);
+#endif
             continue;
         }
 
@@ -280,22 +284,30 @@ void Model::addMeasurement(Measurement *measurement)
         }
 
         if (sweep->count() < minPoints && (!allowLimitHitShortSweep || !looksLikeLimitHit)) {
+#ifdef QT_DEBUG
             qInfo("MODEL INPUT: skipping sweep %d (only %d points, need >= %d)", s, sweep->count(), minPoints);
+#endif
             continue;
         }
         if (sweep->count() < minPoints && allowLimitHitShortSweep && looksLikeLimitHit) {
+#ifdef QT_DEBUG
             qInfo("MODEL INPUT: keeping short sweep %d (%d points < %d) due to likely limit-hit (Ia=%.3f mA, P=%.3f W)",
                   s, sweep->count(), minPoints, iaEnd, pEnd);
+#endif
         }
 
         if (vaEnd < minEndVa && (!allowLimitHitShortSweep || !looksLikeLimitHit)) {
+#ifdef QT_DEBUG
             qInfo("MODEL INPUT: skipping sweep %d (end Va %.3f < 0.75*Va_stop %.3f)", s,
                   vaEnd, effectiveAnodeStopGlobal);
+#endif
             continue;
         }
         if (vaEnd < minEndVa && allowLimitHitShortSweep && looksLikeLimitHit) {
+#ifdef QT_DEBUG
             qInfo("MODEL INPUT: keeping sweep %d despite short end Va %.3f (< %.3f) due to likely limit-hit (Ia=%.3f mA, P=%.3f W)",
                   s, vaEnd, minEndVa, iaEnd, pEnd);
+#endif
         }
 
         // Determine if this sweep's grid values (Vg1) require a sign flip.
@@ -370,7 +382,9 @@ void Model::addMeasurement(Measurement *measurement)
             const double vg1Corrected = -std::fabs(vg1Effective);
 
             if (!loggedFirstVg && std::isfinite(vg1Corrected) && std::fabs(vg1Corrected) > 1e-9) {
+#ifdef QT_DEBUG
                 qInfo("MODEL INPUT: sweep=%d first vg1 used=%.6f (%s)", s, vg1Corrected, usedNominal ? "nominal" : "sample");
+#endif
                 loggedFirstVg = true;
             }
 
@@ -383,7 +397,9 @@ void Model::addMeasurement(Measurement *measurement)
             applyAllPendingBounds();
         }
         if (std::isfinite(minVgUsed) && std::isfinite(maxVgUsed)) {
+#ifdef QT_DEBUG
             qInfo("MODEL INPUT: sweep=%d vg1 range used [%.6f, %.6f] (should be <= 0)", s, minVgUsed, maxVgUsed);
+#endif
         }
     }
 }
@@ -820,7 +836,11 @@ QGraphicsItemGroup *Model::plotModel(Plot *plot, Measurement *measurement, Sweep
                         triodeSegments.append(segment);
                         segmentCount++;
                     } else {
-                        qWarning("Failed to create segment for va=%.3f, ia=%.3f", va, ia);
+                        static int failedSegmentWarnCount = 0;
+                        if (failedSegmentWarnCount < 5) {
+                            qWarning("Failed to create segment for va=%.3f, ia=%.3f", va, ia);
+                            failedSegmentWarnCount++;
+                        }
                     }
 
                     vaPrev = va;

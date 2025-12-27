@@ -29,6 +29,17 @@ class PushPullOutput : public Circuit
 public:
     PushPullOutput();
 
+    int parameterIndexForUiRow(int uiRow) const override {
+        switch (uiRow) {
+        case 0: return PP_VB;
+        case 1: return PP_VS;
+        case 2: return PP_IA;
+        case 3: return PP_RAA;
+        case 12: return PP_HEADROOM;
+        default: return -1;
+        }
+    }
+
     void updateUI(QLabel *labels[], QLineEdit *values[]) override;
     void plot(Plot *plot) override;
     int getDeviceType(int index) override;
