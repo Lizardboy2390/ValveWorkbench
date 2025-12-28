@@ -489,6 +489,34 @@ Command sequencing and tolerances are enforced in `Analyser::startTest()`,
   - Fit orchestration: `valveworkbench.cpp` (`ValveWorkbench::modelPentode`)
   - Parameter freezing: `valvemodel/model/gardinerpentode.cpp` (`GardinerPentode::setOptions`, SCREEN_MODE and ANODE_REMODEL_MODE)
 
+### 2025-12-27 Summary (Modelling Tests triode seed quality)
+
+- **Symptom:** Using Modelling Tests + Process Modelling Tests produced significantly worse pentode knee fits (Gardiner and ExtractModel) than the manual workflow of clicking **Fit Triode** first, then **Fit Pentode**.
+- **Root cause:** The triode-connected pentode measurement was only used to form a quick `Estimate` seed and was *not* being solved through Ceres as a real `CohenHelieTriode` fit before being passed into `Estimate::estimatePentode(...)`.
+- **Fix:** In `ValveWorkbench::on_processModellingTestsButton_clicked()`, when a triode-connected pentode measurement exists and there is no existing Cohen-Helie triode model, create a temporary `CohenHelieTriode`, add the triode-connected measurement, run `solve()`, and then use that fitted triode model as the seed for the pentode estimate. This matches the expected modelling pipeline and improves knee fit quality.
+
+- **Related notes:**
+  - ExtractModel knee sensitivity: `ExtractModelPentode::setOptions()` bounds for secondary-emission parameters can affect the knee; ensure SE bounds are not overly restrictive if knee cannot be matched.
+  - Gardiner “Ia stuck near 0” regressions are often unit/normalization related around `Vg2` (screen voltage). See `GardinerPentode::{anodeCurrent,screenCurrent,addSample}` for any screen-voltage normalization logic.
+
+### 2025-12-27 Summary (Canonical: Gardiner screen stage + Export-to-Device grid sign)
+
+- **Gardiner multi-stage solve must preserve the anode knee**
+  - Gardiner uses a separate Ceres `screenProblem` for `Ig2` residuals.
+  - Chaining `NORMAL_MODE` → `SCREEN_MODE` is required to fit `Ig2`, but the `SCREEN_MODE` solve can otherwise degrade the already-fit anode knee because the screen residual shares the same `Epk` core parameters.
+  - **Canonical fix:** In `GardinerPentode::setOptions()` for `SCREEN_MODE`, freeze anode/shared parameters:
+    - Core: `mu, x, kp, kvb, kvb1, vct`
+    - Anode coupling: `a`
+    - Secondary-emission shape (when enabled): `omega, lambda, nu, s, ap`
+  - Leave screen-specific parameters (`kg2a, tau/rho/theta, psi`) free so `Ig2` can be fitted without moving the anode knee.
+
+- **Export-to-Device must write analyser grid ranges as positive magnitudes**
+  - The Analyser UI represents “-ve Grid Voltage” as **positive magnitude values**.
+  - If exported presets carry negative `analyserDefaults.grid.start/stop/step`, loading the device can produce negative UI values and block starting a test until manually corrected.
+  - **Canonical fix:** In `ValveWorkbench::exportFittedModelToDevices()`, sanitize exported grid ranges (both `analyserDefaults.grid` and per-test snapshot `tests.*.grid`) to:
+    - `start = abs(start)`, `stop = abs(stop)`, `start <= stop`
+    - `step = abs(step)` and default to `0.5` if invalid
+
 ### 2025-11-26 Summary (Pentode / transfer interaction and analyser verification)
 
 This section documents **behaviour only**; the intent is to record what was found and what has been done so far so a successor can decide how to proceed. Do **not** treat this as approval to change code again.

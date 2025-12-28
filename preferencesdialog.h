@@ -35,6 +35,7 @@ public:
     int getAveragingMode();
     int getAveragingFixedSamples();
     bool useRemodelling();
+    bool warmStartFromDeviceModel();
     bool useSecondaryEmission();
     bool fixSecondaryEmission();
     bool fixTriodeParameters();

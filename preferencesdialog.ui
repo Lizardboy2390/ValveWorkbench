@@ -337,6 +337,16 @@
      </widget>
     </item>
     <item>
+     <widget class="QCheckBox" name="checkWarmStartDeviceModel">
+      <property name="text">
+       <string>Warm-start pentode fit from saved device model</string>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QCheckBox" name="checkSecondary">
       <property name="text">
        <string>Use secondary emissions in model</string>

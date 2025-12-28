@@ -2375,6 +2375,7 @@ release\moc_valveworkbench.cpp: ..\..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonArray \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonarray.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\model\extractmodelpentode.h \
@@ -2651,6 +2652,7 @@ release\moc_circuit.cpp: ..\..\..\valvemodel\circuit\circuit.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -3276,6 +3278,7 @@ release\moc_triodeaccathodefollower.cpp: ..\..\..\valvemodel\circuit\triodeaccat
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -3901,6 +3904,7 @@ release\moc_triodecommoncathode.cpp: ..\..\..\valvemodel\circuit\triodecommoncat
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -4526,6 +4530,7 @@ release\moc_pentodecommoncathode.cpp: ..\..\..\valvemodel\circuit\pentodecommonc
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -5151,6 +5156,7 @@ release\moc_singleendedoutput.cpp: ..\..\..\valvemodel\circuit\singleendedoutput
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -5776,6 +5782,7 @@ release\moc_singleendeduloutput.cpp: ..\..\..\valvemodel\circuit\singleendedulou
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -6401,6 +6408,7 @@ release\moc_pushpulloutput.cpp: ..\..\..\valvemodel\circuit\pushpulloutput.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -7026,6 +7034,7 @@ release\moc_pushpulluloutput.cpp: ..\..\..\valvemodel\circuit\pushpulluloutput.h
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -7651,6 +7660,7 @@ release\moc_triodedccathodefollower.cpp: ..\..\..\valvemodel\circuit\triodedccat
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -8276,6 +8286,7 @@ release\moc_triodecc_dccf_twostage.cpp: ..\..\..\valvemodel\circuit\triodecc_dcc
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -10017,6 +10028,7 @@ release\main.obj: ..\..\..\main.cpp ..\..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonArray \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonarray.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\model\extractmodelpentode.h \
@@ -12776,6 +12788,7 @@ release\valveworkbench.obj: ..\..\..\valveworkbench.cpp ..\..\..\valveworkbench.
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonArray \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonarray.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		..\..\..\valvemodel\model\reefmanpentode.h \
 		..\..\..\valvemodel\model\gardinerpentode.h \
 		..\..\..\valvemodel\model\extractmodelpentode.h \
@@ -13110,6 +13123,7 @@ release\circuit.obj: ..\..\..\valvemodel\circuit\circuit.cpp ..\..\..\valvemodel
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -13734,6 +13748,7 @@ release\triodeaccathodefollower.obj: ..\..\..\valvemodel\circuit\triodeaccathode
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -14356,6 +14371,7 @@ release\triodecommoncathode.obj: ..\..\..\valvemodel\circuit\triodecommoncathode
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -14979,6 +14995,7 @@ release\pentodecommoncathode.obj: ..\..\..\valvemodel\circuit\pentodecommoncatho
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -15601,6 +15618,7 @@ release\singleendedoutput.obj: ..\..\..\valvemodel\circuit\singleendedoutput.cpp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -16224,6 +16242,7 @@ release\singleendeduloutput.obj: ..\..\..\valvemodel\circuit\singleendeduloutput
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -16846,6 +16865,7 @@ release\pushpulloutput.obj: ..\..\..\valvemodel\circuit\pushpulloutput.cpp ..\..
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -17469,6 +17489,7 @@ release\pushpulluloutput.obj: ..\..\..\valvemodel\circuit\pushpulluloutput.cpp .
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -18092,6 +18113,7 @@ release\triodedccathodefollower.obj: ..\..\..\valvemodel\circuit\triodedccathode
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -18714,6 +18736,7 @@ release\triodecc_dccf_twostage.obj: ..\..\..\valvemodel\circuit\triodecc_dccf_tw
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -21526,6 +21549,7 @@ release\device.obj: ..\..\..\valvemodel\model\device.cpp ..\..\..\valvemodel\mod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -28718,6 +28742,7 @@ release\moc_device.obj: ..\..\..\valvemodel\model\moc_device.cpp ..\..\..\valvem
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \

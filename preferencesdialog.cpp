@@ -522,14 +522,9 @@ bool PreferencesDialog::showDataTab()
     return ui->checkShowDataTab->isChecked();
 }
 
-double PreferencesDialog::getCalibrationLoadResistorOhms() const
+bool PreferencesDialog::warmStartFromDeviceModel()
 {
-    return calibrationLoadResistorSpinBox->value();
-}
-
-double PreferencesDialog::getCalibrationLoadResistorWatts() const
-{
-    return calibrationLoadResistorWattsSpinBox->value();
+    return ui->checkWarmStartDeviceModel->isChecked();
 }
 
 double PreferencesDialog::grid1CommandForDesired(double desiredVoltage) const
@@ -544,6 +539,26 @@ double PreferencesDialog::grid2CommandForDesired(double desiredVoltage) const
     return gridCommandForDesired(desiredVoltage,
                                  grid2MeasuredLowSpinBox->value(),
                                  grid2MeasuredHighSpinBox->value());
+}
+
+double PreferencesDialog::getGrid1MeasuredLow() const
+{
+    return grid1MeasuredLowSpinBox ? grid1MeasuredLowSpinBox->value() : -GRID_CAL_LOW_REF;
+}
+
+double PreferencesDialog::getGrid1MeasuredHigh() const
+{
+    return grid1MeasuredHighSpinBox ? grid1MeasuredHighSpinBox->value() : -GRID_CAL_HIGH_REF;
+}
+
+double PreferencesDialog::getGrid2MeasuredLow() const
+{
+    return grid2MeasuredLowSpinBox ? grid2MeasuredLowSpinBox->value() : -GRID_CAL_LOW_REF;
+}
+
+double PreferencesDialog::getGrid2MeasuredHigh() const
+{
+    return grid2MeasuredHighSpinBox ? grid2MeasuredHighSpinBox->value() : -GRID_CAL_HIGH_REF;
 }
 
 double PreferencesDialog::gridCommandForDesired(double desiredVoltage,
@@ -569,11 +584,6 @@ double PreferencesDialog::gridCommandForDesired(double desiredVoltage,
     return (desiredVoltage - offset) / slope;
 }
 
-double PreferencesDialog::getGrid1MeasuredLow() const { return grid1MeasuredLowSpinBox->value(); }
-double PreferencesDialog::getGrid1MeasuredHigh() const { return grid1MeasuredHighSpinBox->value(); }
-double PreferencesDialog::getGrid2MeasuredLow() const { return grid2MeasuredLowSpinBox->value(); }
-double PreferencesDialog::getGrid2MeasuredHigh() const { return grid2MeasuredHighSpinBox->value(); }
-
 void PreferencesDialog::setHvCalibrationRawAdc(int hv1Adc,
                                               int iaHi1Adc,
                                               int iaLo1Adc,
@@ -589,13 +599,13 @@ void PreferencesDialog::setHvCalibrationRawAdc(int hv1Adc,
     lastIaLo2Adc = iaLo2Adc;
 
     if (hvCalRawLabel) {
-        hvCalRawLabel->setText(QStringLiteral("HV1=%1 IA_HI_1=%2 IA_LO_1=%3 | HV2=%4 IA_HI_2=%5 IA_LO_2=%6")
-                                   .arg(lastHv1Adc)
-                                   .arg(lastIaHi1Adc)
-                                   .arg(lastIaLo1Adc)
-                                   .arg(lastHv2Adc)
-                                   .arg(lastIaHi2Adc)
-                                   .arg(lastIaLo2Adc));
+        hvCalRawLabel->setText(QString("HV1=%1 IA_HI1=%2 IA_LO1=%3 | HV2=%4 IA_HI2=%5 IA_LO2=%6")
+                                   .arg(hv1Adc)
+                                   .arg(iaHi1Adc)
+                                   .arg(iaLo1Adc)
+                                   .arg(hv2Adc)
+                                   .arg(iaHi2Adc)
+                                   .arg(iaLo2Adc));
     }
 }
 
@@ -603,192 +613,30 @@ void PreferencesDialog::loadFromSettings()
 {
     QSettings s("ValveWorkbench", "ValveWorkbench");
 
-    QString savedPort = s.value("preferences/port", "").toString();
-    if (!savedPort.isEmpty()) {
-        bool found = false;
-        for (int i = 0; i < ui->portSelect->count(); ++i) {
-            if (ui->portSelect->itemText(i) == savedPort) { found = true; break; }
-        }
-        if (!found) {
-            ui->portSelect->addItem(savedPort);
-        }
-        setPort(savedPort);
-    }
-
-    int savedPentodeFit = s.value("preferences/pentodeFit", GARDINER_PENTODE).toInt();
-    if (savedPentodeFit == REEFMAN_DERK_PENTODE || savedPentodeFit == REEFMAN_DERK_E_PENTODE) {
-        savedPentodeFit = EXTRACT_DERK_E_PENTODE;
-    }
-    int idxFit = ui->pentodeFit->findData(savedPentodeFit);
-    if (idxFit >= 0) {
-        ui->pentodeFit->setCurrentIndex(idxFit);
-    }
-
-    int savedSampling = s.value("preferences/sampling", SMP_LINEAR).toInt();
-    int idxSamp = ui->sampling->findData(savedSampling);
-    if (idxSamp >= 0) {
-        ui->sampling->setCurrentIndex(idxSamp);
-    }
-
-    int savedAvgMode = s.value("preferences/avgMode", 0).toInt();
-    if (savedAvgMode < 0 || savedAvgMode > 1) {
-        savedAvgMode = 0;
-    }
-    ui->avgMode->setCurrentIndex(savedAvgMode);
-
-    int savedAvgSamples = s.value("preferences/avgSamples", 5).toInt();
-    ui->avgSamples->setValue(savedAvgSamples);
-
     ui->checkScreenCurrent->setChecked(s.value("preferences/showScreenCurrent", true).toBool());
     ui->checkRemodel->setChecked(s.value("preferences/useRemodelling", false).toBool());
+    // When enabled, pentode fitting can warm-start from a saved device model seed.
+    ui->checkWarmStartDeviceModel->setChecked(s.value("preferences/warmStartFromDeviceModel", false).toBool());
     ui->checkSecondary->setChecked(s.value("preferences/useSecondaryEmission", true).toBool());
     ui->checkFixTriode->setChecked(s.value("preferences/fixTriodeParameters", true).toBool());
     ui->checkFixSecondary->setChecked(s.value("preferences/fixSecondaryEmission", true).toBool());
     ui->checkSmoothCurves->setChecked(s.value("preferences/smoothCurves", false).toBool());
     ui->checkShowDataTab->setChecked(s.value("preferences/showDataTab", false).toBool());
-
-    calibrationLoadResistorSpinBox->setValue(s.value("cal/loadResistorOhms", 47000.0).toDouble());
-    if (calibrationLoadResistorWattsSpinBox) {
-        calibrationLoadResistorWattsSpinBox->setValue(s.value("cal/loadResistorWatts", 2.0).toDouble());
-    }
-    if (linkHvVoltagePointsCheckBox) {
-        linkHvVoltagePointsCheckBox->setChecked(s.value("hvCal/linkVoltagePoints", true).toBool());
-    }
-
-    const QVariantList hv1Volts = s.value("hvCal/hv1/points/volts").toList();
-    const QVariantList hv1HvAdc = s.value("hvCal/hv1/points/hvAdc").toList();
-    const QVariantList hv1IaHi = s.value("hvCal/hv1/points/iaHiAdc").toList();
-    const QVariantList hv1IaLo = s.value("hvCal/hv1/points/iaLoAdc").toList();
-    for (int i = 0; i < hv1PointVoltsSpin.size() && i < 6; ++i) {
-        if (i < hv1Volts.size()) hv1PointVoltsSpin[i]->setValue(hv1Volts.at(i).toDouble());
-        if (i < hv1HvAdc.size()) hv1PointHvAdcSpin[i]->setValue(hv1HvAdc.at(i).toInt());
-        if (i < hv1IaHi.size()) hv1PointIaHiAdcSpin[i]->setValue(hv1IaHi.at(i).toInt());
-        if (i < hv1IaLo.size()) hv1PointIaLoAdcSpin[i]->setValue(hv1IaLo.at(i).toInt());
-    }
-
-    const QVariantList hv2Volts = s.value("hvCal/hv2/points/volts").toList();
-    const QVariantList hv2HvAdc = s.value("hvCal/hv2/points/hvAdc").toList();
-    const QVariantList hv2IaHi = s.value("hvCal/hv2/points/iaHiAdc").toList();
-    const QVariantList hv2IaLo = s.value("hvCal/hv2/points/iaLoAdc").toList();
-    for (int i = 0; i < hv2PointVoltsSpin.size() && i < 6; ++i) {
-        if (i < hv2Volts.size()) hv2PointVoltsSpin[i]->setValue(hv2Volts.at(i).toDouble());
-        if (i < hv2HvAdc.size()) hv2PointHvAdcSpin[i]->setValue(hv2HvAdc.at(i).toInt());
-        if (i < hv2IaHi.size()) hv2PointIaHiAdcSpin[i]->setValue(hv2IaHi.at(i).toInt());
-        if (i < hv2IaLo.size()) hv2PointIaLoAdcSpin[i]->setValue(hv2IaLo.at(i).toInt());
-    }
-
-    const auto shouldApplyDefaultHvVolts = [](const QVariantList &volts,
-                                             const QVariantList &hvAdc,
-                                             const QVariantList &iaHi,
-                                             const QVariantList &iaLo) {
-        if (volts.isEmpty() && hvAdc.isEmpty() && iaHi.isEmpty() && iaLo.isEmpty()) {
-            return true;
-        }
-
-        auto allZeroD = [](const QVariantList &xs) {
-            if (xs.isEmpty()) return true;
-            for (const QVariant &v : xs) {
-                if (std::fabs(v.toDouble()) > 1e-9) return false;
-            }
-            return true;
-        };
-        auto allZeroI = [](const QVariantList &xs) {
-            if (xs.isEmpty()) return true;
-            for (const QVariant &v : xs) {
-                if (v.toInt() != 0) return false;
-            }
-            return true;
-        };
-
-        return allZeroD(volts) && allZeroI(hvAdc) && allZeroI(iaHi) && allZeroI(iaLo);
-    };
-
-    auto computeSuggestedVolts = [this]() {
-        const double rOhms = calibrationLoadResistorSpinBox ? calibrationLoadResistorSpinBox->value() : 47000.0;
-        const double watts = calibrationLoadResistorWattsSpinBox ? calibrationLoadResistorWattsSpinBox->value() : 2.0;
-        if (!(rOhms > 1.0) || !(watts > 0.0)) {
-            return QVector<double>({50.0, 100.0, 150.0, 200.0, 250.0, 300.0});
-        }
-        double vmax = std::sqrt(rOhms * watts);
-        if (vmax > 600.0) vmax = 600.0;
-        const QVector<double> fractions = {0.25, 0.50, 0.75, 0.85, 0.925, 1.00};
-        QVector<double> suggested;
-        suggested.reserve(6);
-        for (int i = 0; i < fractions.size(); ++i) {
-            double v = std::round(vmax * fractions.at(i));
-            if (v < 0.0) v = 0.0;
-            if (v > 600.0) v = 600.0;
-            suggested.push_back(v);
-        }
-        return suggested;
-    };
-
-    const QVector<double> suggested = computeSuggestedVolts();
-    if (shouldApplyDefaultHvVolts(hv1Volts, hv1HvAdc, hv1IaHi, hv1IaLo)) {
-        hv1LastSuggestedVolts = suggested;
-        for (int i = 0; i < hv1PointVoltsSpin.size() && i < suggested.size() && i < 6; ++i) {
-            hv1PointVoltsSpin[i]->setValue(suggested.at(i));
-        }
-    }
-    if (shouldApplyDefaultHvVolts(hv2Volts, hv2HvAdc, hv2IaHi, hv2IaLo)) {
-        hv2LastSuggestedVolts = suggested;
-        for (int i = 0; i < hv2PointVoltsSpin.size() && i < suggested.size() && i < 6; ++i) {
-            hv2PointVoltsSpin[i]->setValue(suggested.at(i));
-        }
-    }
-
-    // If linking is enabled and both channels are still uncalibrated, keep their point voltages identical.
-    if (linkHvVoltagePointsCheckBox && linkHvVoltagePointsCheckBox->isChecked()) {
-        auto allAdcZero = [](const QVector<QSpinBox*> &xs) {
-            for (int i = 0; i < xs.size() && i < 6; ++i) {
-                if (xs[i]->value() != 0) return false;
-            }
-            return true;
-        };
-
-        const bool hv1Uncal = allAdcZero(hv1PointHvAdcSpin) && allAdcZero(hv1PointIaHiAdcSpin) && allAdcZero(hv1PointIaLoAdcSpin);
-        const bool hv2Uncal = allAdcZero(hv2PointHvAdcSpin) && allAdcZero(hv2PointIaHiAdcSpin) && allAdcZero(hv2PointIaLoAdcSpin);
-        if (hv1Uncal && hv2Uncal) {
-            for (int i = 0; i < hv1PointVoltsSpin.size() && i < hv2PointVoltsSpin.size() && i < 6; ++i) {
-                QSignalBlocker b(hv2PointVoltsSpin[i]);
-                hv2PointVoltsSpin[i]->setValue(hv1PointVoltsSpin[i]->value());
-            }
-            if (hv1LastSuggestedVolts.size() >= 6) {
-                hv2LastSuggestedVolts = hv1LastSuggestedVolts;
-            }
-        }
-    }
-
-    grid1MeasuredLowSpinBox->setValue(s.value("gridCal/g1Low", -PreferencesDialog::GRID_CAL_LOW_REF).toDouble());
-    grid1MeasuredHighSpinBox->setValue(s.value("gridCal/g1High", -PreferencesDialog::GRID_CAL_HIGH_REF).toDouble());
-    grid2MeasuredLowSpinBox->setValue(s.value("gridCal/g2Low", -PreferencesDialog::GRID_CAL_LOW_REF).toDouble());
-    grid2MeasuredHighSpinBox->setValue(s.value("gridCal/g2High", -PreferencesDialog::GRID_CAL_HIGH_REF).toDouble());
 }
 
 void PreferencesDialog::saveToSettings() const
 {
     QSettings s("ValveWorkbench", "ValveWorkbench");
 
-    s.setValue("preferences/port", ui->portSelect->currentText());
-    s.setValue("preferences/pentodeFit", ui->pentodeFit->currentData().toInt());
-    s.setValue("preferences/sampling", ui->sampling->currentData().toInt());
-    s.setValue("preferences/avgMode", ui->avgMode->currentIndex());
-    s.setValue("preferences/avgSamples", ui->avgSamples->value());
     s.setValue("preferences/showScreenCurrent", ui->checkScreenCurrent->isChecked());
     s.setValue("preferences/useRemodelling", ui->checkRemodel->isChecked());
+    s.setValue("preferences/warmStartFromDeviceModel", ui->checkWarmStartDeviceModel->isChecked());
     s.setValue("preferences/useSecondaryEmission", ui->checkSecondary->isChecked());
     s.setValue("preferences/fixTriodeParameters", ui->checkFixTriode->isChecked());
     s.setValue("preferences/fixSecondaryEmission", ui->checkFixSecondary->isChecked());
     s.setValue("preferences/smoothCurves", ui->checkSmoothCurves->isChecked());
     s.setValue("preferences/showDataTab", ui->checkShowDataTab->isChecked());
-
-    s.setValue("cal/loadResistorOhms", calibrationLoadResistorSpinBox->value());
-    if (calibrationLoadResistorWattsSpinBox) {
-        s.setValue("cal/loadResistorWatts", calibrationLoadResistorWattsSpinBox->value());
-    }
-    if (linkHvVoltagePointsCheckBox) {
-        s.setValue("hvCal/linkVoltagePoints", linkHvVoltagePointsCheckBox->isChecked());
-    }
+    s.setValue("hvCal/linkVoltagePoints", linkHvVoltagePointsCheckBox->isChecked());
 
     QVariantList hv1Volts;
     QVariantList hv1HvAdc;

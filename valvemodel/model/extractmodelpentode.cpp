@@ -627,15 +627,15 @@ void ExtractModelPentode::setOptions()
     // Secondary-emission geometry: constrain to realistic ranges so the
     // solver cannot wander into extreme Psec shapes that prevent
     // convergence.
-    setLimits(parameter[PAR_OMEGA],  0.0, 600.0);  // Vco offset
-    setLimits(parameter[PAR_LAMBDA], 5.0, 200.0);  // Vg2 / lambda scale
-    setLimits(parameter[PAR_NU],     0.0, 80.0);   // nu * Vg1 weight
+    setLimits(parameter[PAR_OMEGA],  0.0, 800.0);  // Vco offset
+    setLimits(parameter[PAR_LAMBDA], 5.0, 250.0);  // Vg2 / lambda scale
+    setLimits(parameter[PAR_NU],     0.0, 120.0);  // nu * Vg1 weight
     if (preferences && preferences->useSecondaryEmission()) {
-        setLimits(parameter[PAR_S],  0.001, 0.5);
+        setLimits(parameter[PAR_S],  0.0, 1.0);
     } else {
-        setLimits(parameter[PAR_S],  0.0, 0.5);
+        setLimits(parameter[PAR_S],  0.0, 1.0);
     }
-    setLimits(parameter[PAR_AP],     0.001, 0.05); // cross-over sharpness
+    setLimits(parameter[PAR_AP],     0.0, 0.2); // cross-over sharpness
 
     // Allow more iterations for the SE-enabled ExtractModel fit while
     // keeping other solver settings similar to the Gardiner pentode.

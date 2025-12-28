@@ -161,7 +161,7 @@ private:
 double GardinerPentode::anodeCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     // Normalize screen voltage to volts for Epk helper (measurement may be kV like 0.250)
-    double v2_for_epk = (std::fabs(vg2) < 5.0 ? vg2 * 1000.0 : vg2);
+    double v2_for_epk = (std::fabs(vg2) < 5.0 && std::fabs(vg2) > 1e-9) ? (vg2 * 1000.0) : vg2;
     double epk = cohenHelieEpk(v2_for_epk, vg1);
     // Runtime stability: prevent hard-zero collapse at strong -Vg1 during plotting
     epk = std::max(epk, 1e-6);
@@ -170,9 +170,9 @@ double GardinerPentode::anodeCurrent(double va, double vg1, double vg2, bool sec
     double g = exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
     //double g = 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
     double scale = 1.0 - g;
-    double vco = vg2 / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
+    double vco = v2_for_epk / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
     double psec = parameter[PAR_S]->getValue() * va * (1.0 + tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
-    double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG2]->getValue()) + parameter[PAR_OS]->getValue() * vg2;
+    double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG2]->getValue()) + parameter[PAR_OS]->getValue() * v2_for_epk;
 
     if(secondaryEmission) {
         ia = ia - epk * psec / parameter[PAR_KG2]->getValue();
@@ -185,11 +185,11 @@ double GardinerPentode::anodeCurrent(double va, double vg1, double vg2, bool sec
 double GardinerPentode::screenCurrent(double va, double vg1, double vg2, bool secondaryEmission)
 {
     // Normalize screen voltage to volts for Epk helper
-    double v2_for_epk = (std::fabs(vg2) < 5.0 ? vg2 * 1000.0 : vg2);
+    double v2_for_epk = (std::fabs(vg2) < 5.0 && std::fabs(vg2) > 1e-9) ? (vg2 * 1000.0) : vg2;
     double epk = cohenHelieEpk(v2_for_epk, vg1);
     double shift = parameter[PAR_RHO]->getValue() * (1.0 - parameter[PAR_TAU]->getValue() * vg1);
     double h = exp(-pow(shift * va, parameter[PAR_THETA]->getValue() * 0.9));
-    double vco = vg2 / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
+    double vco = v2_for_epk / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
     double psec = parameter[PAR_S]->getValue() * va * (1.0 + tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
     double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG2A]->getValue() - epk * parameter[PAR_A]->getValue() * va / parameter[PAR_KG2A]->getValue();
     //double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG3]->getValue();
@@ -211,7 +211,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
 {
     // Filter out degenerate points that destabilize residual evaluation
     const double eps = 1e-9;
-    const double vg2Normalized = (std::fabs(vg2) < 5.0 ? vg2 * 1000.0 : vg2);
+    const double vg2Normalized = (std::fabs(vg2) < 5.0 && std::fabs(vg2) > eps) ? (vg2 * 1000.0) : vg2;
     if (vg2Normalized <= eps) {
         return; // screen effectively off / discharge transient
     }
@@ -222,7 +222,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
     if (!preferences->useSecondaryEmission()) {
         anodeProblem.AddResidualBlock(
             new AutoDiffCostFunction<UnifiedPentodeIaResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIaResidual(va, vg1, ia, vg2, ig2)),
+                new UnifiedPentodeIaResidual(va, vg1, ia, vg2Normalized, ig2)),
             NULL,
             parameter[PAR_KG1]->getPointer(),
             parameter[PAR_KP]->getPointer(),
@@ -240,7 +240,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
 
         anodeRemodelProblem.AddResidualBlock(
             new AutoDiffCostFunction<UnifiedPentodeIaResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIaResidual(va, vg1, ia, vg2, ig2)),
+                new UnifiedPentodeIaResidual(va, vg1, ia, vg2Normalized, ig2)),
             NULL,
             parameter[PAR_KG1]->getPointer(),
             parameter[PAR_KP]->getPointer(),
@@ -258,7 +258,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
 
         screenProblem.AddResidualBlock(
             new AutoDiffCostFunction<UnifiedPentodeIg2Residual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIg2Residual(va, vg1, ia, vg2, ig2)),
+                new UnifiedPentodeIg2Residual(va, vg1, ia, vg2Normalized, ig2)),
             NULL,
             parameter[PAR_KP]->getPointer(),
             parameter[PAR_KVB]->getPointer(),
@@ -276,7 +276,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
     } else {
         anodeProblem.AddResidualBlock(
             new AutoDiffCostFunction<UnifiedPentodeIaSEResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIaSEResidual(va, vg1, ia, vg2, ig2)),
+                new UnifiedPentodeIaSEResidual(va, vg1, ia, vg2Normalized, ig2)),
             NULL,
             parameter[PAR_KG1]->getPointer(),
             parameter[PAR_KP]->getPointer(),
@@ -299,7 +299,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
 
         anodeRemodelProblem.AddResidualBlock(
             new AutoDiffCostFunction<UnifiedPentodeIaSEResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIaSEResidual(va, vg1, ia, vg2, ig2)),
+                new UnifiedPentodeIaSEResidual(va, vg1, ia, vg2Normalized, ig2)),
             NULL,
             parameter[PAR_KG1]->getPointer(),
             parameter[PAR_KP]->getPointer(),
@@ -322,7 +322,7 @@ void GardinerPentode::addSample(double va, double ia, double vg1, double vg2, do
 
         screenProblem.AddResidualBlock(
             new AutoDiffCostFunction<UnifiedPentodeIg2SEResidual, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1>(
-                new UnifiedPentodeIg2SEResidual(va, vg1, ia, vg2, ig2)),
+                new UnifiedPentodeIg2SEResidual(va, vg1, ia, vg2Normalized, ig2)),
             NULL,
             parameter[PAR_KP]->getPointer(),
             parameter[PAR_KVB]->getPointer(),
@@ -635,10 +635,22 @@ void GardinerPentode::setOptions()
         parameter[PAR_THETA]->setValue(parameter[PAR_GAMMA]->getValue());
         parameter[PAR_KG2A]->setValue(parameter[PAR_KG2]->getValue());
 
+        screenProblem.SetParameterBlockConstant(parameter[PAR_MU]->getPointer());
+        screenProblem.SetParameterBlockConstant(parameter[PAR_X]->getPointer());
+        screenProblem.SetParameterBlockConstant(parameter[PAR_KP]->getPointer());
+        screenProblem.SetParameterBlockConstant(parameter[PAR_KVB]->getPointer());
+        screenProblem.SetParameterBlockConstant(parameter[PAR_KVB1]->getPointer());
+        screenProblem.SetParameterBlockConstant(parameter[PAR_VCT]->getPointer());
+
         //screenProblem.SetParameterBlockConstant(parameter[PAR_KG2]->getPointer());
         screenProblem.SetParameterBlockConstant(parameter[PAR_A]->getPointer());
 
         if (preferences->useSecondaryEmission()) {
+            screenProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
+            screenProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());
+            screenProblem.SetParameterBlockConstant(parameter[PAR_NU]->getPointer());
+            screenProblem.SetParameterBlockConstant(parameter[PAR_S]->getPointer());
+            screenProblem.SetParameterBlockConstant(parameter[PAR_AP]->getPointer());
             if (preferences->fixSecondaryEmission()) {
                 screenProblem.SetParameterBlockConstant(parameter[PAR_OMEGA]->getPointer());
                 screenProblem.SetParameterBlockConstant(parameter[PAR_LAMBDA]->getPointer());

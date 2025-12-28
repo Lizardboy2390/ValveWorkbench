@@ -55,6 +55,7 @@ public:
     QCheckBox *checkSmoothCurves;
     QCheckBox *checkShowDataTab;
     QCheckBox *checkRemodel;
+    QCheckBox *checkWarmStartDeviceModel;
     QCheckBox *checkSecondary;
     QCheckBox *checkFixTriode;
     QCheckBox *checkFixSecondary;
@@ -228,6 +229,12 @@ public:
 
         verticalLayout->addWidget(checkRemodel);
 
+        checkWarmStartDeviceModel = new QCheckBox(verticalLayoutWidget);
+        checkWarmStartDeviceModel->setObjectName("checkWarmStartDeviceModel");
+        checkWarmStartDeviceModel->setChecked(false);
+
+        verticalLayout->addWidget(checkWarmStartDeviceModel);
+
         checkSecondary = new QCheckBox(verticalLayoutWidget);
         checkSecondary->setObjectName("checkSecondary");
         checkSecondary->setChecked(true);
@@ -270,6 +277,7 @@ public:
         checkSmoothCurves->setText(QCoreApplication::translate("PreferencesDialog", "Smooth measurement plotting", nullptr));
         checkShowDataTab->setText(QCoreApplication::translate("PreferencesDialog", "Show Data tab", nullptr));
         checkRemodel->setText(QCoreApplication::translate("PreferencesDialog", "Pentode remodel after screen modelling", nullptr));
+        checkWarmStartDeviceModel->setText(QCoreApplication::translate("PreferencesDialog", "Warm-start pentode fit from saved device model", nullptr));
         checkSecondary->setText(QCoreApplication::translate("PreferencesDialog", "Use secondary emissions in model", nullptr));
         checkFixTriode->setText(QCoreApplication::translate("PreferencesDialog", "Fix triode parameters for pentode modelling", nullptr));
         checkFixSecondary->setText(QCoreApplication::translate("PreferencesDialog", "Fix secondary emission parameters for screen modelling", nullptr));

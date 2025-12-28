@@ -13,6 +13,26 @@ Device::Device(int _modelDeviceType) : deviceType(_modelDeviceType)
     }
 }
 
+Device::~Device()
+{
+    for (auto it = modelsByType.begin(); it != modelsByType.end(); ++it) {
+        delete it.value();
+    }
+    modelsByType.clear();
+    model = nullptr;
+
+    delete measurement;
+    measurement = nullptr;
+
+    delete triodeSeed;
+    triodeSeed = nullptr;
+}
+
+Model *Device::getModelForType(int wantedType) const
+{
+    return modelsByType.value(wantedType, nullptr);
+}
+
 Device::Device(QJsonDocument modelDocument)
 {
     vaMax =400.0;
@@ -70,29 +90,44 @@ Device::Device(QJsonDocument modelDocument)
             }
         }
 
-        if (deviceObject.contains("model") && deviceObject["model"].isObject()) {
-            QJsonObject modelObject = deviceObject["model"].toObject();
-            qInfo("Found model object");
-
-            // Do not clobber any top-level deviceType hint (root["deviceType"]).
-            // Some fitted-model exports do not include a model["device"] field,
-            // so forcing TRIODE here can misclassify exported pentodes.
-
+        auto buildModelFromJson = [&](const QJsonObject &modelObject) -> Model * {
             QString modelTypeStr = modelObject.value("type").toString();
-            if (!modelTypeStr.isEmpty()) {
-                qInfo("Model type: %s", modelTypeStr.toStdString().c_str());
+
+            Model *m = nullptr;
+            if (modelTypeStr == "simple") {
+                m = new SimpleTriode();
+            } else if (modelTypeStr == "koren") {
+                m = new KorenTriode();
+            } else if (modelTypeStr == "cohenHelie") {
+                m = new CohenHelieTriode();
+            } else if (modelTypeStr == "reefman") {
+                m = new ReefmanPentode();
+            } else if (modelTypeStr == "gardiner") {
+                m = new GardinerPentode();
+            } else if (modelTypeStr == "extractDerkE") {
+                m = new ExtractModelPentode();
+            } else {
+                if (modelObject.contains("kvb1")) {
+                    m = new CohenHelieTriode();
+                } else if (modelObject.contains("kp") || modelObject.contains("kvb")) {
+                    m = new KorenTriode();
+                } else {
+                    m = new SimpleTriode();
+                }
+            }
+
+            if (!m) {
+                return nullptr;
             }
 
             if (modelObject.contains("device") && modelObject["device"].isString()) {
                 QString deviceStr = modelObject["device"].toString();
-                qInfo("Device string: %s", deviceStr.toStdString().c_str());
                 if (deviceStr.compare("pentode", Qt::CaseInsensitive) == 0) {
                     deviceType = PENTODE;
                 } else if (deviceStr.compare("triode", Qt::CaseInsensitive) == 0) {
                     deviceType = TRIODE;
                 }
             } else {
-                // Infer device type from model type when the JSON omits model.device.
                 if (modelTypeStr == "reefman" || modelTypeStr == "gardiner" || modelTypeStr == "extractDerkE") {
                     deviceType = PENTODE;
                 } else if (modelTypeStr == "simple" || modelTypeStr == "koren" || modelTypeStr == "cohenHelie") {
@@ -100,71 +135,32 @@ Device::Device(QJsonDocument modelDocument)
                 }
             }
 
-            // Choose model class: prefer explicit type, otherwise infer from keys.
-            // This now includes explicit support for ExtractModel pentode exports
-            // which use type "extractDerkE" in their JSON.
-            if (modelTypeStr == "simple") {
-                model = new SimpleTriode();
-            } else if (modelTypeStr == "koren") {
-                model = new KorenTriode();
-            } else if (modelTypeStr == "cohenHelie") {
-                model = new CohenHelieTriode();
-            } else if (modelTypeStr == "reefman") {
-                model = new ReefmanPentode();
-            } else if (modelTypeStr == "gardiner") {
-                model = new GardinerPentode();
-            } else if (modelTypeStr == "extractDerkE") {
-                model = new ExtractModelPentode();
-            } else {
-                // Infer triode model from present keys
-                if (modelObject.contains("kvb1")) {
-                    model = new CohenHelieTriode();
-                    qInfo("Inferred model: Cohen-Helie (kvb1 present)");
-                } else if (modelObject.contains("kp") || modelObject.contains("kvb")) {
-                    model = new KorenTriode();
-                    qInfo("Inferred model: Koren (kp/kvb present)");
-                } else {
-                    model = new SimpleTriode();
-                    qInfo("Inferred model: Simple (fallback)");
-                }
-            }
+            m->fromJson(modelObject);
+            m->setConverged(true);
+            modelsByType.insert(m->getType(), m);
+            return m;
+        };
 
-            if (model != nullptr) {
-                model->fromJson(modelObject);
-                model->setConverged(true);
-                qInfo("Model created and initialized");
-                if (modelTypeStr == "gardiner") {
-                    qInfo("Device '%s' Gardiner parameters after fromJson: mu=%.12f kg1=%.12f x=%.12f kp=%.12f kvb=%.12f kvb1=%.12f vct=%.12f",
-                          name.toStdString().c_str(),
-                          model->getParameter(PAR_MU),
-                          model->getParameter(PAR_KG1),
-                          model->getParameter(PAR_X),
-                          model->getParameter(PAR_KP),
-                          model->getParameter(PAR_KVB),
-                          model->getParameter(PAR_KVB1),
-                          model->getParameter(PAR_VCT));
-                    qInfo("  kg2=%.12f kg2a=%.12f a=%.12f alpha=%.12f beta=%.12f gamma=%.12f os=%.12f",
-                          model->getParameter(PAR_KG2),
-                          model->getParameter(PAR_KG2A),
-                          model->getParameter(PAR_A),
-                          model->getParameter(PAR_ALPHA),
-                          model->getParameter(PAR_BETA),
-                          model->getParameter(PAR_GAMMA),
-                          model->getParameter(PAR_OS));
-                    qInfo("  tau=%.12f rho=%.12f theta=%.12f psi=%.12f omega=%.12f lambda=%.12f nu=%.12f s=%.12f ap=%.12f",
-                          model->getParameter(PAR_TAU),
-                          model->getParameter(PAR_RHO),
-                          model->getParameter(PAR_THETA),
-                          model->getParameter(PAR_PSI),
-                          model->getParameter(PAR_OMEGA),
-                          model->getParameter(PAR_LAMBDA),
-                          model->getParameter(PAR_NU),
-                          model->getParameter(PAR_S),
-                          model->getParameter(PAR_AP));
+        if (deviceObject.contains("models") && deviceObject["models"].isObject()) {
+            const QJsonObject all = deviceObject["models"].toObject();
+            for (auto it = all.begin(); it != all.end(); ++it) {
+                if (!it.value().isObject()) {
+                    continue;
                 }
+                buildModelFromJson(it.value().toObject());
             }
-        } else {
-            qInfo("No model object found in JSON");
+        }
+
+        if (deviceObject.contains("model") && deviceObject["model"].isObject()) {
+            model = buildModelFromJson(deviceObject["model"].toObject());
+        }
+
+        if (!model && !modelsByType.isEmpty()) {
+            model = modelsByType.begin().value();
+        }
+
+        if (model) {
+            modelType = model->getType();
         }
 
         // Optional embedded triode seed model used when the preset was

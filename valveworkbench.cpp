@@ -1288,6 +1288,18 @@ bool ValveWorkbench::ensureDatasheetRefPoint(double &va0, double &vg0, double &i
             }
         }
 
+        if (isDoubleTriode) {
+            // Health prerequisite sweeps must also populate the secondary
+            // (Triode B) channels; keep the second-anode sweep in sync with
+            // the primary so the analyser records Va2/Ia2/Vg3.
+            secondAnodeStart = anodeStart;
+            secondAnodeStop  = anodeStop;
+            secondAnodeStep  = anodeStep;
+            secondGridStart  = gridStart;
+            secondGridStop   = gridStop;
+            secondGridStep   = gridStep;
+        }
+
         if (deviceType == PENTODE) {
             // Avoid running pentode anode characteristics starting at Va=0 when Vg2 is high.
             // That condition can immediately spike Ig2 / trip clamps and abort the run.
@@ -1564,6 +1576,17 @@ void ValveWorkbench::configureTransferForHealthPoint(const HealthPoint &pt)
         screenStart = 0.0;
         screenStop  = 0.0;
         screenStep  = 0.0;
+    }
+
+    if (isDoubleTriode) {
+        // Keep the secondary sweep in lockstep with the primary sweep so the
+        // analyser captures Triode B data during Health transfer sweeps.
+        secondAnodeStart = anodeStart;
+        secondAnodeStop  = anodeStop;
+        secondAnodeStep  = anodeStep;
+        secondGridStart  = gridStart;
+        secondGridStop   = gridStop;
+        secondGridStep   = gridStep;
     }
 }
 
@@ -2867,6 +2890,12 @@ void ValveWorkbench::finalizeHealthRun()
                     double vg2RefForPg2 = r0.vg2;
                     double pg2Ref_W = 0.0;
 
+                    // For Screen Health we only use the centre reference values.
+                    // (The stored healthReference.corners are intended for Triode A/B Ia-only
+                    // corner scoring; Screen Health uses the Full-OP centre.)
+                    double ig2RefForPct = 0.0;
+                    double pg2RefForPct_W = 0.0;
+
                     if (showFullOpRefs) {
                         if (haveHealthSurface && ig2RefSurface.size() > 0 && ig2RefSurface.at(0) > 0.0) {
                             ig2RefCentre = ig2RefSurface.at(0);
@@ -2896,20 +2925,24 @@ void ValveWorkbench::finalizeHealthRun()
                         }
                     }
 
+                    // Use the same reference numbers for the % column.
+                    ig2RefForPct = ig2RefCentre;
+                    pg2RefForPct_W = pg2Ref_W;
+
                     setEdit(ui->triodeB_Ia_measured, formatValue(ig2Meas, 3));
                     setEdit(ui->triodeB_Ia_ref, (ig2RefCentre > 0.0) ? formatValue(ig2RefCentre, 3) : QString());
                     setEditStyle(ui->triodeB_Ia_ref, refStyle);
                     setEdit(ui->triodeB_Ia_pct,
-                            (ig2RefCentre > 0.0)
-                                ? QString::number(100.0 * metricScore(ig2Meas, ig2RefCentre), 'f', 0)
+                            (ig2RefForPct > 0.0)
+                                ? QString::number(100.0 * metricScore(ig2Meas, ig2RefForPct), 'f', 0)
                                 : QString());
 
                     setEdit(ui->triodeB_rp_measured, (pg2Meas_W > 0.0) ? formatValue(pg2Meas_W, 3) : QString());
                     setEdit(ui->triodeB_rp_ref, (pg2Ref_W > 0.0) ? formatValue(pg2Ref_W, 3) : QString());
                     setEditStyle(ui->triodeB_rp_ref, refStyle);
                     setEdit(ui->triodeB_rp_pct,
-                            (pg2Ref_W > 0.0)
-                                ? QString::number(100.0 * metricScore(pg2Meas_W, pg2Ref_W), 'f', 0)
+                            (pg2RefForPct_W > 0.0)
+                                ? QString::number(100.0 * metricScore(pg2Meas_W, pg2RefForPct_W), 'f', 0)
                                 : QString());
 
                     // Clear unused fields
@@ -3605,6 +3638,11 @@ bool ValveWorkbench::captureHealthReferenceFromLastRun()
             const double ig2 = accumulateScalar(oldIg2, ig2Centre);
             if (ig2 > 0.0) {
                 centerMerged.insert(QStringLiteral("ig2Ref_mA"), ig2);
+                const double vg2ForPg2 = centerPoint.vg2;
+                const double pg2_W = (vg2ForPg2 > 0.0) ? (vg2ForPg2 * ig2 / 1000.0) : 0.0;
+                if (pg2_W > 0.0 && std::isfinite(pg2_W)) {
+                    centerMerged.insert(QStringLiteral("pg2Ref_W"), pg2_W);
+                }
             }
         }
 
@@ -3850,14 +3888,13 @@ void ValveWorkbench::on_modellingTestsButton_clicked()
     // --- Build modelling steps based on selected device variant ---
     if (requestedProjectType == PENTODE || requestedTriodeConnectedPentode) {
         // Pentode / Triode-Connected Pentode sequences.
-        {
+        if (requestedTriodeConnectedPentode) {
             ModellingTestStep s;
             initStep(s);
-            s.label = requestedTriodeConnectedPentode ? tr("Triode-connected anode")
-                                                     : tr("Pentode anode");
+            s.label = tr("Triode-connected anode");
             s.deviceType = PENTODE;
             s.testType = ANODE_CHARACTERISTICS;
-            s.triodeConnectedPentode = requestedTriodeConnectedPentode;
+            s.triodeConnectedPentode = true;
 
             // Use the current UI ranges as the authoritative source.
             s.anodeStart = savedAnodeStartForModelling;
@@ -3867,39 +3904,83 @@ void ValveWorkbench::on_modellingTestsButton_clicked()
             s.gridStop   = savedGridStopForModelling;
             s.gridStep   = savedGridStepForModelling;
 
-            if (requestedTriodeConnectedPentode) {
+            s.screenStart = 0.0;
+            s.screenStop  = 0.0;
+            s.screenStep  = 0.0;
+
+            modellingSteps.append(s);
+        } else {
+            {
+                ModellingTestStep s;
+                initStep(s);
+                s.label = tr("Triode-connected anode");
+                s.deviceType = PENTODE;
+                s.testType = ANODE_CHARACTERISTICS;
+                s.triodeConnectedPentode = true;
+
+                // Use the current UI ranges as the authoritative source.
+                s.anodeStart = savedAnodeStartForModelling;
+                s.anodeStop  = savedAnodeStopForModelling;
+                s.anodeStep  = savedAnodeStepForModelling;
+                s.gridStart  = savedGridStartForModelling;
+                s.gridStop   = savedGridStopForModelling;
+                s.gridStep   = savedGridStepForModelling;
+
                 s.screenStart = 0.0;
                 s.screenStop  = 0.0;
                 s.screenStep  = 0.0;
-            } else {
+
+                modellingSteps.append(s);
+            }
+
+            {
+                ModellingTestStep s;
+                initStep(s);
+                s.label = tr("Pentode anode");
+                s.deviceType = PENTODE;
+                s.testType = ANODE_CHARACTERISTICS;
+                s.triodeConnectedPentode = false;
+
+                // Use the current UI ranges as the authoritative source.
+                s.anodeStart = savedAnodeStartForModelling;
+                s.anodeStop  = savedAnodeStopForModelling;
+                s.anodeStep  = savedAnodeStepForModelling;
+                s.gridStart  = savedGridStartForModelling;
+                s.gridStop   = savedGridStopForModelling;
+                s.gridStep   = savedGridStepForModelling;
+
                 s.screenStart = savedScreenStartForModelling;
                 s.screenStop  = savedScreenStopForModelling;
                 s.screenStep  = savedScreenStepForModelling;
-            }
-            modellingSteps.append(s);
-        }
 
-        if (!requestedTriodeConnectedPentode) {
-            // Transfer sweep at datasheet Va when available.
-            const HealthPoint ds = dsRefPoint();
-            ModellingTestStep s;
-            initStep(s);
-            s.label = tr("Pentode transfer (Va=%1V, Vg2=%2V)")
-                          .arg(QString::number(ds.va, 'f', 0))
-                          .arg(QString::number(ds.vg2, 'f', 0));
-            s.deviceType = PENTODE;
-            s.testType = TRANSFER_CHARACTERISTICS;
-            s.triodeConnectedPentode = false;
-            s.anodeStart = ds.va;
-            s.anodeStop  = ds.va;
-            s.anodeStep  = std::max(1.0, std::fabs(ds.va));
-            s.gridStart  = savedGridStartForModelling;
-            s.gridStop   = savedGridStopForModelling;
-            s.gridStep   = savedGridStepForModelling;
-            s.screenStart = ds.vg2;
-            s.screenStop  = ds.vg2;
-            s.screenStep  = std::max(1.0, std::fabs(ds.vg2));
-            modellingSteps.append(s);
+                modellingSteps.append(s);
+            }
+
+            {
+                const HealthPoint ds = dsRefPoint();
+
+                ModellingTestStep s;
+                initStep(s);
+                s.label = tr("Pentode transfer (Va=%1V)");
+                s.label = s.label.arg(QString::number(ds.va, 'f', 0));
+                s.deviceType = PENTODE;
+                s.testType = TRANSFER_CHARACTERISTICS;
+                s.triodeConnectedPentode = false;
+
+                s.anodeStart = ds.va;
+                s.anodeStop  = ds.va;
+                s.anodeStep  = std::max(1.0, std::fabs(ds.va));
+
+                s.gridStart  = savedGridStartForModelling;
+                s.gridStop   = savedGridStopForModelling;
+                s.gridStep   = savedGridStepForModelling;
+
+                s.screenStart = ds.vg2;
+                s.screenStop  = ds.vg2;
+                s.screenStep  = std::max(1.0, std::fabs(ds.vg2));
+
+                modellingSteps.append(s);
+            }
         }
     } else {
         // Triode / Double Triode / Diode sequences.
@@ -4321,6 +4402,20 @@ void ValveWorkbench::on_pushButton_3_clicked()
         hadAnalyserDefaults = true;
         heaterVoltage = defs.value("heaterVoltage").toDouble(heaterVoltage);
 
+        const auto sanitizeGridRange = [](double &start, double &stop, double &step) {
+            if (std::isfinite(start)) start = std::fabs(start);
+            if (std::isfinite(stop))  stop  = std::fabs(stop);
+            if (start > stop) {
+                std::swap(start, stop);
+            }
+            if (std::isfinite(step)) {
+                step = std::fabs(step);
+            }
+            if (!(step > 0.0)) {
+                step = 0.5;
+            }
+        };
+
         const auto setRange = [&](const char *key, double &start, double &stop, double &step){
             const QJsonObject r = defs.value(QLatin1String(key)).toObject();
             if (!r.isEmpty()) {
@@ -4332,6 +4427,20 @@ void ValveWorkbench::on_pushButton_3_clicked()
         setRange("anode", anodeStart, anodeStop, anodeStep);
         setRange("grid", gridStart, gridStop, gridStep);
         setRange("screen", screenStart, screenStop, screenStep);
+        sanitizeGridRange(gridStart, gridStop, gridStep);
+
+        // Some triode templates represent a double-triode DUT by setting
+        // analyserDefaults.doubleTriode=true while keeping the base deviceType
+        // as TRIODE. Ensure the UI enters Double Triode mode so the analyser
+        // captures Va2/Ia2/Vg3 and Quick/Full Health can populate Triode B.
+        const bool wantsDoubleTriode = defs.value("doubleTriode").toBool(false);
+        if (wantsDoubleTriode && ui && ui->deviceType) {
+            const int idxDouble = ui->deviceType->findText(QLatin1String("Double Triode"));
+            if (idxDouble >= 0) {
+                ui->deviceType->setCurrentIndex(idxDouble);
+                on_deviceType_currentIndexChanged(idxDouble);
+            }
+        }
 
         // Prefer limits block if present (new-format templates)
         const QJsonObject lim = defs.value("limits").toObject();
@@ -4395,6 +4504,7 @@ void ValveWorkbench::on_pushButton_3_clicked()
                 setRangeFrom("anode", anodeStart, anodeStop, anodeStep);
                 setRangeFrom("grid",  gridStart, gridStop, gridStep);
                 setRangeFrom("screen", screenStart, screenStop, screenStep);
+                sanitizeGridRange(gridStart, gridStop, gridStep);
 
                 const QJsonObject lim2 = snapshot.value("limits").toObject();
                 if (!lim2.isEmpty()) {
@@ -12742,6 +12852,20 @@ void ValveWorkbench::on_testType_currentIndexChanged(int index)
 {
     const int newTestType = ui->testType->itemData(index).toInt();
 
+    const auto sanitizeGridRange = [](double &start, double &stop, double &step) {
+        if (std::isfinite(start)) start = std::fabs(start);
+        if (std::isfinite(stop))  stop  = std::fabs(stop);
+        if (start > stop) {
+            std::swap(start, stop);
+        }
+        if (std::isfinite(step)) {
+            step = std::fabs(step);
+        }
+        if (!(step > 0.0)) {
+            step = 0.5;
+        }
+    };
+
     // If we have per-test defaults loaded from analyserDefaults.tests,
     // restore the ranges/limits corresponding to the newly selected test
     // type before updating the UI fields.
@@ -12771,6 +12895,7 @@ void ValveWorkbench::on_testType_currentIndexChanged(int index)
             setRangeFrom("anode",  anodeStart,  anodeStop,  anodeStep);
             setRangeFrom("grid",   gridStart,   gridStop,   gridStep);
             setRangeFrom("screen", screenStart, screenStop, screenStep);
+            sanitizeGridRange(gridStart, gridStop, gridStep);
 
             const QJsonObject lim2 = snapshot.value(QStringLiteral("limits")).toObject();
             if (!lim2.isEmpty()) {
@@ -13856,18 +13981,7 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
 
     QList<Measurement *> fitPentodeAnodes;
     {
-        const Measurement *baseMeasurement = selectedPentodeAnodeMeasurement();
-        double baseVg2 = nominalVg2Of(const_cast<Measurement *>(baseMeasurement));
-        if (!std::isfinite(baseVg2) && !pentodeAnodes.isEmpty()) {
-            baseVg2 = nominalVg2Of(pentodeAnodes.first());
-        }
-
-        const double targets[] = {
-            std::isfinite(baseVg2) ? baseVg2 : 200.0,
-            std::isfinite(baseVg2) ? (baseVg2 + 25.0) : 225.0,
-            std::isfinite(baseVg2) ? (baseVg2 + 50.0) : 250.0
-        };
-
+        const double targets[] = {200.0, 225.0, 250.0};
         for (double t : targets) {
             Measurement *m = findClosestPentodeAnodeByVg2(t);
             if (!m) {
@@ -13892,27 +14006,11 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
 
     Measurement *primaryAnode = nullptr;
     {
-        const Measurement *baseMeasurement = selectedPentodeAnodeMeasurement();
-        double baseVg2 = nominalVg2Of(const_cast<Measurement *>(baseMeasurement));
-        if (!std::isfinite(baseVg2) && !pentodeAnodes.isEmpty()) {
-            baseVg2 = nominalVg2Of(pentodeAnodes.first());
-        }
-        const double primaryTarget = std::isfinite(baseVg2) ? (baseVg2 + 25.0) : 225.0;
-
-        Measurement *m225 = findClosestPentodeAnodeByVg2(primaryTarget);
+        Measurement *m225 = findClosestPentodeAnodeByVg2(225.0);
         for (Measurement *m : fitPentodeAnodes) {
             if (m && m == m225) {
                 primaryAnode = m;
                 break;
-            }
-        }
-        if (!primaryAnode) {
-            Measurement *sel = selectedPentodeAnodeMeasurement();
-            for (Measurement *m : fitPentodeAnodes) {
-                if (m && m == sel) {
-                    primaryAnode = m;
-                    break;
-                }
             }
         }
         if (!primaryAnode) {
@@ -13938,11 +14036,51 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
         triodeEstimate.estimateTriode(triodeConnected);
         triodeSeedFromMeasurement = std::make_unique<CohenHelieTriode>();
         triodeSeedFromMeasurement->setEstimate(&triodeEstimate);
+        triodeSeedFromMeasurement->setPreferences(&preferencesDialog);
+        triodeSeedFromMeasurement->setMode(NORMAL_MODE);
+        triodeSeedFromMeasurement->addMeasurement(triodeConnected);
+        triodeSeedFromMeasurement->solve();
         triodeModel = triodeSeedFromMeasurement.get();
     }
 
     Estimate estimate;
-    estimate.estimatePentode(seedMeasurement, triodeModel, selectedPentodeModelType, preferencesDialog.useSecondaryEmission());
+    if (triodeModel != nullptr) {
+        estimate.estimatePentode(seedMeasurement, triodeModel, selectedPentodeModelType, preferencesDialog.useSecondaryEmission());
+    } else if (currentDevice && currentDevice->getDeviceType() == PENTODE && preferencesDialog.warmStartFromDeviceModel()) {
+        Model *deviceSeed = nullptr;
+        if (currentDevice->getModelForType(selectedPentodeModelType) != nullptr) {
+            deviceSeed = currentDevice->getModelForType(selectedPentodeModelType);
+        } else if (currentDevice->getModel() != nullptr && currentDevice->getModelType() == selectedPentodeModelType) {
+            deviceSeed = currentDevice->getModel();
+        }
+
+        if (deviceSeed && deviceSeed->isConverged()) {
+            estimate.setMu(deviceSeed->getParameter(PAR_MU));
+            estimate.setKg1(deviceSeed->getParameter(PAR_KG1));
+            estimate.setX(deviceSeed->getParameter(PAR_X));
+            estimate.setKp(deviceSeed->getParameter(PAR_KP));
+            estimate.setKvb(deviceSeed->getParameter(PAR_KVB));
+            estimate.setKvb1(deviceSeed->getParameter(PAR_KVB1));
+            estimate.setVct(deviceSeed->getParameter(PAR_VCT));
+
+            estimate.setKg2(deviceSeed->getParameter(PAR_KG2));
+            estimate.setA(deviceSeed->getParameter(PAR_A));
+            estimate.setAlpha(deviceSeed->getParameter(PAR_ALPHA));
+            estimate.setBeta(deviceSeed->getParameter(PAR_BETA));
+            estimate.setGamma(deviceSeed->getParameter(PAR_GAMMA));
+            estimate.setPsi(deviceSeed->getParameter(PAR_PSI));
+
+            estimate.setOmega(deviceSeed->getParameter(PAR_OMEGA));
+            estimate.setLambda(deviceSeed->getParameter(PAR_LAMBDA));
+            estimate.setNu(deviceSeed->getParameter(PAR_NU));
+            estimate.setS(deviceSeed->getParameter(PAR_S));
+            estimate.setAp(deviceSeed->getParameter(PAR_AP));
+        } else {
+            estimate.estimatePentode(seedMeasurement, nullptr, selectedPentodeModelType, preferencesDialog.useSecondaryEmission());
+        }
+    } else {
+        estimate.estimatePentode(seedMeasurement, nullptr, selectedPentodeModelType, preferencesDialog.useSecondaryEmission());
+    }
 
     model = ModelFactory::createModel(selectedPentodeModelType);
     if (!model) {
@@ -14232,7 +14370,11 @@ void ValveWorkbench::on_processModellingTestsButton_clicked()
     thread = new QThread;
     model->moveToThread(thread);
     disconnect(model, nullptr, this, nullptr);
-    connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
+    if (selectedPentodeModelType == GARDINER_PENTODE) {
+        connect(model, &Model::modelReady, this, &ValveWorkbench::modelScreen);
+    } else {
+        connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
+    }
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
     thread->start();
     QMetaObject::invokeMethod(model, "solveThreaded");
@@ -14528,7 +14670,9 @@ void ValveWorkbench::modelPentode()
         // triodeModel seed as the base for pentode estimation so the
         // Gardiner/Reefman pentode starts from a consistent triode base.
         estimate.estimatePentode(primary, triodeModel, pentodeModelType, preferencesDialog.useSecondaryEmission());
-    } else if (currentDevice && currentDevice->getDeviceType() == PENTODE) {
+    } else if (currentDevice && currentDevice->getDeviceType() == PENTODE &&
+               currentDevice->getModel() != nullptr &&
+               currentDevice->getModelType() == pentodeModelType) {
         // Secondary fallback: if we have no explicit triode seed but do have a
         // pentode device model, copy its parameters into the Estimate as a
         // starting point.
@@ -14577,7 +14721,11 @@ void ValveWorkbench::modelPentode()
 
     model->moveToThread(thread);
     disconnect(model, nullptr, this, nullptr);
-    connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
+    if (pentodeModelType == GARDINER_PENTODE) {
+        connect(model, &Model::modelReady, this, &ValveWorkbench::modelScreen);
+    } else {
+        connect(model, &Model::modelReady, this, &ValveWorkbench::loadModel);
+    }
     connect(thread, &QThread::finished, thread, &QObject::deleteLater);
 
     thread->start();
@@ -14594,6 +14742,7 @@ void ValveWorkbench::modelScreen()
 
         ui->fitPentodeButton->setEnabled(true); // Allow modelling again
         ui->fitTriodeButton->setEnabled(true);
+        if (ui && ui->processModellingTestsButton) ui->processModellingTestsButton->setEnabled(true);
 
         thread->quit();
 
@@ -15439,8 +15588,23 @@ void ValveWorkbench::exportFittedModelToDevices()
         }
     }
 
-    // Build device preset JSON
+    // Build device preset JSON. If overwriting an existing device file, load it
+    // first so we can preserve any previously stored model seeds.
     QJsonObject root;
+    {
+        QFileInfo existingInfo(outPath);
+        if (existingInfo.exists()) {
+            QFile inFile(outPath);
+            if (inFile.open(QIODevice::ReadOnly)) {
+                const QJsonDocument inDoc = QJsonDocument::fromJson(inFile.readAll());
+                if (inDoc.isObject()) {
+                    root = inDoc.object();
+                }
+                inFile.close();
+            }
+        }
+    }
+
     root["name"] = deviceName;
 
     // Start from current analyser UI limits if available; otherwise sensible
@@ -15546,6 +15710,20 @@ void ValveWorkbench::exportFittedModelToDevices()
     // both analyser templates and Designer devices.
     QJsonObject analyserDefaults;
 
+    auto sanitizeGridRange = [](double &start, double &stop, double &step) {
+        if (std::isfinite(start)) start = std::fabs(start);
+        if (std::isfinite(stop))  stop  = std::fabs(stop);
+        if (start > stop) {
+            std::swap(start, stop);
+        }
+        if (std::isfinite(step)) {
+            step = std::fabs(step);
+        }
+        if (!(step > 0.0)) {
+            step = 0.5;
+        }
+    };
+
     // Anode sweep range
     {
         QJsonObject anodeObj;
@@ -15558,9 +15736,13 @@ void ValveWorkbench::exportFittedModelToDevices()
     // Grid sweep range
     {
         QJsonObject gridObj;
-        gridObj["start"] = gridStart;
-        gridObj["step"]  = gridStep;
-        gridObj["stop"]  = gridStop;
+        double gridStartOut = gridStart;
+        double gridStopOut  = gridStop;
+        double gridStepOut  = gridStep;
+        sanitizeGridRange(gridStartOut, gridStopOut, gridStepOut);
+        gridObj["start"] = gridStartOut;
+        gridObj["step"]  = gridStepOut;
+        gridObj["stop"]  = gridStopOut;
         analyserDefaults["grid"] = gridObj;
     }
 
@@ -15637,9 +15819,17 @@ void ValveWorkbench::exportFittedModelToDevices()
             gridObj.insert("stop",  gridStopOut);
             snapshot.insert("grid", gridObj);
         } else {
-            snapshot.insert("grid",   makeRangeFromMeas(&Measurement::getGridStart,
-                                                         &Measurement::getGridStop,
-                                                         &Measurement::getGridStep));
+            QJsonObject gridObj = makeRangeFromMeas(&Measurement::getGridStart,
+                                                    &Measurement::getGridStop,
+                                                    &Measurement::getGridStep);
+            double gridStartOut = gridObj.value("start").toDouble();
+            double gridStopOut  = gridObj.value("stop").toDouble();
+            double gridStepOut  = gridObj.value("step").toDouble();
+            sanitizeGridRange(gridStartOut, gridStopOut, gridStepOut);
+            gridObj.insert("start", gridStartOut);
+            gridObj.insert("stop",  gridStopOut);
+            gridObj.insert("step",  gridStepOut);
+            snapshot.insert("grid", gridObj);
         }
 
         snapshot.insert("screen", makeRangeFromMeas(&Measurement::getScreenStart,
@@ -15721,6 +15911,31 @@ void ValveWorkbench::exportFittedModelToDevices()
     // internal plotting and Designer/Modeller behaviour.
     QJsonObject modelObj;
     toExport->toJson(modelObj);
+
+    // Preserve ALL fitted models for this device (Gardiner, ExtractModel, etc.)
+    // so switching solvers can warm-start from the matching saved seed.
+    {
+        QJsonObject modelsObj = root.value(QStringLiteral("models")).toObject();
+
+        // If the existing file only had the legacy single 'model' block, fold it
+        // into the multi-model map so it isn't lost.
+        if (root.contains(QStringLiteral("model")) && root.value(QStringLiteral("model")).isObject()) {
+            const QJsonObject legacy = root.value(QStringLiteral("model")).toObject();
+            const QString legacyKey = legacy.value(QStringLiteral("type")).toString();
+            if (!legacyKey.isEmpty() && !modelsObj.contains(legacyKey)) {
+                modelsObj.insert(legacyKey, legacy);
+            }
+        }
+
+        const QString newKey = modelObj.value(QStringLiteral("type")).toString();
+        if (!newKey.isEmpty()) {
+            modelsObj.insert(newKey, modelObj);
+        }
+        root["models"] = modelsObj;
+    }
+
+    // Keep legacy 'model' pointing at the most recently exported model for
+    // backward compatibility.
     root["model"] = modelObj;
 
     // In addition to the internal `model` block, embed an optional `spice`

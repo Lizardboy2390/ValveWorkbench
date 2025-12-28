@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QGraphicsItemGroup>
+#include <QMap>
 
 #include "ceres/ceres.h"
 #include "glog/logging.h"
@@ -39,6 +40,7 @@ class Device : UIBridge
 public:
     Device(int _modelDeviceType);
     Device(QJsonDocument model);
+    ~Device();
 
     double getParameter(int index) const;
 
@@ -46,6 +48,8 @@ public:
     // generating SPICE subcircuit exports. Callers must not take ownership
     // or delete the returned pointer.
     Model *getModel() const { return model; }
+
+    Model *getModelForType(int wantedType) const;
 
     double anodeCurrent(double va, double vg1, double vg2 = 0);
     double anodeVoltage(double ia, double vg1, double vg2 = 0);
@@ -104,6 +108,8 @@ private:
     int modelType = COHEN_HELIE_TRIODE;
 
     Model *model = nullptr;
+
+    QMap<int, Model *> modelsByType;
 
     // Optional measurement attached to this device when loaded from a preset
     // that included analyser sweeps. May be null for legacy presets or
