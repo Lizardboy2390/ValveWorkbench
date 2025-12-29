@@ -59,6 +59,7 @@ void PushPullUlOutput::setGainMode(int mode)
 void PushPullUlOutput::setSymSwingEnabled(bool enabled)
 {
     showSymSwing = enabled;
+    update(PPUL_HEADROOM);
 }
 
 void PushPullUlOutput::setInductiveLoad(bool enabled)
@@ -270,6 +271,21 @@ void PushPullUlOutput::update(int index)
     const double vg1Max = device1->getVg1Max() * 2.0;
     const double vaMax  = device1->getVaMax();
 
+    // DC anode voltage per valve at the operating point.
+    // - Inductive load: Va≈Vb (no DC primary drop)
+    // - Resistive load: each valve sees RAA/2 at DC, so Va_bias = Vb - Ia*(RAA/2)
+    const double ia_A = ia / 1000.0;
+    const double rPerValve = raa / 2.0;
+    double vaBias = vb;
+    if (!inductiveLoad && rPerValve > 0.0 && ia_A > 0.0) {
+        vaBias = vb - ia_A * rPerValve;
+        if (!std::isfinite(vaBias)) {
+            vaBias = vb;
+        }
+        vaBias = std::clamp(vaBias, 0.0, vaMax);
+    }
+    const double vg2Bias = vaBias * tap + vb * (1.0 - tap);
+
     // Class B load line (not plotted here, but used conceptually)
     const double iaMaxB = 4000.0 * vb / raa;
     QVector<QPointF> classBLine;
@@ -316,7 +332,7 @@ void PushPullUlOutput::update(int index)
     for (int i = 1; i < 101; ++i) {
         const double va = vaMax * static_cast<double>(i) / 100.0;
         const double vg2 = va * tap + vb * (1.0 - tap);
-        double ia0_mA = device1->anodeCurrent(va, 0.0, vg2) * 1000.0;
+        double ia0_mA = device1->anodeCurrent(va, 0.0, vg2);
         if (std::isfinite(ia0_mA) && ia0_mA >= 0.0) {
             anodeCurve0.push_back(QPointF(va, ia0_mA));
         }
@@ -343,13 +359,13 @@ void PushPullUlOutput::update(int index)
         }
     }
 
-    // Find Vk (grid bias) such that Ia(Vb, -Vk, Vg2=Vb) ~= ia
+    // Find Vk (grid bias) such that Ia(VaBias, -Vk, Vg2Bias) ~= ia
     double bestVg1 = 0.0;
     double minErr  = std::numeric_limits<double>::infinity();
     const int vgSteps = 100;
     for (int i = 0; i <= vgSteps; ++i) {
         const double vg1 = vg1Max * static_cast<double>(i) / vgSteps;
-        double ia_test_mA = device1->anodeCurrent(vb, -vg1, vb) * 1000.0;
+        double ia_test_mA = device1->anodeCurrent(vaBias, -vg1, vg2Bias);
         if (!std::isfinite(ia_test_mA)) continue;
         const double err = std::abs(ia - ia_test_mA);
         if (err < minErr) {
@@ -362,7 +378,7 @@ void PushPullUlOutput::update(int index)
     if (device1->getDeviceType() == PENTODE) {
         // Device::screenCurrent already returns mA, so no extra 1000x factor
         // is needed when forming Ik.
-        ik_mA += device1->screenCurrent(vb, -bestVg1, vb);
+        ik_mA += device1->screenCurrent(vaBias, -bestVg1, vg2Bias);
     }
 
     double rk_ohms = 0.0;
@@ -422,7 +438,7 @@ void PushPullUlOutput::update(int index)
         double vaLeft = -1.0;
         auto f_left = [&](double va_val) {
             const double vg2 = va_val * tap + vb * (1.0 - tap);
-            double ia_curve_mA = device1->anodeCurrent(va_val, 0.0, vg2) * 1000.0;
+            double ia_curve_mA = device1->anodeCurrent(va_val, 0.0, vg2);
             double ia_line = ia_line_mA(va_val);
             return ia_curve_mA - ia_line;
         };
@@ -916,32 +932,65 @@ bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
         if (!std::isfinite(flo) || !std::isfinite(fhi)) {
             return false;
         }
+        bool bracketed = true;
+        double mid = 0.0;
+
         if (flo * fhi > 0.0) {
             lo = -vb;
             hi =  vb;
             flo = eval(lo);
             fhi = eval(hi);
-            if (!std::isfinite(flo) || !std::isfinite(fhi) || flo * fhi > 0.0) {
+            if (!std::isfinite(flo) || !std::isfinite(fhi)) {
                 return false;
+            }
+
+            if (flo * fhi > 0.0) {
+                bracketed = false;
+                const int scanSteps = 200;
+                const double scanLo = -2.0 * vb;
+                const double scanHi =  2.0 * vb;
+                double bestMid = 0.0;
+                double bestAbs = std::numeric_limits<double>::infinity();
+
+                for (int i = 0; i <= scanSteps; ++i) {
+                    const double t = static_cast<double>(i) / static_cast<double>(scanSteps);
+                    const double v = scanLo + (scanHi - scanLo) * t;
+                    const double fv = eval(v);
+                    if (!std::isfinite(fv)) {
+                        continue;
+                    }
+                    const double av = std::abs(fv);
+                    if (av < bestAbs) {
+                        bestAbs = av;
+                        bestMid = v;
+                    }
+                }
+
+                if (!std::isfinite(bestAbs)) {
+                    return false;
+                }
+
+                mid = bestMid;
             }
         }
 
-        double mid = 0.0;
-        for (int it = 0; it < 30; ++it) {
-            mid = 0.5 * (lo + hi);
-            double fmid = eval(mid);
-            if (!std::isfinite(fmid)) {
-                return false;
-            }
-            if (std::abs(fmid) < 1e-6) {
-                break;
-            }
-            if (flo * fmid <= 0.0) {
-                hi = mid;
-                fhi = fmid;
-            } else {
-                lo = mid;
-                flo = fmid;
+        if (bracketed) {
+            for (int it = 0; it < 30; ++it) {
+                mid = 0.5 * (lo + hi);
+                double fmid = eval(mid);
+                if (!std::isfinite(fmid)) {
+                    return false;
+                }
+                if (std::abs(fmid) < 1e-6) {
+                    break;
+                }
+                if (flo * fmid <= 0.0) {
+                    hi = mid;
+                    fhi = fmid;
+                } else {
+                    lo = mid;
+                    flo = fmid;
+                }
             }
         }
 
@@ -975,6 +1024,18 @@ bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
         return true;
     };
 
+    // Keep the DFT stable by always providing a value for every sample. If the
+    // solver fails at a phase, reuse the last valid solution instead of
+    // skipping the sample (which breaks the DFT normalization and can inflate
+    // THD beyond 100%).
+    double lastVPri = 0.0;
+    double lastIaTop_mA = 0.0;
+    double lastIaBot_mA = 0.0;
+    double lastIg2Top_mA = 0.0;
+    double lastIg2Bot_mA = 0.0;
+    bool haveLast = false;
+    int failedSolveCount = 0;
+
     for (int k = 0; k < sampleCount; ++k) {
         const double phase = twoPi * static_cast<double>(k) / static_cast<double>(sampleCount);
         const double drive = 0.5 * gridVpp * std::sin(phase);
@@ -988,6 +1049,8 @@ bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
         double iaBot_mA = 0.0;
         double ig2Top_mA = 0.0;
         double ig2Bot_mA = 0.0;
+
+        bool solved = false;
 
         if (rk_ac > 0.0) {
             bool ok = true;
@@ -1011,20 +1074,43 @@ bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
                 }
             }
             if (!ok) {
-                continue;
-            }
-            if (!solvePrimaryVoltage(vgTop_abs, vgBot_abs, vk_inst, vPri, iaTop_mA, iaBot_mA, ig2Top_mA, ig2Bot_mA)) {
-                continue;
+                solved = false;
+            } else if (solvePrimaryVoltage(vgTop_abs, vgBot_abs, vk_inst, vPri, iaTop_mA, iaBot_mA, ig2Top_mA, ig2Bot_mA)) {
+                solved = true;
             }
         } else {
-            if (!solvePrimaryVoltage(vgTop_abs, vgBot_abs, vk, vPri, iaTop_mA, iaBot_mA, ig2Top_mA, ig2Bot_mA)) {
-                continue;
-            }
+            solved = solvePrimaryVoltage(vgTop_abs, vgBot_abs, vk, vPri, iaTop_mA, iaBot_mA, ig2Top_mA, ig2Bot_mA);
         }
 
-        if (std::isfinite(vPri)) {
-            lastHeadroomWaveform.push_back(vPri);
+        if (!solved) {
+            ++failedSolveCount;
+            if (haveLast) {
+                vPri = lastVPri;
+                iaTop_mA = lastIaTop_mA;
+                iaBot_mA = lastIaBot_mA;
+                ig2Top_mA = lastIg2Top_mA;
+                ig2Bot_mA = lastIg2Bot_mA;
+            } else {
+                vPri = 0.0;
+                iaTop_mA = iaBot_mA = 0.0;
+                ig2Top_mA = ig2Bot_mA = 0.0;
+            }
+        } else {
+            lastVPri = vPri;
+            lastIaTop_mA = iaTop_mA;
+            lastIaBot_mA = iaBot_mA;
+            lastIg2Top_mA = ig2Top_mA;
+            lastIg2Bot_mA = ig2Bot_mA;
+            haveLast = true;
         }
+
+        // If we are failing to solve at a significant fraction of phases, do
+        // not report a misleading THD figure.
+        if (failedSolveCount > sampleCount / 8) {
+            return false;
+        }
+
+        lastHeadroomWaveform.push_back(std::isfinite(vPri) ? vPri : 0.0);
 
         const double vaTop = std::clamp(vaCentre + 0.5 * vPri, 0.0, 2.0 * vb);
         const double vaBot = std::clamp(vaCentre - 0.5 * vPri, 0.0, 2.0 * vb);
@@ -1037,7 +1123,7 @@ bool PushPullUlOutput::simulateHarmonicsTimeDomain(double vb,
 
         const double window = 0.5 * (1.0 - std::cos(twoPi * static_cast<double>(k) /
                                                    static_cast<double>(sampleCount - 1)));
-        const double v = vPri * window;
+        const double v = (std::isfinite(vPri) ? vPri : 0.0) * window;
 
         for (int n = 1; n <= 4; ++n) {
             const double angle = static_cast<double>(n) * phase;
@@ -1362,68 +1448,6 @@ void PushPullUlOutput::plot(Plot *plot)
         }
     }
 
-    if (effectiveHeadroomVpk > 0.0 && lastTopTrajectory.size() > 1 && lastBotTrajectory.size() > 1) {
-        QGraphicsItemGroup *trajGroup = new QGraphicsItemGroup();
-
-        QPen penTop;
-        penTop.setColor(QColor::fromRgb(255, 140, 0));
-        penTop.setWidth(2);
-
-        QPen penBot;
-        penBot.setColor(QColor::fromRgb(160, 32, 240));
-        penBot.setWidth(2);
-
-        for (int i = 0; i < lastTopTrajectory.size() - 1; ++i) {
-            const QPointF s = lastTopTrajectory[i];
-            const QPointF e = lastTopTrajectory[i + 1];
-            if (auto *seg = plot->createSegment(s.x(), s.y(), e.x(), e.y(), penTop)) {
-                trajGroup->addToGroup(seg);
-            }
-        }
-        for (int i = 0; i < lastBotTrajectory.size() - 1; ++i) {
-            const QPointF s = lastBotTrajectory[i];
-            const QPointF e = lastBotTrajectory[i + 1];
-            if (auto *seg = plot->createSegment(s.x(), s.y(), e.x(), e.y(), penBot)) {
-                trajGroup->addToGroup(seg);
-            }
-        }
-
-        if (!trajGroup->childItems().isEmpty()) {
-            if (!acSignalLine) {
-                acSignalLine = new QGraphicsItemGroup();
-                plot->getScene()->addItem(acSignalLine);
-            }
-            acSignalLine->addToGroup(trajGroup);
-
-            const double xScale = plot->getXScale();
-            const double yScale = plot->getYScale();
-            if (xScale > 0.0 && yScale > 0.0) {
-                const double xStart = plot->getXStart();
-                const double yStart = plot->getYStart();
-                const double xStop  = xStart + static_cast<double>(PLOT_WIDTH)  / xScale;
-                const double yStop  = yStart + static_cast<double>(PLOT_HEIGHT) / yScale;
-
-                const double xText = xStart + 0.03 * (xStop - xStart);
-                const double yText = yStart + 0.95 * (yStop - yStart);
-
-                const double sx = (xText - xStart) * xScale;
-                const double sy = PLOT_HEIGHT - (yText - yStart) * yScale;
-
-                QGraphicsTextItem *t1 = new QGraphicsTextItem("D1 trajectory");
-                t1->setDefaultTextColor(penTop.color());
-                t1->setPos(sx, sy);
-                trajGroup->addToGroup(t1);
-
-                QGraphicsTextItem *t2 = new QGraphicsTextItem("D2 trajectory");
-                t2->setDefaultTextColor(penBot.color());
-                t2->setPos(sx, sy + 14.0);
-                trajGroup->addToGroup(t2);
-            }
-        } else {
-            delete trajGroup;
-        }
-    }
-
     // Max swing (brown) and symmetric swing (blue) tick/label helpers along
     // the AC load line, mirroring the non-UL PushPullOutput behaviour. Both
     // helpers share a single label row and are mutually exclusive via
@@ -1443,7 +1467,7 @@ void PushPullUlOutput::plot(Plot *plot)
         if (device1) {
             auto f = [&](double va) {
                 const double vg2 = va * tap + vb * (1.0 - tap);
-                double ia_curve_mA = device1->anodeCurrent(va, 0.0, vg2) * 1000.0;
+                double ia_curve_mA = device1->anodeCurrent(va, 0.0, vg2);
                 double ia_line = ia_line_mA(va);
                 return ia_curve_mA - ia_line;
             };

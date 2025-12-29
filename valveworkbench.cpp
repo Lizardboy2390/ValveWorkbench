@@ -8839,10 +8839,24 @@ void ValveWorkbench::selectStdDevice(int index, int deviceNumber)
             }
         }
 
-        // Fallback: draw using the device's internal anodePlot, which uses
-        // vg1Max/vg2Max from the preset JSON.
+        // Fallback: draw using the device's internal anodePlot.
+        // For Designer pentode output-stage circuits, override Vg2 so the
+        // red model families match the circuit's chosen screen supply.
         if (!modelledCurves) {
-            modelledCurves = device->anodePlot(&plot);
+            double vg2Override = 0.0;
+            if (circuitType == SINGLE_ENDED_OUTPUT) {
+                Circuit *seCircuit = circuits.at(circuitType);
+                if (seCircuit) {
+                    vg2Override = seCircuit->getParameter(SE_VS);
+                }
+            } else if (circuitType == PUSH_PULL_OUTPUT) {
+                Circuit *ppCircuit = circuits.at(circuitType);
+                if (ppCircuit) {
+                    vg2Override = ppCircuit->getParameter(PP_VS);
+                }
+            }
+
+            modelledCurves = device->anodePlot(&plot, vg2Override);
             if (modelledCurves) {
                 modelledCurves->setVisible(ui->modelCheck->isChecked());
             }
@@ -9114,7 +9128,23 @@ void ValveWorkbench::plotModel()
     }
 
     if (currentDevice != nullptr) {
-        modelPlot = currentDevice->anodePlot(&plot);
+        double vg2Override = 0.0;
+        if (ui && ui->designerCheck && ui->designerCheck->isChecked() && ui->circuitSelection) {
+            const int circuitType = ui->circuitSelection->currentData().toInt();
+            if (circuitType == SINGLE_ENDED_OUTPUT) {
+                Circuit *seCircuit = circuits.at(circuitType);
+                if (seCircuit) {
+                    vg2Override = seCircuit->getParameter(SE_VS);
+                }
+            } else if (circuitType == PUSH_PULL_OUTPUT) {
+                Circuit *ppCircuit = circuits.at(circuitType);
+                if (ppCircuit) {
+                    vg2Override = ppCircuit->getParameter(PP_VS);
+                }
+            }
+        }
+
+        modelPlot = currentDevice->anodePlot(&plot, vg2Override);
     }
 }
 
@@ -15119,6 +15149,10 @@ void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
         se->plot(&plot);
         se->updateUI(circuitLabels, circuitValues);
     } else if (auto *pp = dynamic_cast<PushPullOutput*>(c)) {
+        // Reset PP headroom manual override to 0 whenever the Max Sym Swing
+        // checkbox is clicked, so that the helper-derived symmetric/max swing
+        // becomes the default effective headroom again.
+        pp->setParameter(PP_HEADROOM, 0.0);
         pp->setSymSwingEnabled(enabled);
         pp->plot(&plot);
         pp->updateUI(circuitLabels, circuitValues);
@@ -15128,6 +15162,10 @@ void ValveWorkbench::on_symSwingCheck_stateChanged(int arg1)
         seul->updateUI(circuitLabels, circuitValues);
         updateHeadroomWaveformView(seul);
     } else if (auto *ppul = dynamic_cast<PushPullUlOutput*>(c)) {
+        // Reset UL PP headroom manual override to 0 whenever the Max Sym Swing
+        // checkbox is clicked, so that the helper-derived symmetric/max swing
+        // becomes the default effective headroom again.
+        ppul->setParameter(PPUL_HEADROOM, 0.0);
         ppul->setSymSwingEnabled(enabled);
         ppul->plot(&plot);
         ppul->updateUI(circuitLabels, circuitValues);

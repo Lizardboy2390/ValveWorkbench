@@ -648,6 +648,19 @@ void SingleEndedOutput::update(int index)
     const double vg1Max = device1->getVg1Max();
     const double vaMax  = device1->getVaMax();
 
+    // DC anode voltage at the operating point.
+    // - Inductive load (transformer primary): treat as ~no DC drop, Va≈Vb.
+    // - Resistive load: Va_bias = Vb - Ia*Ra.
+    const double ia_A = ia / 1000.0;
+    double vaBias = vb;
+    if (!inductiveLoad && raa > 0.0 && ia_A > 0.0) {
+        vaBias = vb - ia_A * raa;
+        if (!std::isfinite(vaBias)) {
+            vaBias = vb;
+        }
+        vaBias = std::clamp(vaBias, 0.0, vb);
+    }
+
     // Class B load line (not currently plotted, but kept for parity)
     const double iaMaxB = 4000.0 * vb / raa;
     QVector<QPointF> classBLine;
@@ -685,7 +698,7 @@ void SingleEndedOutput::update(int index)
     QVector<QPointF> anodeCurve0;
     for (int i = 1; i < 101; ++i) {
         const double va = vaMax * static_cast<double>(i) / 100.0;
-        double ia0_mA = device1->anodeCurrent(va, 0.0, vs) * 1000.0;
+        double ia0_mA = device1->anodeCurrent(va, 0.0, vs);
         if (std::isfinite(ia0_mA) && ia0_mA >= 0.0) {
             anodeCurve0.push_back(QPointF(va, ia0_mA));
         }
@@ -721,7 +734,7 @@ void SingleEndedOutput::update(int index)
     double ig2_mA = 0.0;
 
     bool usedMeasurementBias = false;
-    if (device1 && device1->getMeasurement()) {
+    if (inductiveLoad && device1 && device1->getMeasurement()) {
         double vk_meas = 0.0;
         double ig2_meas_mA = 0.0;
         if (device1->findBiasFromMeasurement(vb, vs, ia, vk_meas, ig2_meas_mA)) {
@@ -734,12 +747,12 @@ void SingleEndedOutput::update(int index)
 
     if (!usedMeasurementBias) {
         // Existing model-based path: find Vk (grid bias) such that
-        // Ia(Vb, -Vk, Vs) ~= ia using the fitted model.
+        // Ia(VaBias, -Vk, Vs) ~= ia using the fitted model.
         double minErr = std::numeric_limits<double>::infinity();
         const int vgSteps = 1000;
         for (int i = 0; i <= vgSteps; ++i) {
             const double vg1 = vg1Max * static_cast<double>(i) / vgSteps;
-            double ia_test_mA = device1->anodeCurrent(vb, -vg1, vs) * 1000.0;
+            double ia_test_mA = device1->anodeCurrent(vaBias, -vg1, vs);
             if (!std::isfinite(ia_test_mA)) continue;
             const double err = std::abs(ia - ia_test_mA);
             if (err < minErr) {
@@ -753,7 +766,7 @@ void SingleEndedOutput::update(int index)
         if (device1->getDeviceType() == PENTODE) {
             // Device::screenCurrent already returns mA (see Model::screenCurrent
             // convention), so add it directly without additional scaling.
-            ig2_mA = device1->screenCurrent(vb, -bestVg1, vs);
+            ig2_mA = device1->screenCurrent(vaBias, -bestVg1, vs);
             ik_mA += ig2_mA;
         }
     }
@@ -810,7 +823,7 @@ void SingleEndedOutput::update(int index)
         // Left limit: intersection of AC load line with Vg1 = 0 curve at current screen voltage
         double vaLeft = -1.0;
         auto f_left = [&](double va_val) {
-            double ia_curve_mA = device1->anodeCurrent(va_val, 0.0, vs) * 1000.0;
+            double ia_curve_mA = device1->anodeCurrent(va_val, 0.0, vs);
             double ia_line = ia_line_mA(va_val);
             return ia_curve_mA - ia_line;
         };
@@ -950,7 +963,7 @@ void SingleEndedOutput::update(int index)
                 double iaMinus_A     = device1->anodeCurrent(vb, vgBias - dVg, vs);
                 double gm_mA_per_V   = 0.0;
                 if (std::isfinite(iaPlus_A) && std::isfinite(iaMinus_A) && dVg > 0.0) {
-                    gm_mA_per_V = (iaPlus_A - iaMinus_A) * 1000.0 / (2.0 * dVg);
+                    gm_mA_per_V = (iaPlus_A - iaMinus_A) / (2.0 * dVg);
                 }
                 if (std::isfinite(gm_mA_per_V)) {
                     const double gm_A_per_V = gm_mA_per_V / 1000.0;
@@ -1658,7 +1671,10 @@ void SingleEndedOutput::plot(Plot *plot)
     }
 
     // DC load line from (0, Vb/Ra) to (Vb, 0) for reference (green, like Triode CC)
-    if (raa > 0.0) {
+    // Only meaningful in resistive-load mode. For an inductive (transformer)
+    // load there is ~no DC drop across the primary, so this line would imply
+    // a false Va bias point.
+    if (!inductiveLoad && raa > 0.0) {
         cathodeLoadLine = new QGraphicsItemGroup();
         QPen dcPen;
         dcPen.setColor(QColor::fromRgb(0, 128, 0));
@@ -1815,7 +1831,7 @@ void SingleEndedOutput::plot(Plot *plot)
     {
         const double slope = gradient; // mA/V, same as AC load line
         const double ia0   = ia;
-        const double va0   = vb;
+        const double va0   = inductiveLoad ? vb : vaBias;
 
         auto ia_line_mA = [&](double va) {
             return ia0 + slope * (va - va0);
@@ -1825,7 +1841,7 @@ void SingleEndedOutput::plot(Plot *plot)
         double vaLeft = -1.0;
         if (device1) {
             auto f = [&](double va) {
-                double ia_curve_mA = device1->anodeCurrent(va, 0.0, vs) * 1000.0;
+                double ia_curve_mA = device1->anodeCurrent(va, 0.0, vs);
                 double ia_line = ia_line_mA(va);
                 return ia_curve_mA - ia_line;
             };

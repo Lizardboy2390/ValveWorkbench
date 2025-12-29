@@ -81,7 +81,7 @@ public:
     void updateUI(QLabel *labels[], QLineEdit *values[]);
     void anodeAxes(Plot *plot);
     void transferAxes(Plot *plot);
-    QGraphicsItemGroup *anodePlot(Plot *plot);
+    QGraphicsItemGroup *anodePlot(Plot *plot, double vg2Override = 0.0);
     QGraphicsItemGroup *transferPlot(Plot *plot);
     double interval(double maxValue);
 

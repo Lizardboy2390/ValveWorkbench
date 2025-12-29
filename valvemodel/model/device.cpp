@@ -360,7 +360,7 @@ void Device::transferAxes(Plot *plot)
 
 }
 
-QGraphicsItemGroup *Device::anodePlot(Plot *plot)
+QGraphicsItemGroup *Device::anodePlot(Plot *plot, double vg2Override)
 {
     // Some device presets (e.g., analyser-only exports) may not have an attached
     // fitted model. In that case, skip plotting model curves instead of
@@ -371,8 +371,10 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
         return nullptr;
     }
 
+    const double vg2Use = (deviceType == PENTODE && vg2Override > 0.0) ? vg2Override : vg2Max;
+
     qInfo("Device::anodePlot: name='%s' type=%d vaMax=%.3f iaMax=%.3f vg1Max=%.3f vg2Max=%.3f",
-          name.toStdString().c_str(), deviceType, vaMax, iaMax, vg1Max, vg2Max);
+          name.toStdString().c_str(), deviceType, vaMax, iaMax, vg1Max, vg2Use);
 
     QList<QGraphicsItem *> items;
 
@@ -458,7 +460,7 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
             const double vgLabel = vg1; // preserve for label text
             double va = 0.0;
             double ia = 0.0;
-            ia = model->anodeCurrent(va, vg1, vg2Max);
+            ia = model->anodeCurrent(va, vg1, vg2Use);
 
             // For pentode model families, sample up to the full visible X
             // range so lines can extend to the right edge of the current
@@ -479,7 +481,7 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
             QList<QGraphicsItem*> pentodeSegments;
             for (int j = 1; j < 61; j++) {
                 double vaNext = (curveVaMax * j) / 60.0;
-                double iaNext = model->anodeCurrent(vaNext, vg1, vg2Max);
+                double iaNext = model->anodeCurrent(vaNext, vg1, vg2Use);
 
                 QGraphicsLineItem *seg = plot->createSegment(va, ia, vaNext, iaNext, modelPen);
                 if (seg) {
@@ -516,7 +518,7 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
                 int lastVis  = -1;
                 for (int j = 0; j <= steps; ++j) {
                     const double vaProbe = curveVaMax * static_cast<double>(j) / static_cast<double>(steps);
-                    double iaProbe = model->anodeCurrent(vaProbe, vg1, vg2Max);
+                    double iaProbe = model->anodeCurrent(vaProbe, vg1, vg2Use);
                     if (!std::isfinite(iaProbe)) {
                         continue;
                     }
@@ -548,7 +550,7 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
                     vaLabel = std::min(xStop - epsX, std::max(xStart, vaLabel));
                     x = vaLabel;
 
-                    double yAtLine = model->anodeCurrent(x, vg1, vg2Max);
+                    double yAtLine = model->anodeCurrent(x, vg1, vg2Use);
                     // Fallback: mid-height of the visible axis if the model
                     // returns a non-finite value.
                     y = yStart + 0.5 * (yStop - yStart);
@@ -562,7 +564,7 @@ QGraphicsItemGroup *Device::anodePlot(Plot *plot)
                 const double epsY = std::max(0.05, iaMax * 0.01);
                 const double vaLabel = std::max(0.0, vaMax * 0.7);
                 x = std::min(vaMax - epsX, std::max(0.0, vaLabel));
-                double yAtLine = model->anodeCurrent(x, vg1, vg2Max);
+                double yAtLine = model->anodeCurrent(x, vg1, vg2Use);
                 y = iaMax - epsY;
                 if (std::isfinite(yAtLine)) {
                     y = std::min(iaMax - epsY, std::max(0.0, yAtLine));
