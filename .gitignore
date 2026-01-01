@@ -1,0 +1,16 @@
+# Build output / local IDE artifacts
+/build/
+/build-*/
+
+# Windows / MSVC build artifacts
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.idb
+
+# Qt generated build artifacts
+moc_*.cpp
+moc_*.h
+ui_*.h
+qrc_*.cpp
