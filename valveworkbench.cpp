@@ -14737,6 +14737,14 @@ void ValveWorkbench::modelPentode()
     }
 
     model = ModelFactory::createModel(pentodeModelType);
+    if (!model) {
+        ui->fitPentodeButton->setEnabled(true); // Allow modelling again
+        ui->fitTriodeButton->setEnabled(true);
+        if (ui && ui->processModellingTestsButton) ui->processModellingTestsButton->setEnabled(true);
+        QMessageBox::warning(this, tr("Fit Pentode"), tr("Failed to create pentode model."));
+        return;
+    }
+
     model->setEstimate(&estimate);
     model->setMode(NORMAL_MODE);
     model->setPreferences(&preferencesDialog);

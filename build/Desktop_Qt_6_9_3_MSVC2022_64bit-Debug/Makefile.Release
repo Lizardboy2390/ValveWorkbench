@@ -19,7 +19,7 @@ CXXFLAGS      = -nologo -Zc:wchar_t -FS -Zc:rvalueCast -Zc:inline -Zc:strictStri
 INCPATH       = -I..\..\..\ValveWorkbench -I. -IC:\Qt\6.9.3\msvc2022_64\include -IC:\Qt\6.9.3\msvc2022_64\include\QtCore -IC:\Qt\6.9.3\msvc2022_64\include\QtWidgets -IC:\Qt\6.9.3\msvc2022_64\include\QtSerialPort -IC:\Ceres_Install\ceres-solver\include -IC:\Ceres_Install\gflags\include -IC:\Ceres_Install\Eigen3\include\eigen3 -IC:\Ceres_Install\glog\include -IC:\Qt\6.9.3\msvc2022_64\include\QtPrintSupport -IC:\Qt\6.9.3\msvc2022_64\include\QtGui -Irelease -I. -I/include -IC:\Qt\6.9.3\msvc2022_64\mkspecs\win32-msvc 
 LINKER        = link
 LFLAGS        = /NOLOGO /DYNAMICBASE /NXCOMPAT /OPT:REF /OPT:ICF /INCREMENTAL:NO /SUBSYSTEM:WINDOWS "/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'"
-LIBS          = /LIBPATH:C:\Ceres_Install\ceres-solver\lib C:\Ceres_Install\ceres-solver\lib\ceres.lib /LIBPATH:C:\Ceres_Install\gflags\lib C:\Ceres_Install\gflags\lib\gflags_static.lib /LIBPATH:C:\Ceres_Install\glog\lib C:\Ceres_Install\glog\lib\glog.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6PrintSupport.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Widgets.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Gui.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6SerialPort.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Core.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6EntryPoint.lib shell32.lib  
+LIBS          = /LIBPATH:C:\Ceres_Install\ceres-solver\lib C:\Ceres_Install\ceres-solver\lib\ceres.lib /LIBPATH:C:\Ceres_Install\gflags\lib C:\Ceres_Install\gflags\lib\gflags_static.lib /LIBPATH:C:\Ceres_Install\glog\lib C:\Ceres_Install\glog\lib\glog.lib User32.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6PrintSupport.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Widgets.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Gui.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6SerialPort.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Core.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6EntryPoint.lib shell32.lib  
 QMAKE         = C:\Qt\6.9.3\msvc2022_64\bin\qmake.exe
 DEL_FILE      = del
 CHK_DIR_EXISTS= if not exist
@@ -448,7 +448,7 @@ DESTDIR_TARGET = release\ValveWorkbench.exe
 first: all
 all: Makefile.Release  release\ValveWorkbench.exe
 
-release\ValveWorkbench.exe: C:\Qt\6.9.3\msvc2022_64\lib\Qt6PrintSupport.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Widgets.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Gui.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6SerialPort.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Core.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6EntryPoint.lib ui_valveworkbench.h $(OBJECTS) 
+release\ValveWorkbench.exe: C:\Qt\6.9.3\msvc2022_64\lib\Qt6PrintSupport.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Widgets.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Gui.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6SerialPort.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6Core.lib C:\Qt\6.9.3\msvc2022_64\lib\Qt6EntryPoint.lib ui_valveworkbench.h ui_preferencesdialog.h ui_projectdialog.h $(OBJECTS) 
 	$(LINKER) $(LFLAGS) /MANIFEST:embed /OUT:$(DESTDIR_TARGET) @<<
 release\analyser.obj release\client.obj release\ledindicator.obj release\main.obj release\preferencesdialog.obj release\projectdialog.obj release\comparedialog.obj release\project.obj release\valveworkbench.obj release\circuit.obj release\triodeaccathodefollower.obj release\triodecommoncathode.obj release\pentodecommoncathode.obj release\singleendedoutput.obj release\singleendeduloutput.obj release\pushpulloutput.obj release\pushpulluloutput.obj release\triodedccathodefollower.obj release\triodecc_dccf_twostage.obj release\dataset.obj release\measurement.obj release\project.obj release\sample.obj release\sweep.obj release\cohenhelietriode.obj release\device.obj release\estimate.obj release\gardinerpentode.obj release\extractmodelpentode.obj release\simplemanualpentode.obj release\linearsolver.obj release\model.obj release\modelfactory.obj release\korentriode.obj release\reefmanpentode.obj release\simpletriode.obj release\template.obj release\quadraticsolver.obj release\moc_device.obj
 release\moc_model.obj release\moc_cohenhelietriode.obj release\moc_estimate.obj release\moc_gardinerpentode.obj release\moc_korentriode.obj release\moc_reefmanpentode.obj release\moc_simpletriode.obj release\uibridge.obj release\plot.obj release\parameter.obj release\simplemanualpentodedialog.obj release\moc_uibridge.obj release\moc_ledindicator.obj release\moc_preferencesdialog.obj release\moc_projectdialog.obj release\moc_comparedialog.obj release\moc_valveworkbench.obj release\moc_circuit.obj release\moc_triodeaccathodefollower.obj release\moc_triodecommoncathode.obj release\moc_pentodecommoncathode.obj release\moc_singleendedoutput.obj release\moc_singleendeduloutput.obj release\moc_pushpulloutput.obj release\moc_pushpulluloutput.obj release\moc_triodedccathodefollower.obj release\moc_triodecc_dccf_twostage.obj release\moc_simplemanualpentodedialog.obj
@@ -462,7 +462,7 @@ qmake: FORCE
 qmake_all: FORCE
 
 dist:
-	$(ZIP) ValveWorkbench.zip $(SOURCES) $(DIST) ..\..\ValveWorkbench.pro C:\Qt\6.9.3\msvc2022_64\mkspecs\features\spec_pre.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\common\windows-desktop.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\win32\windows_vulkan_sdk.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\common\windows-vulkan.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\common\msvc-desktop.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\qconfig.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_ext_freetype.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_ext_libjpeg.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_ext_libpng.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_charts.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_charts_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_chartsqml.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_chartsqml_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_concurrent.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_concurrent_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_core.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_core_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_dbus.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_dbus_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_designer.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_designer_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_designercomponents_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_devicediscovery_support_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_entrypoint_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_example_icons_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_examples_asset_downloader_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_fb_support_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_freetype_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_gui.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_gui_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_harfbuzz_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_help.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_help_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_jpeg_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsanimation.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsanimation_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsfolderlistmodel.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsfolderlistmodel_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsplatform.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsplatform_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsqmlmodels.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsqmlmodels_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labssettings.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labssettings_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labssharedimage.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labssharedimage_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labswavefrontmesh.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labswavefrontmesh_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_linguist.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_network.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_network_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_opengl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_opengl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_openglwidgets.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_openglwidgets_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_packetprotocol_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_png_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_printsupport.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_printsupport_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qdoccatch_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qdoccatchconversions_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qdoccatchgenerators_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qml.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qml_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlassetdownloader.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlassetdownloader_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlcompiler.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlcompiler_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlcore.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlcore_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmldebug_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmldom_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlformat_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlintegration.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlintegration_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmllocalstorage.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmllocalstorage_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlls_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlmeta.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlmeta_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlmodels.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlmodels_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlnetwork.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlnetwork_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmltest.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmltest_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmltoolingsettings_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmltyperegistrar_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlworkerscript.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlworkerscript_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlxmllistmodel.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlxmllistmodel_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quick.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quick_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2basic.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2basic_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2basicstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2basicstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fluentwinui3styleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fluentwinui3styleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fusion.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fusion_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fusionstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fusionstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2imagine.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2imagine_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2imaginestyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2imaginestyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2impl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2impl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2material.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2material_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2materialstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2materialstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2universal.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2universal_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2universalstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2universalstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2windowsstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2windowsstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrolstestutilsprivate_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2quickimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2quickimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2utils.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2utils_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickeffects.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickeffects_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicklayouts.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicklayouts_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickparticles_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickshapes_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicktemplates2.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicktemplates2_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicktestutilsprivate_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickvectorimage.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickvectorimage_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickvectorimagegenerator_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickwidgets.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickwidgets_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_serialbus.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_serialbus_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_serialport.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_serialport_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_sql.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_sql_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_svg.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_svg_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_svgwidgets.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_svgwidgets_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_testinternals_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_testlib.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_testlib_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_tools_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_uiplugin.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_uitools.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_uitools_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_widgets.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_widgets_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_xml.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_xml_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_zlib_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\features\qt_functions.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\qt_config.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\win32-msvc\qmake.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\spec_post.prf ..\..\.qmake.stash C:\Qt\6.9.3\msvc2022_64\mkspecs\features\exclusive_builds.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\common\msvc-version.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\toolchain.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\default_pre.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\win32\default_pre.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\resolve_config.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\exclusive_builds_post.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\default_post.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\build_pass.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\precompile_header.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\warn_on.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\permissions.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\qt.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\resources_functions.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\resources.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\moc.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\win32\opengl.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\uic.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\qmake_use.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\file_copies.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\win32\windows.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\testcase_targets.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\exceptions.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\yacc.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\lex.prf ..\..\ValveWorkbench.pro C:\Qt\6.9.3\msvc2022_64\lib\Qt6PrintSupport.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6Widgets.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6Gui.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6SerialPort.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6Core.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6EntryPoint.prl    C:\Qt\6.9.3\msvc2022_64\mkspecs\features\data\dummy.cpp ..\..\analyser\client.h ..\..\ledindicator\ledindicator.h ..\..\preferencesdialog.h ..\..\projectdialog.h ..\..\comparedialog.h ..\..\project.h ..\..\valveworkbench.h ..\..\valvemodel\circuit\circuit.h ..\..\valvemodel\circuit\triodeaccathodefollower.h ..\..\valvemodel\circuit\triodecommoncathode.h ..\..\valvemodel\circuit\pentodecommoncathode.h ..\..\valvemodel\circuit\singleendedoutput.h ..\..\valvemodel\circuit\singleendeduloutput.h ..\..\valvemodel\circuit\pushpulloutput.h ..\..\valvemodel\circuit\pushpulluloutput.h ..\..\valvemodel\circuit\triodedccathodefollower.h ..\..\valvemodel\circuit\triodecc_dccf_twostage.h ..\..\valvemodel\ui\parameter.h ..\..\valvemodel\ui\simplemanualpentodedialog.h ..\..\valvemodel\model\quadraticsolver.h  ..\..\analyser\analyser.cpp ..\..\analyser\client.cpp ..\..\ledindicator\ledindicator.cpp ..\..\main.cpp ..\..\preferencesdialog.cpp ..\..\projectdialog.cpp ..\..\comparedialog.cpp ..\..\project.cpp ..\..\valveworkbench.cpp ..\..\valvemodel\circuit\circuit.cpp ..\..\valvemodel\circuit\triodeaccathodefollower.cpp ..\..\valvemodel\circuit\triodecommoncathode.cpp ..\..\valvemodel\circuit\pentodecommoncathode.cpp ..\..\valvemodel\circuit\singleendedoutput.cpp ..\..\valvemodel\circuit\singleendeduloutput.cpp ..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\valvemodel\circuit\pushpulluloutput.cpp ..\..\valvemodel\circuit\triodedccathodefollower.cpp ..\..\valvemodel\circuit\triodecc_dccf_twostage.cpp ..\..\valvemodel\data\dataset.cpp ..\..\valvemodel\data\measurement.cpp ..\..\valvemodel\data\project.cpp ..\..\valvemodel\data\sample.cpp ..\..\valvemodel\data\sweep.cpp ..\..\valvemodel\model\cohenhelietriode.cpp ..\..\valvemodel\model\device.cpp ..\..\valvemodel\model\estimate.cpp ..\..\valvemodel\model\gardinerpentode.cpp ..\..\valvemodel\model\extractmodelpentode.cpp ..\..\valvemodel\model\simplemanualpentode.cpp ..\..\valvemodel\model\linearsolver.cpp ..\..\valvemodel\model\model.cpp ..\..\valvemodel\model\modelfactory.cpp ..\..\valvemodel\model\korentriode.cpp ..\..\valvemodel\model\reefmanpentode.cpp ..\..\valvemodel\model\simpletriode.cpp ..\..\valvemodel\model\template.cpp ..\..\valvemodel\model\quadraticsolver.cpp ..\..\valvemodel\model\moc_device.cpp ..\..\valvemodel\model\moc_model.cpp ..\..\valvemodel\model\moc_cohenhelietriode.cpp ..\..\valvemodel\model\moc_estimate.cpp ..\..\valvemodel\model\moc_gardinerpentode.cpp ..\..\valvemodel\model\moc_korentriode.cpp ..\..\valvemodel\model\moc_reefmanpentode.cpp ..\..\valvemodel\model\moc_simpletriode.cpp ..\..\valvemodel\ui\uibridge.cpp ..\..\valvemodel\ui\plot.cpp ..\..\valvemodel\ui\parameter.cpp ..\..\valvemodel\ui\simplemanualpentodedialog.cpp ..\..\valvemodel\ui\moc_uibridge.cpp ..\..\valveworkbench.ui    
+	$(ZIP) ValveWorkbench.zip $(SOURCES) $(DIST) ..\..\ValveWorkbench.pro C:\Qt\6.9.3\msvc2022_64\mkspecs\features\spec_pre.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\common\windows-desktop.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\win32\windows_vulkan_sdk.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\common\windows-vulkan.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\common\msvc-desktop.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\qconfig.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_ext_freetype.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_ext_libjpeg.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_ext_libpng.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_charts.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_charts_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_chartsqml.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_chartsqml_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_concurrent.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_concurrent_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_core.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_core_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_dbus.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_dbus_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_designer.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_designer_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_designercomponents_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_devicediscovery_support_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_entrypoint_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_example_icons_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_examples_asset_downloader_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_fb_support_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_freetype_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_gui.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_gui_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_harfbuzz_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_help.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_help_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_jpeg_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsanimation.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsanimation_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsfolderlistmodel.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsfolderlistmodel_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsplatform.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsplatform_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsqmlmodels.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labsqmlmodels_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labssettings.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labssettings_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labssharedimage.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labssharedimage_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labswavefrontmesh.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_labswavefrontmesh_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_linguist.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_network.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_network_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_opengl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_opengl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_openglwidgets.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_openglwidgets_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_packetprotocol_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_png_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_printsupport.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_printsupport_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qdoccatch_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qdoccatchconversions_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qdoccatchgenerators_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qml.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qml_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlassetdownloader.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlassetdownloader_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlcompiler.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlcompiler_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlcore.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlcore_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmldebug_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmldom_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlformat_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlintegration.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlintegration_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmllocalstorage.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmllocalstorage_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlls_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlmeta.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlmeta_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlmodels.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlmodels_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlnetwork.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlnetwork_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmltest.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmltest_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmltoolingsettings_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmltyperegistrar_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlworkerscript.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlworkerscript_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlxmllistmodel.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_qmlxmllistmodel_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quick.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quick_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2basic.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2basic_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2basicstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2basicstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fluentwinui3styleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fluentwinui3styleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fusion.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fusion_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fusionstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2fusionstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2imagine.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2imagine_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2imaginestyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2imaginestyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2impl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2impl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2material.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2material_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2materialstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2materialstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2universal.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2universal_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2universalstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2universalstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2windowsstyleimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrols2windowsstyleimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickcontrolstestutilsprivate_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2quickimpl.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2quickimpl_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2utils.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickdialogs2utils_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickeffects.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickeffects_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicklayouts.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicklayouts_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickparticles_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickshapes_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicktemplates2.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicktemplates2_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quicktestutilsprivate_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickvectorimage.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickvectorimage_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickvectorimagegenerator_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickwidgets.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_quickwidgets_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_serialbus.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_serialbus_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_serialport.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_serialport_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_sql.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_sql_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_svg.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_svg_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_svgwidgets.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_svgwidgets_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_testinternals_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_testlib.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_testlib_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_tools_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_uiplugin.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_uitools.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_uitools_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_widgets.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_widgets_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_xml.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_xml_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\modules\qt_lib_zlib_private.pri C:\Qt\6.9.3\msvc2022_64\mkspecs\features\qt_functions.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\qt_config.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\win32-msvc\qmake.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\spec_post.prf ..\..\.qmake.stash C:\Qt\6.9.3\msvc2022_64\mkspecs\features\exclusive_builds.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\common\msvc-version.conf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\toolchain.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\default_pre.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\win32\default_pre.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\resolve_config.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\exclusive_builds_post.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\default_post.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\build_pass.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\precompile_header.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\warn_on.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\permissions.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\qt.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\resources_functions.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\resources.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\moc.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\win32\opengl.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\uic.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\qmake_use.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\file_copies.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\win32\windows.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\testcase_targets.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\exceptions.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\yacc.prf C:\Qt\6.9.3\msvc2022_64\mkspecs\features\lex.prf ..\..\ValveWorkbench.pro C:\Qt\6.9.3\msvc2022_64\lib\Qt6PrintSupport.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6Widgets.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6Gui.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6SerialPort.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6Core.prl C:\Qt\6.9.3\msvc2022_64\lib\Qt6EntryPoint.prl    C:\Qt\6.9.3\msvc2022_64\mkspecs\features\data\dummy.cpp ..\..\analyser\client.h ..\..\ledindicator\ledindicator.h ..\..\preferencesdialog.h ..\..\projectdialog.h ..\..\comparedialog.h ..\..\project.h ..\..\valveworkbench.h ..\..\valvemodel\circuit\circuit.h ..\..\valvemodel\circuit\triodeaccathodefollower.h ..\..\valvemodel\circuit\triodecommoncathode.h ..\..\valvemodel\circuit\pentodecommoncathode.h ..\..\valvemodel\circuit\singleendedoutput.h ..\..\valvemodel\circuit\singleendeduloutput.h ..\..\valvemodel\circuit\pushpulloutput.h ..\..\valvemodel\circuit\pushpulluloutput.h ..\..\valvemodel\circuit\triodedccathodefollower.h ..\..\valvemodel\circuit\triodecc_dccf_twostage.h ..\..\valvemodel\ui\parameter.h ..\..\valvemodel\ui\simplemanualpentodedialog.h ..\..\valvemodel\model\quadraticsolver.h  ..\..\analyser\analyser.cpp ..\..\analyser\client.cpp ..\..\ledindicator\ledindicator.cpp ..\..\main.cpp ..\..\preferencesdialog.cpp ..\..\projectdialog.cpp ..\..\comparedialog.cpp ..\..\project.cpp ..\..\valveworkbench.cpp ..\..\valvemodel\circuit\circuit.cpp ..\..\valvemodel\circuit\triodeaccathodefollower.cpp ..\..\valvemodel\circuit\triodecommoncathode.cpp ..\..\valvemodel\circuit\pentodecommoncathode.cpp ..\..\valvemodel\circuit\singleendedoutput.cpp ..\..\valvemodel\circuit\singleendeduloutput.cpp ..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\valvemodel\circuit\pushpulluloutput.cpp ..\..\valvemodel\circuit\triodedccathodefollower.cpp ..\..\valvemodel\circuit\triodecc_dccf_twostage.cpp ..\..\valvemodel\data\dataset.cpp ..\..\valvemodel\data\measurement.cpp ..\..\valvemodel\data\project.cpp ..\..\valvemodel\data\sample.cpp ..\..\valvemodel\data\sweep.cpp ..\..\valvemodel\model\cohenhelietriode.cpp ..\..\valvemodel\model\device.cpp ..\..\valvemodel\model\estimate.cpp ..\..\valvemodel\model\gardinerpentode.cpp ..\..\valvemodel\model\extractmodelpentode.cpp ..\..\valvemodel\model\simplemanualpentode.cpp ..\..\valvemodel\model\linearsolver.cpp ..\..\valvemodel\model\model.cpp ..\..\valvemodel\model\modelfactory.cpp ..\..\valvemodel\model\korentriode.cpp ..\..\valvemodel\model\reefmanpentode.cpp ..\..\valvemodel\model\simpletriode.cpp ..\..\valvemodel\model\template.cpp ..\..\valvemodel\model\quadraticsolver.cpp ..\..\valvemodel\model\moc_device.cpp ..\..\valvemodel\model\moc_model.cpp ..\..\valvemodel\model\moc_cohenhelietriode.cpp ..\..\valvemodel\model\moc_estimate.cpp ..\..\valvemodel\model\moc_gardinerpentode.cpp ..\..\valvemodel\model\moc_korentriode.cpp ..\..\valvemodel\model\moc_reefmanpentode.cpp ..\..\valvemodel\model\moc_simpletriode.cpp ..\..\valvemodel\ui\uibridge.cpp ..\..\valvemodel\ui\plot.cpp ..\..\valvemodel\ui\parameter.cpp ..\..\valvemodel\ui\simplemanualpentodedialog.cpp ..\..\valvemodel\ui\moc_uibridge.cpp ..\..\valveworkbench.ui ..\..\preferencesdialog.ui ..\..\projectdialog.ui    
 
 clean: compiler_clean 
 	-$(DEL_FILE) release\analyser.obj release\client.obj release\ledindicator.obj release\main.obj release\preferencesdialog.obj release\projectdialog.obj release\comparedialog.obj release\project.obj release\valveworkbench.obj release\circuit.obj release\triodeaccathodefollower.obj release\triodecommoncathode.obj release\pentodecommoncathode.obj release\singleendedoutput.obj release\singleendeduloutput.obj release\pushpulloutput.obj release\pushpulluloutput.obj release\triodedccathodefollower.obj release\triodecc_dccf_twostage.obj release\dataset.obj release\measurement.obj release\project.obj release\sample.obj release\sweep.obj release\cohenhelietriode.obj release\device.obj release\estimate.obj release\gardinerpentode.obj release\extractmodelpentode.obj release\simplemanualpentode.obj release\linearsolver.obj release\model.obj release\modelfactory.obj release\korentriode.obj release\reefmanpentode.obj release\simpletriode.obj release\template.obj release\quadraticsolver.obj release\moc_device.obj release\moc_model.obj release\moc_cohenhelietriode.obj release\moc_estimate.obj release\moc_gardinerpentode.obj release\moc_korentriode.obj release\moc_reefmanpentode.obj release\moc_simpletriode.obj release\uibridge.obj release\plot.obj release\parameter.obj release\simplemanualpentodedialog.obj release\moc_uibridge.obj release\moc_ledindicator.obj release\moc_preferencesdialog.obj release\moc_projectdialog.obj release\moc_comparedialog.obj release\moc_valveworkbench.obj release\moc_circuit.obj release\moc_triodeaccathodefollower.obj release\moc_triodecommoncathode.obj release\moc_pentodecommoncathode.obj release\moc_singleendedoutput.obj release\moc_singleendeduloutput.obj release\moc_pushpulloutput.obj release\moc_pushpulluloutput.obj release\moc_triodedccathodefollower.obj release\moc_triodecc_dccf_twostage.obj release\moc_simplemanualpentodedialog.obj
@@ -918,6 +918,9 @@ release\moc_preferencesdialog.cpp: ..\..\preferencesdialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		release\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
 	C:\Qt\6.9.3\msvc2022_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include C:/Users/lizar/Documents/ValveWorkbench/build/Desktop_Qt_6_9_3_MSVC2022_64bit-Debug/release/moc_predefs.h -IC:/Qt/6.9.3/msvc2022_64/mkspecs/win32-msvc -IC:/Users/lizar/Documents/ValveWorkbench -IC:/Qt/6.9.3/msvc2022_64/include -IC:/Qt/6.9.3/msvc2022_64/include/QtCore -IC:/Qt/6.9.3/msvc2022_64/include/QtWidgets -IC:/Qt/6.9.3/msvc2022_64/include/QtSerialPort -IC:/Ceres_Install/ceres-solver/include -IC:/Ceres_Install/gflags/include -IC:/Ceres_Install/Eigen3/include/eigen3 -IC:/Ceres_Install/glog/include -IC:/Qt/6.9.3/msvc2022_64/include/QtPrintSupport -IC:/Qt/6.9.3/msvc2022_64/include/QtGui -I. -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\ATLMFC\include" -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.8\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\shared" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\um" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\winrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\cppwinrt" ..\..\preferencesdialog.h -o release\moc_preferencesdialog.cpp
@@ -1354,6 +1357,9 @@ release\moc_comparedialog.cpp: ..\..\comparedialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -1988,6 +1994,7 @@ release\moc_valveworkbench.cpp: ..\..\valveworkbench.h \
 		..\..\valvemodel\data\measurement.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -2016,7 +2023,6 @@ release\moc_valveworkbench.cpp: ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlabel.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		..\..\valvemodel\ui\parameter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\valvemodel\model\korentriode.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -2036,6 +2042,9 @@ release\moc_valveworkbench.cpp: ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgridlayout.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QScrollArea \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qscrollarea.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -2366,6 +2375,7 @@ release\moc_valveworkbench.cpp: ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonArray \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonarray.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		..\..\valvemodel\model\reefmanpentode.h \
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
@@ -2642,6 +2652,7 @@ release\moc_circuit.cpp: ..\..\valvemodel\circuit\circuit.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -2997,6 +3008,9 @@ release\moc_circuit.cpp: ..\..\valvemodel\circuit\circuit.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -3264,6 +3278,7 @@ release\moc_triodeaccathodefollower.cpp: ..\..\valvemodel\circuit\triodeaccathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -3619,6 +3634,9 @@ release\moc_triodeaccathodefollower.cpp: ..\..\valvemodel\circuit\triodeaccathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -3628,8 +3646,6 @@ release\moc_triodeaccathodefollower.cpp: ..\..\valvemodel\circuit\triodeaccathod
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		release\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
 	C:\Qt\6.9.3\msvc2022_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include C:/Users/lizar/Documents/ValveWorkbench/build/Desktop_Qt_6_9_3_MSVC2022_64bit-Debug/release/moc_predefs.h -IC:/Qt/6.9.3/msvc2022_64/mkspecs/win32-msvc -IC:/Users/lizar/Documents/ValveWorkbench -IC:/Qt/6.9.3/msvc2022_64/include -IC:/Qt/6.9.3/msvc2022_64/include/QtCore -IC:/Qt/6.9.3/msvc2022_64/include/QtWidgets -IC:/Qt/6.9.3/msvc2022_64/include/QtSerialPort -IC:/Ceres_Install/ceres-solver/include -IC:/Ceres_Install/gflags/include -IC:/Ceres_Install/Eigen3/include/eigen3 -IC:/Ceres_Install/glog/include -IC:/Qt/6.9.3/msvc2022_64/include/QtPrintSupport -IC:/Qt/6.9.3/msvc2022_64/include/QtGui -I. -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\ATLMFC\include" -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.8\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\shared" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\um" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\winrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\cppwinrt" ..\..\valvemodel\circuit\triodeaccathodefollower.h -o release\moc_triodeaccathodefollower.cpp
@@ -3888,6 +3904,7 @@ release\moc_triodecommoncathode.cpp: ..\..\valvemodel\circuit\triodecommoncathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -4243,6 +4260,9 @@ release\moc_triodecommoncathode.cpp: ..\..\valvemodel\circuit\triodecommoncathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -4252,8 +4272,6 @@ release\moc_triodecommoncathode.cpp: ..\..\valvemodel\circuit\triodecommoncathod
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		release\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
 	C:\Qt\6.9.3\msvc2022_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include C:/Users/lizar/Documents/ValveWorkbench/build/Desktop_Qt_6_9_3_MSVC2022_64bit-Debug/release/moc_predefs.h -IC:/Qt/6.9.3/msvc2022_64/mkspecs/win32-msvc -IC:/Users/lizar/Documents/ValveWorkbench -IC:/Qt/6.9.3/msvc2022_64/include -IC:/Qt/6.9.3/msvc2022_64/include/QtCore -IC:/Qt/6.9.3/msvc2022_64/include/QtWidgets -IC:/Qt/6.9.3/msvc2022_64/include/QtSerialPort -IC:/Ceres_Install/ceres-solver/include -IC:/Ceres_Install/gflags/include -IC:/Ceres_Install/Eigen3/include/eigen3 -IC:/Ceres_Install/glog/include -IC:/Qt/6.9.3/msvc2022_64/include/QtPrintSupport -IC:/Qt/6.9.3/msvc2022_64/include/QtGui -I. -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\ATLMFC\include" -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.8\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\shared" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\um" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\winrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\cppwinrt" ..\..\valvemodel\circuit\triodecommoncathode.h -o release\moc_triodecommoncathode.cpp
@@ -4512,6 +4530,7 @@ release\moc_pentodecommoncathode.cpp: ..\..\valvemodel\circuit\pentodecommoncath
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -4867,6 +4886,9 @@ release\moc_pentodecommoncathode.cpp: ..\..\valvemodel\circuit\pentodecommoncath
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -4876,8 +4898,6 @@ release\moc_pentodecommoncathode.cpp: ..\..\valvemodel\circuit\pentodecommoncath
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		release\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
 	C:\Qt\6.9.3\msvc2022_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include C:/Users/lizar/Documents/ValveWorkbench/build/Desktop_Qt_6_9_3_MSVC2022_64bit-Debug/release/moc_predefs.h -IC:/Qt/6.9.3/msvc2022_64/mkspecs/win32-msvc -IC:/Users/lizar/Documents/ValveWorkbench -IC:/Qt/6.9.3/msvc2022_64/include -IC:/Qt/6.9.3/msvc2022_64/include/QtCore -IC:/Qt/6.9.3/msvc2022_64/include/QtWidgets -IC:/Qt/6.9.3/msvc2022_64/include/QtSerialPort -IC:/Ceres_Install/ceres-solver/include -IC:/Ceres_Install/gflags/include -IC:/Ceres_Install/Eigen3/include/eigen3 -IC:/Ceres_Install/glog/include -IC:/Qt/6.9.3/msvc2022_64/include/QtPrintSupport -IC:/Qt/6.9.3/msvc2022_64/include/QtGui -I. -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\ATLMFC\include" -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.8\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\shared" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\um" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\winrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\cppwinrt" ..\..\valvemodel\circuit\pentodecommoncathode.h -o release\moc_pentodecommoncathode.cpp
@@ -5136,6 +5156,7 @@ release\moc_singleendedoutput.cpp: ..\..\valvemodel\circuit\singleendedoutput.h 
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -5491,6 +5512,9 @@ release\moc_singleendedoutput.cpp: ..\..\valvemodel\circuit\singleendedoutput.h 
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -5758,6 +5782,7 @@ release\moc_singleendeduloutput.cpp: ..\..\valvemodel\circuit\singleendeduloutpu
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -6113,6 +6138,9 @@ release\moc_singleendeduloutput.cpp: ..\..\valvemodel\circuit\singleendeduloutpu
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -6380,6 +6408,7 @@ release\moc_pushpulloutput.cpp: ..\..\valvemodel\circuit\pushpulloutput.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -6735,6 +6764,9 @@ release\moc_pushpulloutput.cpp: ..\..\valvemodel\circuit\pushpulloutput.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -7002,6 +7034,7 @@ release\moc_pushpulluloutput.cpp: ..\..\valvemodel\circuit\pushpulluloutput.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -7357,6 +7390,9 @@ release\moc_pushpulluloutput.cpp: ..\..\valvemodel\circuit\pushpulluloutput.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -7624,6 +7660,7 @@ release\moc_triodedccathodefollower.cpp: ..\..\valvemodel\circuit\triodedccathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -7979,6 +8016,9 @@ release\moc_triodedccathodefollower.cpp: ..\..\valvemodel\circuit\triodedccathod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -7988,8 +8028,6 @@ release\moc_triodedccathodefollower.cpp: ..\..\valvemodel\circuit\triodedccathod
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		release\moc_predefs.h \
 		C:\Qt\6.9.3\msvc2022_64\bin\moc.exe
 	C:\Qt\6.9.3\msvc2022_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include C:/Users/lizar/Documents/ValveWorkbench/build/Desktop_Qt_6_9_3_MSVC2022_64bit-Debug/release/moc_predefs.h -IC:/Qt/6.9.3/msvc2022_64/mkspecs/win32-msvc -IC:/Users/lizar/Documents/ValveWorkbench -IC:/Qt/6.9.3/msvc2022_64/include -IC:/Qt/6.9.3/msvc2022_64/include/QtCore -IC:/Qt/6.9.3/msvc2022_64/include/QtWidgets -IC:/Qt/6.9.3/msvc2022_64/include/QtSerialPort -IC:/Ceres_Install/ceres-solver/include -IC:/Ceres_Install/gflags/include -IC:/Ceres_Install/Eigen3/include/eigen3 -IC:/Ceres_Install/glog/include -IC:/Qt/6.9.3/msvc2022_64/include/QtPrintSupport -IC:/Qt/6.9.3/msvc2022_64/include/QtGui -I. -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\ATLMFC\include" -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.32.31326\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.8\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\shared" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\um" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\winrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.19041.0\\cppwinrt" ..\..\valvemodel\circuit\triodedccathodefollower.h -o release\moc_triodedccathodefollower.cpp
@@ -8248,6 +8286,7 @@ release\moc_triodecc_dccf_twostage.cpp: ..\..\valvemodel\circuit\triodecc_dccf_t
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -8603,6 +8642,9 @@ release\moc_triodecc_dccf_twostage.cpp: ..\..\valvemodel\circuit\triodecc_dccf_t
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -8823,12 +8865,20 @@ compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
 compiler_moc_source_make_all:
 compiler_moc_source_clean:
-compiler_uic_make_all: ui_valveworkbench.h
+compiler_uic_make_all: ui_valveworkbench.h ui_preferencesdialog.h ui_projectdialog.h
 compiler_uic_clean:
-	-$(DEL_FILE) ui_valveworkbench.h
+	-$(DEL_FILE) ui_valveworkbench.h ui_preferencesdialog.h ui_projectdialog.h
 ui_valveworkbench.h: ..\..\valveworkbench.ui \
 		C:\Qt\6.9.3\msvc2022_64\bin\uic.exe
 	C:\Qt\6.9.3\msvc2022_64\bin\uic.exe ..\..\valveworkbench.ui -o ui_valveworkbench.h
+
+ui_preferencesdialog.h: ..\..\preferencesdialog.ui \
+		C:\Qt\6.9.3\msvc2022_64\bin\uic.exe
+	C:\Qt\6.9.3\msvc2022_64\bin\uic.exe ..\..\preferencesdialog.ui -o ui_preferencesdialog.h
+
+ui_projectdialog.h: ..\..\projectdialog.ui \
+		C:\Qt\6.9.3\msvc2022_64\bin\uic.exe
+	C:\Qt\6.9.3\msvc2022_64\bin\uic.exe ..\..\projectdialog.ui -o ui_projectdialog.h
 
 compiler_yacc_decl_make_all:
 compiler_yacc_decl_clean:
@@ -9083,6 +9133,9 @@ release\analyser.obj: ..\..\analyser\analyser.cpp ..\..\analyser\analyser.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtreewidget.h \
@@ -9100,6 +9153,7 @@ release\analyser.obj: ..\..\analyser\analyser.cpp ..\..\analyser\analyser.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qrubberband.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtreewidgetitemiterator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -9129,7 +9183,9 @@ release\analyser.obj: ..\..\analyser\analyser.cpp ..\..\analyser\analyser.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonArray \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonarray.h \
 		..\..\valvemodel\data\sweep.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QDebug
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QDebug \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QSettings \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qsettings.h
 
 release\client.obj: ..\..\analyser\client.cpp ..\..\analyser\client.h
 
@@ -9591,6 +9647,7 @@ release\main.obj: ..\..\main.cpp ..\..\valveworkbench.h \
 		..\..\valvemodel\data\measurement.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -9619,7 +9676,6 @@ release\main.obj: ..\..\main.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlabel.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		..\..\valvemodel\ui\parameter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\valvemodel\model\korentriode.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -9639,6 +9695,9 @@ release\main.obj: ..\..\main.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgridlayout.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QScrollArea \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qscrollarea.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -9969,6 +10028,7 @@ release\main.obj: ..\..\main.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonArray \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonarray.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		..\..\valvemodel\model\reefmanpentode.h \
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
@@ -10215,6 +10275,9 @@ release\preferencesdialog.obj: ..\..\preferencesdialog.cpp ..\..\preferencesdial
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\ui_preferencesdialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVariant \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QAbstractButton \
@@ -10239,7 +10302,6 @@ release\preferencesdialog.obj: ..\..\preferencesdialog.cpp ..\..\preferencesdial
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qtextdocument.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpacerItem \
-		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QWidget \
 		..\..\valvemodel\model\model.h \
@@ -10618,6 +10680,10 @@ release\preferencesdialog.obj: ..\..\preferencesdialog.cpp ..\..\preferencesdial
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qtimer.h \
 		..\..\analyser\client.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGridLayout \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QPushButton \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qpushbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QFrame \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QSignalBlocker \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QSettings \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qsettings.h
 
@@ -11081,6 +11147,9 @@ release\comparedialog.obj: ..\..\comparedialog.cpp ..\..\comparedialog.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -11743,6 +11812,9 @@ release\project.obj: ..\..\project.cpp ..\..\project.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -12335,6 +12407,7 @@ release\valveworkbench.obj: ..\..\valveworkbench.cpp ..\..\valveworkbench.h \
 		..\..\valvemodel\data\measurement.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTreeWidgetItem \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -12363,7 +12436,6 @@ release\valveworkbench.obj: ..\..\valveworkbench.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlabel.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		..\..\valvemodel\ui\parameter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\valvemodel\model\korentriode.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -12383,6 +12455,9 @@ release\valveworkbench.obj: ..\..\valveworkbench.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgridlayout.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QScrollArea \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qscrollarea.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -12713,6 +12788,7 @@ release\valveworkbench.obj: ..\..\valveworkbench.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonArray \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonarray.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		..\..\valvemodel\model\reefmanpentode.h \
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
@@ -12732,7 +12808,7 @@ release\valveworkbench.obj: ..\..\valveworkbench.cpp ..\..\valveworkbench.h \
 		..\..\analyser\client.h \
 		..\..\ledindicator\ledindicator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QWidget \
-		release\ui_valveworkbench.h \
+		ui_valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVariant \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QAction \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QApplication \
@@ -12740,6 +12816,7 @@ release\valveworkbench.obj: ..\..\valveworkbench.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsView \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsview.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainter.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGridLayout \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QHeaderView \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qheaderview.h \
@@ -12766,12 +12843,17 @@ release\valveworkbench.obj: ..\..\valveworkbench.cpp ..\..\valveworkbench.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QFileInfo \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QInputDialog \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qinputdialog.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QBrush \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QTextEdit \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtextedit.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QMouseEvent \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsPolygonItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QPolygonF \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QLineF \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsEllipseItem \
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QPen \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSizePolicy \
+		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QPainterPath \
 		..\..\valvemodel\data\sample.h \
 		..\..\valvemodel\data\sweep.h \
 		..\..\valvemodel\circuit\triodecommoncathode.h \
@@ -13041,6 +13123,7 @@ release\circuit.obj: ..\..\valvemodel\circuit\circuit.cpp ..\..\valvemodel\circu
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -13396,6 +13479,9 @@ release\circuit.obj: ..\..\valvemodel\circuit\circuit.cpp ..\..\valvemodel\circu
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -13662,6 +13748,7 @@ release\triodeaccathodefollower.obj: ..\..\valvemodel\circuit\triodeaccathodefol
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -14017,6 +14104,9 @@ release\triodeaccathodefollower.obj: ..\..\valvemodel\circuit\triodeaccathodefol
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -14025,9 +14115,7 @@ release\triodeaccathodefollower.obj: ..\..\valvemodel\circuit\triodeaccathodefol
 		..\..\valvemodel\model\reefmanpentode.h \
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
-		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		..\..\valvemodel\circuit\sharedspice.h
 
 release\triodecommoncathode.obj: ..\..\valvemodel\circuit\triodecommoncathode.cpp ..\..\valvemodel\circuit\triodecommoncathode.h \
 		..\..\valvemodel\circuit\circuit.h \
@@ -14283,6 +14371,7 @@ release\triodecommoncathode.obj: ..\..\valvemodel\circuit\triodecommoncathode.cp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -14638,6 +14727,9 @@ release\triodecommoncathode.obj: ..\..\valvemodel\circuit\triodecommoncathode.cp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -14647,8 +14739,7 @@ release\triodecommoncathode.obj: ..\..\valvemodel\circuit\triodecommoncathode.cp
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsPolygonItem
 
 release\pentodecommoncathode.obj: ..\..\valvemodel\circuit\pentodecommoncathode.cpp ..\..\valvemodel\circuit\pentodecommoncathode.h \
 		..\..\valvemodel\circuit\circuit.h \
@@ -14904,6 +14995,7 @@ release\pentodecommoncathode.obj: ..\..\valvemodel\circuit\pentodecommoncathode.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -15259,6 +15351,9 @@ release\pentodecommoncathode.obj: ..\..\valvemodel\circuit\pentodecommoncathode.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -15267,9 +15362,7 @@ release\pentodecommoncathode.obj: ..\..\valvemodel\circuit\pentodecommoncathode.
 		..\..\valvemodel\model\reefmanpentode.h \
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
-		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		..\..\valvemodel\circuit\sharedspice.h
 
 release\singleendedoutput.obj: ..\..\valvemodel\circuit\singleendedoutput.cpp ..\..\valvemodel\circuit\singleendedoutput.h \
 		..\..\valvemodel\circuit\circuit.h \
@@ -15525,6 +15618,7 @@ release\singleendedoutput.obj: ..\..\valvemodel\circuit\singleendedoutput.cpp ..
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -15880,6 +15974,9 @@ release\singleendedoutput.obj: ..\..\valvemodel\circuit\singleendedoutput.cpp ..
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -15889,8 +15986,6 @@ release\singleendedoutput.obj: ..\..\valvemodel\circuit\singleendedoutput.cpp ..
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsPolygonItem
 
 release\singleendeduloutput.obj: ..\..\valvemodel\circuit\singleendeduloutput.cpp ..\..\valvemodel\circuit\singleendeduloutput.h \
@@ -16147,6 +16242,7 @@ release\singleendeduloutput.obj: ..\..\valvemodel\circuit\singleendeduloutput.cp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -16502,6 +16598,9 @@ release\singleendeduloutput.obj: ..\..\valvemodel\circuit\singleendeduloutput.cp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -16510,9 +16609,7 @@ release\singleendeduloutput.obj: ..\..\valvemodel\circuit\singleendeduloutput.cp
 		..\..\valvemodel\model\reefmanpentode.h \
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
-		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		..\..\valvemodel\circuit\sharedspice.h
 
 release\pushpulloutput.obj: ..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\valvemodel\circuit\pushpulloutput.h \
 		..\..\valvemodel\circuit\circuit.h \
@@ -16768,6 +16865,7 @@ release\pushpulloutput.obj: ..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\va
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -17123,6 +17221,9 @@ release\pushpulloutput.obj: ..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\va
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -17132,8 +17233,7 @@ release\pushpulloutput.obj: ..\..\valvemodel\circuit\pushpulloutput.cpp ..\..\va
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsPolygonItem
 
 release\pushpulluloutput.obj: ..\..\valvemodel\circuit\pushpulluloutput.cpp ..\..\valvemodel\circuit\pushpulluloutput.h \
 		..\..\valvemodel\circuit\circuit.h \
@@ -17389,6 +17489,7 @@ release\pushpulluloutput.obj: ..\..\valvemodel\circuit\pushpulluloutput.cpp ..\.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -17744,6 +17845,9 @@ release\pushpulluloutput.obj: ..\..\valvemodel\circuit\pushpulluloutput.cpp ..\.
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -17753,8 +17857,7 @@ release\pushpulluloutput.obj: ..\..\valvemodel\circuit\pushpulluloutput.cpp ..\.
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
 		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsPolygonItem
 
 release\triodedccathodefollower.obj: ..\..\valvemodel\circuit\triodedccathodefollower.cpp ..\..\valvemodel\circuit\triodedccathodefollower.h \
 		..\..\valvemodel\circuit\circuit.h \
@@ -18010,6 +18113,7 @@ release\triodedccathodefollower.obj: ..\..\valvemodel\circuit\triodedccathodefol
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -18365,6 +18469,9 @@ release\triodedccathodefollower.obj: ..\..\valvemodel\circuit\triodedccathodefol
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -18373,9 +18480,7 @@ release\triodedccathodefollower.obj: ..\..\valvemodel\circuit\triodedccathodefol
 		..\..\valvemodel\model\reefmanpentode.h \
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
-		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		..\..\valvemodel\circuit\sharedspice.h
 
 release\triodecc_dccf_twostage.obj: ..\..\valvemodel\circuit\triodecc_dccf_twostage.cpp ..\..\valvemodel\circuit\triodecc_dccf_twostage.h \
 		..\..\valvemodel\circuit\circuit.h \
@@ -18631,6 +18736,7 @@ release\triodecc_dccf_twostage.obj: ..\..\valvemodel\circuit\triodecc_dccf_twost
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -18986,6 +19092,9 @@ release\triodecc_dccf_twostage.obj: ..\..\valvemodel\circuit\triodecc_dccf_twost
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -18994,9 +19103,7 @@ release\triodecc_dccf_twostage.obj: ..\..\valvemodel\circuit\triodecc_dccf_twost
 		..\..\valvemodel\model\reefmanpentode.h \
 		..\..\valvemodel\model\gardinerpentode.h \
 		..\..\valvemodel\model\extractmodelpentode.h \
-		..\..\valvemodel\circuit\sharedspice.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h
+		..\..\valvemodel\circuit\sharedspice.h
 
 release\dataset.obj: ..\..\valvemodel\data\dataset.cpp ..\..\valvemodel\data\dataset.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
@@ -19458,6 +19565,7 @@ release\measurement.obj: ..\..\valvemodel\data\measurement.cpp ..\..\valvemodel\
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qrubberband.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtreewidgetitemiterator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -19707,6 +19815,7 @@ release\project.obj: ..\..\valvemodel\data\project.cpp ..\..\valvemodel\data\pro
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qrubberband.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qtreewidgetitemiterator.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\ui\plot.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsScene \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsscene.h \
@@ -19743,7 +19852,6 @@ release\project.obj: ..\..\valvemodel\data\project.cpp ..\..\valvemodel\data\pro
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qlabel.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpicture.h \
 		..\..\valvemodel\ui\parameter.h \
-		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		..\..\valvemodel\model\cohenhelietriode.h \
 		..\..\valvemodel\model\korentriode.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -19771,6 +19879,9 @@ release\project.obj: ..\..\valvemodel\data\project.cpp ..\..\valvemodel\data\pro
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -20588,6 +20699,7 @@ release\sweep.obj: ..\..\valvemodel\data\sweep.cpp ..\..\valvemodel\data\sweep.h
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\QColor \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QPointF \
 		..\..\valvemodel\data\measurement.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QString \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QDebug
 
 release\cohenhelietriode.obj: ..\..\valvemodel\model\cohenhelietriode.cpp ..\..\valvemodel\model\cohenhelietriode.h \
@@ -20818,6 +20930,9 @@ release\cohenhelietriode.obj: ..\..\valvemodel\model\cohenhelietriode.cpp ..\..\
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -21434,6 +21549,7 @@ release\device.obj: ..\..\valvemodel\model\device.cpp ..\..\valvemodel\model\dev
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -21802,6 +21918,9 @@ release\device.obj: ..\..\valvemodel\model\device.cpp ..\..\valvemodel\model\dev
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -22095,6 +22214,9 @@ release\estimate.obj: ..\..\valvemodel\model\estimate.cpp ..\..\valvemodel\model
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -22657,6 +22779,9 @@ release\gardinerpentode.obj: ..\..\valvemodel\model\gardinerpentode.cpp ..\..\va
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -23262,6 +23387,9 @@ release\extractmodelpentode.obj: ..\..\valvemodel\model\extractmodelpentode.cpp 
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -23868,6 +23996,9 @@ release\simplemanualpentode.obj: ..\..\valvemodel\model\simplemanualpentode.cpp 
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -24939,6 +25070,9 @@ release\model.obj: ..\..\valvemodel\model\model.cpp ..\..\valvemodel\model\model
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -25551,6 +25685,9 @@ release\modelfactory.obj: ..\..\valvemodel\model\modelfactory.cpp ..\..\valvemod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -26161,6 +26298,9 @@ release\korentriode.obj: ..\..\valvemodel\model\korentriode.cpp ..\..\valvemodel
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -26767,6 +26907,9 @@ release\reefmanpentode.obj: ..\..\valvemodel\model\reefmanpentode.cpp ..\..\valv
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -27370,6 +27513,9 @@ release\simpletriode.obj: ..\..\valvemodel\model\simpletriode.cpp ..\..\valvemod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -28596,6 +28742,7 @@ release\moc_device.obj: ..\..\valvemodel\model\moc_device.cpp ..\..\valvemodel\m
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QGraphicsItemGroup \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qgraphicsitem.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtGui\qpainterpath.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QMap \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -28964,6 +29111,9 @@ release\moc_device.obj: ..\..\valvemodel\model\moc_device.cpp ..\..\valvemodel\m
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		..\..\valvemodel\data\measurement.h \
 		..\..\valvemodel\data\dataset.h \
 		..\..\valvemodel\model\simpletriode.h \
@@ -29202,6 +29352,9 @@ release\moc_model.obj: ..\..\valvemodel\model\moc_model.cpp ..\..\valvemodel\mod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -29811,6 +29964,9 @@ release\moc_cohenhelietriode.obj: ..\..\valvemodel\model\moc_cohenhelietriode.cp
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -30474,6 +30630,9 @@ release\moc_estimate.obj: ..\..\valvemodel\model\moc_estimate.cpp ..\..\valvemod
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\ceres.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\autodiff_cost_function.h \
 		C:\Ceres_Install\ceres-solver\include\ceres\internal\autodiff.h \
@@ -31031,6 +31190,9 @@ release\moc_gardinerpentode.obj: ..\..\valvemodel\model\moc_gardinerpentode.cpp 
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -31639,6 +31801,9 @@ release\moc_korentriode.obj: ..\..\valvemodel\model\moc_korentriode.cpp ..\..\va
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -32249,6 +32414,9 @@ release\moc_reefmanpentode.obj: ..\..\valvemodel\model\moc_reefmanpentode.cpp ..
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -32856,6 +33024,9 @@ release\moc_simpletriode.obj: ..\..\valvemodel\model\moc_simpletriode.cpp ..\..\
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \
@@ -33950,6 +34121,9 @@ release\simplemanualpentodedialog.obj: ..\..\valvemodel\ui\simplemanualpentodedi
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QCheckBox \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\6.9.3\msvc2022_64\include\QtWidgets\QSpinBox \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QVector \
+		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qvector.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\QJsonObject \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonobject.h \
 		C:\Qt\6.9.3\msvc2022_64\include\QtCore\qjsonvalue.h \

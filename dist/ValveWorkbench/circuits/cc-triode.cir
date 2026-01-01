@@ -1,0 +1,17 @@
+Test harness for biasing triodes
+
+.include triode.cir
+
+.op
+
+VB 1 0 dc 300
+
+RG 2 0 1meg
+RK 3 0 1600
+RA 1 4 100k
+
+VM 4 5 DC 0
+
+XV1 5 2 3 triode
+
+.end

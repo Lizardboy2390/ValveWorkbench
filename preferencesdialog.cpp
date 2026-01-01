@@ -507,6 +507,16 @@ bool PreferencesDialog::fixTriodeParameters()
     return ui->checkFixTriode->isChecked();
 }
 
+void PreferencesDialog::setFixSecondaryEmission(bool enabled)
+{
+    ui->checkFixSecondary->setChecked(enabled);
+}
+
+void PreferencesDialog::setFixTriodeParameters(bool enabled)
+{
+    ui->checkFixTriode->setChecked(enabled);
+}
+
 bool PreferencesDialog::showScreenCurrent()
 {
     return ui->checkScreenCurrent->isChecked();

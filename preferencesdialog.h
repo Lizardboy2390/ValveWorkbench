@@ -39,6 +39,8 @@ public:
     bool useSecondaryEmission();
     bool fixSecondaryEmission();
     bool fixTriodeParameters();
+    void setFixSecondaryEmission(bool enabled);
+    void setFixTriodeParameters(bool enabled);
     bool showScreenCurrent();
     bool smoothCurves();
     bool showDataTab();

@@ -54,7 +54,6 @@ public:
     QAction *actionExport_to_Spice;
     QAction *actionExport_SE_Output_to_Spice;
     QWidget *centralwidget;
-    QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
     QTabWidget *tabWidget;
     QWidget *tab;
@@ -349,7 +348,7 @@ public:
     {
         if (ValveWorkbench->objectName().isEmpty())
             ValveWorkbench->setObjectName("ValveWorkbench");
-        ValveWorkbench->resize(1305, 1080);
+        ValveWorkbench->resize(1305, 900);
         actionLoad_Model = new QAction(ValveWorkbench);
         actionLoad_Model->setObjectName("actionLoad_Model");
         actionExit = new QAction(ValveWorkbench);
@@ -378,15 +377,11 @@ public:
         actionExport_SE_Output_to_Spice->setObjectName("actionExport_SE_Output_to_Spice");
         centralwidget = new QWidget(ValveWorkbench);
         centralwidget->setObjectName("centralwidget");
-        horizontalLayoutWidget = new QWidget(centralwidget);
-        horizontalLayoutWidget->setObjectName("horizontalLayoutWidget");
-        horizontalLayoutWidget->setGeometry(QRect(26, 9, 1221, 1011));
-        horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
+        horizontalLayout = new QHBoxLayout(centralwidget);
         horizontalLayout->setObjectName("horizontalLayout");
-        horizontalLayout->setContentsMargins(0, 0, 0, 0);
-        tabWidget = new QTabWidget(horizontalLayoutWidget);
+        tabWidget = new QTabWidget(centralwidget);
         tabWidget->setObjectName("tabWidget");
-        QSizePolicy sizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Expanding);
+        QSizePolicy sizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(tabWidget->sizePolicy().hasHeightForWidth());
@@ -1639,7 +1634,7 @@ public:
 
         verticalLayout_2 = new QVBoxLayout();
         verticalLayout_2->setObjectName("verticalLayout_2");
-        graphicsView = new QGraphicsView(horizontalLayoutWidget);
+        graphicsView = new QGraphicsView(centralwidget);
         graphicsView->setObjectName("graphicsView");
         sizePolicy3.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
         graphicsView->setSizePolicy(sizePolicy3);
@@ -1653,7 +1648,7 @@ public:
 
         verticalLayout_2->addItem(verticalSpacer_4);
 
-        plotTitle = new QLabel(horizontalLayoutWidget);
+        plotTitle = new QLabel(centralwidget);
         plotTitle->setObjectName("plotTitle");
 
         verticalLayout_2->addWidget(plotTitle);
@@ -1668,7 +1663,7 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_3);
 
-        measureCheck = new QCheckBox(horizontalLayoutWidget);
+        measureCheck = new QCheckBox(centralwidget);
         measureCheck->setObjectName("measureCheck");
 
         horizontalLayout_9->addWidget(measureCheck);
@@ -1677,7 +1672,7 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_7);
 
-        modelCheck = new QCheckBox(horizontalLayoutWidget);
+        modelCheck = new QCheckBox(centralwidget);
         modelCheck->setObjectName("modelCheck");
 
         horizontalLayout_9->addWidget(modelCheck);
@@ -1686,7 +1681,7 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_171);
 
-        designerCheck = new QCheckBox(horizontalLayoutWidget);
+        designerCheck = new QCheckBox(centralwidget);
         designerCheck->setObjectName("designerCheck");
         designerCheck->setChecked(true);
 
@@ -1696,7 +1691,7 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_6);
 
-        screenCheck = new QCheckBox(horizontalLayoutWidget);
+        screenCheck = new QCheckBox(centralwidget);
         screenCheck->setObjectName("screenCheck");
 
         horizontalLayout_9->addWidget(screenCheck);
@@ -1714,7 +1709,7 @@ public:
 
         horizontalLayout_health->addItem(horizontalSpacer_19);
 
-        Triode_A_Box = new QGroupBox(horizontalLayoutWidget);
+        Triode_A_Box = new QGroupBox(centralwidget);
         Triode_A_Box->setObjectName("Triode_A_Box");
         verticalLayout_TriodeAHealth = new QVBoxLayout(Triode_A_Box);
         verticalLayout_TriodeAHealth->setObjectName("verticalLayout_TriodeAHealth");
@@ -1895,7 +1890,7 @@ public:
 
         horizontalLayout_health->addWidget(Triode_A_Box);
 
-        Triode_B_Box = new QGroupBox(horizontalLayoutWidget);
+        Triode_B_Box = new QGroupBox(centralwidget);
         Triode_B_Box->setObjectName("Triode_B_Box");
         verticalLayout_TriodeBHealth = new QVBoxLayout(Triode_B_Box);
         verticalLayout_TriodeBHealth->setObjectName("verticalLayout_TriodeBHealth");

@@ -1,0 +1,37 @@
+* Pentode model
+
+* Default parameters are for an EF86
+.subckt pentode A G2 G1 K MU=31.9482 KG1=998.437 X=1.56336 KP=167.091 KVB=0.000248849 KVB1=19.8172 VCT=0.0
++                         KG2=5655.41 A=0.0 ALPHA=0.249777 BETA=0.0643662 GAMMA=0.798651
++                         KG2A=6709.55 TAU=0.434771 RHO=0.0547342 THETA=0.854024 PSI=4.91385
++                         OMEGA=270.473 LAMBDA=63.8964 NU=29.9968 S=0.307751 AP=0.00755009
++                         OS=-0.000344448
+
+R1 G1 K 1G
+R2 A  K 1G
+R3 G2 K 1G
+R4 1  K 1G
+R5 2  K 1G
+R6 3  K 1G
+R7 4  K 1G
+R8 D1 K 1G
+R9 D2 K 1G
+
+* Epk
+E1 1 K VALUE={V(G2,K)>0 ? pow(V(G2,K)*ln(1.0+exp(KP*(1.0/MU+(V(G1,K)+VCT)/sqrt(KVB+KVB1*V(G2,K)+V(G2,K)^2))))/KP,X) : 0}
+
+* G(Va)
+E5 D1 K VALUE={BETA*(1.0-ALPHA*V(G1,K))*V(A,K)}
+E2 2 K VALUE={V(D1,K)>0 ? exp(-1.0*pow(V(D1,K),GAMMA)) : 1}
+
+* H(Va)
+E6 D2 K VALUE={RHO*(1.0-TAU*V(G1,K))*V(A,K)}
+E3 3 K VALUE={V(D2,K)>0 ? exp(-1.0*pow(V(D2,K),THETA)) : 1}
+
+* Psec
+E4 4 K VALUE={S*V(A,K)*(1+tanh(-AP*(V(A,K)-(V(G2,K)/LAMBDA-NU*V(G1,K)-OMEGA))))}
+
+GA A K VALUE={V(A,K)>0 ? V(1,K)*((1/KG1-1/KG2)*(1-V(2,K))+A*V(A,K)/KG2-V(4,K)/KG2) : 0}
+GS G2 K VALUE={V(G2,K)>0 ? V(1,K)*(1+PSI*V(3,K)-A*V(A,K)+V(4,K))/KG2A : 0}
+
+.ends

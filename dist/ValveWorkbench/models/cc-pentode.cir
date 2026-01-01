@@ -1,0 +1,52 @@
+Test harness for biasing pentodes
+
+.include pentode.cir
+
+.param MU=31.9482
+.param KG1=998.437
+.param X=1.56336
+.param KP=167.091
+.param KVB=0.000248849
+.param KVB1=19.8172
+.param VCT=0.0
+
+.param KG2=5655.41
+.param A=0.0
+.param ALPHA=0.249777
+.param BETA=0.0643662
+.param GAMMA=0.798651
+
+.param KG2A=6709.55
+.param TAU=0.434771
+.param RHO=0.0547342
+.param THETA=0.854024
+.param PSI=4.91385
+
+.param OMEGA=270.473
+.param LAMBDA=63.8964
+.param NU=29.9968
+.param S=0.307751
+.param AP=0.00755009
+
+.param OS=-0.000344448
+
+.op
+
+VB 1 0 dc 250
+
+RG 2 0 1meg
+RK 3 8 680
+RA 1 4 100k
+RS 1 6 330k
+
+VM1 4 5 DC 0
+VM2 6 7 DC 0
+VM3 8 0 DC 0
+
+X1 5 7 2 3 pentode MU={MU} KG1={KG1} X={X} KP={KP} KVB={KVB} KVB1={KVB1} VCT={VCT}
++                  KG2={KG2} A={A} ALPHA={ALPHA} BETA={BETA} GAMMA={GAMMA}
++                  KG2A={KG2A} TAU={TAU} RHO={RHO} THETA={THETA} PSI={PSI}
++                  OMEGA={OMEGA} LAMBDA={LAMBDA} NU={NU} S={S} AP={AP}
++                  OS={OS}
+
+.end

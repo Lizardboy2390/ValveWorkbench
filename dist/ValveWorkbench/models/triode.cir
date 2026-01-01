@@ -1,0 +1,14 @@
+* Triode model
+
+* Default parameters are for a 12AX7
+.subckt triode A G1 K MU=112.986 KG1=463.667 X=1.24465 KP=848.497 KVB=0.191374 KVB1=72.2789 VCT=0.361821
+
+R1 G1 K 1G
+R2 A K 1G
+R3 1 K 1G
+
+EPK 1 K VALUE={pow(V(A,K)*ln(1.0+exp(KP*(1.0/MU+(V(G1,K)+VCT)/sqrt(KVB+KVB1*V(A,K)+V(A,K)^2))))/KP,X)}
+
+GA A K VALUE={V(1,K)/KG1}
+
+.ends

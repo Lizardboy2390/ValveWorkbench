@@ -170,7 +170,9 @@ double GardinerPentode::anodeCurrent(double va, double vg1, double vg2, bool sec
     double g = exp(-pow(shift * va, parameter[PAR_GAMMA]->getValue()));
     //double g = 1.0 / (1.0 + pow(shift * va, parameter[PAR_GAMMA]->getValue()));
     double scale = 1.0 - g;
-    double vco = v2_for_epk / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
+    const double lambdaRaw = parameter[PAR_LAMBDA]->getValue();
+    const double lambdaEff = std::max(lambdaRaw, 1e-6);
+    double vco = v2_for_epk / lambdaEff - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
     double psec = parameter[PAR_S]->getValue() * va * (1.0 + tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
     double ia = epk * (k * scale + parameter[PAR_A]->getValue() * va / parameter[PAR_KG2]->getValue()) + parameter[PAR_OS]->getValue() * v2_for_epk;
 
@@ -189,7 +191,9 @@ double GardinerPentode::screenCurrent(double va, double vg1, double vg2, bool se
     double epk = cohenHelieEpk(v2_for_epk, vg1);
     double shift = parameter[PAR_RHO]->getValue() * (1.0 - parameter[PAR_TAU]->getValue() * vg1);
     double h = exp(-pow(shift * va, parameter[PAR_THETA]->getValue() * 0.9));
-    double vco = v2_for_epk / parameter[PAR_LAMBDA]->getValue() - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
+    const double lambdaRaw = parameter[PAR_LAMBDA]->getValue();
+    const double lambdaEff = std::max(lambdaRaw, 1e-6);
+    double vco = v2_for_epk / lambdaEff - vg1 * parameter[PAR_NU]->getValue() - parameter[PAR_OMEGA]->getValue();
     double psec = parameter[PAR_S]->getValue() * va * (1.0 + tanh(-parameter[PAR_AP]->getValue() * (va - vco)));
     double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG2A]->getValue() - epk * parameter[PAR_A]->getValue() * va / parameter[PAR_KG2A]->getValue();
     //double ig2 = epk * (1.0 + parameter[PAR_PSI]->getValue() * h) / parameter[PAR_KG3]->getValue();
@@ -616,7 +620,7 @@ void GardinerPentode::setOptions()
         if (preferences->useSecondaryEmission()) {
             anodeProblem.SetParameterUpperBound(parameter[PAR_LAMBDA]->getPointer(), 0, 2.0 * parameter[PAR_MU]->getValue());
             anodeProblem.SetParameterLowerBound(parameter[PAR_OMEGA]->getPointer(), 0, 0.0);
-            anodeProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 0.0);
+            anodeProblem.SetParameterLowerBound(parameter[PAR_LAMBDA]->getPointer(), 0, 1.0);
             anodeProblem.SetParameterLowerBound(parameter[PAR_NU]->getPointer(), 0, 0.0);
             anodeProblem.SetParameterLowerBound(parameter[PAR_S]->getPointer(), 0, 0.0);
             anodeProblem.SetParameterLowerBound(parameter[PAR_AP]->getPointer(), 0, 0.0);

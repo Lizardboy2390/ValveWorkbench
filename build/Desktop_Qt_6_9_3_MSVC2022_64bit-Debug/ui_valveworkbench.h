@@ -49,10 +49,11 @@ public:
     QAction *actionClose_Project;
     QAction *actionOptions;
     QAction *actionExport_Model;
+    QAction *actionSave_as_Reference_Tube;
+    QAction *actionReset_Reference_Tube;
     QAction *actionExport_to_Spice;
     QAction *actionExport_SE_Output_to_Spice;
     QWidget *centralwidget;
-    QWidget *horizontalLayoutWidget;
     QHBoxLayout *horizontalLayout;
     QTabWidget *tabWidget;
     QWidget *tab;
@@ -116,9 +117,11 @@ public:
     QHBoxLayout *horizontalLayout_23;
     QLabel *cir16Label;
     QLineEdit *cir16Value;
+    QGroupBox *headroomWaveformGroupBox;
+    QVBoxLayout *verticalLayout_headroomWaveform;
+    QGraphicsView *headroomWaveformView;
     QSpacerItem *verticalSpacer;
     QWidget *tab_2;
-    QWidget *layoutWidget;
     QVBoxLayout *verticalLayout_4;
     QLabel *label_2;
     QTreeWidget *projectTree;
@@ -134,9 +137,9 @@ public:
     QTableWidget *properties;
     QSpacerItem *verticalSpacer_2;
     QHBoxLayout *horizontalLayout_3;
-    QSpacerItem *horizontalSpacer_10;
     QPushButton *fitTriodeButton;
     QPushButton *fitPentodeButton;
+    QPushButton *processModellingTestsButton;
     QPushButton *compareButton;
     QSpacerItem *horizontalSpacer_12;
     QWidget *tab_3;
@@ -202,7 +205,15 @@ public:
     QPushButton *runButton;
     QPushButton *quickHealthButton;
     QPushButton *fullHealthButton;
+    QPushButton *modellingTestsButton;
     QSpacerItem *horizontalSpacer_18;
+    QHBoxLayout *horizontalLayout_healthScores;
+    QSpacerItem *horizontalSpacer_healthScoresLeft;
+    QLabel *quickHealthDsLabel;
+    QLabel *quickHealthRefLabel;
+    QLabel *fullHealthDsLabel;
+    QLabel *fullHealthRefLabel;
+    QSpacerItem *horizontalSpacer_healthScoresRight;
     QSpacerItem *verticalSpacer_6;
     QProgressBar *progressBar;
     QSpacerItem *verticalSpacer_11;
@@ -217,20 +228,39 @@ public:
     QGridLayout *gridLayout_datasheet;
     QLabel *datasheetNameLabel;
     QLineEdit *datasheetRefName;
+    QLabel *datasheetRefCountLabel;
+    QLabel *datasheetRefCountValue;
+    QSpacerItem *verticalSpacer_datasheetRefGap;
     QLabel *datasheetSectionLabel;
     QLineEdit *datasheetSection;
+    QLabel *datasheetRefOpLabel;
     QLabel *datasheetVaLabel;
     QLineEdit *datasheetVa;
+    QLineEdit *datasheetVaRef;
     QLabel *datasheetVgLabel;
     QLineEdit *datasheetVg;
+    QLineEdit *datasheetVgRef;
+    QLabel *datasheetVg2Label;
+    QLineEdit *datasheetVg2;
+    QLineEdit *datasheetVg2Ref;
     QLabel *datasheetIaLabel;
     QLineEdit *datasheetIa;
+    QLineEdit *datasheetIaRef;
     QLabel *datasheetGmLabel;
     QLineEdit *datasheetGm;
+    QLineEdit *datasheetGmRef;
     QLabel *datasheetMuLabel;
     QLineEdit *datasheetMu;
+    QLineEdit *datasheetMuRef;
     QLabel *datasheetRpLabel;
     QLineEdit *datasheetRp;
+    QLineEdit *datasheetRpRef;
+    QLabel *datasheetIg2Label;
+    QLineEdit *datasheetIg2;
+    QLineEdit *datasheetIg2Ref;
+    QLabel *datasheetPg2Label;
+    QLineEdit *datasheetPg2;
+    QLineEdit *datasheetPg2Ref;
     QSpacerItem *horizontalSpacer_8;
     QSpacerItem *verticalSpacer_3;
     QSpacerItem *horizontalSpacer;
@@ -246,66 +276,68 @@ public:
     QCheckBox *modelCheck;
     QSpacerItem *horizontalSpacer_171;
     QCheckBox *designerCheck;
+    QSpacerItem *horizontalSpacer_6;
     QCheckBox *screenCheck;
     QSpacerItem *horizontalSpacer_15;
-    QSpacerItem *horizontalSpacer_6;
     QHBoxLayout *horizontalLayout_health;
+    QSpacerItem *horizontalSpacer_19;
     QGroupBox *Triode_A_Box;
     QVBoxLayout *verticalLayout_TriodeAHealth;
-    QHBoxLayout *horizontalLayout_TriodeAHeader;
+    QGridLayout *gridLayout_TriodeAHealth;
     QLabel *triodeAHeaderMetric;
     QLabel *triodeAHeaderValue1;
     QLabel *triodeAHeaderValue2;
     QLabel *triodeAHeaderCheck;
-    QGridLayout *gridLayout_TriodeAHealth;
-    QLabel *triodeA_row1Label;
-    QLineEdit *triodeA_row1Value1;
-    QLineEdit *triodeA_row1Value2;
-    QCheckBox *triodeA_row1Check;
-    QLabel *triodeA_row2Label;
-    QLineEdit *triodeA_row2Value1;
-    QLineEdit *triodeA_row2Value2;
-    QCheckBox *triodeA_row2Check;
-    QLabel *triodeA_row3Label;
-    QLineEdit *triodeA_row3Value1;
-    QLineEdit *triodeA_row3Value2;
-    QCheckBox *triodeA_row3Check;
-    QLabel *triodeA_row4Label;
-    QLineEdit *triodeA_row4Value1;
-    QLineEdit *triodeA_row4Value2;
-    QCheckBox *triodeA_row4Check;
-    QLabel *triodeA_row5Label;
-    QLineEdit *triodeA_row5Value1;
-    QLineEdit *triodeA_row5Value2;
-    QCheckBox *triodeA_row5Check;
+    QLabel *triodeAHeaderFourCornerPct;
+    QLabel *triodeA_Ia_label;
+    QLineEdit *triodeA_Ia_measured;
+    QLineEdit *triodeA_Ia_ref;
+    QLineEdit *triodeA_Ia_pct;
+    QLineEdit *triodeA_corner1_pct;
+    QLabel *triodeA_rp_label;
+    QLineEdit *triodeA_rp_measured;
+    QLineEdit *triodeA_rp_ref;
+    QLineEdit *triodeA_rp_pct;
+    QLineEdit *triodeA_corner2_pct;
+    QLabel *triodeA_gm_label;
+    QLineEdit *triodeA_gm_measured;
+    QLineEdit *triodeA_gm_ref;
+    QLineEdit *triodeA_gm_pct;
+    QLineEdit *triodeA_corner3_pct;
+    QLabel *triodeA_mu_label;
+    QLineEdit *triodeA_mu_measured;
+    QLineEdit *triodeA_mu_ref;
+    QLineEdit *triodeA_mu_pct;
+    QLineEdit *triodeA_corner4_pct;
     QGroupBox *Triode_B_Box;
     QVBoxLayout *verticalLayout_TriodeBHealth;
-    QHBoxLayout *horizontalLayout_TriodeBHeader;
+    QGridLayout *gridLayout_TriodeBHealth;
     QLabel *triodeBHeaderMetric;
     QLabel *triodeBHeaderValue1;
     QLabel *triodeBHeaderValue2;
     QLabel *triodeBHeaderCheck;
-    QGridLayout *gridLayout_TriodeBHealth;
-    QLabel *triodeB_row1Label;
-    QLineEdit *triodeB_row1Value1;
-    QLineEdit *triodeB_row1Value2;
-    QCheckBox *triodeB_row1Check;
-    QLabel *triodeB_row2Label;
-    QLineEdit *triodeB_row2Value1;
-    QLineEdit *triodeB_row2Value2;
-    QCheckBox *triodeB_row2Check;
-    QLabel *triodeB_row3Label;
-    QLineEdit *triodeB_row3Value1;
-    QLineEdit *triodeB_row3Value2;
-    QCheckBox *triodeB_row3Check;
-    QLabel *triodeB_row4Label;
-    QLineEdit *triodeB_row4Value1;
-    QLineEdit *triodeB_row4Value2;
-    QCheckBox *triodeB_row4Check;
-    QLabel *triodeB_row5Label;
-    QLineEdit *triodeB_row5Value1;
-    QLineEdit *triodeB_row5Value2;
-    QCheckBox *triodeB_row5Check;
+    QLabel *triodeBHeaderFourCornerPct;
+    QLabel *triodeB_Ia_label;
+    QLineEdit *triodeB_Ia_measured;
+    QLineEdit *triodeB_Ia_ref;
+    QLineEdit *triodeB_Ia_pct;
+    QLineEdit *triodeB_corner1_pct;
+    QLabel *triodeB_rp_label;
+    QLineEdit *triodeB_rp_measured;
+    QLineEdit *triodeB_rp_ref;
+    QLineEdit *triodeB_rp_pct;
+    QLineEdit *triodeB_corner2_pct;
+    QLabel *triodeB_gm_label;
+    QLineEdit *triodeB_gm_measured;
+    QLineEdit *triodeB_gm_ref;
+    QLineEdit *triodeB_gm_pct;
+    QLineEdit *triodeB_corner3_pct;
+    QLabel *triodeB_mu_label;
+    QLineEdit *triodeB_mu_measured;
+    QLineEdit *triodeB_mu_ref;
+    QLineEdit *triodeB_mu_pct;
+    QLineEdit *triodeB_corner4_pct;
+    QSpacerItem *horizontalSpacer_11;
     QSpacerItem *horizontalSpacer_2;
     QMenuBar *menubar;
     QMenu *menuFile;
@@ -316,7 +348,7 @@ public:
     {
         if (ValveWorkbench->objectName().isEmpty())
             ValveWorkbench->setObjectName("ValveWorkbench");
-        ValveWorkbench->resize(1229, 1080);
+        ValveWorkbench->resize(1305, 900);
         actionLoad_Model = new QAction(ValveWorkbench);
         actionLoad_Model->setObjectName("actionLoad_Model");
         actionExit = new QAction(ValveWorkbench);
@@ -335,21 +367,21 @@ public:
         actionOptions->setObjectName("actionOptions");
         actionExport_Model = new QAction(ValveWorkbench);
         actionExport_Model->setObjectName("actionExport_Model");
+        actionSave_as_Reference_Tube = new QAction(ValveWorkbench);
+        actionSave_as_Reference_Tube->setObjectName("actionSave_as_Reference_Tube");
+        actionReset_Reference_Tube = new QAction(ValveWorkbench);
+        actionReset_Reference_Tube->setObjectName("actionReset_Reference_Tube");
         actionExport_to_Spice = new QAction(ValveWorkbench);
         actionExport_to_Spice->setObjectName("actionExport_to_Spice");
         actionExport_SE_Output_to_Spice = new QAction(ValveWorkbench);
         actionExport_SE_Output_to_Spice->setObjectName("actionExport_SE_Output_to_Spice");
         centralwidget = new QWidget(ValveWorkbench);
         centralwidget->setObjectName("centralwidget");
-        horizontalLayoutWidget = new QWidget(centralwidget);
-        horizontalLayoutWidget->setObjectName("horizontalLayoutWidget");
-        horizontalLayoutWidget->setGeometry(QRect(26, 9, 1221, 1011));
-        horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
+        horizontalLayout = new QHBoxLayout(centralwidget);
         horizontalLayout->setObjectName("horizontalLayout");
-        horizontalLayout->setContentsMargins(0, 0, 0, 0);
-        tabWidget = new QTabWidget(horizontalLayoutWidget);
+        tabWidget = new QTabWidget(centralwidget);
         tabWidget->setObjectName("tabWidget");
-        QSizePolicy sizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Expanding);
+        QSizePolicy sizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(tabWidget->sizePolicy().hasHeightForWidth());
@@ -375,13 +407,15 @@ public:
 
         circuitSelection = new QComboBox(tab);
         circuitSelection->setObjectName("circuitSelection");
-        QSizePolicy sizePolicy2(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+        QSizePolicy sizePolicy2(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Fixed);
         sizePolicy2.setHorizontalStretch(0);
         sizePolicy2.setVerticalStretch(0);
         sizePolicy2.setHeightForWidth(circuitSelection->sizePolicy().hasHeightForWidth());
         circuitSelection->setSizePolicy(sizePolicy2);
-        circuitSelection->setMinimumSize(QSize(160, 0));
-        circuitSelection->setMaximumSize(QSize(160, 16777215));
+        circuitSelection->setMinimumSize(QSize(300, 0));
+        circuitSelection->setMaximumSize(QSize(16777215, 16777215));
+        circuitSelection->setMinimumContentsLength(30);
+        circuitSelection->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
 
         horizontalLayout_4->addWidget(circuitSelection);
 
@@ -397,8 +431,11 @@ public:
 
         stdDeviceSelection = new QComboBox(tab);
         stdDeviceSelection->setObjectName("stdDeviceSelection");
-        sizePolicy2.setHeightForWidth(stdDeviceSelection->sizePolicy().hasHeightForWidth());
-        stdDeviceSelection->setSizePolicy(sizePolicy2);
+        QSizePolicy sizePolicy3(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
+        sizePolicy3.setHorizontalStretch(0);
+        sizePolicy3.setVerticalStretch(0);
+        sizePolicy3.setHeightForWidth(stdDeviceSelection->sizePolicy().hasHeightForWidth());
+        stdDeviceSelection->setSizePolicy(sizePolicy3);
         stdDeviceSelection->setMinimumSize(QSize(160, 0));
         stdDeviceSelection->setMaximumSize(QSize(160, 16777215));
 
@@ -416,7 +453,10 @@ public:
 
         stdDeviceSelection2 = new QComboBox(tab);
         stdDeviceSelection2->setObjectName("stdDeviceSelection2");
+        sizePolicy3.setHeightForWidth(stdDeviceSelection2->sizePolicy().hasHeightForWidth());
+        stdDeviceSelection2->setSizePolicy(sizePolicy3);
         stdDeviceSelection2->setMinimumSize(QSize(160, 0));
+        stdDeviceSelection2->setMaximumSize(QSize(160, 16777215));
 
         horizontalLayout_17->addWidget(stdDeviceSelection2);
 
@@ -444,8 +484,8 @@ public:
 
         cir1Value = new QLineEdit(tab);
         cir1Value->setObjectName("cir1Value");
-        sizePolicy2.setHeightForWidth(cir1Value->sizePolicy().hasHeightForWidth());
-        cir1Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir1Value->sizePolicy().hasHeightForWidth());
+        cir1Value->setSizePolicy(sizePolicy3);
         cir1Value->setMinimumSize(QSize(60, 0));
         cir1Value->setMaximumSize(QSize(60, 16777215));
 
@@ -463,8 +503,8 @@ public:
 
         cir2Value = new QLineEdit(tab);
         cir2Value->setObjectName("cir2Value");
-        sizePolicy2.setHeightForWidth(cir2Value->sizePolicy().hasHeightForWidth());
-        cir2Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir2Value->sizePolicy().hasHeightForWidth());
+        cir2Value->setSizePolicy(sizePolicy3);
         cir2Value->setMinimumSize(QSize(60, 0));
         cir2Value->setMaximumSize(QSize(60, 16777215));
 
@@ -482,8 +522,8 @@ public:
 
         cir3Value = new QLineEdit(tab);
         cir3Value->setObjectName("cir3Value");
-        sizePolicy2.setHeightForWidth(cir3Value->sizePolicy().hasHeightForWidth());
-        cir3Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir3Value->sizePolicy().hasHeightForWidth());
+        cir3Value->setSizePolicy(sizePolicy3);
         cir3Value->setMinimumSize(QSize(60, 0));
         cir3Value->setMaximumSize(QSize(60, 16777215));
 
@@ -501,8 +541,8 @@ public:
 
         cir4Value = new QLineEdit(tab);
         cir4Value->setObjectName("cir4Value");
-        sizePolicy2.setHeightForWidth(cir4Value->sizePolicy().hasHeightForWidth());
-        cir4Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir4Value->sizePolicy().hasHeightForWidth());
+        cir4Value->setSizePolicy(sizePolicy3);
         cir4Value->setMinimumSize(QSize(60, 0));
         cir4Value->setMaximumSize(QSize(60, 16777215));
 
@@ -520,8 +560,8 @@ public:
 
         cir5Value = new QLineEdit(tab);
         cir5Value->setObjectName("cir5Value");
-        sizePolicy2.setHeightForWidth(cir5Value->sizePolicy().hasHeightForWidth());
-        cir5Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir5Value->sizePolicy().hasHeightForWidth());
+        cir5Value->setSizePolicy(sizePolicy3);
         cir5Value->setMinimumSize(QSize(60, 0));
         cir5Value->setMaximumSize(QSize(60, 16777215));
 
@@ -539,8 +579,8 @@ public:
 
         cir6Value = new QLineEdit(tab);
         cir6Value->setObjectName("cir6Value");
-        sizePolicy2.setHeightForWidth(cir6Value->sizePolicy().hasHeightForWidth());
-        cir6Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir6Value->sizePolicy().hasHeightForWidth());
+        cir6Value->setSizePolicy(sizePolicy3);
         cir6Value->setMinimumSize(QSize(60, 0));
         cir6Value->setMaximumSize(QSize(60, 16777215));
 
@@ -558,8 +598,8 @@ public:
 
         cir7Value = new QLineEdit(tab);
         cir7Value->setObjectName("cir7Value");
-        sizePolicy2.setHeightForWidth(cir7Value->sizePolicy().hasHeightForWidth());
-        cir7Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir7Value->sizePolicy().hasHeightForWidth());
+        cir7Value->setSizePolicy(sizePolicy3);
         cir7Value->setMinimumSize(QSize(60, 0));
         cir7Value->setMaximumSize(QSize(60, 16777215));
 
@@ -572,18 +612,18 @@ public:
         horizontalLayout_11->setObjectName("horizontalLayout_11");
         cir8Label = new QLabel(tab);
         cir8Label->setObjectName("cir8Label");
-        QSizePolicy sizePolicy3(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
-        sizePolicy3.setHorizontalStretch(0);
-        sizePolicy3.setVerticalStretch(0);
-        sizePolicy3.setHeightForWidth(cir8Label->sizePolicy().hasHeightForWidth());
-        cir8Label->setSizePolicy(sizePolicy3);
+        QSizePolicy sizePolicy4(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
+        sizePolicy4.setHorizontalStretch(0);
+        sizePolicy4.setVerticalStretch(0);
+        sizePolicy4.setHeightForWidth(cir8Label->sizePolicy().hasHeightForWidth());
+        cir8Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_11->addWidget(cir8Label);
 
         cir8Value = new QLineEdit(tab);
         cir8Value->setObjectName("cir8Value");
-        sizePolicy2.setHeightForWidth(cir8Value->sizePolicy().hasHeightForWidth());
-        cir8Value->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(cir8Value->sizePolicy().hasHeightForWidth());
+        cir8Value->setSizePolicy(sizePolicy3);
         cir8Value->setMinimumSize(QSize(60, 0));
         cir8Value->setMaximumSize(QSize(60, 16777215));
 
@@ -596,8 +636,8 @@ public:
         horizontalLayout_14->setObjectName("horizontalLayout_14");
         cir9Label = new QLabel(tab);
         cir9Label->setObjectName("cir9Label");
-        sizePolicy3.setHeightForWidth(cir9Label->sizePolicy().hasHeightForWidth());
-        cir9Label->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(cir9Label->sizePolicy().hasHeightForWidth());
+        cir9Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_14->addWidget(cir9Label);
 
@@ -614,8 +654,8 @@ public:
         horizontalLayout_15->setObjectName("horizontalLayout_15");
         cir10Label = new QLabel(tab);
         cir10Label->setObjectName("cir10Label");
-        sizePolicy3.setHeightForWidth(cir10Label->sizePolicy().hasHeightForWidth());
-        cir10Label->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(cir10Label->sizePolicy().hasHeightForWidth());
+        cir10Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_15->addWidget(cir10Label);
 
@@ -632,8 +672,8 @@ public:
         horizontalLayout_18->setObjectName("horizontalLayout_18");
         cir11Label = new QLabel(tab);
         cir11Label->setObjectName("cir11Label");
-        sizePolicy3.setHeightForWidth(cir11Label->sizePolicy().hasHeightForWidth());
-        cir11Label->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(cir11Label->sizePolicy().hasHeightForWidth());
+        cir11Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_18->addWidget(cir11Label);
 
@@ -650,8 +690,8 @@ public:
         horizontalLayout_19->setObjectName("horizontalLayout_19");
         cir12Label = new QLabel(tab);
         cir12Label->setObjectName("cir12Label");
-        sizePolicy3.setHeightForWidth(cir12Label->sizePolicy().hasHeightForWidth());
-        cir12Label->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(cir12Label->sizePolicy().hasHeightForWidth());
+        cir12Label->setSizePolicy(sizePolicy4);
 
         horizontalLayout_19->addWidget(cir12Label);
 
@@ -728,6 +768,20 @@ public:
 
         verticalLayout->addLayout(horizontalLayout_23);
 
+        headroomWaveformGroupBox = new QGroupBox(tab);
+        headroomWaveformGroupBox->setObjectName("headroomWaveformGroupBox");
+        verticalLayout_headroomWaveform = new QVBoxLayout(headroomWaveformGroupBox);
+        verticalLayout_headroomWaveform->setObjectName("verticalLayout_headroomWaveform");
+        headroomWaveformView = new QGraphicsView(headroomWaveformGroupBox);
+        headroomWaveformView->setObjectName("headroomWaveformView");
+        headroomWaveformView->setMinimumSize(QSize(0, 80));
+        headroomWaveformView->setMaximumSize(QSize(16777215, 120));
+
+        verticalLayout_headroomWaveform->addWidget(headroomWaveformView);
+
+
+        verticalLayout->addWidget(headroomWaveformGroupBox);
+
         verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Expanding);
 
         verticalLayout->addItem(verticalSpacer);
@@ -735,18 +789,14 @@ public:
         tabWidget->addTab(tab, QString());
         tab_2 = new QWidget();
         tab_2->setObjectName("tab_2");
-        layoutWidget = new QWidget(tab_2);
-        layoutWidget->setObjectName("layoutWidget");
-        layoutWidget->setGeometry(QRect(10, 0, 337, 670));
-        verticalLayout_4 = new QVBoxLayout(layoutWidget);
+        verticalLayout_4 = new QVBoxLayout(tab_2);
         verticalLayout_4->setObjectName("verticalLayout_4");
-        verticalLayout_4->setContentsMargins(0, 0, 0, 0);
-        label_2 = new QLabel(layoutWidget);
+        label_2 = new QLabel(tab_2);
         label_2->setObjectName("label_2");
 
         verticalLayout_4->addWidget(label_2);
 
-        projectTree = new QTreeWidget(layoutWidget);
+        projectTree = new QTreeWidget(tab_2);
         QTreeWidgetItem *__qtreewidgetitem = new QTreeWidgetItem();
         __qtreewidgetitem->setText(0, QString::fromUtf8("1"));
         projectTree->setHeaderItem(__qtreewidgetitem);
@@ -758,7 +808,7 @@ public:
 
         verticalLayout_4->addWidget(projectTree);
 
-        groupBox = new QGroupBox(layoutWidget);
+        groupBox = new QGroupBox(tab_2);
         groupBox->setObjectName("groupBox");
         groupBox->setEnabled(true);
         groupBox->setMinimumSize(QSize(40, 100));
@@ -795,16 +845,16 @@ public:
 
         verticalLayout_4->addWidget(groupBox);
 
-        label = new QLabel(layoutWidget);
+        label = new QLabel(tab_2);
         label->setObjectName("label");
 
         verticalLayout_4->addWidget(label);
 
-        properties = new QTableWidget(layoutWidget);
+        properties = new QTableWidget(tab_2);
         if (properties->columnCount() < 2)
             properties->setColumnCount(2);
-        if (properties->rowCount() < 15)
-            properties->setRowCount(15);
+        if (properties->rowCount() < 14)
+            properties->setRowCount(14);
         properties->setObjectName("properties");
         properties->setMinimumSize(QSize(0, 212));
         properties->setRowCount(15);
@@ -824,23 +874,24 @@ public:
 
         horizontalLayout_3 = new QHBoxLayout();
         horizontalLayout_3->setObjectName("horizontalLayout_3");
-        horizontalSpacer_10 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        horizontalLayout_3->addItem(horizontalSpacer_10);
-
-        fitTriodeButton = new QPushButton(layoutWidget);
+        fitTriodeButton = new QPushButton(tab_2);
         fitTriodeButton->setObjectName("fitTriodeButton");
         fitTriodeButton->setEnabled(true);
 
         horizontalLayout_3->addWidget(fitTriodeButton);
 
-        fitPentodeButton = new QPushButton(layoutWidget);
+        fitPentodeButton = new QPushButton(tab_2);
         fitPentodeButton->setObjectName("fitPentodeButton");
         fitPentodeButton->setEnabled(true);
 
         horizontalLayout_3->addWidget(fitPentodeButton);
 
-        compareButton = new QPushButton(layoutWidget);
+        processModellingTestsButton = new QPushButton(tab_2);
+        processModellingTestsButton->setObjectName("processModellingTestsButton");
+
+        horizontalLayout_3->addWidget(processModellingTestsButton);
+
+        compareButton = new QPushButton(tab_2);
         compareButton->setObjectName("compareButton");
 
         horizontalLayout_3->addWidget(compareButton);
@@ -857,7 +908,7 @@ public:
         tab_3->setObjectName("tab_3");
         layoutWidget_2 = new QWidget(tab_3);
         layoutWidget_2->setObjectName("layoutWidget_2");
-        layoutWidget_2->setGeometry(QRect(20, 10, 332, 1026));
+        layoutWidget_2->setGeometry(QRect(20, 10, 332, 1066));
         verticalLayout_6 = new QVBoxLayout(layoutWidget_2);
         verticalLayout_6->setObjectName("verticalLayout_6");
         verticalLayout_6->setContentsMargins(0, 0, 0, 0);
@@ -897,16 +948,16 @@ public:
         horizontalLayout_26->setObjectName("horizontalLayout_26");
         deviceTypeLabel_2 = new QLabel(layoutWidget_2);
         deviceTypeLabel_2->setObjectName("deviceTypeLabel_2");
-        sizePolicy3.setHeightForWidth(deviceTypeLabel_2->sizePolicy().hasHeightForWidth());
-        deviceTypeLabel_2->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(deviceTypeLabel_2->sizePolicy().hasHeightForWidth());
+        deviceTypeLabel_2->setSizePolicy(sizePolicy4);
         deviceTypeLabel_2->setMinimumSize(QSize(100, 0));
 
         horizontalLayout_26->addWidget(deviceTypeLabel_2);
 
         deviceType = new QComboBox(layoutWidget_2);
         deviceType->setObjectName("deviceType");
-        sizePolicy2.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
-        deviceType->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(deviceType->sizePolicy().hasHeightForWidth());
+        deviceType->setSizePolicy(sizePolicy3);
         deviceType->setMinimumSize(QSize(160, 0));
         deviceType->setMaximumSize(QSize(160, 16777215));
 
@@ -924,8 +975,8 @@ public:
 
         testType = new QComboBox(layoutWidget_2);
         testType->setObjectName("testType");
-        sizePolicy2.setHeightForWidth(testType->sizePolicy().hasHeightForWidth());
-        testType->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(testType->sizePolicy().hasHeightForWidth());
+        testType->setSizePolicy(sizePolicy3);
         testType->setMinimumSize(QSize(160, 0));
         testType->setMaximumSize(QSize(160, 16777215));
 
@@ -951,8 +1002,8 @@ public:
 
         label_15 = new QLabel(layoutWidget_2);
         label_15->setObjectName("label_15");
-        sizePolicy2.setHeightForWidth(label_15->sizePolicy().hasHeightForWidth());
-        label_15->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(label_15->sizePolicy().hasHeightForWidth());
+        label_15->setSizePolicy(sizePolicy3);
         label_15->setMinimumSize(QSize(50, 20));
         label_15->setMaximumSize(QSize(50, 20));
         label_15->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -961,11 +1012,11 @@ public:
 
         label_16 = new QLabel(layoutWidget_2);
         label_16->setObjectName("label_16");
-        QSizePolicy sizePolicy4(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Preferred);
-        sizePolicy4.setHorizontalStretch(0);
-        sizePolicy4.setVerticalStretch(0);
-        sizePolicy4.setHeightForWidth(label_16->sizePolicy().hasHeightForWidth());
-        label_16->setSizePolicy(sizePolicy4);
+        QSizePolicy sizePolicy5(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Preferred);
+        sizePolicy5.setHorizontalStretch(0);
+        sizePolicy5.setVerticalStretch(0);
+        sizePolicy5.setHeightForWidth(label_16->sizePolicy().hasHeightForWidth());
+        label_16->setSizePolicy(sizePolicy5);
         label_16->setMinimumSize(QSize(50, 0));
         label_16->setMaximumSize(QSize(50, 16777215));
         label_16->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -974,8 +1025,8 @@ public:
 
         label_17 = new QLabel(layoutWidget_2);
         label_17->setObjectName("label_17");
-        sizePolicy4.setHeightForWidth(label_17->sizePolicy().hasHeightForWidth());
-        label_17->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(label_17->sizePolicy().hasHeightForWidth());
+        label_17->setSizePolicy(sizePolicy5);
         label_17->setMinimumSize(QSize(50, 0));
         label_17->setMaximumSize(QSize(50, 16777215));
         label_17->setAlignment(Qt::AlignmentFlag::AlignCenter);
@@ -989,19 +1040,19 @@ public:
         horizontalLayout_30->setObjectName("horizontalLayout_30");
         anodeLabel = new QLabel(layoutWidget_2);
         anodeLabel->setObjectName("anodeLabel");
-        QSizePolicy sizePolicy5(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
-        sizePolicy5.setHorizontalStretch(100);
-        sizePolicy5.setVerticalStretch(0);
-        sizePolicy5.setHeightForWidth(anodeLabel->sizePolicy().hasHeightForWidth());
-        anodeLabel->setSizePolicy(sizePolicy5);
+        QSizePolicy sizePolicy6(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
+        sizePolicy6.setHorizontalStretch(100);
+        sizePolicy6.setVerticalStretch(0);
+        sizePolicy6.setHeightForWidth(anodeLabel->sizePolicy().hasHeightForWidth());
+        anodeLabel->setSizePolicy(sizePolicy6);
         anodeLabel->setMinimumSize(QSize(100, 0));
 
         horizontalLayout_30->addWidget(anodeLabel);
 
         anodeStart = new QLineEdit(layoutWidget_2);
         anodeStart->setObjectName("anodeStart");
-        sizePolicy2.setHeightForWidth(anodeStart->sizePolicy().hasHeightForWidth());
-        anodeStart->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(anodeStart->sizePolicy().hasHeightForWidth());
+        anodeStart->setSizePolicy(sizePolicy3);
         anodeStart->setMinimumSize(QSize(50, 0));
         anodeStart->setMaximumSize(QSize(50, 16777215));
 
@@ -1009,16 +1060,16 @@ public:
 
         anodeStop = new QLineEdit(layoutWidget_2);
         anodeStop->setObjectName("anodeStop");
-        sizePolicy2.setHeightForWidth(anodeStop->sizePolicy().hasHeightForWidth());
-        anodeStop->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(anodeStop->sizePolicy().hasHeightForWidth());
+        anodeStop->setSizePolicy(sizePolicy3);
         anodeStop->setMaximumSize(QSize(50, 16777215));
 
         horizontalLayout_30->addWidget(anodeStop);
 
         anodeStep = new QLineEdit(layoutWidget_2);
         anodeStep->setObjectName("anodeStep");
-        sizePolicy2.setHeightForWidth(anodeStep->sizePolicy().hasHeightForWidth());
-        anodeStep->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(anodeStep->sizePolicy().hasHeightForWidth());
+        anodeStep->setSizePolicy(sizePolicy3);
         anodeStep->setMaximumSize(QSize(50, 16777215));
 
         horizontalLayout_30->addWidget(anodeStep);
@@ -1030,16 +1081,16 @@ public:
         gridGroup->setObjectName("gridGroup");
         gridLabel = new QLabel(layoutWidget_2);
         gridLabel->setObjectName("gridLabel");
-        sizePolicy3.setHeightForWidth(gridLabel->sizePolicy().hasHeightForWidth());
-        gridLabel->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(gridLabel->sizePolicy().hasHeightForWidth());
+        gridLabel->setSizePolicy(sizePolicy4);
         gridLabel->setMinimumSize(QSize(100, 0));
 
         gridGroup->addWidget(gridLabel);
 
         gridStart = new QLineEdit(layoutWidget_2);
         gridStart->setObjectName("gridStart");
-        sizePolicy2.setHeightForWidth(gridStart->sizePolicy().hasHeightForWidth());
-        gridStart->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(gridStart->sizePolicy().hasHeightForWidth());
+        gridStart->setSizePolicy(sizePolicy3);
         gridStart->setMinimumSize(QSize(50, 0));
         gridStart->setMaximumSize(QSize(50, 16777215));
 
@@ -1047,8 +1098,8 @@ public:
 
         gridStop = new QLineEdit(layoutWidget_2);
         gridStop->setObjectName("gridStop");
-        sizePolicy2.setHeightForWidth(gridStop->sizePolicy().hasHeightForWidth());
-        gridStop->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(gridStop->sizePolicy().hasHeightForWidth());
+        gridStop->setSizePolicy(sizePolicy3);
         gridStop->setMinimumSize(QSize(50, 0));
         gridStop->setMaximumSize(QSize(50, 16777215));
 
@@ -1056,8 +1107,8 @@ public:
 
         gridStep = new QLineEdit(layoutWidget_2);
         gridStep->setObjectName("gridStep");
-        sizePolicy2.setHeightForWidth(gridStep->sizePolicy().hasHeightForWidth());
-        gridStep->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(gridStep->sizePolicy().hasHeightForWidth());
+        gridStep->setSizePolicy(sizePolicy3);
         gridStep->setMinimumSize(QSize(50, 0));
         gridStep->setMaximumSize(QSize(50, 16777215));
 
@@ -1070,16 +1121,16 @@ public:
         screenGroup_2->setObjectName("screenGroup_2");
         screenLabel = new QLabel(layoutWidget_2);
         screenLabel->setObjectName("screenLabel");
-        sizePolicy3.setHeightForWidth(screenLabel->sizePolicy().hasHeightForWidth());
-        screenLabel->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(screenLabel->sizePolicy().hasHeightForWidth());
+        screenLabel->setSizePolicy(sizePolicy4);
         screenLabel->setMinimumSize(QSize(100, 0));
 
         screenGroup_2->addWidget(screenLabel);
 
         screenStart = new QLineEdit(layoutWidget_2);
         screenStart->setObjectName("screenStart");
-        sizePolicy2.setHeightForWidth(screenStart->sizePolicy().hasHeightForWidth());
-        screenStart->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(screenStart->sizePolicy().hasHeightForWidth());
+        screenStart->setSizePolicy(sizePolicy3);
         screenStart->setMinimumSize(QSize(50, 0));
         screenStart->setMaximumSize(QSize(50, 16777215));
 
@@ -1087,8 +1138,8 @@ public:
 
         screenStop = new QLineEdit(layoutWidget_2);
         screenStop->setObjectName("screenStop");
-        sizePolicy2.setHeightForWidth(screenStop->sizePolicy().hasHeightForWidth());
-        screenStop->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(screenStop->sizePolicy().hasHeightForWidth());
+        screenStop->setSizePolicy(sizePolicy3);
         screenStop->setMinimumSize(QSize(50, 0));
         screenStop->setMaximumSize(QSize(50, 16777215));
 
@@ -1096,8 +1147,8 @@ public:
 
         screenStep = new QLineEdit(layoutWidget_2);
         screenStep->setObjectName("screenStep");
-        sizePolicy2.setHeightForWidth(screenStep->sizePolicy().hasHeightForWidth());
-        screenStep->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(screenStep->sizePolicy().hasHeightForWidth());
+        screenStep->setSizePolicy(sizePolicy3);
         screenStep->setMinimumSize(QSize(50, 0));
         screenStep->setMaximumSize(QSize(50, 16777215));
 
@@ -1112,8 +1163,8 @@ public:
         horizontalLayout_31->setObjectName("horizontalLayout_31");
         label_18 = new QLabel(layoutWidget_2);
         label_18->setObjectName("label_18");
-        sizePolicy3.setHeightForWidth(label_18->sizePolicy().hasHeightForWidth());
-        label_18->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(label_18->sizePolicy().hasHeightForWidth());
+        label_18->setSizePolicy(sizePolicy4);
         label_18->setMinimumSize(QSize(120, 0));
         label_18->setMaximumSize(QSize(16777215, 16777215));
 
@@ -1121,8 +1172,8 @@ public:
 
         iaMax = new QLineEdit(layoutWidget_2);
         iaMax->setObjectName("iaMax");
-        sizePolicy2.setHeightForWidth(iaMax->sizePolicy().hasHeightForWidth());
-        iaMax->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(iaMax->sizePolicy().hasHeightForWidth());
+        iaMax->setSizePolicy(sizePolicy3);
         iaMax->setMinimumSize(QSize(50, 0));
         iaMax->setMaximumSize(QSize(50, 16777215));
 
@@ -1139,8 +1190,8 @@ public:
         horizontalLayout_32->setObjectName("horizontalLayout_32");
         label_19 = new QLabel(layoutWidget_2);
         label_19->setObjectName("label_19");
-        sizePolicy3.setHeightForWidth(label_19->sizePolicy().hasHeightForWidth());
-        label_19->setSizePolicy(sizePolicy3);
+        sizePolicy4.setHeightForWidth(label_19->sizePolicy().hasHeightForWidth());
+        label_19->setSizePolicy(sizePolicy4);
         label_19->setMinimumSize(QSize(120, 0));
         label_19->setMaximumSize(QSize(16777215, 16777215));
 
@@ -1148,8 +1199,8 @@ public:
 
         pMax = new QLineEdit(layoutWidget_2);
         pMax->setObjectName("pMax");
-        sizePolicy2.setHeightForWidth(pMax->sizePolicy().hasHeightForWidth());
-        pMax->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(pMax->sizePolicy().hasHeightForWidth());
+        pMax->setSizePolicy(sizePolicy3);
         pMax->setMinimumSize(QSize(50, 0));
         pMax->setMaximumSize(QSize(50, 16777215));
 
@@ -1178,8 +1229,8 @@ public:
         horizontalLayout_33->setObjectName("horizontalLayout_33");
         heaterVLabel = new QLabel(layoutWidget_2);
         heaterVLabel->setObjectName("heaterVLabel");
-        sizePolicy4.setHeightForWidth(heaterVLabel->sizePolicy().hasHeightForWidth());
-        heaterVLabel->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(heaterVLabel->sizePolicy().hasHeightForWidth());
+        heaterVLabel->setSizePolicy(sizePolicy5);
         heaterVLabel->setMinimumSize(QSize(100, 0));
 
         horizontalLayout_33->addWidget(heaterVLabel);
@@ -1190,11 +1241,11 @@ public:
 
         heaterVlcd = new QLCDNumber(layoutWidget_2);
         heaterVlcd->setObjectName("heaterVlcd");
-        QSizePolicy sizePolicy6(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Minimum);
-        sizePolicy6.setHorizontalStretch(0);
-        sizePolicy6.setVerticalStretch(0);
-        sizePolicy6.setHeightForWidth(heaterVlcd->sizePolicy().hasHeightForWidth());
-        heaterVlcd->setSizePolicy(sizePolicy6);
+        QSizePolicy sizePolicy7(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Minimum);
+        sizePolicy7.setHorizontalStretch(0);
+        sizePolicy7.setVerticalStretch(0);
+        sizePolicy7.setHeightForWidth(heaterVlcd->sizePolicy().hasHeightForWidth());
+        heaterVlcd->setSizePolicy(sizePolicy7);
         heaterVlcd->setMinimumSize(QSize(50, 0));
         heaterVlcd->setDigitCount(6);
         heaterVlcd->setSegmentStyle(QLCDNumber::SegmentStyle::Flat);
@@ -1212,8 +1263,8 @@ public:
         horizontalLayout_34->setObjectName("horizontalLayout_34");
         heaterILabel = new QLabel(layoutWidget_2);
         heaterILabel->setObjectName("heaterILabel");
-        sizePolicy4.setHeightForWidth(heaterILabel->sizePolicy().hasHeightForWidth());
-        heaterILabel->setSizePolicy(sizePolicy4);
+        sizePolicy5.setHeightForWidth(heaterILabel->sizePolicy().hasHeightForWidth());
+        heaterILabel->setSizePolicy(sizePolicy5);
         heaterILabel->setMinimumSize(QSize(100, 0));
 
         horizontalLayout_34->addWidget(heaterILabel);
@@ -1224,8 +1275,8 @@ public:
 
         heaterIlcd = new QLCDNumber(layoutWidget_2);
         heaterIlcd->setObjectName("heaterIlcd");
-        sizePolicy6.setHeightForWidth(heaterIlcd->sizePolicy().hasHeightForWidth());
-        heaterIlcd->setSizePolicy(sizePolicy6);
+        sizePolicy7.setHeightForWidth(heaterIlcd->sizePolicy().hasHeightForWidth());
+        heaterIlcd->setSizePolicy(sizePolicy7);
         heaterIlcd->setMinimumSize(QSize(50, 0));
         heaterIlcd->setLineWidth(1);
         heaterIlcd->setDigitCount(6);
@@ -1262,12 +1313,50 @@ public:
 
         horizontalLayout_35->addWidget(fullHealthButton);
 
+        modellingTestsButton = new QPushButton(layoutWidget_2);
+        modellingTestsButton->setObjectName("modellingTestsButton");
+
+        horizontalLayout_35->addWidget(modellingTestsButton);
+
         horizontalSpacer_18 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
 
         horizontalLayout_35->addItem(horizontalSpacer_18);
 
 
         verticalLayout_6->addLayout(horizontalLayout_35);
+
+        horizontalLayout_healthScores = new QHBoxLayout();
+        horizontalLayout_healthScores->setObjectName("horizontalLayout_healthScores");
+        horizontalSpacer_healthScoresLeft = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_healthScores->addItem(horizontalSpacer_healthScoresLeft);
+
+        quickHealthDsLabel = new QLabel(layoutWidget_2);
+        quickHealthDsLabel->setObjectName("quickHealthDsLabel");
+
+        horizontalLayout_healthScores->addWidget(quickHealthDsLabel);
+
+        quickHealthRefLabel = new QLabel(layoutWidget_2);
+        quickHealthRefLabel->setObjectName("quickHealthRefLabel");
+
+        horizontalLayout_healthScores->addWidget(quickHealthRefLabel);
+
+        fullHealthDsLabel = new QLabel(layoutWidget_2);
+        fullHealthDsLabel->setObjectName("fullHealthDsLabel");
+
+        horizontalLayout_healthScores->addWidget(fullHealthDsLabel);
+
+        fullHealthRefLabel = new QLabel(layoutWidget_2);
+        fullHealthRefLabel->setObjectName("fullHealthRefLabel");
+
+        horizontalLayout_healthScores->addWidget(fullHealthRefLabel);
+
+        horizontalSpacer_healthScoresRight = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_healthScores->addItem(horizontalSpacer_healthScoresRight);
+
+
+        verticalLayout_6->addLayout(horizontalLayout_healthScores);
 
         verticalSpacer_6 = new QSpacerItem(40, 10, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
 
@@ -1339,84 +1428,190 @@ public:
 
         gridLayout_datasheet->addWidget(datasheetRefName, 0, 1, 1, 1);
 
+        datasheetRefCountLabel = new QLabel(datasheetGroupBox);
+        datasheetRefCountLabel->setObjectName("datasheetRefCountLabel");
+
+        gridLayout_datasheet->addWidget(datasheetRefCountLabel, 0, 2, 1, 1);
+
+        datasheetRefCountValue = new QLabel(datasheetGroupBox);
+        datasheetRefCountValue->setObjectName("datasheetRefCountValue");
+
+        gridLayout_datasheet->addWidget(datasheetRefCountValue, 0, 3, 1, 1);
+
+        verticalSpacer_datasheetRefGap = new QSpacerItem(20, 10, QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
+
+        gridLayout_datasheet->addItem(verticalSpacer_datasheetRefGap, 1, 0, 1, 4);
+
         datasheetSectionLabel = new QLabel(datasheetGroupBox);
         datasheetSectionLabel->setObjectName("datasheetSectionLabel");
-        datasheetSectionLabel->setVisible(false);
+        datasheetSectionLabel->setVisible(true);
 
-        gridLayout_datasheet->addWidget(datasheetSectionLabel, 1, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetSectionLabel, 2, 0, 1, 1);
 
         datasheetSection = new QLineEdit(datasheetGroupBox);
         datasheetSection->setObjectName("datasheetSection");
         datasheetSection->setVisible(false);
         datasheetSection->setReadOnly(true);
 
-        gridLayout_datasheet->addWidget(datasheetSection, 1, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetSection, 2, 1, 1, 1);
+
+        datasheetRefOpLabel = new QLabel(datasheetGroupBox);
+        datasheetRefOpLabel->setObjectName("datasheetRefOpLabel");
+
+        gridLayout_datasheet->addWidget(datasheetRefOpLabel, 2, 2, 1, 1);
 
         datasheetVaLabel = new QLabel(datasheetGroupBox);
         datasheetVaLabel->setObjectName("datasheetVaLabel");
 
-        gridLayout_datasheet->addWidget(datasheetVaLabel, 2, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetVaLabel, 3, 0, 1, 1);
 
         datasheetVa = new QLineEdit(datasheetGroupBox);
         datasheetVa->setObjectName("datasheetVa");
         datasheetVa->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetVa, 2, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetVa, 3, 1, 1, 1);
+
+        datasheetVaRef = new QLineEdit(datasheetGroupBox);
+        datasheetVaRef->setObjectName("datasheetVaRef");
+        datasheetVaRef->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetVaRef, 3, 2, 1, 1);
 
         datasheetVgLabel = new QLabel(datasheetGroupBox);
         datasheetVgLabel->setObjectName("datasheetVgLabel");
 
-        gridLayout_datasheet->addWidget(datasheetVgLabel, 3, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetVgLabel, 4, 0, 1, 1);
 
         datasheetVg = new QLineEdit(datasheetGroupBox);
         datasheetVg->setObjectName("datasheetVg");
         datasheetVg->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetVg, 3, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetVg, 4, 1, 1, 1);
+
+        datasheetVgRef = new QLineEdit(datasheetGroupBox);
+        datasheetVgRef->setObjectName("datasheetVgRef");
+        datasheetVgRef->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetVgRef, 4, 2, 1, 1);
+
+        datasheetVg2Label = new QLabel(datasheetGroupBox);
+        datasheetVg2Label->setObjectName("datasheetVg2Label");
+
+        gridLayout_datasheet->addWidget(datasheetVg2Label, 5, 0, 1, 1);
+
+        datasheetVg2 = new QLineEdit(datasheetGroupBox);
+        datasheetVg2->setObjectName("datasheetVg2");
+        datasheetVg2->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetVg2, 5, 1, 1, 1);
+
+        datasheetVg2Ref = new QLineEdit(datasheetGroupBox);
+        datasheetVg2Ref->setObjectName("datasheetVg2Ref");
+        datasheetVg2Ref->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetVg2Ref, 5, 2, 1, 1);
 
         datasheetIaLabel = new QLabel(datasheetGroupBox);
         datasheetIaLabel->setObjectName("datasheetIaLabel");
 
-        gridLayout_datasheet->addWidget(datasheetIaLabel, 4, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetIaLabel, 6, 0, 1, 1);
 
         datasheetIa = new QLineEdit(datasheetGroupBox);
         datasheetIa->setObjectName("datasheetIa");
         datasheetIa->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetIa, 4, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetIa, 6, 1, 1, 1);
+
+        datasheetIaRef = new QLineEdit(datasheetGroupBox);
+        datasheetIaRef->setObjectName("datasheetIaRef");
+        datasheetIaRef->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetIaRef, 6, 2, 1, 1);
 
         datasheetGmLabel = new QLabel(datasheetGroupBox);
         datasheetGmLabel->setObjectName("datasheetGmLabel");
 
-        gridLayout_datasheet->addWidget(datasheetGmLabel, 5, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetGmLabel, 7, 0, 1, 1);
 
         datasheetGm = new QLineEdit(datasheetGroupBox);
         datasheetGm->setObjectName("datasheetGm");
         datasheetGm->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetGm, 5, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetGm, 7, 1, 1, 1);
+
+        datasheetGmRef = new QLineEdit(datasheetGroupBox);
+        datasheetGmRef->setObjectName("datasheetGmRef");
+        datasheetGmRef->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetGmRef, 7, 2, 1, 1);
 
         datasheetMuLabel = new QLabel(datasheetGroupBox);
         datasheetMuLabel->setObjectName("datasheetMuLabel");
 
-        gridLayout_datasheet->addWidget(datasheetMuLabel, 6, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetMuLabel, 8, 0, 1, 1);
 
         datasheetMu = new QLineEdit(datasheetGroupBox);
         datasheetMu->setObjectName("datasheetMu");
         datasheetMu->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetMu, 6, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetMu, 8, 1, 1, 1);
+
+        datasheetMuRef = new QLineEdit(datasheetGroupBox);
+        datasheetMuRef->setObjectName("datasheetMuRef");
+        datasheetMuRef->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetMuRef, 8, 2, 1, 1);
 
         datasheetRpLabel = new QLabel(datasheetGroupBox);
         datasheetRpLabel->setObjectName("datasheetRpLabel");
 
-        gridLayout_datasheet->addWidget(datasheetRpLabel, 7, 0, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetRpLabel, 9, 0, 1, 1);
 
         datasheetRp = new QLineEdit(datasheetGroupBox);
         datasheetRp->setObjectName("datasheetRp");
         datasheetRp->setReadOnly(false);
 
-        gridLayout_datasheet->addWidget(datasheetRp, 7, 1, 1, 1);
+        gridLayout_datasheet->addWidget(datasheetRp, 9, 1, 1, 1);
+
+        datasheetRpRef = new QLineEdit(datasheetGroupBox);
+        datasheetRpRef->setObjectName("datasheetRpRef");
+        datasheetRpRef->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetRpRef, 9, 2, 1, 1);
+
+        datasheetIg2Label = new QLabel(datasheetGroupBox);
+        datasheetIg2Label->setObjectName("datasheetIg2Label");
+
+        gridLayout_datasheet->addWidget(datasheetIg2Label, 10, 0, 1, 1);
+
+        datasheetIg2 = new QLineEdit(datasheetGroupBox);
+        datasheetIg2->setObjectName("datasheetIg2");
+        datasheetIg2->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetIg2, 10, 1, 1, 1);
+
+        datasheetIg2Ref = new QLineEdit(datasheetGroupBox);
+        datasheetIg2Ref->setObjectName("datasheetIg2Ref");
+        datasheetIg2Ref->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetIg2Ref, 10, 2, 1, 1);
+
+        datasheetPg2Label = new QLabel(datasheetGroupBox);
+        datasheetPg2Label->setObjectName("datasheetPg2Label");
+
+        gridLayout_datasheet->addWidget(datasheetPg2Label, 11, 0, 1, 1);
+
+        datasheetPg2 = new QLineEdit(datasheetGroupBox);
+        datasheetPg2->setObjectName("datasheetPg2");
+        datasheetPg2->setReadOnly(false);
+
+        gridLayout_datasheet->addWidget(datasheetPg2, 11, 1, 1, 1);
+
+        datasheetPg2Ref = new QLineEdit(datasheetGroupBox);
+        datasheetPg2Ref->setObjectName("datasheetPg2Ref");
+        datasheetPg2Ref->setReadOnly(true);
+
+        gridLayout_datasheet->addWidget(datasheetPg2Ref, 11, 2, 1, 1);
 
 
         verticalLayout_6->addWidget(datasheetGroupBox);
@@ -1439,10 +1634,10 @@ public:
 
         verticalLayout_2 = new QVBoxLayout();
         verticalLayout_2->setObjectName("verticalLayout_2");
-        graphicsView = new QGraphicsView(horizontalLayoutWidget);
+        graphicsView = new QGraphicsView(centralwidget);
         graphicsView->setObjectName("graphicsView");
-        sizePolicy2.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
-        graphicsView->setSizePolicy(sizePolicy2);
+        sizePolicy3.setHeightForWidth(graphicsView->sizePolicy().hasHeightForWidth());
+        graphicsView->setSizePolicy(sizePolicy3);
         graphicsView->setMinimumSize(QSize(720, 640));
         graphicsView->setMaximumSize(QSize(720, 640));
         graphicsView->setSizeIncrement(QSize(11, 0));
@@ -1453,7 +1648,7 @@ public:
 
         verticalLayout_2->addItem(verticalSpacer_4);
 
-        plotTitle = new QLabel(horizontalLayoutWidget);
+        plotTitle = new QLabel(centralwidget);
         plotTitle->setObjectName("plotTitle");
 
         verticalLayout_2->addWidget(plotTitle);
@@ -1468,7 +1663,7 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_3);
 
-        measureCheck = new QCheckBox(horizontalLayoutWidget);
+        measureCheck = new QCheckBox(centralwidget);
         measureCheck->setObjectName("measureCheck");
 
         horizontalLayout_9->addWidget(measureCheck);
@@ -1477,7 +1672,7 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_7);
 
-        modelCheck = new QCheckBox(horizontalLayoutWidget);
+        modelCheck = new QCheckBox(centralwidget);
         modelCheck->setObjectName("modelCheck");
 
         horizontalLayout_9->addWidget(modelCheck);
@@ -1486,13 +1681,17 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_171);
 
-        designerCheck = new QCheckBox(horizontalLayoutWidget);
+        designerCheck = new QCheckBox(centralwidget);
         designerCheck->setObjectName("designerCheck");
         designerCheck->setChecked(true);
 
         horizontalLayout_9->addWidget(designerCheck);
 
-        screenCheck = new QCheckBox(horizontalLayoutWidget);
+        horizontalSpacer_6 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_9->addItem(horizontalSpacer_6);
+
+        screenCheck = new QCheckBox(centralwidget);
         screenCheck->setObjectName("screenCheck");
 
         horizontalLayout_9->addWidget(screenCheck);
@@ -1501,155 +1700,189 @@ public:
 
         horizontalLayout_9->addItem(horizontalSpacer_15);
 
-        horizontalSpacer_6 = new QSpacerItem(20, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        horizontalLayout_9->addItem(horizontalSpacer_6);
-
 
         verticalLayout_2->addLayout(horizontalLayout_9);
 
         horizontalLayout_health = new QHBoxLayout();
         horizontalLayout_health->setObjectName("horizontalLayout_health");
-        Triode_A_Box = new QGroupBox(horizontalLayoutWidget);
+        horizontalSpacer_19 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_health->addItem(horizontalSpacer_19);
+
+        Triode_A_Box = new QGroupBox(centralwidget);
         Triode_A_Box->setObjectName("Triode_A_Box");
         verticalLayout_TriodeAHealth = new QVBoxLayout(Triode_A_Box);
         verticalLayout_TriodeAHealth->setObjectName("verticalLayout_TriodeAHealth");
-        horizontalLayout_TriodeAHeader = new QHBoxLayout();
-        horizontalLayout_TriodeAHeader->setObjectName("horizontalLayout_TriodeAHeader");
+        gridLayout_TriodeAHealth = new QGridLayout();
+        gridLayout_TriodeAHealth->setObjectName("gridLayout_TriodeAHealth");
+        gridLayout_TriodeAHealth->setHorizontalSpacing(2);
+        gridLayout_TriodeAHealth->setVerticalSpacing(0);
         triodeAHeaderMetric = new QLabel(Triode_A_Box);
         triodeAHeaderMetric->setObjectName("triodeAHeaderMetric");
+        triodeAHeaderMetric->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderMetric);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderMetric, 0, 0, 1, 1);
 
         triodeAHeaderValue1 = new QLabel(Triode_A_Box);
         triodeAHeaderValue1->setObjectName("triodeAHeaderValue1");
+        triodeAHeaderValue1->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderValue1);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderValue1, 0, 1, 1, 1);
 
         triodeAHeaderValue2 = new QLabel(Triode_A_Box);
         triodeAHeaderValue2->setObjectName("triodeAHeaderValue2");
+        triodeAHeaderValue2->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderValue2);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderValue2, 0, 2, 1, 1);
 
         triodeAHeaderCheck = new QLabel(Triode_A_Box);
         triodeAHeaderCheck->setObjectName("triodeAHeaderCheck");
+        triodeAHeaderCheck->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeAHeader->addWidget(triodeAHeaderCheck);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderCheck, 0, 3, 1, 1);
 
+        triodeAHeaderFourCornerPct = new QLabel(Triode_A_Box);
+        triodeAHeaderFourCornerPct->setObjectName("triodeAHeaderFourCornerPct");
+        triodeAHeaderFourCornerPct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-top: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-bottom: 0px;"));
+        triodeAHeaderFourCornerPct->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        verticalLayout_TriodeAHealth->addLayout(horizontalLayout_TriodeAHeader);
+        gridLayout_TriodeAHealth->addWidget(triodeAHeaderFourCornerPct, 0, 4, 1, 1);
 
-        gridLayout_TriodeAHealth = new QGridLayout();
-        gridLayout_TriodeAHealth->setObjectName("gridLayout_TriodeAHealth");
-        triodeA_row1Label = new QLabel(Triode_A_Box);
-        triodeA_row1Label->setObjectName("triodeA_row1Label");
+        triodeA_Ia_label = new QLabel(Triode_A_Box);
+        triodeA_Ia_label->setObjectName("triodeA_Ia_label");
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row1Label, 0, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_label, 1, 0, 1, 1);
 
-        triodeA_row1Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row1Value1->setObjectName("triodeA_row1Value1");
-        triodeA_row1Value1->setReadOnly(true);
+        triodeA_Ia_measured = new QLineEdit(Triode_A_Box);
+        triodeA_Ia_measured->setObjectName("triodeA_Ia_measured");
+        triodeA_Ia_measured->setMaxLength(4);
+        triodeA_Ia_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row1Value1, 0, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_measured, 1, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row1Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row1Value2->setObjectName("triodeA_row1Value2");
-        triodeA_row1Value2->setReadOnly(true);
+        triodeA_Ia_ref = new QLineEdit(Triode_A_Box);
+        triodeA_Ia_ref->setObjectName("triodeA_Ia_ref");
+        triodeA_Ia_ref->setMaxLength(4);
+        triodeA_Ia_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row1Value2, 0, 2, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_ref, 1, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row1Check = new QCheckBox(Triode_A_Box);
-        triodeA_row1Check->setObjectName("triodeA_row1Check");
+        triodeA_Ia_pct = new QLineEdit(Triode_A_Box);
+        triodeA_Ia_pct->setObjectName("triodeA_Ia_pct");
+        triodeA_Ia_pct->setMaxLength(4);
+        triodeA_Ia_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row1Check, 0, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_Ia_pct, 1, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row2Label = new QLabel(Triode_A_Box);
-        triodeA_row2Label->setObjectName("triodeA_row2Label");
+        triodeA_corner1_pct = new QLineEdit(Triode_A_Box);
+        triodeA_corner1_pct->setObjectName("triodeA_corner1_pct");
+        triodeA_corner1_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
+        triodeA_corner1_pct->setMaxLength(4);
+        triodeA_corner1_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row2Label, 1, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_corner1_pct, 1, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row2Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row2Value1->setObjectName("triodeA_row2Value1");
-        triodeA_row2Value1->setReadOnly(true);
+        triodeA_rp_label = new QLabel(Triode_A_Box);
+        triodeA_rp_label->setObjectName("triodeA_rp_label");
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row2Value1, 1, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_label, 2, 0, 1, 1);
 
-        triodeA_row2Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row2Value2->setObjectName("triodeA_row2Value2");
-        triodeA_row2Value2->setReadOnly(true);
+        triodeA_rp_measured = new QLineEdit(Triode_A_Box);
+        triodeA_rp_measured->setObjectName("triodeA_rp_measured");
+        triodeA_rp_measured->setMaxLength(5);
+        triodeA_rp_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row2Value2, 1, 2, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_measured, 2, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row2Check = new QCheckBox(Triode_A_Box);
-        triodeA_row2Check->setObjectName("triodeA_row2Check");
+        triodeA_rp_ref = new QLineEdit(Triode_A_Box);
+        triodeA_rp_ref->setObjectName("triodeA_rp_ref");
+        triodeA_rp_ref->setMaxLength(5);
+        triodeA_rp_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row2Check, 1, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_ref, 2, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row3Label = new QLabel(Triode_A_Box);
-        triodeA_row3Label->setObjectName("triodeA_row3Label");
+        triodeA_rp_pct = new QLineEdit(Triode_A_Box);
+        triodeA_rp_pct->setObjectName("triodeA_rp_pct");
+        triodeA_rp_pct->setMaxLength(4);
+        triodeA_rp_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row3Label, 2, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_rp_pct, 2, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row3Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row3Value1->setObjectName("triodeA_row3Value1");
-        triodeA_row3Value1->setReadOnly(true);
+        triodeA_corner2_pct = new QLineEdit(Triode_A_Box);
+        triodeA_corner2_pct->setObjectName("triodeA_corner2_pct");
+        triodeA_corner2_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
+        triodeA_corner2_pct->setMaxLength(4);
+        triodeA_corner2_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row3Value1, 2, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_corner2_pct, 2, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row3Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row3Value2->setObjectName("triodeA_row3Value2");
-        triodeA_row3Value2->setReadOnly(true);
+        triodeA_gm_label = new QLabel(Triode_A_Box);
+        triodeA_gm_label->setObjectName("triodeA_gm_label");
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row3Value2, 2, 2, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_label, 3, 0, 1, 1);
 
-        triodeA_row3Check = new QCheckBox(Triode_A_Box);
-        triodeA_row3Check->setObjectName("triodeA_row3Check");
+        triodeA_gm_measured = new QLineEdit(Triode_A_Box);
+        triodeA_gm_measured->setObjectName("triodeA_gm_measured");
+        triodeA_gm_measured->setMaxLength(4);
+        triodeA_gm_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row3Check, 2, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_measured, 3, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row4Label = new QLabel(Triode_A_Box);
-        triodeA_row4Label->setObjectName("triodeA_row4Label");
+        triodeA_gm_ref = new QLineEdit(Triode_A_Box);
+        triodeA_gm_ref->setObjectName("triodeA_gm_ref");
+        triodeA_gm_ref->setMaxLength(4);
+        triodeA_gm_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row4Label, 3, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_ref, 3, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row4Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row4Value1->setObjectName("triodeA_row4Value1");
-        triodeA_row4Value1->setReadOnly(true);
+        triodeA_gm_pct = new QLineEdit(Triode_A_Box);
+        triodeA_gm_pct->setObjectName("triodeA_gm_pct");
+        triodeA_gm_pct->setMaxLength(4);
+        triodeA_gm_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row4Value1, 3, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_gm_pct, 3, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row4Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row4Value2->setObjectName("triodeA_row4Value2");
-        triodeA_row4Value2->setReadOnly(true);
+        triodeA_corner3_pct = new QLineEdit(Triode_A_Box);
+        triodeA_corner3_pct->setObjectName("triodeA_corner3_pct");
+        triodeA_corner3_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
+        triodeA_corner3_pct->setMaxLength(4);
+        triodeA_corner3_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row4Value2, 3, 2, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_corner3_pct, 3, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row4Check = new QCheckBox(Triode_A_Box);
-        triodeA_row4Check->setObjectName("triodeA_row4Check");
+        triodeA_mu_label = new QLabel(Triode_A_Box);
+        triodeA_mu_label->setObjectName("triodeA_mu_label");
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row4Check, 3, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_label, 4, 0, 1, 1);
 
-        triodeA_row5Label = new QLabel(Triode_A_Box);
-        triodeA_row5Label->setObjectName("triodeA_row5Label");
+        triodeA_mu_measured = new QLineEdit(Triode_A_Box);
+        triodeA_mu_measured->setObjectName("triodeA_mu_measured");
+        triodeA_mu_measured->setMaxLength(4);
+        triodeA_mu_measured->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row5Label, 4, 0, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_measured, 4, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row5Value1 = new QLineEdit(Triode_A_Box);
-        triodeA_row5Value1->setObjectName("triodeA_row5Value1");
-        triodeA_row5Value1->setReadOnly(true);
+        triodeA_mu_ref = new QLineEdit(Triode_A_Box);
+        triodeA_mu_ref->setObjectName("triodeA_mu_ref");
+        triodeA_mu_ref->setMaxLength(4);
+        triodeA_mu_ref->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row5Value1, 4, 1, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_ref, 4, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row5Value2 = new QLineEdit(Triode_A_Box);
-        triodeA_row5Value2->setObjectName("triodeA_row5Value2");
-        triodeA_row5Value2->setReadOnly(true);
+        triodeA_mu_pct = new QLineEdit(Triode_A_Box);
+        triodeA_mu_pct->setObjectName("triodeA_mu_pct");
+        triodeA_mu_pct->setMaxLength(4);
+        triodeA_mu_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row5Value2, 4, 2, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_mu_pct, 4, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeA_row5Check = new QCheckBox(Triode_A_Box);
-        triodeA_row5Check->setObjectName("triodeA_row5Check");
+        triodeA_corner4_pct = new QLineEdit(Triode_A_Box);
+        triodeA_corner4_pct->setObjectName("triodeA_corner4_pct");
+        triodeA_corner4_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
+        triodeA_corner4_pct->setMaxLength(4);
+        triodeA_corner4_pct->setReadOnly(true);
 
-        gridLayout_TriodeAHealth->addWidget(triodeA_row5Check, 4, 3, 1, 1);
+        gridLayout_TriodeAHealth->addWidget(triodeA_corner4_pct, 4, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
 
         verticalLayout_TriodeAHealth->addLayout(gridLayout_TriodeAHealth);
@@ -1657,152 +1890,190 @@ public:
 
         horizontalLayout_health->addWidget(Triode_A_Box);
 
-        Triode_B_Box = new QGroupBox(horizontalLayoutWidget);
+        Triode_B_Box = new QGroupBox(centralwidget);
         Triode_B_Box->setObjectName("Triode_B_Box");
         verticalLayout_TriodeBHealth = new QVBoxLayout(Triode_B_Box);
         verticalLayout_TriodeBHealth->setObjectName("verticalLayout_TriodeBHealth");
-        horizontalLayout_TriodeBHeader = new QHBoxLayout();
-        horizontalLayout_TriodeBHeader->setObjectName("horizontalLayout_TriodeBHeader");
+        gridLayout_TriodeBHealth = new QGridLayout();
+        gridLayout_TriodeBHealth->setObjectName("gridLayout_TriodeBHealth");
+        gridLayout_TriodeBHealth->setHorizontalSpacing(2);
+        gridLayout_TriodeBHealth->setVerticalSpacing(0);
         triodeBHeaderMetric = new QLabel(Triode_B_Box);
         triodeBHeaderMetric->setObjectName("triodeBHeaderMetric");
+        triodeBHeaderMetric->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderMetric);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderMetric, 0, 0, 1, 1);
 
         triodeBHeaderValue1 = new QLabel(Triode_B_Box);
         triodeBHeaderValue1->setObjectName("triodeBHeaderValue1");
+        triodeBHeaderValue1->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderValue1);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderValue1, 0, 1, 1, 1);
 
         triodeBHeaderValue2 = new QLabel(Triode_B_Box);
         triodeBHeaderValue2->setObjectName("triodeBHeaderValue2");
+        triodeBHeaderValue2->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderValue2);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderValue2, 0, 2, 1, 1);
 
         triodeBHeaderCheck = new QLabel(Triode_B_Box);
         triodeBHeaderCheck->setObjectName("triodeBHeaderCheck");
+        triodeBHeaderCheck->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        horizontalLayout_TriodeBHeader->addWidget(triodeBHeaderCheck);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderCheck, 0, 3, 1, 1);
 
+        triodeBHeaderFourCornerPct = new QLabel(Triode_B_Box);
+        triodeBHeaderFourCornerPct->setObjectName("triodeBHeaderFourCornerPct");
+        triodeBHeaderFourCornerPct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-top: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-bottom: 0px;"));
+        triodeBHeaderFourCornerPct->setAlignment(Qt::AlignmentFlag::AlignCenter);
 
-        verticalLayout_TriodeBHealth->addLayout(horizontalLayout_TriodeBHeader);
+        gridLayout_TriodeBHealth->addWidget(triodeBHeaderFourCornerPct, 0, 4, 1, 1);
 
-        gridLayout_TriodeBHealth = new QGridLayout();
-        gridLayout_TriodeBHealth->setObjectName("gridLayout_TriodeBHealth");
-        triodeB_row1Label = new QLabel(Triode_B_Box);
-        triodeB_row1Label->setObjectName("triodeB_row1Label");
+        triodeB_Ia_label = new QLabel(Triode_B_Box);
+        triodeB_Ia_label->setObjectName("triodeB_Ia_label");
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row1Label, 0, 0, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_label, 1, 0, 1, 1);
 
-        triodeB_row1Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row1Value1->setObjectName("triodeB_row1Value1");
-        triodeB_row1Value1->setReadOnly(true);
+        triodeB_Ia_measured = new QLineEdit(Triode_B_Box);
+        triodeB_Ia_measured->setObjectName("triodeB_Ia_measured");
+        triodeB_Ia_measured->setMaxLength(4);
+        triodeB_Ia_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row1Value1, 0, 1, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_measured, 1, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row1Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row1Value2->setObjectName("triodeB_row1Value2");
-        triodeB_row1Value2->setReadOnly(true);
+        triodeB_Ia_ref = new QLineEdit(Triode_B_Box);
+        triodeB_Ia_ref->setObjectName("triodeB_Ia_ref");
+        triodeB_Ia_ref->setMaxLength(4);
+        triodeB_Ia_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row1Value2, 0, 2, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_ref, 1, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row1Check = new QCheckBox(Triode_B_Box);
-        triodeB_row1Check->setObjectName("triodeB_row1Check");
+        triodeB_Ia_pct = new QLineEdit(Triode_B_Box);
+        triodeB_Ia_pct->setObjectName("triodeB_Ia_pct");
+        triodeB_Ia_pct->setMaxLength(4);
+        triodeB_Ia_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row1Check, 0, 3, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_Ia_pct, 1, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row2Label = new QLabel(Triode_B_Box);
-        triodeB_row2Label->setObjectName("triodeB_row2Label");
+        triodeB_corner1_pct = new QLineEdit(Triode_B_Box);
+        triodeB_corner1_pct->setObjectName("triodeB_corner1_pct");
+        triodeB_corner1_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
+        triodeB_corner1_pct->setMaxLength(4);
+        triodeB_corner1_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row2Label, 1, 0, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_corner1_pct, 1, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row2Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row2Value1->setObjectName("triodeB_row2Value1");
-        triodeB_row2Value1->setReadOnly(true);
+        triodeB_rp_label = new QLabel(Triode_B_Box);
+        triodeB_rp_label->setObjectName("triodeB_rp_label");
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row2Value1, 1, 1, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_label, 2, 0, 1, 1);
 
-        triodeB_row2Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row2Value2->setObjectName("triodeB_row2Value2");
-        triodeB_row2Value2->setReadOnly(true);
+        triodeB_rp_measured = new QLineEdit(Triode_B_Box);
+        triodeB_rp_measured->setObjectName("triodeB_rp_measured");
+        triodeB_rp_measured->setMaxLength(5);
+        triodeB_rp_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row2Value2, 1, 2, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_measured, 2, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row2Check = new QCheckBox(Triode_B_Box);
-        triodeB_row2Check->setObjectName("triodeB_row2Check");
+        triodeB_rp_ref = new QLineEdit(Triode_B_Box);
+        triodeB_rp_ref->setObjectName("triodeB_rp_ref");
+        triodeB_rp_ref->setMaxLength(5);
+        triodeB_rp_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row2Check, 1, 3, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_ref, 2, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row3Label = new QLabel(Triode_B_Box);
-        triodeB_row3Label->setObjectName("triodeB_row3Label");
+        triodeB_rp_pct = new QLineEdit(Triode_B_Box);
+        triodeB_rp_pct->setObjectName("triodeB_rp_pct");
+        triodeB_rp_pct->setMaxLength(4);
+        triodeB_rp_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row3Label, 2, 0, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_rp_pct, 2, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row3Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row3Value1->setObjectName("triodeB_row3Value1");
-        triodeB_row3Value1->setReadOnly(true);
+        triodeB_corner2_pct = new QLineEdit(Triode_B_Box);
+        triodeB_corner2_pct->setObjectName("triodeB_corner2_pct");
+        triodeB_corner2_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
+        triodeB_corner2_pct->setMaxLength(4);
+        triodeB_corner2_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row3Value1, 2, 1, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_corner2_pct, 2, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row3Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row3Value2->setObjectName("triodeB_row3Value2");
-        triodeB_row3Value2->setReadOnly(true);
+        triodeB_gm_label = new QLabel(Triode_B_Box);
+        triodeB_gm_label->setObjectName("triodeB_gm_label");
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row3Value2, 2, 2, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_label, 3, 0, 1, 1);
 
-        triodeB_row3Check = new QCheckBox(Triode_B_Box);
-        triodeB_row3Check->setObjectName("triodeB_row3Check");
+        triodeB_gm_measured = new QLineEdit(Triode_B_Box);
+        triodeB_gm_measured->setObjectName("triodeB_gm_measured");
+        triodeB_gm_measured->setMaxLength(4);
+        triodeB_gm_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row3Check, 2, 3, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_measured, 3, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row4Label = new QLabel(Triode_B_Box);
-        triodeB_row4Label->setObjectName("triodeB_row4Label");
+        triodeB_gm_ref = new QLineEdit(Triode_B_Box);
+        triodeB_gm_ref->setObjectName("triodeB_gm_ref");
+        triodeB_gm_ref->setMaxLength(4);
+        triodeB_gm_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row4Label, 3, 0, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_ref, 3, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row4Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row4Value1->setObjectName("triodeB_row4Value1");
-        triodeB_row4Value1->setReadOnly(true);
+        triodeB_gm_pct = new QLineEdit(Triode_B_Box);
+        triodeB_gm_pct->setObjectName("triodeB_gm_pct");
+        triodeB_gm_pct->setMaxLength(4);
+        triodeB_gm_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row4Value1, 3, 1, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_gm_pct, 3, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row4Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row4Value2->setObjectName("triodeB_row4Value2");
-        triodeB_row4Value2->setReadOnly(true);
+        triodeB_corner3_pct = new QLineEdit(Triode_B_Box);
+        triodeB_corner3_pct->setObjectName("triodeB_corner3_pct");
+        triodeB_corner3_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px; border-bottom: 0px;"));
+        triodeB_corner3_pct->setMaxLength(4);
+        triodeB_corner3_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row4Value2, 3, 2, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_corner3_pct, 3, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row4Check = new QCheckBox(Triode_B_Box);
-        triodeB_row4Check->setObjectName("triodeB_row4Check");
+        triodeB_mu_label = new QLabel(Triode_B_Box);
+        triodeB_mu_label->setObjectName("triodeB_mu_label");
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row4Check, 3, 3, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_label, 4, 0, 1, 1);
 
-        triodeB_row5Label = new QLabel(Triode_B_Box);
-        triodeB_row5Label->setObjectName("triodeB_row5Label");
+        triodeB_mu_measured = new QLineEdit(Triode_B_Box);
+        triodeB_mu_measured->setObjectName("triodeB_mu_measured");
+        triodeB_mu_measured->setMaxLength(4);
+        triodeB_mu_measured->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row5Label, 4, 0, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_measured, 4, 1, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row5Value1 = new QLineEdit(Triode_B_Box);
-        triodeB_row5Value1->setObjectName("triodeB_row5Value1");
-        triodeB_row5Value1->setReadOnly(true);
+        triodeB_mu_ref = new QLineEdit(Triode_B_Box);
+        triodeB_mu_ref->setObjectName("triodeB_mu_ref");
+        triodeB_mu_ref->setMaxLength(4);
+        triodeB_mu_ref->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row5Value1, 4, 1, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_ref, 4, 2, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row5Value2 = new QLineEdit(Triode_B_Box);
-        triodeB_row5Value2->setObjectName("triodeB_row5Value2");
-        triodeB_row5Value2->setReadOnly(true);
+        triodeB_mu_pct = new QLineEdit(Triode_B_Box);
+        triodeB_mu_pct->setObjectName("triodeB_mu_pct");
+        triodeB_mu_pct->setMaxLength(4);
+        triodeB_mu_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row5Value2, 4, 2, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_mu_pct, 4, 3, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
-        triodeB_row5Check = new QCheckBox(Triode_B_Box);
-        triodeB_row5Check->setObjectName("triodeB_row5Check");
+        triodeB_corner4_pct = new QLineEdit(Triode_B_Box);
+        triodeB_corner4_pct->setObjectName("triodeB_corner4_pct");
+        triodeB_corner4_pct->setStyleSheet(QString::fromUtf8("color: rgb(255,140,0); border-bottom: 1px solid rgb(255,140,0); border-left: 1px solid rgb(255,140,0); border-right: 1px solid rgb(255,140,0); border-top: 0px;"));
+        triodeB_corner4_pct->setMaxLength(4);
+        triodeB_corner4_pct->setReadOnly(true);
 
-        gridLayout_TriodeBHealth->addWidget(triodeB_row5Check, 4, 3, 1, 1);
+        gridLayout_TriodeBHealth->addWidget(triodeB_corner4_pct, 4, 4, 1, 1, Qt::AlignmentFlag::AlignHCenter);
 
 
         verticalLayout_TriodeBHealth->addLayout(gridLayout_TriodeBHealth);
 
 
         horizontalLayout_health->addWidget(Triode_B_Box);
+
+        horizontalSpacer_11 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        horizontalLayout_health->addItem(horizontalSpacer_11);
 
 
         verticalLayout_2->addLayout(horizontalLayout_health);
@@ -1817,7 +2088,7 @@ public:
         ValveWorkbench->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ValveWorkbench);
         menubar->setObjectName("menubar");
-        menubar->setGeometry(QRect(0, 0, 1229, 26));
+        menubar->setGeometry(QRect(0, 0, 1305, 26));
         menuFile = new QMenu(menubar);
         menuFile->setObjectName("menuFile");
         menuHelp = new QMenu(menubar);
@@ -1841,6 +2112,8 @@ public:
         menuFile->addAction(actionExport_Model);
         menuFile->addAction(actionExport_SE_Output_to_Spice);
         menuFile->addAction(actionExport_to_Spice);
+        menuFile->addAction(actionSave_as_Reference_Tube);
+        menuFile->addAction(actionReset_Reference_Tube);
 
         retranslateUi(ValveWorkbench);
 
@@ -1883,6 +2156,8 @@ public:
 #if QT_CONFIG(shortcut)
         actionExport_Model->setShortcut(QCoreApplication::translate("ValveWorkbench", "Ctrl+E", nullptr));
 #endif // QT_CONFIG(shortcut)
+        actionSave_as_Reference_Tube->setText(QCoreApplication::translate("ValveWorkbench", "Save as Reference Tube...", nullptr));
+        actionReset_Reference_Tube->setText(QCoreApplication::translate("ValveWorkbench", "Reset Reference Tube", nullptr));
         actionExport_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export Model to Spice...", nullptr));
         actionExport_SE_Output_to_Spice->setText(QCoreApplication::translate("ValveWorkbench", "Export SE Output to SPICE...", nullptr));
         label_3->setText(QCoreApplication::translate("ValveWorkbench", "Circuit Type:", nullptr));
@@ -1906,6 +2181,7 @@ public:
         cir14Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel14", nullptr));
         cir15Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel15", nullptr));
         cir16Label->setText(QCoreApplication::translate("ValveWorkbench", "TextLabel16", nullptr));
+        headroomWaveformGroupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Headroom Waveshape", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab), QCoreApplication::translate("ValveWorkbench", "Designer", nullptr));
         label_2->setText(QCoreApplication::translate("ValveWorkbench", "Project Browser", nullptr));
         groupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Small-signal (gm/ra/\316\274)", nullptr));
@@ -1916,6 +2192,7 @@ public:
         label->setText(QCoreApplication::translate("ValveWorkbench", "Properties", nullptr));
         fitTriodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Triode", nullptr));
         fitPentodeButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Pentode...", nullptr));
+        processModellingTestsButton->setText(QCoreApplication::translate("ValveWorkbench", "Fit Modelling Tests", nullptr));
         compareButton->setText(QCoreApplication::translate("ValveWorkbench", "Compare Device", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_2), QCoreApplication::translate("ValveWorkbench", "Modeller", nullptr));
         pushButton_3->setText(QCoreApplication::translate("ValveWorkbench", "Load Template...", nullptr));
@@ -1936,17 +2213,28 @@ public:
         runButton->setText(QCoreApplication::translate("ValveWorkbench", "Run Test", nullptr));
         quickHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Quick Health", nullptr));
         fullHealthButton->setText(QCoreApplication::translate("ValveWorkbench", "Full Health", nullptr));
+        modellingTestsButton->setText(QCoreApplication::translate("ValveWorkbench", "Modelling Tests", nullptr));
+        quickHealthDsLabel->setText(QCoreApplication::translate("ValveWorkbench", "DS:", nullptr));
+        quickHealthRefLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref:", nullptr));
+        fullHealthDsLabel->setText(QCoreApplication::translate("ValveWorkbench", "DS:", nullptr));
+        fullHealthRefLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref:", nullptr));
         btnImportFromDevice->setText(QCoreApplication::translate("ValveWorkbench", "Import from Device", nullptr));
         btnAddToProject->setText(QCoreApplication::translate("ValveWorkbench", "Save to Project", nullptr));
         datasheetGroupBox->setTitle(QCoreApplication::translate("ValveWorkbench", "Datasheet / Reference", nullptr));
         datasheetNameLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ref name:", nullptr));
-        datasheetSectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Section:", nullptr));
+        datasheetRefCountLabel->setText(QCoreApplication::translate("ValveWorkbench", "Reference Saves", nullptr));
+        datasheetRefCountValue->setText(QString());
+        datasheetSectionLabel->setText(QCoreApplication::translate("ValveWorkbench", "Quick Health Test OP", nullptr));
+        datasheetRefOpLabel->setText(QCoreApplication::translate("ValveWorkbench", "Full Health Test OP", nullptr));
         datasheetVaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Va (V):", nullptr));
         datasheetVgLabel->setText(QCoreApplication::translate("ValveWorkbench", "Vg (V):", nullptr));
+        datasheetVg2Label->setText(QCoreApplication::translate("ValveWorkbench", "Vg2 (V):", nullptr));
         datasheetIaLabel->setText(QCoreApplication::translate("ValveWorkbench", "Ia (mA):", nullptr));
         datasheetGmLabel->setText(QCoreApplication::translate("ValveWorkbench", "gm (\302\265S):", nullptr));
         datasheetMuLabel->setText(QCoreApplication::translate("ValveWorkbench", "\316\274:", nullptr));
         datasheetRpLabel->setText(QCoreApplication::translate("ValveWorkbench", "rp (\316\251):", nullptr));
+        datasheetIg2Label->setText(QCoreApplication::translate("ValveWorkbench", "Ig2 (mA):", nullptr));
+        datasheetPg2Label->setText(QCoreApplication::translate("ValveWorkbench", "Pg2 (W):", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_3), QCoreApplication::translate("ValveWorkbench", "Analyser", nullptr));
         plotTitle->setText(QString());
         measureCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Measurement", nullptr));
@@ -1954,35 +2242,25 @@ public:
         designerCheck->setText(QCoreApplication::translate("ValveWorkbench", "Designer Overlays", nullptr));
         screenCheck->setText(QCoreApplication::translate("ValveWorkbench", "Show Screen Current", nullptr));
         Triode_A_Box->setTitle(QCoreApplication::translate("ValveWorkbench", "Triode A Health", nullptr));
-        triodeAHeaderMetric->setText(QCoreApplication::translate("ValveWorkbench", "Metric", nullptr));
-        triodeAHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Value 1", nullptr));
-        triodeAHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Value 2", nullptr));
-        triodeAHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "OK?", nullptr));
-        triodeA_row1Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 1", nullptr));
-        triodeA_row1Check->setText(QString());
-        triodeA_row2Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 2", nullptr));
-        triodeA_row2Check->setText(QString());
-        triodeA_row3Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 3", nullptr));
-        triodeA_row3Check->setText(QString());
-        triodeA_row4Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 4", nullptr));
-        triodeA_row4Check->setText(QString());
-        triodeA_row5Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 5", nullptr));
-        triodeA_row5Check->setText(QString());
+        triodeAHeaderMetric->setText(QString());
+        triodeAHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Measured", nullptr));
+        triodeAHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
+        triodeAHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "Pct(%)", nullptr));
+        triodeAHeaderFourCornerPct->setText(QCoreApplication::translate("ValveWorkbench", "4 Cor Pct", nullptr));
+        triodeA_Ia_label->setText(QCoreApplication::translate("ValveWorkbench", "Ia(mA)", nullptr));
+        triodeA_rp_label->setText(QCoreApplication::translate("ValveWorkbench", "rp(Ohms)", nullptr));
+        triodeA_gm_label->setText(QCoreApplication::translate("ValveWorkbench", "gm((umhos)", nullptr));
+        triodeA_mu_label->setText(QCoreApplication::translate("ValveWorkbench", "mu((V/V)", nullptr));
         Triode_B_Box->setTitle(QCoreApplication::translate("ValveWorkbench", "Triode B Health", nullptr));
-        triodeBHeaderMetric->setText(QCoreApplication::translate("ValveWorkbench", "Metric", nullptr));
-        triodeBHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Value 1", nullptr));
-        triodeBHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Value 2", nullptr));
-        triodeBHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "OK?", nullptr));
-        triodeB_row1Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 1", nullptr));
-        triodeB_row1Check->setText(QString());
-        triodeB_row2Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 2", nullptr));
-        triodeB_row2Check->setText(QString());
-        triodeB_row3Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 3", nullptr));
-        triodeB_row3Check->setText(QString());
-        triodeB_row4Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 4", nullptr));
-        triodeB_row4Check->setText(QString());
-        triodeB_row5Label->setText(QCoreApplication::translate("ValveWorkbench", "Row 5", nullptr));
-        triodeB_row5Check->setText(QString());
+        triodeBHeaderMetric->setText(QString());
+        triodeBHeaderValue1->setText(QCoreApplication::translate("ValveWorkbench", "Measured", nullptr));
+        triodeBHeaderValue2->setText(QCoreApplication::translate("ValveWorkbench", "Ref", nullptr));
+        triodeBHeaderCheck->setText(QCoreApplication::translate("ValveWorkbench", "Pct(%)", nullptr));
+        triodeBHeaderFourCornerPct->setText(QCoreApplication::translate("ValveWorkbench", "4 Cor Pct", nullptr));
+        triodeB_Ia_label->setText(QCoreApplication::translate("ValveWorkbench", "Ia(mA)", nullptr));
+        triodeB_rp_label->setText(QCoreApplication::translate("ValveWorkbench", "rp(Ohms)", nullptr));
+        triodeB_gm_label->setText(QCoreApplication::translate("ValveWorkbench", "gm((umhos)", nullptr));
+        triodeB_mu_label->setText(QCoreApplication::translate("ValveWorkbench", "mu((V/V)", nullptr));
         menuFile->setTitle(QCoreApplication::translate("ValveWorkbench", "File", nullptr));
         menuHelp->setTitle(QCoreApplication::translate("ValveWorkbench", "Help", nullptr));
     } // retranslateUi

@@ -109,6 +109,8 @@ else:win32:CONFIG(debug, debug|release): LIBS += -LC:/Ceres_Install/gflags/lib/ 
 win32:CONFIG(release, debug|release): LIBS += -LC:/Ceres_Install/glog/lib/ -lglog
 else:win32:CONFIG(debug, debug|release): LIBS += -LC:/Ceres_Install/glog/lib/ -lglog
 
+win32:LIBS += -lUser32
+
 # ngSpice library
 # win32:LIBS += -L"C:/Users/lizar/Downloads/ngspice-45.2_64" -lngspice
 
